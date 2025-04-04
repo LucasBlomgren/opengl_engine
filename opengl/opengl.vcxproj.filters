@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="glad.c" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Linking\lib\stb\stb.cpp" />
+    <ClCompile Include="mesh.h" />
+    <ClCompile Include="AABB.h" />
+    <ClCompile Include="drawLine.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="shader.h" />
+    <ClInclude Include="xyzObject.h" />
+    <ClInclude Include="sweepnprune.h" />
+    <ClInclude Include="worldFrame.h" />
+    <ClInclude Include="SAT.h" />
+    <ClInclude Include="vertex.h" />
+    <ClInclude Include="camera.h" />
+    <ClInclude Include="OOBB.h" />
+    <ClInclude Include="collisionManifold.h" />
+    <ClInclude Include="drawContactPoints.h" />
+    <ClInclude Include="drawLine.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="object.fs" />
+    <None Include="object.vs" />
+  </ItemGroup>
+</Project>
