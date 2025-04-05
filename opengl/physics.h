@@ -7,7 +7,6 @@
 #include "sweepandprune.h"
 #include "SAT.h"
 #include "collisionManifold.h"
-#include "AABB.h"
 #include "mesh.h"
 #include "rotateCube.h"
 

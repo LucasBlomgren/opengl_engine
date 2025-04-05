@@ -1,24 +1,14 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/io.hpp>
-#include <glm/gtx/component_wise.hpp>
-
 
 #include <iostream>
 #include <vector>
 #include <random>
 #include <chrono>
-#include <algorithm>
-#include <unordered_set>
-#include <optional>
-#include <unordered_map>
 
+#include "initOpenGL.h"
+#include "inputManager.h"
 #include "camera.h"
 #include "physics.h"
 #include "sceneBuilder.h"
@@ -37,11 +27,6 @@ std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow* window);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void mouseButtonCallback(GLFWwindow* window, int key, int action, int mods);
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -49,9 +34,6 @@ const unsigned int SCR_HEIGHT = 1080;
 
 // camera
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
-float lastX = SCR_WIDTH / 2.0f;
-float lastY = SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
 
 // timing
 float deltaTime = 0.0f;	
@@ -115,15 +97,8 @@ std::vector<unsigned int> indices = {
     33, 34, 35
 };
 
-bool FPS = 1;
-bool paused = false;
-bool showAabb;
-bool showContactPoints;
-bool showCollisionNormal;
-bool showNormals;
-
-std::string pressedKey = "-1";
-
+EngineState engineState;
+InputManager inputManager;
 PhysicsEngine physicsEngine;
 SceneBuilder sceneBuilder;
 
@@ -135,29 +110,10 @@ int main()
     camera.Pitch -= 30;
     camera.ProcessMouseMovement(0, 0);
 
-    // glfw: initialize and configure
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL");
 
-    // glfw window creation
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    glfwMakeContextCurrent(window);
-    glfwSetCursorPosCallback(window, mouse_callback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSetKeyCallback(window, keyCallback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-    // glad: load all OpenGL function pointers
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    inputManager.SetPointers(&engineState, &camera);
+    inputManager.Init(window);
 
     auto start_time = std::chrono::high_resolution_clock::now();
     int frames = 0;
@@ -226,22 +182,20 @@ int main()
     std::random_device rd;
     std::mt19937 g(rd());
 
-    // create objects
-    //(PhysicsEngine& physicsEngine, std::vector<Mesh>& meshList, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices)
+    // create scene
     sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
 
     // main loop
     while (!glfwWindowShouldClose(window))
     {
-        if (pressedKey == "H") {
+        if (engineState.GetPressedKey() == "H") {
             sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
-            pressedKey = "-1";
         }
-        if (pressedKey == "Mouse1") {
+        if (engineState.GetPressedKey() == "Mouse1") {
             sceneBuilder.createObject(physicsEngine, meshList, camera.Position + camera.Front * 30.0f, glm::vec3(10, 10, 10), 1, 0, 0, cubeVertices, indices);
             meshList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
-            pressedKey = "-1";
         }
+        engineState.SetPressedKey("");
 
         auto current_time = std::chrono::high_resolution_clock::now();
         // per-frame time logic
@@ -249,7 +203,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        processInput(window);
+        inputManager.ProcessInput(window, deltaTime);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -263,8 +217,8 @@ int main()
         shader.setMat4("view", view);
 
         // physics step
-        if (!paused)
-            physicsEngine.step(window, meshList, deltaTime, showNormals, g);
+        if (!engineState.IsPaused())
+            physicsEngine.step(window, meshList, deltaTime, engineState.GetShowNormals(), g);
         
         //shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
         //shader.setVec3("lightPos", lightPos);
@@ -283,23 +237,23 @@ int main()
             }
             object.drawMesh(shader);
 
-            if (showAabb) 
+            if (engineState.GetShowAABB())
                 object.AABB.draw(shader, object.colliding);
-            if (showNormals) 
+            if (engineState.GetShowNormals())
                 object.OOBB.drawNormals(shader, VAO_line, object.position);
         }
-        if (showContactPoints) {
+        if (engineState.GetShowContactPoints()) {
             //glDisable(GL_DEPTH_TEST);
             shader.setBool("useUniformColor", true);
             shader.setBool("useTexture", false);
             shader.setVec3("uColor", glm::vec3(0, 250, 154));
             shader.setBool("isContactPoint", true);
 
-            //for (auto& pair : contactCache) {
-            //    Contact& contact = pair.second;
-            //    for (int i = 0; i < contact.counter; i++)
-            //        drawContactPoint(shader, VAO_contactPoint, contact.points[i].globalCoord);
-            //}
+            for (auto& pair : physicsEngine.contactCache) {
+                Contact& contact = pair.second;
+                for (int i = 0; i < contact.counter; i++)
+                    drawContactPoint(shader, VAO_contactPoint, contact.points[i].globalCoord);
+            }
             shader.setBool("isContactPoint", false);
             //glEnable(GL_DEPTH_TEST);
         }
@@ -314,17 +268,15 @@ int main()
         //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // cout FPS
-        if (FPS) {
-            float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-            if (seconds > last_second)
-            {
-                last_second = seconds;
-                std::cout << "FPS: " << frames << "\n";
-                std::cout << "Objects: " << meshList.size() << "\n";
-                frames = 0;
-            };
-            frames++;
-        }
+        float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+        if (seconds > last_second)
+        {
+            last_second = seconds;
+            std::cout << "FPS: " << frames << "\n";
+            std::cout << "Objects: " << meshList.size() << "\n";
+            frames = 0;
+        };
+        frames++;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -333,110 +285,8 @@ int main()
     return 0;
 }
 
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
-    //Mesh& obj = meshList[1];
-    //Mesh& obj = *light;
-    //float speed = 750;
-    //if(!paused)
-    //{
-    //    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 0, 1) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 0, -1) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(1, 0, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(-1, 0, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 1, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, -1, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-    //        obj.linearVelocity = glm::vec3();
-    //        obj.angularVelocity = glm::vec3();
-    //    }
-    //}
-
-
-    //Mesh& obj = meshList[1];
-    //float speed = 0.01;
-    //if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    //    obj.position += glm::vec3(0, 0, 1) * speed;
-    //if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    //    obj.position -= glm::vec3(0, 0, 1) * speed;
-    //if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    //    obj.position += glm::vec3(1, 0, 0) * speed;
-    //if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    //    obj.position -= glm::vec3(1, 0, 0) * speed;
-    //if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-    //    obj.position += glm::vec3(0, 1, 0) * speed;
-    //if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-    //    obj.position -= glm::vec3(0, 1, 0) * speed;
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
-}
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
-    float xpos = static_cast<float>(xposIn);
-    float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse) {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-    lastX = xpos;
-    lastY = ypos;
-
-    camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
-}
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_Q)
-            showAabb = !showAabb;
-        if (key == GLFW_KEY_E)
-            showContactPoints = !showContactPoints;
-        if (key == GLFW_KEY_R)
-            showNormals = !showNormals;
-        if (key == GLFW_KEY_T)
-            showCollisionNormal = !showCollisionNormal;
-
-        if (key == GLFW_KEY_G)
-            paused = !paused;
-
-        if (key == GLFW_KEY_H)
-            pressedKey = 'H';
-    }
-}
-
-void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
-        pressedKey = "Mouse1";
-    }
-}
