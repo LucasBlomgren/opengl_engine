@@ -8,17 +8,20 @@
 #include <chrono>
 
 #include "initOpenGL.h"
+#include "engineState.h"
 #include "inputManager.h"
 #include "camera.h"
 #include "physics.h"
 #include "sceneBuilder.h"
 #include "shader.h"
 #include "mesh.h"
+
 #include "drawContactPoints.h"
 #include "xyzObject.h"
 #include "worldFrame.h"
-#include "vertex.h"
 #include "drawLine.h"
+
+#include "cubeData.h"
 
 // Överlagra operator << för glm::vec3
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -26,81 +29,23 @@ std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     return os;
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-// camera
-Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
-
 // timing
 float deltaTime = 0.0f;	
 float lastFrame = 0.0f;
-
-std::vector<Vertex> cubeVertices = {
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},  // FRONT
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},
-
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},  // BACK
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},
-
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},  // LEFT
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},
-
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},  // RIGHT
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},
-
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},  // BOT
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},
-
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)},  // TOP 
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)}
-};
-std::vector<unsigned int> indices = {
-    0, 1, 2,
-    3, 4, 5,
-    6, 7, 8,
-    9, 10, 11,
-    12, 13, 14,
-    15, 16, 17,
-    18, 19, 20,
-    21, 22, 23,
-    24, 25, 26,
-    27, 28, 29,
-    30, 31, 32,
-    33, 34, 35
-};
 
 EngineState engineState;
 InputManager inputManager;
 PhysicsEngine physicsEngine;
 SceneBuilder sceneBuilder;
+Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
 
 std::vector<Mesh> meshList;
 
@@ -284,9 +229,3 @@ int main()
     glfwTerminate();
     return 0;
 }
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
-

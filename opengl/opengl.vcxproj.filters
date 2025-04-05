@@ -36,6 +36,7 @@
     <ClInclude Include="initOpenGL.h" />
     <ClInclude Include="inputManager.h" />
     <ClInclude Include="engineState.h" />
+    <ClInclude Include="cubeData.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="object.fs" />

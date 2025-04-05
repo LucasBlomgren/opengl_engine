@@ -20,6 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
+    <ClInclude Include="cubeData.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
     <ClCompile Include="drawLine.cpp" />
     <ClCompile Include="engineState.cpp" />
     <ClCompile Include="glad.c" />
