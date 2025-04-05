@@ -1,4 +1,5 @@
-#pragma once
+#include "sweepandprune.h"
+
 void updateEdgePos(const std::vector<Mesh>& meshList, std::vector<Edge>& allEdgesX, std::vector<Edge>& allEdgesY, std::vector<Edge>& allEdgesZ)
 {
     // Pointers = ingen update required

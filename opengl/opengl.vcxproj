@@ -24,17 +24,33 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="mesh.h" />
+    <ClCompile Include="mesh.cpp" />
+    <ClCompile Include="physics.cpp" />
+    <ClCompile Include="rotateCube.cpp" />
+    <ClCompile Include="sceneBuilder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
+    <ClCompile Include="collisionManifold.cpp">
+      <FileType>CppHeader</FileType>
+    </ClCompile>
     <ClInclude Include="collisionManifold.h" />
     <ClInclude Include="drawContactPoints.h" />
     <ClInclude Include="drawLine.h" />
+    <ClInclude Include="mesh.h" />
     <ClInclude Include="OOBB.h" />
+    <ClInclude Include="physics.h" />
+    <ClInclude Include="rotateCube.h" />
+    <ClCompile Include="SAT.cpp">
+      <FileType>CppHeader</FileType>
+    </ClCompile>
     <ClInclude Include="SAT.h" />
+    <ClInclude Include="sceneBuilder.h" />
     <ClInclude Include="shader.h" />
-    <ClInclude Include="sweepnprune.h" />
+    <ClInclude Include="sweepandprune.h" />
+    <ClCompile Include="sweepandprune.cpp">
+      <FileType>CppHeader</FileType>
+    </ClCompile>
     <ClInclude Include="vertex.h" />
     <ClInclude Include="worldFrame.h" />
     <ClInclude Include="xyzObject.h" />

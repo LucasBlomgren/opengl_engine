@@ -2,12 +2,13 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <stb/stb_image.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
 #include <glm/gtx/component_wise.hpp>
-#include <stb/stb_image.h>
+
 
 #include <iostream>
 #include <vector>
@@ -19,13 +20,12 @@
 #include <unordered_map>
 
 #include "camera.h"
+#include "physics.h"
+#include "sceneBuilder.h"
 #include "shader.h"
 #include "mesh.h"
-#include "SAT.h"
-#include "collisionManifold.h"
 #include "drawContactPoints.h"
 #include "xyzObject.h"
-#include "sweepnprune.h"
 #include "worldFrame.h"
 #include "vertex.h"
 #include "drawLine.h"
@@ -42,10 +42,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouseButtonCallback(GLFWwindow* window, int key, int action, int mods);
-void createObject(glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, bool floorTexture);
-glm::quat rotateCubeWithQuaternion(GLFWwindow* window, glm::quat currentOrientation, float deltaTime);
-void createScene();
-
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -119,12 +115,6 @@ std::vector<unsigned int> indices = {
     33, 34, 35
 };
 
-std::vector<Mesh> meshList;
-std::vector<Edge> allEdgesX;
-std::vector<Edge> allEdgesY;
-std::vector<Edge> allEdgesZ;
-std::unordered_map<size_t, Contact> contactCache;
-
 bool FPS = 1;
 bool paused = false;
 bool showAabb;
@@ -132,14 +122,12 @@ bool showContactPoints;
 bool showCollisionNormal;
 bool showNormals;
 
-int objectId = 0;
-int amountObjects = 5;
-int amountStacks = 1;
+std::string pressedKey = "-1";
 
-float lightStrength = 100.0f;
-glm::vec3 lightStartingPos{ 250,180,200 };
-glm::vec3 lightPos = lightStartingPos;
-Mesh* light = nullptr;
+PhysicsEngine physicsEngine;
+SceneBuilder sceneBuilder;
+
+std::vector<Mesh> meshList;
 
 int main()
 {
@@ -238,15 +226,23 @@ int main()
     std::random_device rd;
     std::mt19937 g(rd());
 
-    light = new Mesh(-1, cubeVertices, indices, lightPos, glm::vec3(10, 1, 10), 1, 0, 0);
-    light->hasGravity = false;
-
     // create objects
-    createScene();
+    //(PhysicsEngine& physicsEngine, std::vector<Mesh>& meshList, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices)
+    sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
 
     // main loop
     while (!glfwWindowShouldClose(window))
     {
+        if (pressedKey == "H") {
+            sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
+            pressedKey = "-1";
+        }
+        if (pressedKey == "Mouse1") {
+            sceneBuilder.createObject(physicsEngine, meshList, camera.Position + camera.Front * 30.0f, glm::vec3(10, 10, 10), 1, 0, 0, cubeVertices, indices);
+            meshList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
+            pressedKey = "-1";
+        }
+
         auto current_time = std::chrono::high_resolution_clock::now();
         // per-frame time logic
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -267,303 +263,12 @@ int main()
         shader.setMat4("view", view);
 
         // physics step
-        float num_iterations = 1;
         if (!paused)
-        for (int i = 0; i < num_iterations; i++)
-        {
-            float strength = float(i + 1) / num_iterations;
-
-            // update objects pos etc.
-            for (Mesh& object : meshList)
-            {
-                if (object.id == 1)
-                    object.orientation = rotateCubeWithQuaternion(window, object.orientation, deltaTime);
-
-                object.updatePos(num_iterations, deltaTime);
-                object.updateAABB();
-                object.colliding = false;
-
-                if(!object.isStatic)
-                    object.OOBB_shouldUpdate = true;
-                if (showNormals) 
-                    object.updateOOBB();
-            }
-            light->updatePos(num_iterations, deltaTime);
-            lightPos = light->position;
-
-            // Broad phase
-            updateEdgePos(meshList, allEdgesX, allEdgesY, allEdgesZ);
-
-            float varianceX = calculateVariance(allEdgesX);
-            float varianceY = calculateVariance(allEdgesY);
-            float varianceZ = calculateVariance(allEdgesZ);
-
-            std::vector<Edge>* selectedEdges = findMaxVarianceAxis(varianceX, varianceY, varianceZ, allEdgesX, allEdgesY, allEdgesZ);
-            insertionSort(*selectedEdges);
-            std::vector<std::pair<int, int>> collisionCouplesList = findOverlap(*selectedEdges);
-
-            int axisOrder;
-            if (selectedEdges == &allEdgesX) { axisOrder = 0; }
-            else if (selectedEdges == &allEdgesY) { axisOrder = 1; }
-            else { axisOrder = 2; }
-
-            for (const std::pair<int, int>& collisionCouple : collisionCouplesList)
-            {
-                if (meshList[collisionCouple.first].asleep and meshList[collisionCouple.second].asleep)
-                    continue;
-
-                Mesh& objA = meshList[collisionCouple.first];
-                Mesh& objB = meshList[collisionCouple.second];
-
-                if (checkOtherAxes(axisOrder, objA, objB))
-                {
-                    objA.updateOOBB(); 
-                    objB.updateOOBB();
-
-                    // Narrow phase
-                    glm::vec3 collisionNormal;
-                    float depth = std::numeric_limits<float>::max();
-                    int collisionNormalOwner = 0;
-                    if (IntersectPolygons(objA, objB, collisionNormal, depth, collisionNormalOwner))
-                    {
-                        objA.colliding = true; 
-                        objB.colliding = true;
-                        objA.collisionPoint = objA.position;
-                        objB.collisionPoint = objB.position;
-
-                        glm::vec3 direction = objB.position - objA.position;
-                        if (glm::dot(direction, collisionNormal) < 0) 
-                            collisionNormal = -collisionNormal;
-
-                        // contactPoints
-                        Mesh* objA_ptr = &objA;
-                        Mesh* objB_ptr = &objB;
-
-                        Contact contact = createContact(contactCache, objA, objB, collisionNormal, collisionNormalOwner);
-
-                        if (contact.counter == 0) {
-                            std::cout << "No contact points found" << std::endl;
-                            std::cout << depth << std::endl;
-                            continue;
-                        }
-
-                        // render normal
-                        if (showCollisionNormal) {
-
-                            glm::vec3 lineStart = glm::vec3(200, 60, 200);
-                            glm::vec3 lineEnd = lineStart + collisionNormal * 40.0f;
-
-                            // 4. Rita linjen
-                            drawLine(shader, VAO_line, lineStart, lineEnd, glm::vec3(1.0f, 0.0f, 0.0f)); // t.ex. röd färgdrawLine(shader, VAO_line, )
-                        }
-
-                        //objA.setAsleep(deltaTime);
-                        //objB.setAsleep(deltaTime);
-
-                        //if (objA.asleep and objB.asleep)
-                        //    continue;
-
-                        std::shuffle(contact.points.begin(), contact.points.begin() + contact.counter, g);
-
-                        // PGS solver
-                        int maxIterations = 20;
-                        for (int i = 0; i < maxIterations; i++) {
-                            bool converged = true;
-
-                            for (int j = 0; j < contact.counter; j++) {
-                                ContactPoint& cp = contact.points[j];
-
-                                glm::vec3 relativeVelocity = (objB.linearVelocity + glm::cross(objB.angularVelocity, cp.rB)) -
-                                    (objA.linearVelocity + glm::cross(objA.angularVelocity, cp.rA));
-
-                                float normalVelocity = glm::dot(relativeVelocity, contact.normal);
-
-                                // Beräkna impulsen med redan uträkna target bounce velocity
-                                float J = -(normalVelocity - cp.targetBounceVelocity);
-                                J *= cp.m_eff;
-
-                                // Clamp
-                                float temp = cp.accumulatedImpulse;
-                                cp.accumulatedImpulse = glm::max(temp + J, 0.0f);
-                                float deltaImpulse = cp.accumulatedImpulse - temp;
-
-                                // Add normal to impulse
-                                glm::vec3 deltaNormalImpulse = deltaImpulse * contact.normal;
-
-                                // Apply impulses
-                                if (glm::length(deltaNormalImpulse) > 1e-6f) { 
-                                    objA.linearVelocity -= deltaNormalImpulse * objA.invMass;
-                                    objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, deltaNormalImpulse);
-
-                                    objB.linearVelocity += deltaNormalImpulse * objB.invMass;
-                                    objB.angularVelocity += objB.inverseInertia * glm::cross(cp.rB, deltaNormalImpulse);
-
-                                    // impulse was changed
-                                    converged = false; 
-                                }
-
-                                //--------------- Pre-calculate for friction ----------------
-                                // Project tangential velocity to the tangent plane
-                                float v_t1 = glm::dot(relativeVelocity, cp.t1);
-                                float v_t2 = glm::dot(relativeVelocity, cp.t2);
-                                // Combine the tangential velocities to a vector
-                                float vtMagnitude = glm::sqrt(v_t1 * v_t1 + v_t2 * v_t2);
-
-                                // Beräkna effektiv massa längs cp.t1 och cp.t2 (som tidigare)
-                                float k_t1 = (objA.invMass + objB.invMass)
-                                    + glm::dot(glm::cross(cp.rA, cp.t1), objA.inverseInertia * glm::cross(cp.rA, cp.t1))
-                                    + glm::dot(glm::cross(cp.rB, cp.t1), objB.inverseInertia * glm::cross(cp.rB, cp.t1));
-                                float invMassT1 = 1.0f / k_t1;
-
-                                float k_t2 = (objA.invMass + objB.invMass)
-                                    + glm::dot(glm::cross(cp.rA, cp.t2), objA.inverseInertia * glm::cross(cp.rA, cp.t2))
-                                    + glm::dot(glm::cross(cp.rB, cp.t2), objB.inverseInertia * glm::cross(cp.rB, cp.t2));
-                                float invMassT2 = 1.0f / k_t2;
-
-                                // Beräkna preliminära impulser i varje riktning:
-                                float J1 = -v_t1 * invMassT1;
-                                float J2 = -v_t2 * invMassT2;
-
-                                // ---------- Static friction ----------
-                                if (vtMagnitude < 0.5f)
-                                {
-                                    // Den totala önskade friktionsimpulsen i tangentplanet:
-                                    glm::vec3 desiredFrictionImpulse = (J1 * cp.t1) + (J2 * cp.t2);
-
-                                    // Beräkna maximal statisk friktionsimpuls (mu_static * |accumulatedImpulse|)
-                                    float mu_static = 0.9f; // Justera beroende på material
-                                    float maxStaticImpulse = mu_static * fabs(cp.accumulatedImpulse);
-
-                                    float impulseMag = glm::length(desiredFrictionImpulse);
-                                    if (impulseMag > maxStaticImpulse) {
-                                        desiredFrictionImpulse *= (maxStaticImpulse / impulseMag);
-                                    }
-
-                                    // Applicera den statiska friktionsimpulsen:
-                                    objA.linearVelocity -= desiredFrictionImpulse * objA.invMass;
-                                    objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, desiredFrictionImpulse);
-
-                                    objB.linearVelocity += desiredFrictionImpulse * objB.invMass;
-                                    objB.angularVelocity += objB.inverseInertia * glm::cross(cp.rB, desiredFrictionImpulse);
-                                }
-
-                                // ---------- Dynamisk friktion (när kontakt glider) ----------
-                                else
-                                {
-                                    // Uppdatera de ackumulerade friktionsimpulserna (använd samma klampningsmetod som du gör idag)
-                                    float oldFrictionImpulse1 = cp.accumulatedFrictionImpulse1;
-                                    float newFrictionImpulse1 = oldFrictionImpulse1 + J1;
-                                    float oldFrictionImpulse2 = cp.accumulatedFrictionImpulse2;
-                                    float newFrictionImpulse2 = oldFrictionImpulse2 + J2;
-
-                                    // Klampar impulsen så att total friktion inte överskrider mu_d * |accumulatedImpulse|
-                                    float mu_dynamic = 0.5f;  // Exempelvärde – justera efter material
-                                    float maxFriction = mu_dynamic * fabs(cp.accumulatedImpulse);
-                                    float lengthSq = newFrictionImpulse1 * newFrictionImpulse1 + newFrictionImpulse2 * newFrictionImpulse2;
-                                    float maxFrictionSq = maxFriction * maxFriction;
-                                    if (lengthSq > maxFrictionSq) {
-                                        float scale = maxFriction / sqrt(lengthSq);
-                                        newFrictionImpulse1 *= scale;
-                                        newFrictionImpulse2 *= scale;
-                                    }
-
-                                    float deltaFrictionImpulse1 = newFrictionImpulse1 - oldFrictionImpulse1;
-                                    float deltaFrictionImpulse2 = newFrictionImpulse2 - oldFrictionImpulse2;
-                                    cp.accumulatedFrictionImpulse1 = newFrictionImpulse1;
-                                    cp.accumulatedFrictionImpulse2 = newFrictionImpulse2;
-
-                                    // Bygg friktionsimpulsen i tangentplanet:
-                                    glm::vec3 frictionImpulse = (deltaFrictionImpulse1 * cp.t1) + (deltaFrictionImpulse2 * cp.t2);
-
-                                    // Applicera impulsen:
-                                    if (glm::length(frictionImpulse) > 1e-6f) {
-                                        objA.linearVelocity -= frictionImpulse * objA.invMass;
-                                        objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, frictionImpulse);
-
-                                        objB.linearVelocity += frictionImpulse * objB.invMass;
-                                        objB.angularVelocity += objB.inverseInertia * glm::cross(cp.rB, frictionImpulse);
-
-                                        converged = false;
-                                    }
-                                }
-
-                                // ---------- TWIST FRICTION ----------
-                                // Beräkna den relativa rotationshastigheten kring kontaktnormalen
-                                // Detta är hur snabbt de roterar relativt varandra kring "n"
-                                float relativeAngularSpeed = glm::dot((objB.angularVelocity - objA.angularVelocity), contact.normal);
-
-                                // Beräkna effektiv massa för twist. 
-                                // Här använder vi kropparnas inverseInertia (i world space) projicerade på kontaktnormalen.
-                                float effectiveMassTwist = 1.0f / (glm::dot(contact.normal, objA.inverseInertia * contact.normal) +
-                                    glm::dot(contact.normal, objB.inverseInertia * contact.normal));
-
-                                // Beräkna preliminär twist impulse (i rotationsdomänen)
-                                float twistImpulse = -relativeAngularSpeed * effectiveMassTwist;
-
-                                // Klampa twistimpulsen baserat på en twist-friktionskoefficient. 
-                                // Ofta används en formel liknande: maxTwistImpulse = mu_twist * fabs(cp.accumulatedImpulse)
-                                // där cp.accumulatedImpulse är den totala normala impulsen.
-                                float mu_twist = 0.9f; // Exempelvärde – justera efter behov
-                                float maxTwistImpulse = mu_twist * fabs(cp.accumulatedImpulse);
-
-                                // Ackumulera twistimpulsen
-                                float oldTwistImpulse = cp.accumulatedTwistImpulse;
-                                float newTwistImpulse = glm::clamp(oldTwistImpulse + twistImpulse, -maxTwistImpulse, maxTwistImpulse);
-                                float deltaTwistImpulse = newTwistImpulse - oldTwistImpulse;
-                                cp.accumulatedTwistImpulse = newTwistImpulse;
-
-                                // Den twistimpuls vi applicerar är ett moment (angular impulse) kring kontaktnormalen
-                                glm::vec3 twistImpulseVec = deltaTwistImpulse * contact.normal;
-
-                                // Applicera twistimpulsen på kropparnas angulära hastigheter
-                                if (glm::length(twistImpulseVec) > 1e-6f) {
-                                    objA.angularVelocity -= objA.inverseInertia * twistImpulseVec;
-                                    objB.angularVelocity += objB.inverseInertia * twistImpulseVec;
-                                    converged = false;
-                                }
-                            }
-                            // Om vi inte har någon impuls att applicera, är vi klara
-                            if (converged)
-                                break;   
-                        }
-
-                        // Bias impulses
-                        for (int j = 0; j < contact.counter; j++) {
-                            ContactPoint& cp = contact.points[j];
-                            float penetrationError = glm::max(cp.depth - 0.01f, 0.0f);
-                            float J_bias = cp.m_eff * (0.2f / deltaTime) * penetrationError;
-                            glm::vec3 biasImpulseVec = J_bias * contact.normal;
-
-                            objA.biasLinearVelocity -= biasImpulseVec * objA.invMass;
-                            objB.biasLinearVelocity += biasImpulseVec * objB.invMass;
-                        }
-                    }
-                }
-            }
-            int maxFramesWithoutCollision = 3;  // t.ex. behåll upp till 3 frames
-            for (auto it = contactCache.begin(); it != contactCache.end(); ) {
-                if (!it->second.wasUsedThisFrame) {
-                    it->second.framesSinceUsed++;
-
-                    // Ta bort manifold efter X antal frames utan kollisionsmatch
-                    if (it->second.framesSinceUsed > maxFramesWithoutCollision) {
-                        it = contactCache.erase(it);
-                        continue;
-                    }
-                }
-                else {
-                    // Nollställ för nästa frame
-                    it->second.wasUsedThisFrame = false;
-                    it->second.framesSinceUsed = 0;  // Nollställ räknaren vid träff
-                }
-                ++it;
-            }
-        }
-
-
-        shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
-        shader.setVec3("lightPos", lightPos);
-        shader.setVec3("viewPos", camera.Position);
+            physicsEngine.step(window, meshList, deltaTime, showNormals, g);
+        
+        //shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
+        //shader.setVec3("lightPos", lightPos);
+        //shader.setVec3("viewPos", camera.Position);
 
         // render
         for (Mesh& object : meshList)
@@ -590,11 +295,11 @@ int main()
             shader.setVec3("uColor", glm::vec3(0, 250, 154));
             shader.setBool("isContactPoint", true);
 
-            for (auto& pair : contactCache) {
-                Contact& contact = pair.second;
-                for (int i = 0; i < contact.counter; i++)
-                    drawContactPoint(shader, VAO_contactPoint, contact.points[i].globalCoord);
-            }
+            //for (auto& pair : contactCache) {
+            //    Contact& contact = pair.second;
+            //    for (int i = 0; i < contact.counter; i++)
+            //        drawContactPoint(shader, VAO_contactPoint, contact.points[i].globalCoord);
+            //}
             shader.setBool("isContactPoint", false);
             //glEnable(GL_DEPTH_TEST);
         }
@@ -602,11 +307,11 @@ int main()
         draw_worldFrame(shader, VAO_worldFrame);
 
         // render light source
-        light->setModelMatrix();
-        shader.setMat4("model", light->modelMatrix);
-        shader.setVec3("uColor", glm::vec3(255,255,255));
-        glBindVertexArray(light->VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        //light->setModelMatrix();
+        //shader.setMat4("model", light->modelMatrix);
+        //shader.setVec3("uColor", glm::vec3(255,255,255));
+        //glBindVertexArray(light->VAO);
+        //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // cout FPS
         if (FPS) {
@@ -628,104 +333,33 @@ int main()
     return 0;
 }
 
-void createObject(glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, bool floorTexture)
-{
-    Mesh object(objectId, cubeVertices, indices, pos, size, mass, isStatic, floorTexture);
-
-    meshList.emplace_back(object);
-    objectId++;
-
-    allEdgesX.push_back(object.AABB.Box.min.x);
-    allEdgesX.push_back(object.AABB.Box.max.x);
-    allEdgesY.push_back(object.AABB.Box.min.y);
-    allEdgesY.push_back(object.AABB.Box.max.y);
-    allEdgesZ.push_back(object.AABB.Box.min.z);
-    allEdgesZ.push_back(object.AABB.Box.max.z);
-}
-
-void createScene()
-{
-    objectId = 0;
-    meshList.clear();
-    allEdgesX.clear();
-    allEdgesY.clear();
-    allEdgesZ.clear();
-    contactCache.clear();
-
-    // floor
-    createObject(glm::vec3(250, -5, 250), glm::vec3(500, 10, 500), 0, 1, 1);
-
-    // creating 100 tiles of floor 
-    //for (int i = 0; i < 10; i++)
-    //    for (int j = 0; j < 10; j++)
-    //        createObject(glm::vec3(250+i*500, -5, 250+j * -500), glm::vec3(500, 10, 500), 0, 1, 1);
-
-    // player controlled box
-    createObject(glm::vec3(245, 60, 100), glm::vec3(10, 10, 10), 1, 0, 0);
-
-    // slanted platform
-    createObject(glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, 0);
-    meshList[objectId-1].orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-
-    //---catapult---
-    // support
-    createObject(glm::vec3(345, 15, 200), glm::vec3(5, 30, 20), 1, 1, 0);
-    // plank
-    int mass = 50;
-    glm::vec3 size = glm::vec3(140, 2, 5);
-    createObject(glm::vec3(345, 31, 200), size, mass, 0, 0);
-    float I_x = (1.0f / 12.0f) * mass * (size.y * size.y + size.z * size.z);
-    float I_y = (1.0f / 12.0f) * mass * (size.x * size.x + size.y * size.y);
-    float I_z = (1.0f / 12.0f) * mass * (size.x * size.x + size.z * size.z);
-
-    meshList[objectId-1].inverseInertia = glm::mat3(
-        glm::vec3(1.0f / I_x, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f / I_y, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f / I_z)
-    );
-    // projectile
-    createObject(glm::vec3(410, 34.5, 200), glm::vec3(5, 5, 5), 1, 0, 0);
-    // counterweight
-    createObject(glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, 0);
-
-    // box stacks
-    for (int j = 0; j < amountStacks; j++)
-        for (int i = 0; i < amountObjects; i++)
-            createObject(glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, 0);
-
-    // light
-    lightPos = lightStartingPos;
-    light->position = lightStartingPos;
-    light->linearVelocity = glm::vec3(0, 0, 0);
-}
-
 void processInput(GLFWwindow* window)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
     //Mesh& obj = meshList[1];
-    Mesh& obj = *light;
-    float speed = 750;
-    if(!paused)
-    {
-        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-            obj.addForce(glm::vec3(0, 0, 1) * speed);
-        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-            obj.addForce(glm::vec3(0, 0, -1) * speed);
-        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-            obj.addForce(glm::vec3(1, 0, 0) * speed);
-        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-            obj.addForce(glm::vec3(-1, 0, 0) * speed);
-        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            obj.addForce(glm::vec3(0, 1, 0) * speed);
-        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-            obj.addForce(glm::vec3(0, -1, 0) * speed);
-        if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-            obj.linearVelocity = glm::vec3();
-            obj.angularVelocity = glm::vec3();
-        }
-    }
+    //Mesh& obj = *light;
+    //float speed = 750;
+    //if(!paused)
+    //{
+    //    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(0, 0, 1) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(0, 0, -1) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(1, 0, 0) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(-1, 0, 0) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(0, 1, 0) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+    //        obj.addForce(glm::vec3(0, -1, 0) * speed);
+    //    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    //        obj.linearVelocity = glm::vec3();
+    //        obj.angularVelocity = glm::vec3();
+    //    }
+    //}
 
 
     //Mesh& obj = meshList[1];
@@ -797,70 +431,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             paused = !paused;
 
         if (key == GLFW_KEY_H)
-            createScene();
+            pressedKey = 'H';
     }
 }
 
-void mouseButtonCallback(GLFWwindow * window, int button, int action, int mods) {
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
-        createObject(camera.Position + camera.Front*30.0f, glm::vec3(10, 10, 10), 1, 0, 0);
-        meshList[objectId - 1].linearVelocity = camera.Front * 500.0f;
+        pressedKey = "Mouse1";
     }
-}
-
-// Uppdaterar en kvaternion-baserad rotation baserat på knapptryck (1–6).
-// deltaTime används för att göra rotationen tidsberoende (smoother).
-glm::quat rotateCubeWithQuaternion(GLFWwindow* window, glm::quat currentOrientation, float deltaTime)
-{
-    // Hur fort vi vill rotera (grader per sekund) – justerbart efter behov
-    float rotationSpeed = 1.0;
-    const float degreesPerSecond = 90.0f; // ex. 90 grader/s
-    float angle = glm::radians(degreesPerSecond * rotationSpeed * deltaTime);
-    // angle är nu i radianer, och motsvarar "hur många radianer vi roterar detta frame".
-
-    // För att slippa if-satser med +1 / -1, kan vi göra såhär:
-
-    // Rotera runt X-axeln?
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
-    {
-        // KEY_1 => -1 kring X
-        glm::quat delta = glm::angleAxis(-angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
-    {
-        // KEY_2 => +1 kring X
-        glm::quat delta = glm::angleAxis(+angle, glm::vec3(1.0f, 0.0f, 0.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-
-    // Rotera runt Y-axeln?
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
-    {
-        glm::quat delta = glm::angleAxis(-angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
-    {
-        glm::quat delta = glm::angleAxis(+angle, glm::vec3(0.0f, 1.0f, 0.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-
-    // Rotera runt Z-axeln?
-    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS)
-    {
-        glm::quat delta = glm::angleAxis(-angle, glm::vec3(0.0f, 0.0f, 1.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS)
-    {
-        glm::quat delta = glm::angleAxis(+angle, glm::vec3(0.0f, 0.0f, 1.0f));
-        currentOrientation = currentOrientation * delta;
-    }
-
-    // Normalisera för säkerhets skull (undvik drift från enhetskvaternion)
-    currentOrientation = glm::normalize(currentOrientation);
-
-    // Returnera den nya orienteringen
-    return currentOrientation;
 }

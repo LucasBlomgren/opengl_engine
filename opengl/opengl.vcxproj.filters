@@ -4,22 +4,32 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
-    <ClCompile Include="mesh.h" />
+    <ClCompile Include="mesh.cpp" />
     <ClCompile Include="AABB.h" />
     <ClCompile Include="drawLine.cpp" />
+    <ClCompile Include="physics.cpp" />
+    <ClCompile Include="sceneBuilder.cpp" />
+    <ClCompile Include="rotateCube.cpp" />
+    <ClCompile Include="SAT.cpp" />
+    <ClCompile Include="sweepandprune.cpp" />
+    <ClCompile Include="collisionManifold.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="shader.h" />
     <ClInclude Include="xyzObject.h" />
-    <ClInclude Include="sweepnprune.h" />
     <ClInclude Include="worldFrame.h" />
-    <ClInclude Include="SAT.h" />
     <ClInclude Include="vertex.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="OOBB.h" />
-    <ClInclude Include="collisionManifold.h" />
     <ClInclude Include="drawContactPoints.h" />
     <ClInclude Include="drawLine.h" />
+    <ClInclude Include="physics.h" />
+    <ClInclude Include="sceneBuilder.h" />
+    <ClInclude Include="rotateCube.h" />
+    <ClInclude Include="SAT.h" />
+    <ClInclude Include="collisionManifold.h" />
+    <ClInclude Include="sweepandprune.h" />
+    <ClInclude Include="mesh.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="object.fs" />
