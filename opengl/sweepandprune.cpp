@@ -1,22 +1,22 @@
 #include "sweepandprune.h"
 
-void updateEdgePos(const std::vector<Mesh>& meshList, std::vector<Edge>& allEdgesX, std::vector<Edge>& allEdgesY, std::vector<Edge>& allEdgesZ)
+void updateEdgePos(const std::vector<GameObject>& GameObjectList, std::vector<Edge>& allEdgesX, std::vector<Edge>& allEdgesY, std::vector<Edge>& allEdgesZ)
 {
     // Pointers = ingen update required
     for (Edge& edge : allEdgesX)
     {
-        if (edge.isMin) { edge.coord = meshList[edge.id].AABB.Box.min.x.coord; }
-        else            { edge.coord = meshList[edge.id].AABB.Box.max.x.coord; }
+        if (edge.isMin) { edge.coord = GameObjectList[edge.id].AABB.Box.min.x.coord; }
+        else            { edge.coord = GameObjectList[edge.id].AABB.Box.max.x.coord; }
     }
     for (Edge& edge : allEdgesY)
     {
-        if (edge.isMin) { edge.coord = meshList[edge.id].AABB.Box.min.y.coord; }
-        else            { edge.coord = meshList[edge.id].AABB.Box.max.y.coord; }
+        if (edge.isMin) { edge.coord = GameObjectList[edge.id].AABB.Box.min.y.coord; }
+        else            { edge.coord = GameObjectList[edge.id].AABB.Box.max.y.coord; }
     }
     for (Edge& edge : allEdgesZ)
     {
-        if (edge.isMin) { edge.coord = meshList[edge.id].AABB.Box.min.z.coord; }
-        else            { edge.coord = meshList[edge.id].AABB.Box.max.z.coord; }
+        if (edge.isMin) { edge.coord = GameObjectList[edge.id].AABB.Box.min.z.coord; }
+        else            { edge.coord = GameObjectList[edge.id].AABB.Box.max.z.coord; }
     }
 }
 
@@ -83,7 +83,7 @@ std::vector<std::pair<int,int>> findOverlap(const std::vector<Edge>& edges)
     return collisionCoupleslist;
 }
 
-bool checkOtherAxes(int axisOrder, Mesh& objA, Mesh& objB)
+bool checkOtherAxes(int axisOrder, GameObject& objA, GameObject& objB)
 {
     Box& boxA = objA.AABB.Box;
     Box& boxB = objB.AABB.Box;

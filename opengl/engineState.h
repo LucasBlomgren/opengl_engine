@@ -12,6 +12,7 @@ public:
     void ToggleShowNormals();
 
     void SetPressedKey(const std::string& key);
+    void ClearPressedKey();
 
     bool IsPaused() const;
     bool GetShowNormals() const;

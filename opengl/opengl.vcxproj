@@ -20,9 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
+    <ClCompile Include="textureManager.cpp" />
+    <ClCompile Include="xyzObject.cpp" />
+    <ClCompile Include="worldFrame.cpp" />
     <ClInclude Include="cubeData.h">
       <FileType>CppCode</FileType>
     </ClInclude>
+    <ClCompile Include="drawContactPoints.cpp" />
     <ClCompile Include="drawLine.cpp" />
     <ClCompile Include="engineState.cpp" />
     <ClCompile Include="glad.c" />
@@ -30,8 +34,9 @@
     <ClCompile Include="inputManager.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="mesh.cpp" />
+    <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="physics.cpp" />
+    <ClCompile Include="renderer.cpp" />
     <ClCompile Include="rotateCube.cpp" />
     <ClCompile Include="sceneBuilder.cpp" />
   </ItemGroup>
@@ -46,9 +51,10 @@
     <ClInclude Include="engineState.h" />
     <ClInclude Include="initOpenGL.h" />
     <ClInclude Include="inputManager.h" />
-    <ClInclude Include="mesh.h" />
+    <ClInclude Include="GameObject.h" />
     <ClInclude Include="OOBB.h" />
     <ClInclude Include="physics.h" />
+    <ClInclude Include="renderer.h" />
     <ClInclude Include="rotateCube.h" />
     <ClCompile Include="SAT.cpp">
       <FileType>CppHeader</FileType>
@@ -60,6 +66,7 @@
     <ClCompile Include="sweepandprune.cpp">
       <FileType>CppHeader</FileType>
     </ClCompile>
+    <ClInclude Include="textureManager.h" />
     <ClInclude Include="vertex.h" />
     <ClInclude Include="worldFrame.h" />
     <ClInclude Include="xyzObject.h" />

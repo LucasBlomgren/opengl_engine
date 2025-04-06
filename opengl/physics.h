@@ -7,7 +7,7 @@
 #include "sweepandprune.h"
 #include "SAT.h"
 #include "collisionManifold.h"
-#include "mesh.h"
+#include "GameObject.h"
 #include "rotateCube.h"
 
 class PhysicsEngine {
@@ -19,6 +19,6 @@ public:
     std::vector<Edge> allEdgesY;
     std::vector<Edge> allEdgesZ;
 
-    void step(GLFWwindow* window, std::vector<Mesh>& meshList, float deltaTime, bool showNormals, std::mt19937 rng);
+    void step(GLFWwindow* window, std::vector<GameObject>& meshList, float deltaTime, bool showNormals, std::mt19937 rng);
     void clearPhysicsData();
 };

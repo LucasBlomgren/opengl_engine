@@ -18,7 +18,7 @@ std::pair<float, float> ProjectVertices(const std::array<glm::vec3, 8>& vertices
 	return std::make_pair(min, max);
 }
 
-bool IntersectPolygons(Mesh& objA, Mesh& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner)
+bool IntersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner)
 {
     OOBB& boxA = objA.OOBB;
     OOBB& boxB = objB.OOBB;

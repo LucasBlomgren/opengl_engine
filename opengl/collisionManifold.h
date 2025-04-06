@@ -10,7 +10,7 @@
 #include <cmath>
 #include <unordered_map>
 #include "drawLine.h"
-#include "Mesh.h"
+#include "GameObject.h"
 
 struct Plane
 {
@@ -20,8 +20,8 @@ struct Plane
 
 struct InitialContact
 {
-    Mesh* objA_ptr;
-    Mesh* objB_ptr;
+    GameObject* objA_ptr;
+    GameObject* objB_ptr;
     std::array<glm::vec3, 8> globalCoords;
     std::array<glm::vec3, 8> localCoords;
     std::array<float, 8> pointDepths;
@@ -32,7 +32,7 @@ struct InitialContact
 
     InitialContact() = default;
 
-    InitialContact(Mesh* objA, Mesh* objB, const std::array<glm::vec3, 4> refFace, const std::array<glm::vec3, 4> incFace, const glm::vec3 n)
+    InitialContact(GameObject* objA, GameObject* objB, const std::array<glm::vec3, 4> refFace, const std::array<glm::vec3, 4> incFace, const glm::vec3 n)
         : objA_ptr(objA), objB_ptr(objB), referenceFace(refFace), incidentFace(incFace), referenceFaceNormal(n)
     {}
 };
@@ -58,8 +58,8 @@ struct Contact
 {
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;
-    Mesh* objA_ptr;
-    Mesh* objB_ptr;
+    GameObject* objA_ptr;
+    GameObject* objB_ptr;
     std::array<ContactPoint, 4> points;
     int counter = 0;
     glm::vec3 normal;
@@ -67,12 +67,12 @@ struct Contact
 
     Contact() = default;
 
-    Contact(Mesh* objA, Mesh* objB, const glm::vec3 n)
+    Contact(GameObject* objA, GameObject* objB, const glm::vec3 n)
         : objA_ptr(objA), objB_ptr(objB), normal(n)
     {}
 };
 
-std::array<glm::vec3, 4> selectCollisionFace(Mesh& obj, const glm::vec3& normal);
+std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& normal);
 std::array<Plane, 4> createClippingPlanes(const std::array<glm::vec3, 4>& face, const glm::vec3& faceNormal);
 glm::vec3 getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane);
 bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint);
@@ -83,6 +83,6 @@ void computePenetrationDepth(InitialContact& initialContact);
 void PreComputeContactData(Contact& contact);
 size_t generateKey(int idA, int idB);
 void integrateContact(std::unordered_map<size_t, Contact>& contactCache, InitialContact& initialContact, Contact& finalContact);
-Contact createContact(std::unordered_map<size_t, Contact>& contactCache, Mesh& objA, Mesh& objB, glm::vec3 normal, int& collisionNormalOwner);
+Contact createContact(std::unordered_map<size_t, Contact>& contactCache, GameObject& objA, GameObject& objB, glm::vec3 normal, int& collisionNormalOwner);
 
 void drawClippingPlanes(const Shader& shader, unsigned int& VAO, const std::array<Plane, 4>& clippingPlanes, const std::array<glm::vec3, 4>& referenceFace);

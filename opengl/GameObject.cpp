@@ -1,6 +1,6 @@
-#include "mesh.h"
+#include "GameObject.h"
 
-void Mesh::setModelMatrix()
+void GameObject::setModelMatrix()
 {
     if (modelMatrixShouldUpdate == true) {
         modelMatrix = glm::mat4(1.0f);
@@ -11,7 +11,7 @@ void Mesh::setModelMatrix()
     }
 }
 
-void Mesh::calculateInverseInertiaForCube() {
+void GameObject::calculateInverseInertiaForCube() {
     float value = 6.0f / (mass * scale.x * scale.x);
 
     inverseInertia = glm::mat3(
@@ -21,20 +21,14 @@ void Mesh::calculateInverseInertiaForCube() {
     );
 }
 
-void Mesh::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime)
+void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime)
 {
-    // 1. Gör en "omega-kvaternion" med w=0, (x,y,z)=angularVelocity
     glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
-
-    // 2. Uppdatera orientation enligt explicit Euler:
-    //    q_new = q_old + 0.5 * dt * (omegaQuat * q_old)
     orientation += 0.5f * deltaTime * (omegaQuat * orientation);
-
-    // 3. Normalisera för att bibehålla enhetskvaternion
     orientation = glm::normalize(orientation);
 }
     
-void Mesh::drawMesh(Shader& shader)
+void GameObject::drawMesh(Shader& shader)
 {
     setModelMatrix();
 
@@ -46,7 +40,7 @@ void Mesh::drawMesh(Shader& shader)
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }
 
-void Mesh::updateAABB()
+void GameObject::updateAABB()
 {
     setModelMatrix();
 
@@ -54,7 +48,7 @@ void Mesh::updateAABB()
         AABB.update(verticesPositions, modelMatrix, position, isUniformlyScaled);
 }
 
-void Mesh::updateOOBB()
+void GameObject::updateOOBB()
 {
     setModelMatrix();
 
@@ -64,12 +58,12 @@ void Mesh::updateOOBB()
     }
 }
 
-void Mesh::addForce(const glm::vec3& f)
+void GameObject::addForce(const glm::vec3& f)
 {
     force += f;
 }
 
-void Mesh::updatePos(const float& num_iterations, const float& deltaTime)
+void GameObject::updatePos(const float& num_iterations, const float& deltaTime)
 {
     modelMatrixShouldUpdate = true;
 
@@ -109,7 +103,7 @@ void Mesh::updatePos(const float& num_iterations, const float& deltaTime)
     force = glm::vec3();
 }
 
-void Mesh::setAsleep(const float& deltaTime)
+void GameObject::setAsleep(const float& deltaTime)
 {
     if (sleepCounter > 10.0f) {
         asleep = true;
@@ -118,7 +112,7 @@ void Mesh::setAsleep(const float& deltaTime)
     }
 }
 
-void Mesh::setupMesh()
+void GameObject::setupMesh()
 {
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);

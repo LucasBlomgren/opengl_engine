@@ -1,6 +1,6 @@
 #include "physics.h"
 
-void PhysicsEngine::step(GLFWwindow* window, std::vector<Mesh>& meshList, float deltaTime, bool showNormals, std::mt19937 rng)
+void PhysicsEngine::step(GLFWwindow* window, std::vector<GameObject>& GameObjectList, float deltaTime, bool showNormals, std::mt19937 rng)
 {
     float num_iterations = 1;
     for (int i = 0; i < num_iterations; i++)
@@ -8,7 +8,7 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<Mesh>& meshList, float 
         float strength = float(i + 1) / num_iterations;
 
         // update objects pos etc.
-        for (Mesh& object : meshList)
+        for (GameObject& object : GameObjectList)
         {
             if (object.id == 1)
                 object.orientation = rotateCubeWithQuaternion(window, object.orientation, deltaTime);
@@ -26,7 +26,7 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<Mesh>& meshList, float 
         //lightPos = light->position;
 
         // Broad phase
-        updateEdgePos(meshList, allEdgesX, allEdgesY, allEdgesZ);
+        updateEdgePos(GameObjectList, allEdgesX, allEdgesY, allEdgesZ);
 
         float varianceX = calculateVariance(allEdgesX);
         float varianceY = calculateVariance(allEdgesY);
@@ -43,11 +43,11 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<Mesh>& meshList, float 
 
         for (const std::pair<int, int>& collisionCouple : collisionCouplesList)
         {
-            if (meshList[collisionCouple.first].asleep and meshList[collisionCouple.second].asleep)
+            if (GameObjectList[collisionCouple.first].asleep and GameObjectList[collisionCouple.second].asleep)
                 continue;
 
-            Mesh& objA = meshList[collisionCouple.first];
-            Mesh& objB = meshList[collisionCouple.second];
+            GameObject& objA = GameObjectList[collisionCouple.first];
+            GameObject& objB = GameObjectList[collisionCouple.second];
 
             if (checkOtherAxes(axisOrder, objA, objB))
             {
@@ -70,8 +70,8 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<Mesh>& meshList, float 
                         collisionNormal = -collisionNormal;
 
                     // contactPoints
-                    Mesh* objA_ptr = &objA;
-                    Mesh* objB_ptr = &objB;
+                    GameObject* objA_ptr = &objA;
+                    GameObject* objB_ptr = &objB;
 
                     Contact contact = createContact(contactCache, objA, objB, collisionNormal, collisionNormalOwner);
 

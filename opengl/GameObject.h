@@ -22,7 +22,7 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
 }
 
-class Mesh
+class GameObject
 {
 public:
     int id;
@@ -33,6 +33,8 @@ public:
     unsigned int VAO;
     glm::mat4 modelMatrix;
     bool modelMatrixShouldUpdate = true;
+
+    int textureID;
 
     std::vector<glm::vec3> verticesPositions;
 
@@ -73,9 +75,7 @@ public:
 
     bool isWithinRange = false;
 
-    bool floorTexture = false;
-
-    Mesh(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, bool floorTexture)
+    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID)
         : id(id),
         AABB(id),
         vertices(vertices),
@@ -88,7 +88,7 @@ public:
         isStatic(isStatic),
         mass(mass),
         restitution(0.1f),
-        floorTexture(floorTexture)
+        textureID(textureID)
     {
 
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);

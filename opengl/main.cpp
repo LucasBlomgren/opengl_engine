@@ -1,7 +1,5 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <stb/stb_image.h>
-
 #include <iostream>
 #include <vector>
 #include <random>
@@ -13,22 +11,24 @@
 #include "camera.h"
 #include "physics.h"
 #include "sceneBuilder.h"
+#include "renderer.h"
 #include "shader.h"
-#include "mesh.h"
+#include "textureManager.h"
+#include "GameObject.h"
 
 #include "drawContactPoints.h"
 #include "xyzObject.h"
 #include "worldFrame.h"
 #include "drawLine.h"
-
 #include "cubeData.h"
 
-// Överlagra operator << för glm::vec3
+// overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
     return os;
 }
 
+// window resize callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -41,169 +41,96 @@ const unsigned int SCR_HEIGHT = 1080;
 float deltaTime = 0.0f;	
 float lastFrame = 0.0f;
 
+// systems
 EngineState engineState;
-InputManager inputManager;
 PhysicsEngine physicsEngine;
+Renderer renderer;
+
+// managers
+InputManager inputManager;
+TextureManager textureManager;
 SceneBuilder sceneBuilder;
+
+// view
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
 
-std::vector<Mesh> meshList;
+// all game objects
+std::vector<GameObject> GameObjectList;
 
 int main()
 {
-    camera.Yaw += 130;
-    camera.Pitch -= 30;
-    camera.ProcessMouseMovement(0, 0);
+    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
-    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL");
-
+    // setup input
     inputManager.SetPointers(&engineState, &camera);
     inputManager.Init(window);
 
+    // setup rendering
+    Shader shader("object.vs", "object.fs");
+    renderer.Init(SCR_WIDTH, SCR_HEIGHT, engineState, shader);
+
+    // load textures
+    unsigned int crateTexture = TextureManager::LoadTexture("crate", "crate.jpg");
+    unsigned int UVmapTexture = TextureManager::LoadTexture("uvmap", "UV0.png");
+
+    // create scene
+    sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
+
+    // set camera starting angle
+    camera.Yaw += 130;
+    camera.Pitch -= 30;
+    camera.ProcessMouseMovement(0,0);
+
+    // setup rng
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    // setup clock
     auto start_time = std::chrono::high_resolution_clock::now();
     int frames = 0;
     int last_second = 0;
 
+    // setup help VAOs
     unsigned int VAO_line = setupLine();
     unsigned int VAO_xyz = setup_xyzObject();
     unsigned int VAO_worldFrame = setup_worldFrame();
     unsigned int VAO_contactPoint = setupContactPoint();
 
-    // create & use shader
-    Shader shader("object.vs", "object.fs");
-
-    // texture 1
-    unsigned int texture1;
-    glGenTextures(1, &texture1);
-    glBindTexture(GL_TEXTURE_2D, texture1);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // load image, create texture and generate mipmaps
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char* data = stbi_load("crate.jpg", &width, &height, &nrChannels, 4);
-    if (data) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-
-    // texture 2
-    unsigned int texture2;
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
-    unsigned char* data2 = stbi_load("UV0.png", &width, &height, &nrChannels, 4);
-    if (data2) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data2);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data2);
-
-    // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
-    shader.setInt("texture1", 0);
-    shader.setInt("texture2", 1);
-
-    shader.use();
-
-    std::random_device rd;
-    std::mt19937 g(rd());
-
-    // create scene
-    sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
-
     // main loop
     while (!glfwWindowShouldClose(window))
     {
-        if (engineState.GetPressedKey() == "H") {
-            sceneBuilder.createScene(physicsEngine, meshList, cubeVertices, indices);
-        }
-        if (engineState.GetPressedKey() == "Mouse1") {
-            sceneBuilder.createObject(physicsEngine, meshList, camera.Position + camera.Front * 30.0f, glm::vec3(10, 10, 10), 1, 0, 0, cubeVertices, indices);
-            meshList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
-        }
-        engineState.SetPressedKey("");
-
+        // update time
         auto current_time = std::chrono::high_resolution_clock::now();
-        // per-frame time logic
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // "gameplay" functionality
+        if (engineState.GetPressedKey() == "H") {
+            sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
+        }
+        if (engineState.GetPressedKey() == "Mouse1") {
+            sceneBuilder.createObject(physicsEngine, GameObjectList, camera.Position + camera.Front * 30.0f, glm::vec3(10, 10, 10), 1, 0, 1, cubeVertices, indices);
+            GameObjectList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
+        }
+        engineState.ClearPressedKey();
+
+        // continous input 
         inputManager.ProcessInput(window, deltaTime);
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-
-        // projection matrix 
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
-        shader.setMat4("projection", projection);
-
-        // camera/view transformation
-        glm::mat4 view = camera.GetViewMatrix();
-        shader.setMat4("view", view);
 
         // physics step
         if (!engineState.IsPaused())
-            physicsEngine.step(window, meshList, deltaTime, engineState.GetShowNormals(), g);
+            physicsEngine.step(window, GameObjectList, deltaTime, engineState.GetShowNormals(), g);
         
         //shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
         //shader.setVec3("lightPos", lightPos);
         //shader.setVec3("viewPos", camera.Position);
 
-        // render
-        for (Mesh& object : meshList)
-        {
-            if (object.floorTexture) {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, texture2);
-            }
-            else {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, texture1);
-            }
-            object.drawMesh(shader);
-
-            if (engineState.GetShowAABB())
-                object.AABB.draw(shader, object.colliding);
-            if (engineState.GetShowNormals())
-                object.OOBB.drawNormals(shader, VAO_line, object.position);
-        }
-        if (engineState.GetShowContactPoints()) {
-            //glDisable(GL_DEPTH_TEST);
-            shader.setBool("useUniformColor", true);
-            shader.setBool("useTexture", false);
-            shader.setVec3("uColor", glm::vec3(0, 250, 154));
-            shader.setBool("isContactPoint", true);
-
-            for (auto& pair : physicsEngine.contactCache) {
-                Contact& contact = pair.second;
-                for (int i = 0; i < contact.counter; i++)
-                    drawContactPoint(shader, VAO_contactPoint, contact.points[i].globalCoord);
-            }
-            shader.setBool("isContactPoint", false);
-            //glEnable(GL_DEPTH_TEST);
-        }
-        draw_xyzObject(shader, VAO_xyz);
-        draw_worldFrame(shader, VAO_worldFrame);
+        // rendering
+        renderer.BeginFrame();
+        renderer.SetViewProjection(camera);
+        renderer.DrawGameObjects(GameObjectList, VAO_line);
+        renderer.DrawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
         // render light source
         //light->setModelMatrix();
@@ -212,17 +139,18 @@ int main()
         //glBindVertexArray(light->VAO);
         //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-        // cout FPS
+        // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
         if (seconds > last_second)
         {
             last_second = seconds;
             std::cout << "FPS: " << frames << "\n";
-            std::cout << "Objects: " << meshList.size() << "\n";
+            std::cout << "Objects: " << GameObjectList.size() << "\n";
             frames = 0;
         };
         frames++;
 
+        // swap buffers and poll IO events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

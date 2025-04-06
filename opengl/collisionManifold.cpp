@@ -1,6 +1,6 @@
 #include "collisionManifold.h"
 
-std::array<glm::vec3, 4> selectCollisionFace(Mesh& obj, const glm::vec3& normal)
+std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& normal)
 {
     glm::mat4 modelMatrix = obj.modelMatrix;
     glm::mat3 rotationMatrix = glm::mat3(modelMatrix);
@@ -221,8 +221,8 @@ void computePenetrationDepth(InitialContact& initialContact) {
 
 void PreComputeContactData(Contact& contact) {
 
-    Mesh& objA = *contact.objA_ptr;
-    Mesh& objB = *contact.objB_ptr;
+    GameObject& objA = *contact.objA_ptr;
+    GameObject& objB = *contact.objB_ptr;
 
     // pre-calculate rA, rB, EffectiveMass
     for (int j = 0; j < contact.counter; j++) {
@@ -360,7 +360,7 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
     contactCache[key] = finalContact;
 }
 
-Contact createContact(std::unordered_map<size_t, Contact>& contactCache, Mesh& objA, Mesh& objB, glm::vec3 normal, int& collisionNormalOwner)
+Contact createContact(std::unordered_map<size_t, Contact>& contactCache, GameObject& objA, GameObject& objB, glm::vec3 normal, int& collisionNormalOwner)
 {
     std::array<glm::vec3, 4> referenceFace;
     std::array<glm::vec3, 4> incidentFace;
