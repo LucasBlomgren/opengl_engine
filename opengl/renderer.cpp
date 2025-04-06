@@ -1,4 +1,3 @@
-
 #include "renderer.h"
 
 void Renderer::Init(unsigned int width, unsigned int height, EngineState& engineState, Shader& shader)
@@ -11,7 +10,6 @@ void Renderer::Init(unsigned int width, unsigned int height, EngineState& engine
     this->shader = &shader;
     shader.use();
     shader.setInt("texture1", 0);
-    shader.setInt("texture2", 1);
 }
 
 void Renderer::BeginFrame()
@@ -34,7 +32,7 @@ void Renderer::SetViewProjection(Camera& camera)
 void Renderer::DrawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
 {
     for (GameObject& obj : objects) {
-        glActiveTexture(GL_TEXTURE0);
+        //glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, obj.textureID);
         obj.drawMesh(*shader);
 

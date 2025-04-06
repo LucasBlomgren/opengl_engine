@@ -70,8 +70,8 @@ int main()
     renderer.Init(SCR_WIDTH, SCR_HEIGHT, engineState, shader);
 
     // load textures
-    unsigned int crateTexture = TextureManager::LoadTexture("crate", "crate.jpg");
-    unsigned int UVmapTexture = TextureManager::LoadTexture("uvmap", "UV0.png");
+    textureManager.LoadTexture("crate", "crate.jpg");
+    textureManager.LoadTexture("uvmap", "UV0.png");
 
     // create scene
     sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
@@ -110,7 +110,7 @@ int main()
             sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
         }
         if (engineState.GetPressedKey() == "Mouse1") {
-            sceneBuilder.createObject(physicsEngine, GameObjectList, camera.Position + camera.Front * 30.0f, glm::vec3(10, 10, 10), 1, 0, 1, cubeVertices, indices);
+            sceneBuilder.createObject(physicsEngine, GameObjectList, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
             GameObjectList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
         }
         engineState.ClearPressedKey();
