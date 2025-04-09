@@ -11,19 +11,17 @@
 
 class SceneBuilder {
 public:
-
-    int objectId;
     int amountObjects;
     int amountStacks;
 
-    //float lightStrength;
-    //glm::vec3 lightStartingPos;
-    //glm::vec3 lightPos;
-    //Mesh* light;
-
     void SetTextureManager(TextureManager* tm);
-    void createScene(PhysicsEngine& physicsEngine, std::vector<GameObject>& meshList, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
-    void createObject(PhysicsEngine& physicsEngine, std::vector<GameObject>& meshList, const std::string& textureName, glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
+    void createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
+    GameObject& createObject(PhysicsEngine& physicsEngine, const std::string& textureName, glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
+
+    std::vector<GameObject>& GetGameObjectList();
 private:
     TextureManager* textureManager = nullptr;
+
+    int objectId;
+    std::vector<GameObject> GameObjectList;
 };

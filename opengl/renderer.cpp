@@ -50,8 +50,9 @@ void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactP
         shader->setVec3("uColor", glm::vec3(0, 250, 154));
         shader->setBool("isContactPoint", true);
 
-        for (auto& pair : physicsEngine.contactCache) {
-            Contact& contact = pair.second;
+        const auto& contactCache = physicsEngine.GetContactCache();
+        for (const auto& pair : contactCache) {
+            const Contact& contact = pair.second;
             for (int i = 0; i < contact.counter; i++)
                 drawContactPoint(*shader, VAO_contactPoint, contact.points[i].globalCoord);
         }
@@ -60,4 +61,20 @@ void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactP
 
     draw_xyzObject(*shader, VAO_xyz);
     draw_worldFrame(*shader, VAO_worldFrame);
+}
+
+void Renderer::AddLight(const Light& light) {
+    lights.push_back(light);
+}
+
+void Renderer::UploadLightsToShader() {
+    shader->use();
+    shader->setInt("lightCount", lights.size());
+
+    for (size_t i = 0; i < lights.size(); ++i) {
+        std::string index = std::to_string(i);
+        shader->setVec3("lights[" + index + "].position", lights[i].position);
+        shader->setVec3("lights[" + index + "].color", lights[i].color);
+        shader->setFloat("lights[" + index + "].intensity", lights[i].intensity);
+    }
 }

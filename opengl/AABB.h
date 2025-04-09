@@ -7,8 +7,7 @@
 #include "shader.h"
 #include "vertex.h"
 
-struct Edge 
-{
+struct Edge {
     int id;
     bool isMin;
     float coord;
@@ -17,18 +16,15 @@ struct Edge
     : id(id), isMin(isMin), coord(coord) {}
 };
 
-struct Box 
-{
-    struct Min 
-    {
+struct Box {
+    struct Min {
         Edge x;
         Edge y;
         Edge z;
         Min(int id) : x(id, true, 0), y(id, true, 0), z(id, true, 0) {}
     } min;
 
-    struct Max 
-    {
+    struct Max {
         Edge x;
         Edge y;
         Edge z;
@@ -38,14 +34,12 @@ struct Box
     Box(int id) : min(id), max(id) {}
 };
 
-struct defaultBox 
-{
+struct defaultBox {
     glm::vec3 min;
     glm::vec3 max;
 };
 
-struct defaultFaces
-{
+struct defaultFaces {
     std::array<glm::vec3,4> minX;
     std::array<glm::vec3,4> maxX;
     std::array<glm::vec3,4> minY;
@@ -88,26 +82,25 @@ public:
         glm::mat3 model3x3 = glm::mat3(modelMatrix);
         Transform_Box(model3x3, position);
 
-
         // only if "show AABB"
         updateBuffer();
     }
 
-  void draw(Shader& shader, bool colliding)
-  {
-    if (!colliding) { color = glm::vec3(0.9f, 0.7f, 0.2f); }
-    else { color = glm::vec3(1, 0, 0); }
+    void draw(Shader& shader, bool colliding)
+    {
+        if (!colliding) { color = glm::vec3(0.9f, 0.7f, 0.2f); }
+        else { color = glm::vec3(1, 0, 0); }
 
-    glm::mat4 model = glm::mat4(1.0f);
-    shader.setMat4("model", model);
-    shader.setBool("useTexture", false);
-    shader.setBool("useUniformColor", true);
-    shader.setVec3("uColor", color);
+        glm::mat4 model = glm::mat4(1.0f);
+        shader.setMat4("model", model);
+        shader.setBool("useTexture", false);
+        shader.setBool("useUniformColor", true);
+        shader.setVec3("uColor", color);
 
-    glLineWidth(1.0f);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_LINES, 0, 24);
-  }
+        glLineWidth(1.0f);
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_LINES, 0, 24);
+    }
 
 private:
     void Transform_Box(const glm::mat3& M, const glm::vec3& T)
@@ -127,8 +120,7 @@ private:
         Bmin[2] = Bmax[2] = T.z;
 
         for (i = 0; i < 3; i++)
-        for (j = 0; j < 3; j++)
-        {
+        for (j = 0; j < 3; j++) {
             a = (M[j][i] * Amin[j]);
             b = (M[j][i] * Amax[j]);
 
@@ -136,8 +128,7 @@ private:
                 Bmin[i] += a;
                 Bmax[i] += b;
             }
-            else
-            {
+            else {
                 Bmin[i] += b;
                 Bmax[i] += a;
             }
@@ -247,8 +238,7 @@ private:
         float min_Z = std::numeric_limits<float>::max();
 
         // Loop through the vertices and update min and max values
-        for (size_t i = 0; i < vertices.size(); i++)
-        {
+        for (size_t i = 0; i < vertices.size(); i++) {
             float x = vertices[i].x;
             float y = vertices[i].y;
             float z = vertices[i].z;

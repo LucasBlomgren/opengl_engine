@@ -7,6 +7,7 @@
 #include "engineState.h"
 
 #include "drawContactPoints.h"
+#include "light.h"
 #include "worldFrame.h"
 #include "xyzObject.h"
 
@@ -19,12 +20,19 @@ public:
     void DrawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
     void DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
 
+    void UploadLightsToShader(); 
+    void AddLight(const Light& light);
+
 private:
-    EngineState* engineState = nullptr;
-    glm::mat4 projection;
-    glm::mat4 view;
-    Shader* shader = nullptr;
     float screenWidth;
     float screenHeight;
+
+    EngineState* engineState = nullptr;
+    Shader* shader = nullptr;
+
+    glm::mat4 projection;
+    glm::mat4 view;
     float maxViewDistance = 5000.0f;
+
+    std::vector<Light> lights;
 };

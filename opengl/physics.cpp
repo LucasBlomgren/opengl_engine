@@ -191,7 +191,7 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<GameObject>& GameObject
                                 float newFrictionImpulse2 = oldFrictionImpulse2 + J2;
 
                                 // Klampar impulsen så att total friktion inte överskrider mu_d * |accumulatedImpulse|
-                                float mu_dynamic = 0.5f;  // Exempelvärde – justera efter material
+                                float mu_dynamic = 0.8f;  // Exempelvärde – justera efter material
                                 float maxFriction = mu_dynamic * fabs(cp.accumulatedImpulse);
                                 float lengthSq = newFrictionImpulse1 * newFrictionImpulse1 + newFrictionImpulse2 * newFrictionImpulse2;
                                 float maxFrictionSq = maxFriction * maxFriction;
@@ -293,6 +293,22 @@ void PhysicsEngine::step(GLFWwindow* window, std::vector<GameObject>& GameObject
             ++it;
         }
     }
+}
+
+
+void PhysicsEngine::AddAABBEdges(const AABB& box) {
+    allEdgesX.push_back(box.Box.min.x);
+    allEdgesX.push_back(box.Box.max.x);
+
+    allEdgesY.push_back(box.Box.min.y);
+    allEdgesY.push_back(box.Box.max.y);
+
+    allEdgesZ.push_back(box.Box.min.z);
+    allEdgesZ.push_back(box.Box.max.z);
+}
+
+const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
+    return contactCache;
 }
 
 void PhysicsEngine::clearPhysicsData() {

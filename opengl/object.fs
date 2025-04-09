@@ -19,11 +19,8 @@ uniform vec3 lightColor;
 void main() {
 
     // ambient
-    float ambientStrength = 0.0000000000000000000000000001;
-    vec3 ambient = vec3(ambientStrength, ambientStrength, ambientStrength);
-
-    //float ambientStrength = 0.3;
-    //vec3 ambient = ambientStrength * lightColor;
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * lightColor;
   	
     // diffuse 
     vec3 norm = normalize(Normal);
@@ -52,7 +49,7 @@ void main() {
         
     vec3 result = (ambient + diffuse + specular) * ourColor;
 
-    result = ourColor;
+    //result = ourColor;
 
     if (useTexture) {
         FragColor = texture(texture1, TexCoord) * vec4(result, 1.0);

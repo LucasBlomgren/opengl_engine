@@ -52,6 +52,7 @@
     <ClInclude Include="initOpenGL.h" />
     <ClInclude Include="inputManager.h" />
     <ClInclude Include="GameObject.h" />
+    <ClInclude Include="light.h" />
     <ClInclude Include="OOBB.h" />
     <ClInclude Include="physics.h" />
     <ClInclude Include="renderer.h" />

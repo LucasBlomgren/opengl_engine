@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <random>
 
+#include "AABB.h"
 #include "sweepandprune.h"
 #include "SAT.h"
 #include "collisionManifold.h"
@@ -13,12 +14,16 @@
 class PhysicsEngine {
 
 public:
-    std::unordered_map<size_t, Contact> contactCache;
+    void step(GLFWwindow* window, std::vector<GameObject>& meshList, float deltaTime, bool showNormals, std::mt19937 rng);
+    void clearPhysicsData();
+    void AddAABBEdges(const AABB& box);
 
+    const std::unordered_map<size_t, Contact>& GetContactCache() const;
+
+private:
     std::vector<Edge> allEdgesX;
     std::vector<Edge> allEdgesY;
     std::vector<Edge> allEdgesZ;
 
-    void step(GLFWwindow* window, std::vector<GameObject>& meshList, float deltaTime, bool showNormals, std::mt19937 rng);
-    void clearPhysicsData();
+    std::unordered_map<size_t, Contact> contactCache;
 };

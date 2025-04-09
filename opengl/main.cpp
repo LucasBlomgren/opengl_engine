@@ -54,9 +54,6 @@ SceneBuilder sceneBuilder;
 // view
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
 
-// all game objects
-std::vector<GameObject> GameObjectList;
-
 int main()
 {
     GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
@@ -73,8 +70,10 @@ int main()
     textureManager.LoadTexture("crate", "crate.jpg");
     textureManager.LoadTexture("uvmap", "UV0.png");
 
+    // setup scene builder
+    sceneBuilder.SetTextureManager(&textureManager);
     // create scene
-    sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
+    sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
 
     // set camera starting angle
     camera.Yaw += 130;
@@ -107,11 +106,11 @@ int main()
 
         // "gameplay" functionality
         if (engineState.GetPressedKey() == "H") {
-            sceneBuilder.createScene(physicsEngine, GameObjectList, cubeVertices, indices);
+            sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
         }
         if (engineState.GetPressedKey() == "Mouse1") {
-            sceneBuilder.createObject(physicsEngine, GameObjectList, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            GameObjectList[sceneBuilder.objectId - 1].linearVelocity = camera.Front * 500.0f;
+            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+            newObject.linearVelocity = camera.Front * 500.0f;
         }
         engineState.ClearPressedKey();
 
@@ -120,24 +119,20 @@ int main()
 
         // physics step
         if (!engineState.IsPaused())
-            physicsEngine.step(window, GameObjectList, deltaTime, engineState.GetShowNormals(), g);
+            physicsEngine.step(window, sceneBuilder.GetGameObjectList(), deltaTime, engineState.GetShowNormals(), g);
         
-        //shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
-        //shader.setVec3("lightPos", lightPos);
-        //shader.setVec3("viewPos", camera.Position);
+        // lighting
+        glm::vec3 lightPos{ 250,180,200 };
+        float lightStrength = 125.0f;
+        shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
+        shader.setVec3("lightPos", lightPos);
+        shader.setVec3("viewPos", camera.Position);
 
         // rendering
         renderer.BeginFrame();
         renderer.SetViewProjection(camera);
-        renderer.DrawGameObjects(GameObjectList, VAO_line);
+        renderer.DrawGameObjects(sceneBuilder.GetGameObjectList(), VAO_line);
         renderer.DrawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
-
-        // render light source
-        //light->setModelMatrix();
-        //shader.setMat4("model", light->modelMatrix);
-        //shader.setVec3("uColor", glm::vec3(255,255,255));
-        //glBindVertexArray(light->VAO);
-        //glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
@@ -145,7 +140,7 @@ int main()
         {
             last_second = seconds;
             std::cout << "FPS: " << frames << "\n";
-            std::cout << "Objects: " << GameObjectList.size() << "\n";
+            std::cout << "Objects: " << sceneBuilder.GetGameObjectList().size() << "\n";
             frames = 0;
         };
         frames++;
