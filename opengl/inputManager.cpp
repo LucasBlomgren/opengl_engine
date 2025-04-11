@@ -1,4 +1,4 @@
-#include "inputManager.h"
+#include "InputManager.h"
 
 EngineState* InputManager::engineState = nullptr;
 Camera* InputManager::camera = nullptr;

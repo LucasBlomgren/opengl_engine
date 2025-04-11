@@ -20,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
+    <ClCompile Include="Light.cpp" />
+    <ClCompile Include="LightManager.cpp" />
     <ClCompile Include="textureManager.cpp" />
     <ClCompile Include="xyzObject.cpp" />
     <ClCompile Include="worldFrame.cpp" />
@@ -31,7 +33,7 @@
     <ClCompile Include="engineState.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="initOpenGL.cpp" />
-    <ClCompile Include="inputManager.cpp" />
+    <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="GameObject.cpp" />
@@ -50,9 +52,10 @@
     <ClInclude Include="drawLine.h" />
     <ClInclude Include="engineState.h" />
     <ClInclude Include="initOpenGL.h" />
-    <ClInclude Include="inputManager.h" />
+    <ClInclude Include="InputManager.h" />
     <ClInclude Include="GameObject.h" />
-    <ClInclude Include="light.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightManager.h" />
     <ClInclude Include="OOBB.h" />
     <ClInclude Include="physics.h" />
     <ClInclude Include="renderer.h" />

@@ -14,13 +14,15 @@
     <ClCompile Include="sweepandprune.cpp" />
     <ClCompile Include="collisionManifold.cpp" />
     <ClCompile Include="initOpenGL.cpp" />
-    <ClCompile Include="inputManager.cpp" />
+    <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="engineState.cpp" />
     <ClCompile Include="renderer.cpp" />
     <ClCompile Include="drawContactPoints.cpp" />
     <ClCompile Include="worldFrame.cpp" />
     <ClCompile Include="xyzObject.cpp" />
     <ClCompile Include="textureManager.cpp" />
+    <ClCompile Include="Light.cpp" />
+    <ClCompile Include="LightManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="shader.h" />
@@ -39,12 +41,13 @@
     <ClInclude Include="sweepandprune.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="initOpenGL.h" />
-    <ClInclude Include="inputManager.h" />
+    <ClInclude Include="InputManager.h" />
     <ClInclude Include="engineState.h" />
     <ClInclude Include="cubeData.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="textureManager.h" />
-    <ClInclude Include="light.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="object.fs" />

@@ -1,11 +1,12 @@
 #include "renderer.h"
 
-void Renderer::Init(unsigned int width, unsigned int height, EngineState& engineState, Shader& shader)
+void Renderer::Init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader)
 {   
     screenWidth = (float) width;
     screenHeight = (float) height;
 
     this->engineState = &engineState;
+    this->lightManager = &lightManager;
 
     this->shader = &shader;
     shader.use();
@@ -27,6 +28,8 @@ void Renderer::SetViewProjection(Camera& camera)
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
     shader->setMat4("view", view);
+
+    shader->setVec3("viewPos", camera.Position);
 }
 
 void Renderer::DrawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
@@ -43,8 +46,7 @@ void Renderer::DrawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     }
 }
 
-void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame)
-{
+void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame) {
     if (engineState->GetShowContactPoints()) {
         shader->setBool("useUniformColor", true);
         shader->setVec3("uColor", glm::vec3(0, 250, 154));
@@ -63,18 +65,33 @@ void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactP
     draw_worldFrame(*shader, VAO_worldFrame);
 }
 
-void Renderer::AddLight(const Light& light) {
-    lights.push_back(light);
-}
-
 void Renderer::UploadLightsToShader() {
     shader->use();
-    shader->setInt("lightCount", lights.size());
 
-    for (size_t i = 0; i < lights.size(); ++i) {
-        std::string index = std::to_string(i);
-        shader->setVec3("lights[" + index + "].position", lights[i].position);
-        shader->setVec3("lights[" + index + "].color", lights[i].color);
-        shader->setFloat("lights[" + index + "].intensity", lights[i].intensity);
+    const std::vector<Light>& lights = lightManager->GetLights();
+
+    for (int i = 0; i < lights.size(); ++i) {
+        const Light& light = lights[i];
+        std::string base = "pointLights[" + std::to_string(i) + "]";
+
+        shader->setVec3(base + ".position", light.position);
+
+        shader->setVec3(base + ".ambient", light.ambient * light.intensity);
+        shader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
+        shader->setVec3(base + ".specular", light.specular * light.intensity);
+
+        shader->setFloat(base + ".constant", light.constant);
+        shader->setFloat(base + ".linear", light.linear);
+        shader->setFloat(base + ".quadratic", light.quadratic);
     }
+
+    shader->setInt("numPointLights", static_cast<int>(lights.size()));
+}
+
+void Renderer::UploadDirectionalLight() {
+    const DirectionalLight& light = lightManager->GetDirectionalLight();
+    shader->setVec3("dirLight.direction", light.direction);
+    shader->setVec3("dirLight.ambient", light.ambient);
+    shader->setVec3("dirLight.diffuse", light.diffuse);
+    shader->setVec3("dirLight.specular", light.specular);
 }

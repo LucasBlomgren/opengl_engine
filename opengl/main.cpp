@@ -7,7 +7,7 @@
 
 #include "initOpenGL.h"
 #include "engineState.h"
-#include "inputManager.h"
+#include "InputManager.h"
 #include "camera.h"
 #include "physics.h"
 #include "sceneBuilder.h"
@@ -21,6 +21,9 @@
 #include "worldFrame.h"
 #include "drawLine.h"
 #include "cubeData.h"
+
+#include "Light.h"
+#include "LightManager.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -50,6 +53,7 @@ Renderer renderer;
 InputManager inputManager;
 TextureManager textureManager;
 SceneBuilder sceneBuilder;
+LightManager lightManager;
 
 // view
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
@@ -64,7 +68,7 @@ int main()
 
     // setup rendering
     Shader shader("object.vs", "object.fs");
-    renderer.Init(SCR_WIDTH, SCR_HEIGHT, engineState, shader);
+    renderer.Init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader);
 
     // load textures
     textureManager.LoadTexture("crate", "crate.jpg");
@@ -95,6 +99,15 @@ int main()
     unsigned int VAO_worldFrame = setup_worldFrame();
     unsigned int VAO_contactPoint = setupContactPoint();
 
+    Light light(glm::vec3(350, 50, 320), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 5);
+    light.scale = glm::vec3(5, 2, 5);
+    lightManager.AddLight(light);
+
+    Light light2(glm::vec3(150, 220, 100), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 105);
+    lightManager.AddLight(light2);
+
+    //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, -0.0f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
+
     // main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -121,16 +134,13 @@ int main()
         if (!engineState.IsPaused())
             physicsEngine.step(window, sceneBuilder.GetGameObjectList(), deltaTime, engineState.GetShowNormals(), g);
         
-        // lighting
-        glm::vec3 lightPos{ 250,180,200 };
-        float lightStrength = 125.0f;
-        shader.setVec3("lightColor", glm::vec3(lightStrength, lightStrength, lightStrength));
-        shader.setVec3("lightPos", lightPos);
-        shader.setVec3("viewPos", camera.Position);
-
         // rendering
         renderer.BeginFrame();
         renderer.SetViewProjection(camera);
+        renderer.UploadDirectionalLight();
+        renderer.UploadLightsToShader();
+        light.Draw(shader);
+        light2.Draw(shader);
         renderer.DrawGameObjects(sceneBuilder.GetGameObjectList(), VAO_line);
         renderer.DrawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 

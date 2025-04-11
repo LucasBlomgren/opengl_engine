@@ -320,8 +320,8 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
         ContactPoint& newPoint = finalContact.points[i];
         for (int j = 0; j < cachedContact.counter; j++) {
 
-            if (matchedFinalPoints[i] == true) break;
-            if (matchedCachedPoints[j] == true) continue;
+            if (matchedFinalPoints[i]) break;
+            if (matchedCachedPoints[j]) continue;
 
             ContactPoint& cachedPoint = cachedContact.points[j];
 
