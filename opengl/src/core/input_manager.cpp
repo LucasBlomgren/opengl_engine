@@ -7,12 +7,12 @@ bool InputManager::firstMouse;
 float InputManager::lastX;
 float InputManager::lastY;
 
-void InputManager::Init(GLFWwindow* window) 
+void InputManager::init(GLFWwindow* window) 
 {
-    glfwSetKeyCallback(window, KeyCallback);
-    glfwSetCursorPosCallback(window, MouseMovementCallback);
-    glfwSetScrollCallback(window, ScrollCallback);
-    glfwSetMouseButtonCallback(window, MouseButtonCallback);
+    glfwSetKeyCallback(window, keyCallback);
+    glfwSetCursorPosCallback(window, mouseMovementCallback);
+    glfwSetScrollCallback(window, scrollCallback);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -24,12 +24,12 @@ void InputManager::Init(GLFWwindow* window)
     firstMouse = true;
 }
 
-void InputManager::SetPointers(EngineState* state, Camera* camera) {
+void InputManager::setPointers(EngineState* state, Camera* camera) {
     engineState = state;
     this->camera = camera;
 }
 
-void InputManager::MouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn)
+void InputManager::mouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn)
 {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -49,35 +49,35 @@ void InputManager::MouseMovementCallback(GLFWwindow* window, double xposIn, doub
     camera->ProcessMouseMovement(xoffset, yoffset);
 }
 
-void InputManager::ScrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     camera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void InputManager::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
+void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_Q)
-            engineState->ToggleShowAABB();
+            engineState->toggleShowAABB();
         if (key == GLFW_KEY_E)
-            engineState->ToggleShowContactPoints();
+            engineState->toggleShowContactPoints();
         if (key == GLFW_KEY_R)
-            engineState->ToggleShowNormals();
+            engineState->toggleShowNormals();
         if (key == GLFW_KEY_T)
-            engineState->ToggleShowCollisionNormal();
+            engineState->toggleShowCollisionNormal();
         if (key == GLFW_KEY_G)
-            engineState->TogglePause();
+            engineState->togglePause();
         if (key == GLFW_KEY_H)
-            engineState->SetPressedKey("H");
+            engineState->setPressedKey("H");
     }
 }
 
-void InputManager::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) 
+void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) 
 {
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
-        engineState->SetPressedKey("Mouse1");
+        engineState->setPressedKey("Mouse1");
 }
 
-void InputManager::ProcessInput(GLFWwindow* window, float deltaTime)
+void InputManager::processInput(GLFWwindow* window, float deltaTime)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);

@@ -14,14 +14,14 @@
 class Renderer 
 {
 public:
-    void Init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader);
-    void BeginFrame();
-    void SetViewProjection(Camera& camera);
-    void DrawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
-    void DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
+    void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader);
+    void beginFrame();
+    void setViewProjection(Camera& camera);
+    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
+    void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
 
-    void UploadLightsToShader();
-    void UploadDirectionalLight();
+    void uploadLightsToShader();
+    void uploadDirectionalLight();
 
 private:
     float screenWidth;

@@ -1,14 +1,14 @@
 #include "light_manager.h"
 
-void LightManager::AddLight(const Light& light) {
+void LightManager::addLight(const Light& light) {
     lights.push_back(light);
 }
 
-void LightManager::Clear() {
+void LightManager::clear() {
     lights.clear();
 }
 
-const std::vector<Light>& LightManager::GetLights() const {
+const std::vector<Light>& LightManager::getLights() const {
     return lights;
 }
 
@@ -19,6 +19,6 @@ void LightManager::setDirectionalLight(const glm::vec3& direction, const glm::ve
     directionalLight.specular = specular;
 }
 
-const DirectionalLight& LightManager::GetDirectionalLight() const {
+const DirectionalLight& LightManager::getDirectionalLight() const {
     return directionalLight;
 }

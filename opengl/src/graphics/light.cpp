@@ -41,7 +41,7 @@ void Light::setupMesh() {
     glEnableVertexAttribArray(0);
 }
 
-void Light::Draw(Shader& shader) {
+void Light::draw(Shader& shader) {
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = glm::scale(model, this->scale); 
 
@@ -54,5 +54,6 @@ void Light::Draw(Shader& shader) {
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
-void Light::SetPosition(const glm::vec3& pos) { position = pos; }
-const glm::vec3& Light::GetPosition() const { return position; }
+void Light::setPosition(const glm::vec3& pos) { position = pos; }
+
+const glm::vec3& Light::getPosition() const { return position; }

@@ -2,7 +2,7 @@
 
 std::unordered_map<std::string, unsigned int> TextureManager::textures;
 
-unsigned int TextureManager::LoadTexture(const std::string& name, const std::string& path) {
+unsigned int TextureManager::loadTexture(const std::string& name, const std::string& path) {
     // Check if already loaded
     if (textures.find(name) != textures.end())
         return textures[name];
@@ -35,6 +35,6 @@ unsigned int TextureManager::LoadTexture(const std::string& name, const std::str
     return textureID;
 }
 
-unsigned int TextureManager::GetTexture(const std::string& name) {
+unsigned int TextureManager::getTexture(const std::string& name) {
     return textures[name];
 }

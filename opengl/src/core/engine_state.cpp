@@ -1,16 +1,16 @@
 #include "engine_state.h"
 
-void EngineState::TogglePause() { paused = !paused; }
-void EngineState::ToggleShowAABB() { showAabb = !showAabb; }
-void EngineState::ToggleShowContactPoints() { showContactPoints = !showContactPoints; }
-void EngineState::ToggleShowNormals() { showNormals = !showNormals; }
-void EngineState::ToggleShowCollisionNormal() { showCollisionNormal = !showCollisionNormal; }
-void EngineState::SetPressedKey(const std::string& key) { pressedKey = key; }
-void EngineState::ClearPressedKey() { pressedKey.clear(); }
+void EngineState::togglePause() { paused = !paused; }
+void EngineState::toggleShowAABB() { showAabb = !showAabb; }
+void EngineState::toggleShowContactPoints() { showContactPoints = !showContactPoints; }
+void EngineState::toggleShowNormals() { showNormals = !showNormals; }
+void EngineState::toggleShowCollisionNormal() { showCollisionNormal = !showCollisionNormal; }
+void EngineState::setPressedKey(const std::string& key) { pressedKey = key; }
+void EngineState::clearPressedKey() { pressedKey.clear(); }
 
-bool EngineState::IsPaused() const { return paused; }
-bool EngineState::GetShowAABB() const { return showAabb; }
-bool EngineState::GetShowContactPoints() const { return showContactPoints; }
-bool EngineState::GetShowNormals() const { return showNormals; }
-bool EngineState::GetShowCollisionNormal() const { return showCollisionNormal; }
+bool EngineState::isPaused() const { return paused; }
+bool EngineState::getShowAABB() const { return showAabb; }
+bool EngineState::getShowContactPoints() const { return showContactPoints; }
+bool EngineState::getShowNormals() const { return showNormals; }
+bool EngineState::getShowCollisionNormal() const { return showCollisionNormal; }
 std::string EngineState::GetPressedKey() const { return pressedKey; }

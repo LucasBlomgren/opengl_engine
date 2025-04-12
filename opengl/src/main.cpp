@@ -59,19 +59,19 @@ int main()
     GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
     // setup input
-    inputManager.SetPointers(&engineState, &camera);
-    inputManager.Init(window);
+    inputManager.setPointers(&engineState, &camera);
+    inputManager.init(window);
 
     // setup rendering
     Shader shader("src/shaders/object.vs", "src/shaders/object.fs");
-    renderer.Init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader);
+    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader);
 
     // load textures
-    textureManager.LoadTexture("crate", "src/assets/crate.jpg");
-    textureManager.LoadTexture("uvmap", "src/assets/UV0.png");
+    textureManager.loadTexture("crate", "src/assets/crate.jpg");
+    textureManager.loadTexture("uvmap", "src/assets/UV0.png");
 
     // setup scene builder
-    sceneBuilder.SetTextureManager(&textureManager);
+    sceneBuilder.setTextureManager(&textureManager);
     // create scene
     sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
 
@@ -97,13 +97,13 @@ int main()
 
     Light light(glm::vec3(350, 50, 320), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 8);
     light.scale = glm::vec3(5, 2, 5);
-    lightManager.AddLight(light);
+    lightManager.addLight(light);
 
     Light light2(glm::vec3(150, 220, 100), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 75);
-    lightManager.AddLight(light2);
+    lightManager.addLight(light2);
 
     Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(1.0,1.0, 1.0), 105);
-    lightManager.AddLight(light3);
+    lightManager.addLight(light3);
 
     //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, -0.0f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
 
@@ -124,25 +124,25 @@ int main()
             GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
             newObject.linearVelocity = camera.Front * 300.0f;
         }
-        engineState.ClearPressedKey();
+        engineState.clearPressedKey();
 
         // continous input 
-        inputManager.ProcessInput(window, deltaTime);
+        inputManager.processInput(window, deltaTime);
 
         // physics step
-        if (!engineState.IsPaused())
-            physicsEngine.step(sceneBuilder.GetGameObjectList(), deltaTime, engineState.GetShowNormals(), g);
+        if (!engineState.isPaused())
+            physicsEngine.step(sceneBuilder.getGameObjectList(), deltaTime, engineState.getShowNormals(), g);
         
         // rendering
-        renderer.BeginFrame();
-        renderer.SetViewProjection(camera);
-        renderer.UploadDirectionalLight();
-        renderer.UploadLightsToShader();
-        light.Draw(shader);
-        light2.Draw(shader);
-        light3.Draw(shader);
-        renderer.DrawGameObjects(sceneBuilder.GetGameObjectList(), VAO_line);
-        renderer.DrawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
+        renderer.beginFrame();
+        renderer.setViewProjection(camera);
+        renderer.uploadDirectionalLight();
+        renderer.uploadLightsToShader();
+        light.draw(shader);
+        light2.draw(shader);
+        light3.draw(shader);
+        renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
+        renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
         // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
@@ -150,7 +150,7 @@ int main()
         {
             last_second = seconds;
             std::cout << "FPS: " << frames << "\n";
-            std::cout << "Objects: " << sceneBuilder.GetGameObjectList().size() << "\n";
+            std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
             frames = 0;
         };
         frames++;

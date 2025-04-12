@@ -10,8 +10,8 @@
 
 class TextureManager {
 public:
-    static unsigned int LoadTexture(const std::string& name, const std::string& path);
-    static unsigned int GetTexture(const std::string& name);
+    static unsigned int loadTexture(const std::string& name, const std::string& path);
+    static unsigned int getTexture(const std::string& name);
 
 private:
     static std::unordered_map<std::string, unsigned int> textures;

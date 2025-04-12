@@ -14,11 +14,11 @@ public:
     int amountObjects;
     int amountStacks;
 
-    void SetTextureManager(TextureManager* tm);
+    void setTextureManager(TextureManager* tm);
     void createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
     GameObject& createObject(PhysicsEngine& physicsEngine, const std::string& textureName, glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
 
-    std::vector<GameObject>& GetGameObjectList();
+    std::vector<GameObject>& getGameObjectList();
 private:
     TextureManager* textureManager = nullptr;
 

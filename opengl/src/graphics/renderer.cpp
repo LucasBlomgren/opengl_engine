@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-void Renderer::Init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader)
+void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader)
 {   
     screenWidth = (float) width;
     screenHeight = (float) height;
@@ -12,13 +12,13 @@ void Renderer::Init(unsigned int width, unsigned int height, EngineState& engine
     shader.use();
 }
 
-void Renderer::BeginFrame()
+void Renderer::beginFrame()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 }
 
-void Renderer::SetViewProjection(Camera& camera)
+void Renderer::setViewProjection(Camera& camera)
 {
     // projection matrix 
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
@@ -31,21 +31,21 @@ void Renderer::SetViewProjection(Camera& camera)
     shader->setVec3("viewPos", camera.Position);
 }
 
-void Renderer::DrawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
+void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
 {
     for (GameObject& obj : objects) {
         glBindTexture(GL_TEXTURE_2D, obj.textureID);
         obj.drawMesh(*shader);
 
-        if (engineState->GetShowAABB())
+        if (engineState->getShowAABB())
             obj.AABB.draw(*shader, obj.colliding);
-        if (engineState->GetShowNormals())
+        if (engineState->getShowNormals())
             obj.OOBB.drawNormals(*shader, VAO_line, obj.position);
     }
 }
 
-void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame) {
-    if (engineState->GetShowContactPoints()) {
+void Renderer::drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame) {
+    if (engineState->getShowContactPoints()) {
         shader->setBool("useUniformColor", true);
         shader->setVec3("uColor", glm::vec3(0, 250, 154));
         shader->setBool("isContactPoint", true);
@@ -64,10 +64,10 @@ void Renderer::DrawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactP
     //draw_worldFrame(*shader, VAO_worldFrame);
 }
 
-void Renderer::UploadLightsToShader() {
+void Renderer::uploadLightsToShader() {
     shader->use();
 
-    const std::vector<Light>& lights = lightManager->GetLights();
+    const std::vector<Light>& lights = lightManager->getLights();
 
     for (int i = 0; i < lights.size(); ++i) {
         const Light& light = lights[i];
@@ -88,8 +88,8 @@ void Renderer::UploadLightsToShader() {
     shader->setInt("numPointLights", static_cast<int>(lights.size()));
 }
 
-void Renderer::UploadDirectionalLight() {
-    const DirectionalLight& light = lightManager->GetDirectionalLight();
+void Renderer::uploadDirectionalLight() {
+    const DirectionalLight& light = lightManager->getDirectionalLight();
     shader->setVec3("dirLight.direction", light.direction);
     shader->setVec3("dirLight.ambient", light.ambient);
     shader->setVec3("dirLight.diffuse", light.diffuse);

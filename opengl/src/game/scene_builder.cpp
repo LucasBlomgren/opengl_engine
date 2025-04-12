@@ -1,10 +1,10 @@
 #include "scene_builder.h"
 
-std::vector<GameObject>& SceneBuilder::GetGameObjectList() {
+std::vector<GameObject>& SceneBuilder::getGameObjectList() {
     return GameObjectList;
 }
 
-void SceneBuilder::SetTextureManager(TextureManager* tm) {
+void SceneBuilder::setTextureManager(TextureManager* tm) {
     textureManager = tm;
 }
 
@@ -74,7 +74,7 @@ GameObject& SceneBuilder::createObject
     std::vector<unsigned int>& indices
 )
 {
-    unsigned int textureID = textureManager->GetTexture(textureName);
+    unsigned int textureID = textureManager->getTexture(textureName);
     GameObject object(objectId, cubeVertices, indices, pos, size, mass, isStatic, textureID);
 
     GameObjectList.emplace_back(object);

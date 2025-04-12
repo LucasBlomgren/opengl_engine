@@ -12,12 +12,12 @@ struct DirectionalLight {
 
 class LightManager {
 public:
-    void AddLight(const Light& light);
-    void Clear();
-    const std::vector<Light>& GetLights() const;
+    void addLight(const Light& light);
+    void clear();
+    const std::vector<Light>& getLights() const;
 
     void setDirectionalLight(const glm::vec3& direction, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular);
-    const DirectionalLight& GetDirectionalLight() const;
+    const DirectionalLight& getDirectionalLight() const;
 
 private:
     std::vector<Light> lights;

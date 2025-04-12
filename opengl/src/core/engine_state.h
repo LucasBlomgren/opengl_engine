@@ -5,20 +5,20 @@
 class EngineState 
 {
 public:
-    void TogglePause();
-    void ToggleShowAABB();
-    void ToggleShowContactPoints();
-    void ToggleShowCollisionNormal();
-    void ToggleShowNormals();
+    void togglePause();
+    void toggleShowAABB();
+    void toggleShowContactPoints();
+    void toggleShowCollisionNormal();
+    void toggleShowNormals();
 
-    void SetPressedKey(const std::string& key);
-    void ClearPressedKey();
+    void setPressedKey(const std::string& key);
+    void clearPressedKey();
 
-    bool IsPaused() const;
-    bool GetShowNormals() const;
-    bool GetShowAABB() const;
-    bool GetShowContactPoints() const;
-    bool GetShowCollisionNormal() const;
+    bool isPaused() const;
+    bool getShowNormals() const;
+    bool getShowAABB() const;
+    bool getShowContactPoints() const;
+    bool getShowCollisionNormal() const;
     std::string GetPressedKey() const;
 
 private:

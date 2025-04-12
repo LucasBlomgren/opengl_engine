@@ -23,9 +23,9 @@ public:
 
     Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity);
 
-    void Draw(Shader& shader);
-    void SetPosition(const glm::vec3& pos);
-    const glm::vec3& GetPosition() const;
+    void draw(Shader& shader);
+    void setPosition(const glm::vec3& pos);
+    const glm::vec3& getPosition() const;
 
 private:
     unsigned int VAO, VBO, EBO;
