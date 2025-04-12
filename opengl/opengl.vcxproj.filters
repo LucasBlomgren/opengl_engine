@@ -1,56 +1,92 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="glad.c" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="Linking\lib\stb\stb.cpp" />
-    <ClCompile Include="GameObject.cpp" />
-    <ClCompile Include="AABB.h" />
-    <ClCompile Include="drawLine.cpp" />
-    <ClCompile Include="physics.cpp" />
-    <ClCompile Include="sceneBuilder.cpp" />
-    <ClCompile Include="rotateCube.cpp" />
-    <ClCompile Include="SAT.cpp" />
-    <ClCompile Include="sweepandprune.cpp" />
-    <ClCompile Include="collisionManifold.cpp" />
-    <ClCompile Include="initOpenGL.cpp" />
-    <ClCompile Include="InputManager.cpp" />
-    <ClCompile Include="engineState.cpp" />
-    <ClCompile Include="renderer.cpp" />
-    <ClCompile Include="drawContactPoints.cpp" />
-    <ClCompile Include="worldFrame.cpp" />
-    <ClCompile Include="xyzObject.cpp" />
-    <ClCompile Include="textureManager.cpp" />
-    <ClCompile Include="Light.cpp" />
-    <ClCompile Include="LightManager.cpp" />
+    <ClCompile Include="Linking\lib\stb\stb.cpp">
+      <Filter>src\external</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\core\engine_state.cpp" />
+    <ClCompile Include="src\core\input_manager.cpp" />
+    <ClCompile Include="src\physics\collision_manifold.cpp" />
+    <ClCompile Include="src\physics\physics.cpp" />
+    <ClCompile Include="src\physics\sat.cpp" />
+    <ClCompile Include="src\physics\sweep_and_prune.cpp" />
+    <ClCompile Include="src\graphics\light.cpp" />
+    <ClCompile Include="src\graphics\light_manager.cpp" />
+    <ClCompile Include="src\graphics\renderer.cpp" />
+    <ClCompile Include="src\graphics\texture_manager.cpp" />
+    <ClCompile Include="src\graphics\debug\draw_contact_points.cpp" />
+    <ClCompile Include="src\graphics\debug\draw_line.cpp" />
+    <ClCompile Include="src\graphics\debug\world_frame.cpp" />
+    <ClCompile Include="src\graphics\debug\xyz_object.cpp" />
+    <ClCompile Include="src\game\game_object.cpp" />
+    <ClCompile Include="src\game\scene_builder.cpp" />
+    <ClCompile Include="src\externals\glad.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="shader.h" />
-    <ClInclude Include="xyzObject.h" />
-    <ClInclude Include="worldFrame.h" />
-    <ClInclude Include="vertex.h" />
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="OOBB.h" />
-    <ClInclude Include="drawContactPoints.h" />
-    <ClInclude Include="drawLine.h" />
-    <ClInclude Include="physics.h" />
-    <ClInclude Include="sceneBuilder.h" />
-    <ClInclude Include="rotateCube.h" />
-    <ClInclude Include="SAT.h" />
-    <ClInclude Include="collisionManifold.h" />
-    <ClInclude Include="sweepandprune.h" />
-    <ClInclude Include="GameObject.h" />
-    <ClInclude Include="initOpenGL.h" />
-    <ClInclude Include="InputManager.h" />
-    <ClInclude Include="engineState.h" />
-    <ClInclude Include="cubeData.h" />
-    <ClInclude Include="renderer.h" />
-    <ClInclude Include="textureManager.h" />
-    <ClInclude Include="Light.h" />
-    <ClInclude Include="LightManager.h" />
+    <Filter Include="src">
+      <UniqueIdentifier>{11b34857-600a-454c-9641-d46f3d07bb5e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\core">
+      <UniqueIdentifier>{f2ebdefc-a70f-44d9-9d8d-1dece008a1e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\game">
+      <UniqueIdentifier>{e4b66ec0-54cc-4868-b2e1-b63ef7ce0987}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\physics">
+      <UniqueIdentifier>{de9b779a-a9c3-4882-a6b4-1a60f6c30ed6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\shaders">
+      <UniqueIdentifier>{f36d2c57-b29c-422a-85a9-bc58d9873e19}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\external">
+      <UniqueIdentifier>{52016a1c-2a74-493c-a94e-ebee80b7ee4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\assets">
+      <UniqueIdentifier>{2f8bd695-c0ad-42d6-898b-5dae55a5ba2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\graphics">
+      <UniqueIdentifier>{a2ca50ef-7e4f-4147-a876-e50bbec863ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\graphics\debug">
+      <UniqueIdentifier>{2209605e-4776-4489-b926-d5234d7b56f8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="object.fs" />
-    <None Include="object.vs" />
+    <ClInclude Include="src\vertex.h" />
+    <ClInclude Include="src\core\camera.h" />
+    <ClInclude Include="src\core\engine_state.h" />
+    <ClInclude Include="src\core\init_opengl.h" />
+    <ClInclude Include="src\core\input_manager.h" />
+    <ClInclude Include="src\physics\aabb.h" />
+    <ClInclude Include="src\physics\collision_manifold.h" />
+    <ClInclude Include="src\physics\physics.h" />
+    <ClInclude Include="src\physics\sat.h" />
+    <ClInclude Include="src\physics\sweep_and_prune.h" />
+    <ClInclude Include="src\physics\oobb.h" />
+    <ClInclude Include="src\graphics\light.h" />
+    <ClInclude Include="src\graphics\light_manager.h" />
+    <ClInclude Include="src\graphics\renderer.h" />
+    <ClInclude Include="src\graphics\shader.h" />
+    <ClInclude Include="src\graphics\texture_manager.h" />
+    <ClInclude Include="src\graphics\debug\draw_contact_points.h" />
+    <ClInclude Include="src\graphics\debug\draw_line.h" />
+    <ClInclude Include="src\graphics\debug\world_frame.h" />
+    <ClInclude Include="src\graphics\debug\xyz_object.h" />
+    <ClInclude Include="src\game\cube_data.h" />
+    <ClInclude Include="src\game\game_object.h" />
+    <ClInclude Include="src\game\rotate_cube.h" />
+    <ClInclude Include="src\game\scene_builder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="src\UV0.png" />
+    <Image Include="src\crate.jpg" />
+    <Image Include="src\assets\crate.jpg" />
+    <Image Include="src\assets\UV0.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\externals\glfw3.dll" />
+    <None Include="src\shaders\object.fs" />
+    <None Include="src\shaders\object.vs" />
   </ItemGroup>
 </Project>
