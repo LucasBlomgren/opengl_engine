@@ -34,6 +34,7 @@ public:
         setBufferData(this->vertices);
         setupBuffer(bufferData);
 
+        updateNormals(M);
         getTransformedVertices(M);
     }
 

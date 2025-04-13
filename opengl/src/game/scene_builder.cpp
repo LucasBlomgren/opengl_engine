@@ -56,20 +56,20 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     //createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, cubeVertices, indices);
 
     // box stacks
-    //int amountObjects = 5;
-    //int amountStacks = 5;
-    //for (int j = 0; j < amountStacks; j++)
-    //    for (int i = 0; i < amountObjects; i++)
-    //        createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    int amountObjects = 5;
+    int amountStacks = 1;
+    for (int j = 0; j < amountStacks; j++)
+        for (int i = 0; i < amountObjects; i++)
+            createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
 
     // brick wall
-    int amountObjects = 10;
-    for (int i = 0; i < amountObjects; i++)
-        createObject(physicsEngine, "crate", glm::vec3(0 + 145 + (i * 12.5), 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-    for (int i = 0; i < amountObjects-1; i++)
-        createObject(physicsEngine, "crate", glm::vec3(5 + 145 + (i * 12.5), 15, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-    for (int i = 0; i < amountObjects - 2; i++)
-        createObject(physicsEngine, "crate", glm::vec3(10 + 145 + (i * 12.5), 25, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    int amountPerRow = 10;
+    for (int i = 0; i < amountPerRow; i++)
+        createObject(physicsEngine, "crate", glm::vec3(0 + 80 + (i * 12.5), 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    for (int i = 0; i < amountPerRow -1; i++)
+        createObject(physicsEngine, "crate", glm::vec3(5 + 80 + (i * 12.5), 15, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    for (int i = 0; i < amountPerRow -2; i++)
+        createObject(physicsEngine, "crate", glm::vec3(10 + 80 + (i * 12.5), 25, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
 }
 
 GameObject& SceneBuilder::createObject
