@@ -7,6 +7,7 @@ class EngineState
 public:
     void togglePause();
     void toggleShowAABB();
+    void toggleShowOOBB();
     void toggleShowContactPoints();
     void toggleShowCollisionNormal();
     void toggleShowNormals();
@@ -17,13 +18,15 @@ public:
     bool isPaused() const;
     bool getShowNormals() const;
     bool getShowAABB() const;
+    bool getShowOOBB() const;
     bool getShowContactPoints() const;
     bool getShowCollisionNormal() const;
     std::string GetPressedKey() const;
 
 private:
     bool paused = false;
-    bool showAabb = false;
+    bool showAABB = false;
+    bool showOOBB = false;
     bool showContactPoints = false;
     bool showCollisionNormal = false;
     bool showNormals = false;

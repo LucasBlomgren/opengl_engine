@@ -16,7 +16,7 @@ class PhysicsEngine {
 public:
     void step(std::vector<GameObject>& GameObjectList, float deltaTime, bool showNormals, std::mt19937 rng);
     void clearPhysicsData();
-    void AddAABBEdges(const AABB& box);
+    void addAabbEdges(const AABB& box);
 
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 

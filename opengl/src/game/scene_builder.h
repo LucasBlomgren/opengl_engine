@@ -9,16 +9,24 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-class SceneBuilder {
+class SceneBuilder 
+{
 public:
-    int amountObjects;
-    int amountStacks;
-
     void setTextureManager(TextureManager* tm);
     void createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
-    GameObject& createObject(PhysicsEngine& physicsEngine, const std::string& textureName, glm::vec3 pos, glm::vec3 size, float mass, bool isStatic, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
-
+    GameObject& createObject(
+        PhysicsEngine& physicsEngine, 
+        const std::string& textureName, 
+        glm::vec3 pos, 
+        glm::vec3 size, 
+        float mass, 
+        bool isStatic, 
+        std::vector<Vertex>& cubeVertices,
+        std::vector<unsigned int>& indices,
+        glm::quat orientation = glm::quat(1, 0, 0, 0)
+    );
     std::vector<GameObject>& getGameObjectList();
+
 private:
     TextureManager* textureManager = nullptr;
 

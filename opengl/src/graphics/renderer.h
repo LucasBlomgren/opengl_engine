@@ -15,9 +15,9 @@ class Renderer
 {
 public:
     void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader);
-    void beginFrame();
+    void beginFrame() const;
     void setViewProjection(Camera& camera);
-    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
+    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const;
     void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
 
     void uploadLightsToShader();

@@ -20,9 +20,16 @@ static std::vector<unsigned int> indices = {
 };
 
 Light::Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity)
-    : position(pos), scale(scale), color(col), intensity(intensity)
-{
+    : position(pos), scale(scale), color(col), intensity(intensity) {
     setupMesh();
+}
+
+void Light::setPosition(const glm::vec3& pos) {
+    position = pos;
+}
+
+const glm::vec3& Light::getPosition() const {
+    return position;
 }
 
 void Light::setupMesh() {
@@ -41,7 +48,8 @@ void Light::setupMesh() {
     glEnableVertexAttribArray(0);
 }
 
-void Light::draw(Shader& shader) {
+void Light::draw(Shader& shader) const
+{
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = glm::scale(model, this->scale); 
 
@@ -53,7 +61,3 @@ void Light::draw(Shader& shader) {
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
-
-void Light::setPosition(const glm::vec3& pos) { position = pos; }
-
-const glm::vec3& Light::getPosition() const { return position; }

@@ -86,10 +86,16 @@ public:
         updateBuffer();
     }
 
-    void draw(Shader& shader, bool colliding)
+    void draw(Shader& shader, bool colliding, bool asleep)
     {
-        if (!colliding) { color = glm::vec3(0.9f, 0.7f, 0.2f); }
-        else { color = glm::vec3(1, 0, 0); }
+        if (!asleep) {
+            updateBuffer();
+        }
+
+        //if (!colliding) { color = glm::vec3(0.9f, 0.7f, 0.2f); }
+        //else { color = glm::vec3(1, 0, 0); }
+
+        color = glm::vec3(0.9f, 0.7f, 0.2f);
 
         glm::mat4 model = glm::mat4(1.0f);
         shader.setMat4("model", model);

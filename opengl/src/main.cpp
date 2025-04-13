@@ -95,14 +95,13 @@ int main()
     unsigned int VAO_worldFrame = setup_worldFrame();
     unsigned int VAO_contactPoint = setupContactPoint();
 
-    Light light(glm::vec3(350, 50, 320), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 8);
-    light.scale = glm::vec3(5, 2, 5);
+    Light light(glm::vec3(350, 50, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 8);
     lightManager.addLight(light);
 
-    Light light2(glm::vec3(150, 220, 100), glm::vec3(20, 2, 20), glm::vec3(1.0, 1.0, 1.0), 75);
+    Light light2(glm::vec3(150, 220, 100), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 55);
     lightManager.addLight(light2);
 
-    Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(1.0,1.0, 1.0), 105);
+    Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 80);
     lightManager.addLight(light3);
 
     //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, -0.0f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
@@ -122,7 +121,11 @@ int main()
         }
         if (engineState.GetPressedKey() == "Mouse1") {
             GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            newObject.linearVelocity = camera.Front * 300.0f;
+            newObject.linearVelocity = camera.Front * 0.0f;
+        }
+        if (engineState.GetPressedKey() == "Mouse2") {
+            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+            newObject.linearVelocity = camera.Front * 500.0f;
         }
         engineState.clearPressedKey();
 

@@ -38,7 +38,7 @@ public:
 
     std::vector<glm::vec3> verticesPositions;
 
-    glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::quat orientation;
     glm::mat3 inverseInertia;
 
     glm::vec3 scale;
@@ -65,17 +65,17 @@ public:
     glm::vec3 previousCollisionPoint;
     glm::vec3 jitterMinRange;
     glm::vec3 jitterMaxRange;
+    bool isWithinRange = false;
 
     AABB AABB;
     OOBB OOBB;
-
-    bool isUniformlyScaled;
     bool AABB_ShouldUpdate = true;
     bool OOBB_shouldUpdate = false;
+    bool OOBB_shouldUpdateBuffer = false;
 
-    bool isWithinRange = false;
+    bool isUniformlyScaled;
 
-    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID)
+    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID, glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
         : id(id),
         AABB(id),
         vertices(vertices),
@@ -88,9 +88,9 @@ public:
         isStatic(isStatic),
         mass(mass),
         restitution(0.1f),
-        textureID(textureID)
+        textureID(textureID),
+        orientation(orientation)
     {
-
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
 
         if (!isStatic) {
@@ -110,7 +110,7 @@ public:
 
         setModelMatrix();
         AABB.Init(verticesPositions, scale);
-        OOBB.Init(verticesPositions);
+        OOBB.Init(verticesPositions, modelMatrix);
 
         this->setupMesh();
     }
@@ -122,8 +122,9 @@ public:
     void updateAABB();
     void updateOOBB();
     void addForce(const glm::vec3& f);
-    void updatePos(const float& num_iterations, const float& deltaTime);
-    void setAsleep(const float& deltaTime);
+    void updatePos(const float& deltaTime);
+    void setAsleep();
+    void setAwake();
 
 private:
     void setupMesh();

@@ -24,7 +24,8 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
         }
 
     // slanted platform
-    createObject(physicsEngine, "crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, cubeVertices, indices);
+    glm::quat orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    createObject(physicsEngine, "crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, cubeVertices, indices, orientation);
     GameObjectList.back().orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
 
     //---catapult---
@@ -55,11 +56,20 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     //createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, cubeVertices, indices);
 
     // box stacks
-    amountObjects = 5;
-    amountStacks = 1;
-    for (int j = 0; j < amountStacks; j++)
-        for (int i = 0; i < amountObjects; i++)
-            createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    //int amountObjects = 5;
+    //int amountStacks = 5;
+    //for (int j = 0; j < amountStacks; j++)
+    //    for (int i = 0; i < amountObjects; i++)
+    //        createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+
+    // brick wall
+    int amountObjects = 10;
+    for (int i = 0; i < amountObjects; i++)
+        createObject(physicsEngine, "crate", glm::vec3(0 + 145 + (i * 12.5), 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    for (int i = 0; i < amountObjects-1; i++)
+        createObject(physicsEngine, "crate", glm::vec3(5 + 145 + (i * 12.5), 15, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    for (int i = 0; i < amountObjects - 2; i++)
+        createObject(physicsEngine, "crate", glm::vec3(10 + 145 + (i * 12.5), 25, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
 }
 
 GameObject& SceneBuilder::createObject
@@ -71,16 +81,17 @@ GameObject& SceneBuilder::createObject
     float mass, 
     bool isStatic,
     std::vector<Vertex>& cubeVertices, 
-    std::vector<unsigned int>& indices
+    std::vector<unsigned int>& indices,
+    glm::quat orientation
 )
 {
     unsigned int textureID = textureManager->getTexture(textureName);
-    GameObject object(objectId, cubeVertices, indices, pos, size, mass, isStatic, textureID);
+    GameObject object(objectId, cubeVertices, indices, pos, size, mass, isStatic, textureID, orientation);
 
     GameObjectList.emplace_back(object);
     objectId++;
 
-    physicsEngine.AddAABBEdges(object.AABB);
+    physicsEngine.addAabbEdges(object.AABB);
 
     return GameObjectList.back();
 }

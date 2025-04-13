@@ -12,7 +12,7 @@ void Renderer::init(unsigned int width, unsigned int height, EngineState& engine
     shader.use();
 }
 
-void Renderer::beginFrame()
+void Renderer::beginFrame() const
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -31,14 +31,22 @@ void Renderer::setViewProjection(Camera& camera)
     shader->setVec3("viewPos", camera.Position);
 }
 
-void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
+void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const
 {
     for (GameObject& obj : objects) {
         glBindTexture(GL_TEXTURE_2D, obj.textureID);
         obj.drawMesh(*shader);
 
         if (engineState->getShowAABB())
-            obj.AABB.draw(*shader, obj.colliding);
+            obj.AABB.draw(*shader, obj.colliding, obj.asleep);
+        if (engineState->getShowOOBB())
+        {
+            if (!obj.asleep or obj.isStatic) {
+                obj.OOBB_shouldUpdate = true;
+                obj.updateOOBB();
+            }
+            obj.OOBB.draw(*shader, obj.colliding, obj.asleep, obj.isStatic);
+        }
         if (engineState->getShowNormals())
             obj.OOBB.drawNormals(*shader, VAO_line, obj.position);
     }

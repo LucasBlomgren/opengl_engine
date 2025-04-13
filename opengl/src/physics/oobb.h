@@ -25,7 +25,7 @@ public:
         glm::vec3(0, 0, 1),
     };
 
-    void Init(std::vector<glm::vec3>& vertices)
+    void Init(std::vector<glm::vec3>& vertices, const glm::mat4& M)
     {
         std::array<float, 6> extremePoints = getExtremePoints(vertices);
         createVertices(extremePoints);
@@ -33,22 +33,29 @@ public:
         createNormals();
         setBufferData(this->vertices);
         setupBuffer(bufferData);
+
+        getTransformedVertices(M);
     }
 
-    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M)
+    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M, const bool shouldUpdateBuffer)
     {
         // if only has rotated (behöver optimeras också)
         updateNormals(M);
-
         getTransformedVertices(M);
 
-        // only if "show OOBB"
-        //setBufferData(transformedVertices);
-        //updateBuffer();
+        if (shouldUpdateBuffer) {
+            setBufferData(transformedVertices);
+            updateBuffer();
+        }
     }
 
-    void draw(Shader& shader, bool colliding)
+    void draw(Shader& shader, bool colliding, bool asleep, bool isStatic)
     {
+        if (!asleep or isStatic) {
+            setBufferData(transformedVertices);
+            updateBuffer();
+        }
+
         if (!colliding) { color = glm::vec3(0,0,1); }
         else { color = glm::vec3(1, 0, 0); }
 
@@ -58,7 +65,7 @@ public:
         shader.setBool("useUniformColor", true);
         shader.setVec3("uColor", color);
 
-        glLineWidth(3.0f);
+        glLineWidth(1.0f);
         glBindVertexArray(VAO);
         glDrawArrays(GL_LINES, 0, 24);
     }
@@ -66,7 +73,7 @@ public:
     void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position)
     {
         float lineLength = 10.0f;
-        glLineWidth(5.0f);
+        glLineWidth(3.0f);
         glm::vec3 lineEnd = position + normals[0] * lineLength;
         drawLine(shader, VAO, position, lineEnd, glm::vec3(1.0f, 0.0f, 0.0f));
         lineEnd = position + normals[1] * lineLength;

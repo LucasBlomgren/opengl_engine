@@ -56,14 +56,15 @@ void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yof
 void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_Q)
-            engineState->toggleShowAABB();
-        if (key == GLFW_KEY_E)
-            engineState->toggleShowContactPoints();
-        if (key == GLFW_KEY_R)
+        if (key == GLFW_KEY_1)
             engineState->toggleShowNormals();
-        if (key == GLFW_KEY_T)
-            engineState->toggleShowCollisionNormal();
+        if (key == GLFW_KEY_2)
+            engineState->toggleShowAABB();
+        if (key == GLFW_KEY_3)
+            engineState->toggleShowOOBB();
+        if (key == GLFW_KEY_4)
+            engineState->toggleShowContactPoints();
+
         if (key == GLFW_KEY_G)
             engineState->togglePause();
         if (key == GLFW_KEY_H)
@@ -75,6 +76,8 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 {
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
         engineState->setPressedKey("Mouse1");
+    if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS)
+        engineState->setPressedKey("Mouse2");
 }
 
 void InputManager::processInput(GLFWwindow* window, float deltaTime)
