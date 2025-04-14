@@ -29,7 +29,6 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
     {
         object.updatePos(deltaTime);
         object.updateAABB();
-        object.colliding = false;
 
         if (!object.isStatic)
             object.OOBB_shouldUpdate = true;
@@ -63,8 +62,8 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
         if (checkOtherAxes(axisOrder, objA, objB))
         {
             // set awake
-            float velocityThreshold = 1.5;
-            float angularVelocityThreshold = 1.5;
+            float velocityThreshold = 2;
+            float angularVelocityThreshold = 2;
             if (objA.asleep) {
                 if (std::abs(glm::length(objB.linearVelocity)) > velocityThreshold or std::abs(glm::length(objB.angularVelocity)) > angularVelocityThreshold) {
                     objA.setAwake();
@@ -89,9 +88,6 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
             int collisionNormalOwner = 0;
             if (IntersectPolygons(objA, objB, collisionNormal, depth, collisionNormalOwner))
             {
-                objA.colliding = true;
-                objB.colliding = true;
-
                 glm::vec3 direction = objB.position - objA.position;
                 if (glm::dot(direction, collisionNormal) < 0)
                     collisionNormal = -collisionNormal;
@@ -103,15 +99,13 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
                 Contact contact = createContact(contactCache, objA, objB, collisionNormal, collisionNormalOwner);
 
                 if (contact.counter == 0) {
-                    std::cout << "No contact points found" << std::endl;
-                    std::cout << depth << std::endl;
                     continue;
                 }
 
                 std::shuffle(contact.points.begin(), contact.points.begin() + contact.counter, rng);
 
                 // PGS solver
-                int maxIterations = 20;
+                int maxIterations = 8;
                 for (int i = 0; i < maxIterations; i++) {
                     bool converged = true;
 
@@ -124,8 +118,7 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
                         float normalVelocity = glm::dot(relativeVelocity, contact.normal);
 
                         // Beräkna impulsen med redan uträkna target bounce velocity
-                        float J = -(normalVelocity - cp.targetBounceVelocity);
-                        J *= cp.m_eff;
+                        float J = -(normalVelocity - cp.targetBounceVelocity) * cp.m_eff;
 
                         // Clamp
                         float temp = cp.accumulatedImpulse;
@@ -285,7 +278,7 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
             }
         }
     }
-    int maxFramesWithoutCollision = 10;  // t.ex. behåll upp till 3 frames
+    int maxFramesWithoutCollision = 10; 
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
         if (!it->second.wasUsedThisFrame) {
             it->second.framesSinceUsed++;

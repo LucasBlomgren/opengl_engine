@@ -26,7 +26,6 @@ class GameObject
 {
 public:
     int id;
-    bool colliding;
     glm::vec3 position;
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -47,7 +46,6 @@ public:
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
 
-    glm::vec3 force;
     float staticFriction;
     float dynamicFriction;
     float restitution;
@@ -61,11 +59,7 @@ public:
 
     bool asleep = false;
     float sleepCounter = 0;
-    glm::vec3 collisionPoint;
-    glm::vec3 previousCollisionPoint;
-    glm::vec3 jitterMinRange;
-    glm::vec3 jitterMaxRange;
-    bool isWithinRange = false;
+    float sleepCounterThreshold;
 
     AABB AABB;
     OOBB OOBB;
@@ -75,13 +69,12 @@ public:
 
     bool isUniformlyScaled;
 
-    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID, glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
+    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID, glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), float sleepCounterThreshold = 0.5f)
         : id(id),
         AABB(id),
         vertices(vertices),
         indices(indices),
         position(position),
-        colliding(false),
         shouldRotate(true),
         scale(scale),
         hasGravity(true),
@@ -89,7 +82,8 @@ public:
         mass(mass),
         restitution(0.1f),
         textureID(textureID),
-        orientation(orientation)
+        orientation(orientation),
+        sleepCounterThreshold(sleepCounterThreshold)
     {
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
 
@@ -121,7 +115,6 @@ public:
     void drawMesh(Shader& shader);
     void updateAABB();
     void updateOOBB();
-    void addForce(const glm::vec3& f);
     void updatePos(const float& deltaTime);
     void setAsleep();
     void setAwake();

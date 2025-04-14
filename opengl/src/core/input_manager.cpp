@@ -78,6 +78,8 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
         engineState->setPressedKey("Mouse1");
     if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS)
         engineState->setPressedKey("Mouse2");
+    if (button == GLFW_MOUSE_BUTTON_3 && action == GLFW_PRESS)
+        engineState->setPressedKey("Mouse3");
 }
 
 void InputManager::processInput(GLFWwindow* window, float deltaTime)
@@ -93,6 +95,10 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
         camera->ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera->ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        camera->ProcessKeyboard(UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        camera->ProcessKeyboard(DOWN, deltaTime);
 
     //Mesh& obj = meshList[1];
     //Mesh& obj = *light;

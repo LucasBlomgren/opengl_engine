@@ -35,7 +35,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     // plank
     int mass = 50;
     glm::vec3 size = glm::vec3(140, 2, 5);
-    createObject(physicsEngine, "crate", glm::vec3(345, 31, 200), size, mass, 0, cubeVertices, indices);
+    createObject(physicsEngine, "crate", glm::vec3(345, 31, 200), size, mass, 0, cubeVertices, indices, {}, 999);
 
     float I_x = (1.0f / 12.0f) * mass * (size.y * size.y + size.z * size.z);
     float I_y = (1.0f / 12.0f) * mass * (size.x * size.x + size.y * size.y);
@@ -47,46 +47,58 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     );
 
     // projectile
-    createObject(physicsEngine, "crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 50, 0, cubeVertices, indices);
+    createObject(physicsEngine, "crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 50, 0, cubeVertices, indices, {}, 999);
 
     // projectile2
-    createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 50, 0, cubeVertices, indices);
+    createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 55, 0, cubeVertices, indices, {}, 999);
 
     // counterweight
     //createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, cubeVertices, indices);
 
     // box stacks
-    int amountObjects = 5;
-    int amountStacks = 1;
-    for (int j = 0; j < amountStacks; j++)
-        for (int i = 0; i < amountObjects; i++)
-            createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, (10 * i) + 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+    //int amountObjects = 7;
+    //int amountStacks = 1;
+    //for (int j = 0; j < amountStacks; j++)
+    //    for (int i = 0; i < amountObjects; i++)
+    //        createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, 5 + (10 * i), 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
 
-    // brick wall
-    int amountPerRow = 10;
-    for (int i = 0; i < amountPerRow; i++)
-        createObject(physicsEngine, "crate", glm::vec3(0 + 80 + (i * 12.5), 5, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-    for (int i = 0; i < amountPerRow -1; i++)
-        createObject(physicsEngine, "crate", glm::vec3(5 + 80 + (i * 12.5), 15, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-    for (int i = 0; i < amountPerRow -2; i++)
-        createObject(physicsEngine, "crate", glm::vec3(10 + 80 + (i * 12.5), 25, 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+
+    // // ---- brick wall ----
+    int wallHeight = 4;
+    int wallWidth = 70;
+
+    int brickWidth = 10;
+    int brickLength = 10;
+    int brickHeight = 10;
+    int brickDistance = 0;
+    for (int row = 0; row < wallHeight; row++) {
+        for (int col = 0; col < wallWidth; col++)
+        {
+            float x = 80 + row * brickWidth / 2 + (col * (brickWidth + brickDistance / 2));
+            float y = brickHeight / 2 + row * brickHeight;
+            float z = 345;
+            createObject(physicsEngine, "crate", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), 1, 0, cubeVertices, indices);
+        }
+        wallWidth -= 1;
+    }
 }
 
 GameObject& SceneBuilder::createObject
 (
-    PhysicsEngine& physicsEngine, 
-    const std::string& textureName, 
-    glm::vec3 pos, 
-    glm::vec3 size, 
-    float mass, 
+    PhysicsEngine& physicsEngine,
+    const std::string& textureName,
+    glm::vec3 pos,
+    glm::vec3 size,
+    float mass,
     bool isStatic,
-    std::vector<Vertex>& cubeVertices, 
+    std::vector<Vertex>& cubeVertices,
     std::vector<unsigned int>& indices,
-    glm::quat orientation
+    glm::quat orientation,
+    float sleepCounterThreshold
 )
 {
     unsigned int textureID = textureManager->getTexture(textureName);
-    GameObject object(objectId, cubeVertices, indices, pos, size, mass, isStatic, textureID, orientation);
+    GameObject object(objectId, cubeVertices, indices, pos, size, mass, isStatic, textureID, orientation, sleepCounterThreshold);
 
     GameObjectList.emplace_back(object);
     objectId++;

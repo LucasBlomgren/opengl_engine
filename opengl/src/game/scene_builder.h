@@ -15,15 +15,16 @@ public:
     void setTextureManager(TextureManager* tm);
     void createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
     GameObject& createObject(
-        PhysicsEngine& physicsEngine, 
-        const std::string& textureName, 
-        glm::vec3 pos, 
-        glm::vec3 size, 
-        float mass, 
-        bool isStatic, 
+        PhysicsEngine& physicsEngine,
+        const std::string& textureName,
+        glm::vec3 pos,
+        glm::vec3 size,
+        float mass,
+        bool isStatic,
         std::vector<Vertex>& cubeVertices,
         std::vector<unsigned int>& indices,
-        glm::quat orientation = glm::quat(1, 0, 0, 0)
+        glm::quat orientation = glm::quat(1, 0, 0, 0),
+        float sleepCounterThreshold = 0.5f
     );
     std::vector<GameObject>& getGameObjectList();
 

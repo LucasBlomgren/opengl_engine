@@ -38,14 +38,14 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
         obj.drawMesh(*shader);
 
         if (engineState->getShowAABB())
-            obj.AABB.draw(*shader, obj.colliding, obj.asleep);
-        if (engineState->getShowOOBB())
-        {
+            obj.AABB.draw(*shader, obj.asleep);
+
+        if (engineState->getShowOOBB()) {
             if (!obj.asleep or obj.isStatic) {
                 obj.OOBB_shouldUpdate = true;
                 obj.updateOOBB();
             }
-            obj.OOBB.draw(*shader, obj.colliding, obj.asleep, obj.isStatic);
+            obj.OOBB.draw(*shader, obj.asleep, obj.isStatic);
         }
         if (engineState->getShowNormals())
             obj.OOBB.drawNormals(*shader, VAO_line, obj.position);

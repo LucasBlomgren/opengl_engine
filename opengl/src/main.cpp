@@ -1,9 +1,11 @@
+#define GLM_FORCE_SIMD_AVX2 
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <iostream>
 #include <vector>
 #include <random>
 #include <chrono>
+#include <iomanip>
 
 #include "init_opengl.h"
 #include "engine_state.h"
@@ -95,17 +97,26 @@ int main()
     unsigned int VAO_worldFrame = setup_worldFrame();
     unsigned int VAO_contactPoint = setupContactPoint();
 
-    Light light(glm::vec3(350, 50, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 8);
+    // red light
+    Light light(glm::vec3(350, 160, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 60);
     lightManager.addLight(light);
 
-    Light light2(glm::vec3(150, 220, 100), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 55);
+    // green
+    Light light2(glm::vec3(150, 220, 200), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 75);
     lightManager.addLight(light2);
 
-    Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 80);
+    // blue light
+    Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 100);
     lightManager.addLight(light3);
 
-    //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, -0.0f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
+    //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, 0.8f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
 
+    // Bestäm det fasta tidssteget: 60 uppdateringar per sekund
+    const float fixedTimeStep = 1.0f / 360.0f;
+    float accumulator = 0.0f;
+    float lastFrame = static_cast<float>(glfwGetTime());
+
+    float a = -1;
     // main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -125,7 +136,11 @@ int main()
         }
         if (engineState.GetPressedKey() == "Mouse2") {
             GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            newObject.linearVelocity = camera.Front * 500.0f;
+            newObject.linearVelocity = camera.Front * 300.0f;
+        }
+        if (engineState.GetPressedKey() == "Mouse3") {
+            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+            newObject.linearVelocity = camera.Front * 2500.0f;
         }
         engineState.clearPressedKey();
 
@@ -133,8 +148,14 @@ int main()
         inputManager.processInput(window, deltaTime);
 
         // physics step
-        if (!engineState.isPaused())
-            physicsEngine.step(sceneBuilder.getGameObjectList(), deltaTime, engineState.getShowNormals(), g);
+        if (!engineState.isPaused()) 
+        {
+            accumulator += deltaTime;
+            while (accumulator >= fixedTimeStep) {
+                physicsEngine.step(sceneBuilder.getGameObjectList(), fixedTimeStep, engineState.getShowNormals(), g);
+                accumulator -= fixedTimeStep;
+            }
+        }
         
         // rendering
         renderer.beginFrame();
@@ -153,7 +174,9 @@ int main()
         {
             last_second = seconds;
             std::cout << "FPS: " << frames << "\n";
+            std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;
             std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
+            std::cout << "--------------" << std::endl;
             frames = 0;
         };
         frames++;

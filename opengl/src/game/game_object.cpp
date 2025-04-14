@@ -60,39 +60,35 @@ void GameObject::updateOOBB()
     }
 }
 
-void GameObject::addForce(const glm::vec3& f)
-{
-    force += f;
-}
-
 void GameObject::updatePos(const float& deltaTime)
 {
-    if (sleepCounter > 1.0)
+    if (isStatic)
+        return;
+
+    if (sleepCounter > sleepCounterThreshold)
         setAsleep();
+
+    if (asleep)
+        return;
 
     modelMatrixShouldUpdate = true;
 
-    float time = deltaTime;
-
-    if (isStatic or asleep)
-        return;
-
     if (hasGravity)
-        linearVelocity += g * time;
+        linearVelocity += g * deltaTime;
 
-    linearVelocity *= std::pow(0.96f, time);
-    angularVelocity *= std::pow(0.94f, time);
-    biasLinearVelocity *= std::pow(0.96f, time);
+    linearVelocity *= std::pow(0.96f, deltaTime);
+    angularVelocity *= std::pow(0.94f, deltaTime);
+    biasLinearVelocity *= std::pow(0.96f, deltaTime);
 
     glm::vec3 summedLinearVelocity = linearVelocity + biasLinearVelocity;
     biasLinearVelocity = glm::vec3();
 
-    position += summedLinearVelocity * time;
-    updateOrientation(orientation, angularVelocity, time);
+    position += summedLinearVelocity * deltaTime;
+    updateOrientation(orientation, angularVelocity, deltaTime);
 
     // sleep counter
-    float velocityThreshold = 1.5;
-    float angularVelocityThreshold = 1.5;
+    float velocityThreshold = 2;
+    float angularVelocityThreshold = 2;
     if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) {
         sleepCounter += deltaTime;
     }
@@ -111,7 +107,6 @@ void GameObject::setAsleep()
     angularVelocity = glm::vec3(0, 0, 0);
     biasLinearVelocity = glm::vec3(0, 0, 0);
 
-    colliding = false;
     asleep = true;
 }
 
@@ -121,7 +116,6 @@ void GameObject::setAwake()
         return;
 
     asleep = false;
-    colliding = true;
     sleepCounter = 0.0f;
 }
 

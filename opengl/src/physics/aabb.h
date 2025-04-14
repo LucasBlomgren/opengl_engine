@@ -86,14 +86,11 @@ public:
         updateBuffer();
     }
 
-    void draw(Shader& shader, bool colliding, bool asleep)
+    void draw(Shader& shader, bool asleep)
     {
         if (!asleep) {
             updateBuffer();
         }
-
-        //if (!colliding) { color = glm::vec3(0.9f, 0.7f, 0.2f); }
-        //else { color = glm::vec3(1, 0, 0); }
 
         color = glm::vec3(0.9f, 0.7f, 0.2f);
 

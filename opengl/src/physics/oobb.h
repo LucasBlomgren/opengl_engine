@@ -50,14 +50,14 @@ public:
         }
     }
 
-    void draw(Shader& shader, bool colliding, bool asleep, bool isStatic)
+    void draw(Shader& shader, bool asleep, bool isStatic)
     {
         if (!asleep or isStatic) {
             setBufferData(transformedVertices);
             updateBuffer();
         }
 
-        if (!colliding) { color = glm::vec3(0,0,1); }
+        if (asleep) { color = glm::vec3(0,0,1); }
         else { color = glm::vec3(1, 0, 0); }
 
         glm::mat4 model = glm::mat4(1.0f);
