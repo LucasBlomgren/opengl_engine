@@ -18,7 +18,11 @@ public:
     void clearPhysicsData();
     void addAabbEdges(const AABB& box);
 
+    void updatePositions(std::vector<GameObject>& GameObjectList, float deltaTime);
+
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
+    std::vector<Edge>* getSortedEdges() const;
+    int getSelectedAxis() const;
 
     int amountCollisionPairs = 0;
 
@@ -26,6 +30,8 @@ private:
     std::vector<Edge> allEdgesX;
     std::vector<Edge> allEdgesY;
     std::vector<Edge> allEdgesZ;
+    std::vector<Edge>* sortedEdges;
+    int selectedAxis;
 
     std::unordered_map<size_t, Contact> contactCache;
 };

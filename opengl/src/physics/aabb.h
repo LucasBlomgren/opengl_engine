@@ -12,7 +12,7 @@ struct Edge {
     bool isMin;
     float coord;
 
-    Edge(int id, bool isMin, float coord)
+    Edge(int id = 0, bool isMin = 0, float coord = 0)
     : id(id), isMin(isMin), coord(coord) {}
 };
 

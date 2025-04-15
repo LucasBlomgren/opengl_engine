@@ -23,7 +23,7 @@
 #include "light.h"
 #include "light_manager.h"
 
-#include "editor.h"
+#include "editor/editor.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -55,11 +55,11 @@ TextureManager textureManager;
 SceneBuilder sceneBuilder;
 LightManager lightManager;
 
-// editor
-Editor editor(engineState, sceneBuilder, physicsEngine, cubeVertices, indices);
-
 // view
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
+
+// editor
+Editor editor;
 
 int main()
 {
@@ -81,6 +81,9 @@ int main()
     sceneBuilder.setPointers(&textureManager, &lightManager);
     // create scene
     sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
+
+    // setup editor
+    editor.setPointers(engineState, sceneBuilder, physicsEngine, camera, cubeVertices, indices);
 
     // set camera starting angle
     camera.Yaw += 130;
@@ -116,9 +119,6 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // editor functions
-        editor.update(camera);
-
         // continous input 
         inputManager.processInput(window, deltaTime);
 
@@ -130,6 +130,9 @@ int main()
                 accumulator -= fixedTimeStep;
             }
         }
+
+        // editor functions
+        editor.update();
         
         // rendering
         renderer.beginFrame();
@@ -139,6 +142,8 @@ int main()
         renderer.drawLights();
         renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
         renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
+
+        drawLine(shader, VAO_line, editor.ray.start, editor.ray.end, glm::vec3(0.0, 1.0, 0.0));
 
         // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();

@@ -1,5 +1,13 @@
 #include "physics.h"
 
+std::vector<Edge>* PhysicsEngine::getSortedEdges() const {
+    return sortedEdges;
+
+}
+int PhysicsEngine::getSelectedAxis() const {
+    return selectedAxis;
+}
+
 void PhysicsEngine::addAabbEdges(const AABB& box) {
     allEdgesX.push_back(box.Box.min.x);
     allEdgesX.push_back(box.Box.max.x);
@@ -22,9 +30,8 @@ void PhysicsEngine::clearPhysicsData() {
     allEdgesZ.clear();
 }
 
-void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTime, bool showNormals, std::mt19937 rng)
+void PhysicsEngine::updatePositions(std::vector<GameObject>& GameObjectList, float deltaTime) 
 {
-    // update objects pos etc.
     for (GameObject& object : GameObjectList)
     {
         object.updatePos(deltaTime);
@@ -33,6 +40,11 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
         if (!object.isStatic)
             object.OOBB_shouldUpdate = true;
     }
+}
+
+void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTime, bool showNormals, std::mt19937 rng)
+{
+    updatePositions(GameObjectList, deltaTime);
 
     // Broad phase
     updateEdgePos(GameObjectList, allEdgesX, allEdgesY, allEdgesZ);
@@ -43,14 +55,14 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
 
     std::vector<Edge>* selectedEdges = findMaxVarianceAxis(varianceX, varianceY, varianceZ, allEdgesX, allEdgesY, allEdgesZ);
     insertionSort(*selectedEdges);
+    this->sortedEdges = selectedEdges;
 
     std::vector<std::pair<int, int>> collisionCouplesList;
     findOverlap(*selectedEdges, collisionCouplesList);
 
-    int axisOrder;
-    if (selectedEdges == &allEdgesX) { axisOrder = 0; }
-    else if (selectedEdges == &allEdgesY) { axisOrder = 1; }
-    else { axisOrder = 2; }
+    if (selectedEdges == &allEdgesX) { selectedAxis = 0; }
+    else if (selectedEdges == &allEdgesY) { selectedAxis = 1; }
+    else { selectedAxis = 2; }
 
     amountCollisionPairs = collisionCouplesList.size();
 
@@ -63,7 +75,7 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
             continue;
         }
 
-        if (checkOtherAxes(axisOrder, objA, objB))
+        if (checkOtherAxes(selectedAxis, objA, objB))
         {
             // set awake
             float velocityThreshold = 2;
@@ -97,9 +109,6 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
                     collisionNormal = -collisionNormal;
 
                 // contactPoints
-                GameObject* objA_ptr = &objA;
-                GameObject* objB_ptr = &objB;
-
                 Contact contact = createContact(contactCache, objA, objB, collisionNormal, collisionNormalOwner);
 
                 if (contact.counter == 0) {
@@ -167,7 +176,7 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
                         float J2 = -v_t2 * invMassT2;
 
                         // ---------- Static friction ----------
-                        if (vtMagnitude < 0.5f)
+                        if (vtMagnitude < 0.8f)
                         {
                             // Den totala önskade friktionsimpulsen i tangentplanet:
                             glm::vec3 desiredFrictionImpulse = (J1 * cp.t1) + (J2 * cp.t2);
