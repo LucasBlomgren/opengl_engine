@@ -71,8 +71,12 @@ public:
         glDrawArrays(GL_LINES, 0, 24);
     }
 
-    void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position)
+    void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position, const glm::mat4& M, const glm::vec3 angularVelocity)
     {
+        if (glm::length(angularVelocity) != 0) {
+            updateNormals(M);
+        }
+
         float lineLength = 10.0f;
         glLineWidth(3.0f);
         glm::vec3 lineEnd = position + normals[0] * lineLength;

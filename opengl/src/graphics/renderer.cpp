@@ -48,7 +48,15 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
             obj.OOBB.draw(*shader, obj.asleep, obj.isStatic);
         }
         if (engineState->getShowNormals())
-            obj.OOBB.drawNormals(*shader, VAO_line, obj.position);
+            obj.OOBB.drawNormals(*shader, VAO_line, obj.position, obj.modelMatrix, obj.angularVelocity);
+    }
+}
+
+void Renderer::drawLights() const
+{
+    const std::vector<Light>& lights = lightManager->getLights();
+    for (const Light& light : lights) {
+        light.draw(*shader);
     }
 }
 
@@ -73,6 +81,7 @@ void Renderer::drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactP
 }
 
 void Renderer::uploadLightsToShader() {
+
     shader->use();
 
     const std::vector<Light>& lights = lightManager->getLights();

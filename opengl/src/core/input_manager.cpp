@@ -69,6 +69,8 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->togglePause();
         if (key == GLFW_KEY_H)
             engineState->setPressedKey("H");
+        if (key == GLFW_KEY_5)
+            engineState->setPressedKey("5");
     }
 }
 

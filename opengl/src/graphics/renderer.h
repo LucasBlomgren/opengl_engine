@@ -18,6 +18,7 @@ public:
     void beginFrame() const;
     void setViewProjection(Camera& camera);
     void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const;
+    void drawLights() const;
     void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
 
     void uploadLightsToShader();

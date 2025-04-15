@@ -23,6 +23,8 @@
 #include "light.h"
 #include "light_manager.h"
 
+#include "editor.h"
+
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -53,6 +55,9 @@ TextureManager textureManager;
 SceneBuilder sceneBuilder;
 LightManager lightManager;
 
+// editor
+Editor editor(engineState, sceneBuilder, physicsEngine, cubeVertices, indices);
+
 // view
 Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
 
@@ -73,7 +78,7 @@ int main()
     textureManager.loadTexture("uvmap", "src/assets/UV0.png");
 
     // setup scene builder
-    sceneBuilder.setTextureManager(&textureManager);
+    sceneBuilder.setPointers(&textureManager, &lightManager);
     // create scene
     sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
 
@@ -91,32 +96,17 @@ int main()
     int frames = 0;
     int last_second = 0;
 
+    // fixed timestep
+    const float fixedTimeStep = 1.0f / 360.0f;
+    float accumulator = 0.0f;
+    float lastFrame = static_cast<float>(glfwGetTime());
+
     // setup help VAOs
     unsigned int VAO_line = setupLine();
     unsigned int VAO_xyz = setup_xyzObject();
     unsigned int VAO_worldFrame = setup_worldFrame();
     unsigned int VAO_contactPoint = setupContactPoint();
 
-    // red light
-    Light light(glm::vec3(350, 160, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 60);
-    lightManager.addLight(light);
-
-    // green
-    Light light2(glm::vec3(150, 220, 200), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 75);
-    lightManager.addLight(light2);
-
-    // blue light
-    Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 100);
-    lightManager.addLight(light3);
-
-    //lightManager.setDirectionalLight(glm::vec3(-0.0f, -1.0f, 0.8f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
-
-    // Bestäm det fasta tidssteget: 60 uppdateringar per sekund
-    const float fixedTimeStep = 1.0f / 360.0f;
-    float accumulator = 0.0f;
-    float lastFrame = static_cast<float>(glfwGetTime());
-
-    float a = -1;
     // main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -126,30 +116,14 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // "gameplay" functionality
-        if (engineState.GetPressedKey() == "H") {
-            sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
-        }
-        if (engineState.GetPressedKey() == "Mouse1") {
-            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            newObject.linearVelocity = camera.Front * 0.0f;
-        }
-        if (engineState.GetPressedKey() == "Mouse2") {
-            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            newObject.linearVelocity = camera.Front * 300.0f;
-        }
-        if (engineState.GetPressedKey() == "Mouse3") {
-            GameObject& newObject = sceneBuilder.createObject(physicsEngine, "crate", (camera.Position + camera.Front * 30.0f), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
-            newObject.linearVelocity = camera.Front * 2500.0f;
-        }
-        engineState.clearPressedKey();
+        // editor functions
+        editor.update(camera);
 
         // continous input 
         inputManager.processInput(window, deltaTime);
 
         // physics step
-        if (!engineState.isPaused()) 
-        {
+        if (!engineState.isPaused()) {
             accumulator += deltaTime;
             while (accumulator >= fixedTimeStep) {
                 physicsEngine.step(sceneBuilder.getGameObjectList(), fixedTimeStep, engineState.getShowNormals(), g);
@@ -162,9 +136,7 @@ int main()
         renderer.setViewProjection(camera);
         renderer.uploadDirectionalLight();
         renderer.uploadLightsToShader();
-        light.draw(shader);
-        light2.draw(shader);
-        light3.draw(shader);
+        renderer.drawLights();
         renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
         renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
@@ -176,6 +148,11 @@ int main()
             std::cout << "FPS: " << frames << "\n";
             std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;
             std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
+
+            if (deltaTime > 0.016f) {
+                std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << std::endl;
+                std::cout << "Collision pairs: " << physicsEngine.amountCollisionPairs << std::endl;
+            }
             std::cout << "--------------" << std::endl;
             frames = 0;
         };

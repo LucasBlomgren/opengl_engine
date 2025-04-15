@@ -4,8 +4,12 @@ void LightManager::addLight(const Light& light) {
     lights.push_back(light);
 }
 
-void LightManager::clear() {
+void LightManager::clearLights() {
     lights.clear();
+}
+
+void LightManager::clearDirectionalLight() {
+    directionalLight = DirectionalLight();
 }
 
 const std::vector<Light>& LightManager::getLights() const {

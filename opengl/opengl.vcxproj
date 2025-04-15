@@ -23,6 +23,7 @@
     <ClCompile Include="src\core\engine_state.cpp" />
     <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
+    <ClCompile Include="src\game\editor.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\graphics\debug\draw_contact_points.cpp" />
@@ -45,6 +46,7 @@
     <ClInclude Include="src\core\init_opengl.h" />
     <ClInclude Include="src\core\input_manager.h" />
     <ClInclude Include="src\game\cube_data.h" />
+    <ClInclude Include="src\game\editor.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />

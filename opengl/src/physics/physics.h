@@ -20,6 +20,8 @@ public:
 
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
+    int amountCollisionPairs = 0;
+
 private:
     std::vector<Edge> allEdgesX;
     std::vector<Edge> allEdgesY;

@@ -43,12 +43,16 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
 
     std::vector<Edge>* selectedEdges = findMaxVarianceAxis(varianceX, varianceY, varianceZ, allEdgesX, allEdgesY, allEdgesZ);
     insertionSort(*selectedEdges);
-    std::vector<std::pair<int, int>> collisionCouplesList = findOverlap(*selectedEdges);
+
+    std::vector<std::pair<int, int>> collisionCouplesList;
+    findOverlap(*selectedEdges, collisionCouplesList);
 
     int axisOrder;
     if (selectedEdges == &allEdgesX) { axisOrder = 0; }
     else if (selectedEdges == &allEdgesY) { axisOrder = 1; }
     else { axisOrder = 2; }
+
+    amountCollisionPairs = collisionCouplesList.size();
 
     for (const std::pair<int, int>& collisionCouple : collisionCouplesList)
     {

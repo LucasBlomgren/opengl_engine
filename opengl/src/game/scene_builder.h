@@ -4,6 +4,7 @@
 #include "game_object.h"
 #include "vertex.h"
 #include "texture_manager.h"
+#include "light_manager.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,7 +13,7 @@
 class SceneBuilder 
 {
 public:
-    void setTextureManager(TextureManager* tm);
+    void setPointers(TextureManager* tm, LightManager* lm);
     void createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices);
     GameObject& createObject(
         PhysicsEngine& physicsEngine,
@@ -27,9 +28,13 @@ public:
         float sleepCounterThreshold = 0.5f
     );
     std::vector<GameObject>& getGameObjectList();
+    void toggleDayTime();
 
 private:
     TextureManager* textureManager = nullptr;
+    LightManager* lightManager = nullptr;
+
+    bool dayTime = false;
 
     int objectId;
     std::vector<GameObject> GameObjectList;

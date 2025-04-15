@@ -22,6 +22,7 @@
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
+    <ClCompile Include="src\game\editor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -77,6 +78,7 @@
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
+    <ClInclude Include="src\game\editor.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

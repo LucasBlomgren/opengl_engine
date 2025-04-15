@@ -64,23 +64,21 @@ std::vector<Edge>* findMaxVarianceAxis(const float& variancex, const float& vari
     return selectededges;
 }
 
-std::vector<std::pair<int,int>> findOverlap(const std::vector<Edge>& edges)
+void findOverlap(const std::vector<Edge>& edges, std::vector<std::pair<int, int>>& collisionCouplesList)
 {
     std::unordered_set<int> currentTouching;
-    std::vector<std::pair<int, int>> collisionCoupleslist;
+    collisionCouplesList.reserve(edges.size());
 
     for (const Edge& edge : edges) {
         if (edge.isMin) {
             for (const int& touchingid : currentTouching) {
-                collisionCoupleslist.push_back(std::make_pair(edge.id, touchingid));
+                collisionCouplesList.emplace_back(edge.id, touchingid);
             }
             currentTouching.insert(edge.id);
         }
         else
             currentTouching.erase(edge.id);
     }
-
-    return collisionCoupleslist;
 }
 
 bool checkOtherAxes(int axisOrder, GameObject& objA, GameObject& objB)
