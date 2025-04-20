@@ -140,13 +140,6 @@ private:
         setBox({ Bmin[0], Bmin[1], Bmin[2], Bmax[0], Bmax[1], Bmax[2] });
     }
 
-    void transformVertices(glm::mat4& modelMatrix, std::vector<glm::vec3>& vertices, std::vector<glm::vec3>& transformedVertices)
-    {
-        for (int i = 0; i < vertices.size(); i++) {
-            transformedVertices[i] = glm::vec3(modelMatrix * glm::vec4(vertices[i], 1.0f));
-        }
-    }
-
     void setupBuffer()
     {
         setBufferData();

@@ -1,5 +1,15 @@
 #include "physics.h"
 
+void PhysicsEngine::setPointers(std::vector<GameObject>* gameObjectList) {
+    this->gameObjectList = gameObjectList;
+}
+
+RaycastHit PhysicsEngine::performRayCastFinite(Physics::Ray& ray)
+{
+    RaycastHit hitData = rayCastFinite(ray, this->gameObjectList, this->getSortedEdges(), this->selectedAxis);
+    return hitData;
+}
+
 std::vector<Edge>* PhysicsEngine::getSortedEdges() const {
     return sortedEdges;
 
@@ -30,9 +40,9 @@ void PhysicsEngine::clearPhysicsData() {
     allEdgesZ.clear();
 }
 
-void PhysicsEngine::updatePositions(std::vector<GameObject>& GameObjectList, float deltaTime) 
+void PhysicsEngine::updatePositions(float deltaTime) 
 {
-    for (GameObject& object : GameObjectList)
+    for (GameObject& object : *gameObjectList)
     {
         object.updatePos(deltaTime);
         object.updateAABB();
@@ -42,12 +52,12 @@ void PhysicsEngine::updatePositions(std::vector<GameObject>& GameObjectList, flo
     }
 }
 
-void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTime, bool showNormals, std::mt19937 rng)
+void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
 {
-    updatePositions(GameObjectList, deltaTime);
+    updatePositions(deltaTime);
 
     // Broad phase
-    updateEdgePos(GameObjectList, allEdgesX, allEdgesY, allEdgesZ);
+    updateEdgePos(*gameObjectList, allEdgesX, allEdgesY, allEdgesZ);
 
     float varianceX = calculateVariance(allEdgesX);
     float varianceY = calculateVariance(allEdgesY);
@@ -68,8 +78,8 @@ void PhysicsEngine::step(std::vector<GameObject>& GameObjectList, float deltaTim
 
     for (const std::pair<int, int>& collisionCouple : collisionCouplesList)
     {
-        GameObject& objA = GameObjectList[collisionCouple.first];
-        GameObject& objB = GameObjectList[collisionCouple.second];
+        GameObject& objA = (*gameObjectList)[collisionCouple.first];
+        GameObject& objB = (*gameObjectList)[collisionCouple.second];
         
         if (objA.isStatic and objB.isStatic) {
             continue;

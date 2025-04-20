@@ -23,7 +23,7 @@
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor\editor.cpp" />
-    <ClCompile Include="src\game\editor\ray_place_object.cpp" />
+    <ClCompile Include="src\physics\ray_cast_finite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -80,7 +80,9 @@
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\game\editor\editor.h" />
-    <ClInclude Include="src\game\editor\ray_place_object.h" />
+    <ClInclude Include="src\physics\ray_cast_finite.h" />
+    <ClInclude Include="src\physics\ray.h" />
+    <ClInclude Include="src\game\sphere_data.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

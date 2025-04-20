@@ -25,7 +25,7 @@ void InputManager::init(GLFWwindow* window)
 }
 
 void InputManager::setPointers(EngineState* state, Camera* camera) {
-    engineState = state;
+    this->engineState = state;
     this->camera = camera;
 }
 

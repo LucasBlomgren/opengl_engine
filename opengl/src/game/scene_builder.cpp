@@ -41,8 +41,8 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     physicsEngine.clearPhysicsData();
 
     // ----------- floor tiles -----------
-    int floorWidth = 5; 
-    int floorHeight = 5;
+    int floorWidth = 2; 
+    int floorHeight = 500;
     for (int i = 0; i < floorWidth; i++)
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
@@ -89,7 +89,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
 
     // ----------- brick wall -----------
     int wallHeight = 4;
-    int wallWidth = 80;
+    int wallWidth = 1000;
     int brickWidth = 10;
     int brickLength = 10;
     int brickHeight = 10;
@@ -109,7 +109,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
 
     // ----------- pyramid -----------
     int pyramidHeight = 7;
-    int pyramidWidth = 8;
+    int pyramidWidth = 9;
     int stoneWidth = 10;
     int stoneLength = 10;
     int stoneHeight = 10;
@@ -147,6 +147,8 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
         Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 100);
         lightManager->addLight(light3);
     }
+
+    createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(stoneWidth, stoneHeight, stoneLength), 1, 0, sphereVertices, sphereIndices);
 }
 
 GameObject& SceneBuilder::createObject

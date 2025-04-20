@@ -25,6 +25,8 @@
 
 #include "editor/editor.h"
 
+void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera);
+
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -77,13 +79,15 @@ int main()
     textureManager.loadTexture("crate", "src/assets/crate.jpg");
     textureManager.loadTexture("uvmap", "src/assets/UV0.png");
 
-    // setup scene builder
+    // setup scene 
     sceneBuilder.setPointers(&textureManager, &lightManager);
-    // create scene
     sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
 
+    // setup physics
+    physicsEngine.setPointers(&sceneBuilder.getGameObjectList());
+
     // setup editor
-    editor.setPointers(engineState, sceneBuilder, physicsEngine, camera, cubeVertices, indices);
+    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
 
     // set camera starting angle
     camera.Yaw += 130;
@@ -126,14 +130,21 @@ int main()
         if (!engineState.isPaused()) {
             accumulator += deltaTime;
             while (accumulator >= fixedTimeStep) {
-                physicsEngine.step(sceneBuilder.getGameObjectList(), fixedTimeStep, engineState.getShowNormals(), g);
+                physicsEngine.step(fixedTimeStep, engineState.getShowNormals(), g);
                 accumulator -= fixedTimeStep;
             }
         }
 
         // editor functions
         editor.update();
-        
+
+        if (editor.getRayCastHasHit())
+        {
+            RaycastHit rayHit = editor.getLastRayHit();
+            GameObject& obj = sceneBuilder.getGameObjectList()[rayHit.objIndex];
+            if (!obj.isStatic) { obj.asleep = false; }
+        }
+
         // rendering
         renderer.beginFrame();
         renderer.setViewProjection(camera);
@@ -143,7 +154,7 @@ int main()
         renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
         renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
-        drawLine(shader, VAO_line, editor.ray.start, editor.ray.end, glm::vec3(0.0, 1.0, 0.0));
+        drawAABB(editor.getLastRayHit(), shader, camera);
 
         // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
@@ -169,4 +180,48 @@ int main()
     }
     glfwTerminate();
     return 0;
+}
+
+void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera)
+{
+    glm::vec3 min = camera.Position + camera.Front * 100.0f - 5.0f;
+    glm::vec3 max = camera.Position + camera.Front * 100.0f + 5.0f;
+
+    std::array<float, 72> buf = {
+        min.x,min.y,min.z,  max.x,min.y,min.z,
+        min.x,min.y,min.z,  min.x,max.y,min.z,
+        min.x,min.y,min.z,  min.x,min.y,max.z,
+        max.x,max.y,min.z,  max.x,min.y,min.z,
+        max.x,max.y,min.z,  min.x,max.y,min.z,
+        max.x,max.y,min.z,  max.x,max.y,max.z,
+        min.x,max.y,max.z,  min.x,min.y,max.z,
+        min.x,max.y,max.z,  min.x,max.y,min.z,
+        min.x,max.y,max.z,  max.x,max.y,max.z,
+        max.x,min.y,max.z,  max.x,max.y,max.z,
+        max.x,min.y,max.z,  min.x,min.y,max.z,
+        max.x,min.y,max.z,  max.x,min.y,min.z
+    };
+
+    static GLuint vao = 0, vbo = 0; 
+    if (vao == 0) {
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(0);
+    }
+
+
+    shader.setBool("useTexture", false);
+    shader.setBool("useUniformColor", true);
+    shader.setVec3("uColor", { 0.9f,0.7f,0.2f });
+    shader.setMat4("model", glm::mat4(1.0f));
+
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf.data(), GL_DYNAMIC_DRAW);
+
+    glLineWidth(2.0f);
+    glDrawArrays(GL_LINES, 0, 24);
 }

@@ -6,6 +6,8 @@
 #include "texture_manager.h"
 #include "light_manager.h"
 
+#include "sphere_data.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>

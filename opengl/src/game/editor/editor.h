@@ -3,10 +3,10 @@
 #include "engine_state.h"
 #include "scene_builder.h"
 #include "physics.h"
+#include "ray.h"
 #include "game_object.h"
 #include "camera.h"
 #include "vertex.h"
-#include "ray_place_object.h"
 #include <vector>
 
 struct rayCast {
@@ -18,17 +18,17 @@ class Editor
 {
 public:
     void setPointers(
-        EngineState& engineState,
-        SceneBuilder& sceneBuilder,
-        PhysicsEngine& physicsEngine,
-        Camera& camera,
-        std::vector<Vertex>& cubeVertices,
-        std::vector<unsigned int>& indices
+        EngineState* engineState,
+        SceneBuilder* sceneBuilder,
+        PhysicsEngine* physicsEngine,
+        Camera* camera,
+        std::vector<Vertex>* cubeVertices,
+        std::vector<unsigned int>* indices
     );
     void update();
-    void performRaycastPlacement();
-
-    rayCast ray;
+    RaycastHit rayCast();
+    RaycastHit& getLastRayHit();
+    bool getRayCastHasHit() const;
 
 private:
     EngineState* engineState = nullptr;
@@ -38,4 +38,7 @@ private:
 
     std::vector<Vertex>* cubeVertices = nullptr;
     std::vector<unsigned int>* indices = nullptr;
+
+    RaycastHit lastHitData;
+    bool rayCastHasHit = false;
 };

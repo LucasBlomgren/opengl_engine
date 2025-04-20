@@ -37,7 +37,7 @@ void GameObject::drawMesh(Shader& shader)
     shader.setBool("useUniformColor", false);
 
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 2880, GL_UNSIGNED_INT, 0);
 }
 
 void GameObject::updateAABB()
