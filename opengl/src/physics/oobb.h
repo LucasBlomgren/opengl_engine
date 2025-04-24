@@ -62,7 +62,7 @@ public:
 
         glm::mat4 model = glm::mat4(1.0f);
         shader.setMat4("model", model);
-        shader.setBool("useTexture", false);
+        shader.setInt("objectType", 0);
         shader.setBool("useUniformColor", true);
         shader.setVec3("uColor", color);
 
@@ -71,14 +71,17 @@ public:
         glDrawArrays(GL_LINES, 0, 24);
     }
 
-    void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position, const glm::mat4& M, const glm::vec3 angularVelocity)
+    void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position, const glm::mat4& M, const bool asleep)
     {
-        if (glm::length(angularVelocity) != 0) {
+        if (!asleep) {
             updateNormals(M);
         }
 
+        shader.setInt("objectType", 2);
+        shader.setBool("useUniformColor", true);
+
         float lineLength = 10.0f;
-        glLineWidth(3.0f);
+        glLineWidth(4.0f);
         glm::vec3 lineEnd = position + normals[0] * lineLength;
         drawLine(shader, VAO, position, lineEnd, glm::vec3(1.0f, 0.0f, 0.0f));
         lineEnd = position + normals[1] * lineLength;

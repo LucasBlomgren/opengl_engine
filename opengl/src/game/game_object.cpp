@@ -31,10 +31,17 @@ void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angu
 void GameObject::drawMesh(Shader& shader)
 {
     setModelMatrix();
-
     shader.setMat4("model", modelMatrix);
-    shader.setBool("useTexture", true);
-    shader.setBool("useUniformColor", false);
+
+    if (textureID != 999) {
+        shader.setBool("useTexture", true);
+        shader.setBool("useUniformColor", false);
+    }
+    else {
+        shader.setBool("useTexture", false);
+        shader.setBool("useUniformColor", true);
+        shader.setVec3("uColor", glm::vec3(0.9,0.9,0.9));
+    }
 
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 2880, GL_UNSIGNED_INT, 0);
@@ -83,8 +90,13 @@ void GameObject::updatePos(const float& deltaTime)
     glm::vec3 summedLinearVelocity = linearVelocity + biasLinearVelocity;
     biasLinearVelocity = glm::vec3();
 
+    lastPosition = position;
     position += summedLinearVelocity * deltaTime;
     updateOrientation(orientation, angularVelocity, deltaTime);
+
+    if (selectedByEditor) {
+        angularVelocity = glm::vec3(0.0f);
+    }
 
     // sleep counter
     float velocityThreshold = 2;

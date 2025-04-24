@@ -14,7 +14,7 @@
 class Renderer 
 {
 public:
-    void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader);
+    void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader, Shader& debugShader);
     void beginFrame() const;
     void setViewProjection(Camera& camera);
     void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const;
@@ -31,8 +31,7 @@ private:
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;
     Shader* shader = nullptr;
+    Shader* debugShader = nullptr;
 
-    glm::mat4 projection;
-    glm::mat4 view;
     float maxViewDistance = 5000.0f;
 };

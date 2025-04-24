@@ -25,10 +25,15 @@ public:
         std::vector<Vertex>* cubeVertices,
         std::vector<unsigned int>* indices
     );
-    void update();
+    void update(float deltaTime);
     RaycastHit rayCast();
     RaycastHit& getLastRayHit();
     bool getRayCastHasHit() const;
+
+    void selectObject();
+    void updateSelectedObject(float deltaTime);
+    GameObject* selectedObject = nullptr;
+    glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
 
 private:
     EngineState* engineState = nullptr;

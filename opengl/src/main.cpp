@@ -72,8 +72,9 @@ int main()
     inputManager.init(window);
 
     // setup rendering
-    Shader shader("src/shaders/object.vs", "src/shaders/object.fs");
-    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader);
+    Shader shader("src/shaders/object.vert", "src/shaders/object.frag");
+    Shader debugShader("src/shaders/debug.vert", "src/shaders/debug.frag");
+    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader, debugShader);
 
     // load textures
     textureManager.loadTexture("crate", "src/assets/crate.jpg");
@@ -136,10 +137,9 @@ int main()
         }
 
         // editor functions
-        editor.update();
+        editor.update(deltaTime);
 
-        if (editor.getRayCastHasHit())
-        {
+        if (editor.getRayCastHasHit()) {
             RaycastHit rayHit = editor.getLastRayHit();
             GameObject& obj = sceneBuilder.getGameObjectList()[rayHit.objIndex];
             if (!obj.isStatic) { obj.asleep = false; }
@@ -154,12 +154,11 @@ int main()
         renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
         renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
-        drawAABB(editor.getLastRayHit(), shader, camera);
+        //drawAABB(editor.getLastRayHit(), shader, camera);
 
         // print FPS and object count
         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-        if (seconds > last_second)
-        {
+        if (seconds > last_second) {
             last_second = seconds;
             std::cout << "FPS: " << frames << "\n";
             std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;

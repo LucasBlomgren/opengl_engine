@@ -96,8 +96,9 @@ public:
 
         glm::mat4 model = glm::mat4(1.0f);
         shader.setMat4("model", model);
-        shader.setBool("useTexture", false);
-        shader.setBool("useUniformColor", true);
+
+        shader.setInt("objectType", 0);
+        shader.setBool("useUniformColor", true);    
         shader.setVec3("uColor", color);
 
         glLineWidth(1.0f);

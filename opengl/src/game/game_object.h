@@ -68,6 +68,9 @@ public:
     bool OOBB_shouldUpdateBuffer = false;
 
     bool isUniformlyScaled;
+    bool selectedByEditor = false;
+    glm::vec3 lastPosition;
+    glm::vec3 pushCorrection;
 
     GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID, glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), float sleepCounterThreshold = 0.5f)
         : id(id),

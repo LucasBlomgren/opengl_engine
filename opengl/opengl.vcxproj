@@ -40,6 +40,9 @@
     <ClCompile Include="src\physics\ray_cast_finite.cpp" />
     <ClCompile Include="src\physics\sat.cpp" />
     <ClCompile Include="src\physics\sweep_and_prune.cpp" />
+    <None Include="src\shaders\debug.frag">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\camera.h" />
@@ -79,8 +82,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\externals\glfw3.dll" />
-    <None Include="src\shaders\object.fs" />
-    <None Include="src\shaders\object.vs" />
+    <None Include="src\shaders\debug.vert" />
+    <None Include="src\shaders\object.frag" />
+    <None Include="src\shaders\object.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

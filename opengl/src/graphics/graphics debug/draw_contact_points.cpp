@@ -66,10 +66,13 @@ unsigned int setupContactPoint() {
     return VAO;
 }
 
-void drawContactPoint(const Shader& shader, unsigned int& VAO, const glm::vec3& contactPoint) {
-
+void drawContactPoint(const Shader& shader, unsigned int& VAO, const glm::vec3& contactPoint) 
+{
+    shader.setInt("objectType", 1);
     shader.setVec3("contactPointOffset", contactPoint);
+    shader.setVec3("uColor", glm::vec3(0, 250, 154));
+    shader.setBool("useUniformColor", true);
 
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 36);  // Rendera kuben med samma VAO/VBO
+    glDrawArrays(GL_TRIANGLES, 0, 36);  
 }

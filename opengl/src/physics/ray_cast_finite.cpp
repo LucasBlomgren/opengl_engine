@@ -5,12 +5,17 @@
 
 RaycastHit rayCastFinite(Physics::Ray& ray, std::vector<GameObject>* gameObjectList, std::vector<Edge>* edges, int selectedAxis)
 {
+    // ändra så funktionen tar in en vanlig AABB istället för rayBox
+    // 1. loopa över detta x antal gånger i editor
+    // 2. om aabbcollisions.size() == 0: färdig och placera objekt
+    // 3. om inte, visa en "cant place object" markör
+
     if (!edges) {
         RaycastHit emptyHit;
         return emptyHit;
     }
 
-    // Skapa rayAABB och Edge-paret för sweep and prune
+    // Skapa rayAABB och Edge-paret för sweep and prune  ----------- flytta så att editor gör detta/egen funktion
     Raybox rayAABB{ glm::min(ray.start, ray.end), glm::max(ray.start, ray.end) };
 
     std::pair<Edge, Edge> edgePair;
@@ -32,7 +37,11 @@ RaycastHit rayCastFinite(Physics::Ray& ray, std::vector<GameObject>* gameObjectL
         }
     }
 
-    // Narrow phase
+    // Narrow phase ------ separera helt från broadphasen ovan. Broadphase ovan är bara sweep and prune med en limit. Har inget med raycast egentligen att göra
+    // 1. detta är raycast.
+    // 2. efter editor har kört broadphase med en specifik aabb (skapat från ray iteration 1, sen aabb som placeras kring rayhit och flyttas utåt längs ray-normal)
+    // // så ska den köra narrow phase (detta) och lämna tillbaka resultet (sen körs broadphase igen o.s.v.)
+    // 3. sista ray hit är den som ska användas för att placera objektet (eller om för många iterationer: då ska ska inget placeras)
     int bestObjIndex = -1;
     float bestT = std::numeric_limits<float>::max();
 
@@ -60,6 +69,7 @@ RaycastHit rayCastFinite(Physics::Ray& ray, std::vector<GameObject>* gameObjectL
         }
     }
 
+    // no hit
     if (bestObjIndex == -1) {
         RaycastHit emptyHit;
         return emptyHit;

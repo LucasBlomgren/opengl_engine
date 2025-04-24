@@ -19,14 +19,10 @@ void drawLine(const Shader& shader, unsigned int& VAO, const glm::vec3& lineStar
     shader.setVec3("lineEnd", lineEnd);
 
     shader.setBool("useUniformColor", true);
-    shader.setBool("useTexture", false);
     shader.setVec3("uColor", color);
-    shader.setBool("isLine", true);
 
     // Rendera linjen
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINES, 0, 2);  // GL_LINES används för att rita linjen
     glBindVertexArray(0);
-
-    shader.setBool("isLine", false);
 }

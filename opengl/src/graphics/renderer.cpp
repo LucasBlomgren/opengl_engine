@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader)
+void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader, Shader& debugShader)
 {   
     screenWidth = (float) width;
     screenHeight = (float) height;
@@ -9,6 +9,7 @@ void Renderer::init(unsigned int width, unsigned int height, EngineState& engine
     this->lightManager = &lightManager;
 
     this->shader = &shader;
+    this->debugShader = &debugShader;
     shader.use();
 }
 
@@ -22,33 +23,42 @@ void Renderer::setViewProjection(Camera& camera)
 {
     // projection matrix 
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
-    shader->setMat4("projection", projection);
-
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
-    shader->setMat4("view", view);
 
+    shader->use();
+    shader->setMat4("projection", projection);
+    shader->setMat4("view", view);
     shader->setVec3("viewPos", camera.Position);
+
+    debugShader->use();
+    debugShader->setMat4("projection", projection);
+    debugShader->setMat4("view", view);
+    debugShader->setVec3("viewPos", camera.Position);
 }
 
 void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const
 {
     for (GameObject& obj : objects) {
         glBindTexture(GL_TEXTURE_2D, obj.textureID);
+        shader->use();
         obj.drawMesh(*shader);
 
-        if (engineState->getShowAABB())
-            obj.AABB.draw(*shader, obj.asleep);
+        debugShader->use();
+        if (engineState->getShowAABB()) {
+            obj.AABB.draw(*debugShader, obj.asleep);
+        }
 
         if (engineState->getShowOOBB()) {
             if (!obj.asleep or obj.isStatic) {
                 obj.OOBB_shouldUpdate = true;
                 obj.updateOOBB();
             }
-            obj.OOBB.draw(*shader, obj.asleep, obj.isStatic);
+            obj.OOBB.draw(*debugShader, obj.asleep, obj.isStatic);
         }
-        if (engineState->getShowNormals())
-            obj.OOBB.drawNormals(*shader, VAO_line, obj.position, obj.modelMatrix, obj.angularVelocity);
+        if (engineState->getShowNormals()) {
+            obj.OOBB.drawNormals(*debugShader, VAO_line, obj.position, obj.modelMatrix, obj.asleep);
+        }
     }
 }
 
@@ -61,29 +71,23 @@ void Renderer::drawLights() const
 }
 
 void Renderer::drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame) {
+    debugShader->use();
     if (engineState->getShowContactPoints()) {
-        shader->setBool("useUniformColor", true);
-        shader->setVec3("uColor", glm::vec3(0, 250, 154));
-        shader->setBool("isContactPoint", true);
-        shader->setBool("useTexture", false);
-
         const auto& contactCache = physicsEngine.GetContactCache();
         for (const auto& pair : contactCache) {
             const Contact& contact = pair.second;
             for (int i = 0; i < contact.counter; i++)
-                drawContactPoint(*shader, VAO_contactPoint, contact.points[i].globalCoord);
+                drawContactPoint(*debugShader, VAO_contactPoint, contact.points[i].globalCoord);
         }
-        shader->setBool("isContactPoint", false);
     }
 
-    draw_xyzObject(*shader, VAO_xyz);
-    //draw_worldFrame(*shader, VAO_worldFrame);
+    draw_xyzObject(*debugShader, VAO_xyz);
+    //draw_worldFrame(*debugShader, VAO_worldFrame);
 }
 
 void Renderer::uploadLightsToShader() {
 
     shader->use();
-
     const std::vector<Light>& lights = lightManager->getLights();
 
     for (int i = 0; i < lights.size(); ++i) {
@@ -107,6 +111,8 @@ void Renderer::uploadLightsToShader() {
 
 void Renderer::uploadDirectionalLight() {
     const DirectionalLight& light = lightManager->getDirectionalLight();
+
+    shader->use();
     shader->setVec3("dirLight.direction", light.direction);
     shader->setVec3("dirLight.ambient", light.ambient);
     shader->setVec3("dirLight.diffuse", light.diffuse);

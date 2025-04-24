@@ -11,13 +11,12 @@ in vec3 FragPos;
 
 uniform bool useTexture;
 uniform sampler2D texture1;
-
 uniform vec3 viewPos;
 
 // ---- lighting ----
 struct DirLight {
     vec3 direction;
-	
+
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -62,8 +61,8 @@ void main()
         FragColor = texture(texture1, TexCoord) * vec4(result, 1.0);
     }
     else {
-        FragColor = vec4(ourColor, 1.0);
-    }  
+        FragColor = vec4(ourColor * result, 1.0);
+    }
 }
 
 // calculates the color when using a directional light.

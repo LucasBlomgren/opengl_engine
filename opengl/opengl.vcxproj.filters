@@ -92,7 +92,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\externals\glfw3.dll" />
-    <None Include="src\shaders\object.fs" />
-    <None Include="src\shaders\object.vs" />
+    <None Include="src\shaders\object.frag" />
+    <None Include="src\shaders\object.vert" />
+    <None Include="src\shaders\debug.vert">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\debug.frag" />
   </ItemGroup>
 </Project>
