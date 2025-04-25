@@ -66,44 +66,16 @@ public:
 
     void Init(const std::vector<glm::vec3>& vertices, glm::vec3& scale)
     {
-        // if (isUniformlyScaled) {
             std::array<float, 6> extremePoints = getExtremePoints(vertices);
             setDefaultBox(extremePoints);
             setBox(extremePoints);
             setDefaultFaces(extremePoints);
-            setupBuffer();
-        // else {
     }
 
-    void update(std::vector<glm::vec3>& vertices,glm::mat4& modelMatrix, glm::vec3& position, bool isUniformlyScaled)
+    void update(std::vector<glm::vec3>& vertices,glm::mat4& modelMatrix, glm::vec3& position)
     {
-        // only if "Box has moved"?
-
         glm::mat3 model3x3 = glm::mat3(modelMatrix);
         Transform_Box(model3x3, position);
-
-        // only if "show AABB"
-        updateBuffer();
-    }
-
-    void draw(Shader& shader, bool asleep)
-    {
-        if (!asleep) {
-            updateBuffer();
-        }
-
-        color = glm::vec3(0.9f, 0.7f, 0.2f);
-
-        glm::mat4 model = glm::mat4(1.0f);
-        shader.setMat4("model", model);
-
-        shader.setInt("objectType", 0);
-        shader.setBool("useUniformColor", true);    
-        shader.setVec3("uColor", color);
-
-        glLineWidth(1.0f);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_LINES, 0, 24);
     }
 
 private:
@@ -139,58 +111,6 @@ private:
         }
 
         setBox({ Bmin[0], Bmin[1], Bmin[2], Bmax[0], Bmax[1], Bmax[2] });
-    }
-
-    void setupBuffer()
-    {
-        setBufferData();
-        // VAO
-        glGenVertexArrays(1, &VAO);
-        glBindVertexArray(VAO);
-        // VBO
-        glGenBuffers(1, &VBO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, bufferData.size() * sizeof(float), bufferData.data(), GL_STATIC_DRAW);
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-    }
-
-    void updateBuffer()
-    {
-        setBufferData();
-        // Bind the VBO
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        // Update the data in the VBO
-        glBufferSubData(GL_ARRAY_BUFFER, 0, bufferData.size() * sizeof(float), bufferData.data());
-    }
-
-    void setBufferData()
-    {
-        float min_X = Box.min.x.coord;
-        float min_Y = Box.min.y.coord;
-        float min_Z = Box.min.z.coord;
-        float max_X = Box.max.x.coord;
-        float max_Y = Box.max.y.coord;
-        float max_Z = Box.max.z.coord;
-
-        bufferData.clear();
-
-        bufferData =
-        {
-        min_X, min_Y, min_Z,  max_X, min_Y, min_Z,
-        min_X, min_Y, min_Z,  min_X, max_Y, min_Z,
-        min_X, min_Y, min_Z,  min_X, min_Y, max_Z,
-        max_X, max_Y, min_Z,  max_X, min_Y, min_Z,
-        max_X, max_Y, min_Z,  min_X, max_Y, min_Z,
-        max_X, max_Y, min_Z,  max_X, max_Y, max_Z,
-        min_X, max_Y, max_Z,  min_X, min_Y, max_Z,
-        min_X, max_Y, max_Z,  min_X, max_Y, min_Z,
-        min_X, max_Y, max_Z,  max_X, max_Y, max_Z,
-        max_X, min_Y, max_Z,  max_X, max_Y, max_Z,
-        max_X, min_Y, max_Z,  min_X, min_Y, max_Z,
-        max_X, min_Y, max_Z,  max_X, min_Y, min_Z
-        };
     }
 
     void setBox(const std::array<float, 6>& extremePoints)

@@ -17,6 +17,8 @@
 #include "shader.h"
 #include "aabb.h"
 #include "oobb.h"
+#include "oobb_renderer.h"
+#include "aabb_renderer.h"
 
 inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
@@ -66,6 +68,8 @@ public:
     bool AABB_ShouldUpdate = true;
     bool OOBB_shouldUpdate = false;
     bool OOBB_shouldUpdateBuffer = false;
+    OOBBRenderer oobbRenderer;
+    AABBRenderer aabbRenderer;
 
     bool isUniformlyScaled;
     bool selectedByEditor = false;
@@ -107,7 +111,12 @@ public:
 
         setModelMatrix();
         AABB.Init(verticesPositions, scale);
+        AABB.update(verticesPositions, modelMatrix, position);
         OOBB.Init(verticesPositions, modelMatrix);
+
+        aabbRenderer.setupWireframeBox(AABB);
+        oobbRenderer.setupWireframeBox();
+        oobbRenderer.setupNormals();
 
         this->setupMesh();
     }

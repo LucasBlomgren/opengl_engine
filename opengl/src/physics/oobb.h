@@ -11,13 +11,9 @@
 class OOBB
 {
 public:
-    unsigned int VAO;
-    unsigned int VBO;
     std::array<glm::vec3, 8> vertices;
     std::array<glm::vec3, 8> transformedVertices;
     std::array<glm::vec3, 3> normals;
-    glm::vec3 color;
-    std::array<glm::vec3, 24> bufferData;
 
     std::array<glm::vec3, 3> localAxes = {
         glm::vec3(1, 0, 0),
@@ -29,65 +25,15 @@ public:
     {
         std::array<float, 6> extremePoints = getExtremePoints(vertices);
         createVertices(extremePoints);
-
         createNormals();
-        setBufferData(this->vertices);
-        setupBuffer(bufferData);
-
         updateNormals(M);
         getTransformedVertices(M);
     }
 
-    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M, const bool shouldUpdateBuffer)
+    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M)
     {
-        // if only has rotated (behöver optimeras också)
         updateNormals(M);
         getTransformedVertices(M);
-
-        if (shouldUpdateBuffer) {
-            setBufferData(transformedVertices);
-            updateBuffer();
-        }
-    }
-
-    void draw(Shader& shader, bool asleep, bool isStatic)
-    {
-        if (!asleep or isStatic) {
-            setBufferData(transformedVertices);
-            updateBuffer();
-        }
-
-        if (asleep) { color = glm::vec3(0,0,1); }
-        else { color = glm::vec3(1, 0, 0); }
-
-        glm::mat4 model = glm::mat4(1.0f);
-        shader.setMat4("model", model);
-        shader.setInt("objectType", 0);
-        shader.setBool("useUniformColor", true);
-        shader.setVec3("uColor", color);
-
-        glLineWidth(1.0f);
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_LINES, 0, 24);
-    }
-
-    void drawNormals(Shader& shader, unsigned int& VAO, glm::vec3& position, const glm::mat4& M, const bool asleep)
-    {
-        if (!asleep) {
-            updateNormals(M);
-        }
-
-        shader.setInt("objectType", 2);
-        shader.setBool("useUniformColor", true);
-
-        float lineLength = 10.0f;
-        glLineWidth(4.0f);
-        glm::vec3 lineEnd = position + normals[0] * lineLength;
-        drawLine(shader, VAO, position, lineEnd, glm::vec3(1.0f, 0.0f, 0.0f));
-        lineEnd = position + normals[1] * lineLength;
-        drawLine(shader, VAO, position, lineEnd, glm::vec3(0.0f, 1.0f, 0.0f));
-        lineEnd = position + normals[2] * lineLength;
-        drawLine(shader, VAO, position, lineEnd, glm::vec3(0.0f, 0.0f, 1.0f));
     }
 
 private:
@@ -96,33 +42,6 @@ private:
         for (int i = 0; i < vertices.size(); i++) {
             transformedVertices[i] = glm::vec3(M * glm::vec4(vertices[i], 1.0f));
         }
-    }
-
-    void updateBuffer()
-    {
-        // Bind the VBO
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        // Update the data in the VBO
-        glBufferSubData(GL_ARRAY_BUFFER, 0, bufferData.size() * sizeof(glm::vec3), bufferData.data());
-    }
-
-    void setBufferData(const std::array<glm::vec3, 8>& vertices)
-    {
-        bufferData =
-        {
-            vertices[0], vertices[1],
-            vertices[0], vertices[2],
-            vertices[0], vertices[4],
-            vertices[1], vertices[3],
-            vertices[1], vertices[5],
-            vertices[2], vertices[3],
-            vertices[2], vertices[6],
-            vertices[3], vertices[7],
-            vertices[4], vertices[5],
-            vertices[4], vertices[6],
-            vertices[5], vertices[7],
-            vertices[6], vertices[7]
-        };
     }
 
     void createVertices(const std::array<float,6>& extremePoints)
@@ -200,19 +119,5 @@ private:
         normals[0] = glm::normalize(R * localAxes[0]);
         normals[1] = glm::normalize(R * localAxes[1]);
         normals[2] = glm::normalize(R * localAxes[2]);
-    }
-
-    void setupBuffer(const std::array<glm::vec3, 24>& bufferData)
-    {
-        // VAO
-        glGenVertexArrays(1, &VAO);
-        glBindVertexArray(VAO);
-        // VBO
-        glGenBuffers(1, &VBO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, bufferData.size() * sizeof(glm::vec3), bufferData.data(), GL_STATIC_DRAW);
-        // position attribute
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
-        glEnableVertexAttribArray(0);
     }
 };

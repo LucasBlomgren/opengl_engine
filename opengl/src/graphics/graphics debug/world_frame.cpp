@@ -82,8 +82,8 @@ void draw_worldFrame(const Shader& shader, const unsigned int& VAO_xyz)
 {
     glm::mat4 model = glm::mat4(1.0f);
     shader.setMat4("model", model);
-    shader.setBool("useUniformColor", true);
-    shader.setVec3("uColor", glm::vec3(0, 0, 0));
+    shader.setBool("debug.useUniformColor", true);
+    shader.setVec3("debug.uColor", glm::vec3(0, 0, 0));
 
     glLineWidth(5.0f);
     glBindVertexArray(VAO_xyz);

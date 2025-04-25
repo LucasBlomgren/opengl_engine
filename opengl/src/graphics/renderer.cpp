@@ -46,18 +46,15 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
 
         debugShader->use();
         if (engineState->getShowAABB()) {
-            obj.AABB.draw(*debugShader, obj.asleep);
+            //obj.AABB.draw(*debugShader, obj.asleep);
+            obj.aabbRenderer.drawBox(obj.AABB, *debugShader, obj.asleep);
         }
 
         if (engineState->getShowOOBB()) {
-            if (!obj.asleep or obj.isStatic) {
-                obj.OOBB_shouldUpdate = true;
-                obj.updateOOBB();
-            }
-            obj.OOBB.draw(*debugShader, obj.asleep, obj.isStatic);
+            obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep);
         }
         if (engineState->getShowNormals()) {
-            obj.OOBB.drawNormals(*debugShader, VAO_line, obj.position, obj.modelMatrix, obj.asleep);
+            obj.oobbRenderer.drawNormals(*debugShader, obj.modelMatrix);
         }
     }
 }

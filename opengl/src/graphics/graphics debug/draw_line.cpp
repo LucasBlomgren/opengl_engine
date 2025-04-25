@@ -15,11 +15,11 @@ unsigned int setupLine() {
 void drawLine(const Shader& shader, unsigned int& VAO, const glm::vec3& lineStart, const glm::vec3& lineEnd, const glm::vec3& color)
 {
     // Skicka start- och slutpunkt till shadern
-    shader.setVec3("lineStart", lineStart);
-    shader.setVec3("lineEnd", lineEnd);
+    shader.setVec3("debug.lineStart", lineStart);
+    shader.setVec3("debug.lineEnd", lineEnd);
 
-    shader.setBool("useUniformColor", true);
-    shader.setVec3("uColor", color);
+    shader.setBool("debug.useUniformColor", true);
+    shader.setVec3("debug.uColor", color);
 
     // Rendera linjen
     glBindVertexArray(VAO);

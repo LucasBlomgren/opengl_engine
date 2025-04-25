@@ -68,10 +68,10 @@ unsigned int setupContactPoint() {
 
 void drawContactPoint(const Shader& shader, unsigned int& VAO, const glm::vec3& contactPoint) 
 {
-    shader.setInt("objectType", 1);
-    shader.setVec3("contactPointOffset", contactPoint);
-    shader.setVec3("uColor", glm::vec3(0, 250, 154));
-    shader.setBool("useUniformColor", true);
+    shader.setInt("debug.objectType", 1);
+    shader.setVec3("debug.contactPointOffset", contactPoint);
+    shader.setVec3("debug.uColor", glm::vec3(0, 250, 154));
+    shader.setBool("debug.useUniformColor", true);
 
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);  

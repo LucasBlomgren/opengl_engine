@@ -6,8 +6,10 @@ unsigned int setup_xyzObject()
     {
         0.0f,   5.0f,   0.0f,    1.0f, 0.0f, 0.0f,
         100.0f, 5.0f,   0.0f,    1.0f, 0.0f, 0.0f,
+
         0.0f,   5.0f,   0.0f,    0.0f, 1.0f, 0.0f,
         0.0f,   105.0f, 0.0f,    0.0f, 1.0f, 0.0f,
+
         0.0f,   5.0f,   0.0f,    0.0f, 0.0f, 1.0f,
         0.0f,   5.0f,   100.0f,  0.0f, 0.0f, 1.0f,
     };
@@ -34,10 +36,10 @@ unsigned int setup_xyzObject()
 
 void draw_xyzObject(const Shader& shader, const unsigned int& VAO_xyz)
 {
-    shader.setInt("objectType", 0);
     glm::mat4 model = glm::mat4(1.0f);
     shader.setMat4("model", model);
-    shader.setBool("useUniformColor", false);
+    shader.setInt("debug.objectType", 0);
+    shader.setBool("debug.useUniformColor", false);
 
     glLineWidth(7.0f);
     glBindVertexArray(VAO_xyz);

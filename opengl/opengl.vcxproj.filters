@@ -24,6 +24,8 @@
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor\editor.cpp" />
     <ClCompile Include="src\physics\ray_cast_finite.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -83,6 +85,8 @@
     <ClInclude Include="src\physics\ray_cast_finite.h" />
     <ClInclude Include="src\physics\ray.h" />
     <ClInclude Include="src\game\sphere_data.h" />
+    <ClInclude Include="src\graphics\graphics debug\oobb_renderer.h" />
+    <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

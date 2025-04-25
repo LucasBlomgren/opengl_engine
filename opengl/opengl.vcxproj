@@ -26,8 +26,10 @@
     <ClCompile Include="src\game\editor\editor.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\world_frame.cpp" />
     <ClCompile Include="src\graphics\graphics debug\xyz_object.cpp" />
     <ClCompile Include="src\graphics\light.cpp" />
@@ -55,8 +57,10 @@
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\game\sphere_data.h" />
+    <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_contact_points.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_line.h" />
+    <ClInclude Include="src\graphics\graphics debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\world_frame.h" />
     <ClInclude Include="src\graphics\graphics debug\xyz_object.h" />
     <ClInclude Include="src\graphics\light.h" />

@@ -149,8 +149,8 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     }
 
     // sphere
-    GameObject& sphere = createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(5), 1, 0, sphereVertices, sphereIndices);
-    sphere.textureID = 999;
+    //GameObject& sphere = createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(10), 1, 0, sphereVertices, sphereIndices);
+    //sphere.textureID = 999;
 }
 
 GameObject& SceneBuilder::createObject

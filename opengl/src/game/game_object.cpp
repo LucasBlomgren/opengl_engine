@@ -44,7 +44,7 @@ void GameObject::drawMesh(Shader& shader)
     }
 
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 2880, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }
 
 void GameObject::updateAABB()
@@ -52,7 +52,7 @@ void GameObject::updateAABB()
     setModelMatrix();
 
     if ((AABB_ShouldUpdate and !asleep) or isStatic) 
-        AABB.update(verticesPositions, modelMatrix, position, isUniformlyScaled);
+        AABB.update(verticesPositions, modelMatrix, position);
 }
 
 void GameObject::updateOOBB()
@@ -61,9 +61,8 @@ void GameObject::updateOOBB()
 
     if (OOBB_shouldUpdate and !asleep) 
     {
-        OOBB.update(verticesPositions, modelMatrix, OOBB_shouldUpdateBuffer);
+        OOBB.update(verticesPositions, modelMatrix);
         OOBB_shouldUpdate = false;
-        OOBB_shouldUpdateBuffer = false;
     }
 }
 
