@@ -26,6 +26,7 @@
     <ClCompile Include="src\physics\ray_cast_finite.cpp" />
     <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
+    <ClCompile Include="src\geometry\cube_data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -57,7 +58,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\vertex.h" />
     <ClInclude Include="src\core\camera.h" />
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
@@ -77,16 +77,17 @@
     <ClInclude Include="src\graphics\graphics debug\draw_line.h" />
     <ClInclude Include="src\graphics\graphics debug\world_frame.h" />
     <ClInclude Include="src\graphics\graphics debug\xyz_object.h" />
-    <ClInclude Include="src\game\cube_data.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\game\editor\editor.h" />
     <ClInclude Include="src\physics\ray_cast_finite.h" />
     <ClInclude Include="src\physics\ray.h" />
-    <ClInclude Include="src\game\sphere_data.h" />
     <ClInclude Include="src\graphics\graphics debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
+    <ClInclude Include="src\geometry\cube_data.h" />
+    <ClInclude Include="src\geometry\sphere_data.h" />
+    <ClInclude Include="src\geometry\vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

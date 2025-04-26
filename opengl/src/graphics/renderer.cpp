@@ -40,16 +40,13 @@ void Renderer::setViewProjection(Camera& camera)
 void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const
 {
     for (GameObject& obj : objects) {
-        glBindTexture(GL_TEXTURE_2D, obj.textureID);
-        shader->use();
         obj.drawMesh(*shader);
 
-        debugShader->use();
-        if (engineState->getShowAABB()) {
-            //obj.AABB.draw(*debugShader, obj.asleep);
-            obj.aabbRenderer.drawBox(obj.AABB, *debugShader, obj.asleep);
-        }
+        obj.aabbRenderer.updateModel(obj.AABB, obj.asleep);
 
+        if (engineState->getShowAABB()) {
+            obj.aabbRenderer.drawBox(*debugShader);
+        }
         if (engineState->getShowOOBB()) {
             obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep);
         }

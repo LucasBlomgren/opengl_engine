@@ -57,6 +57,7 @@ public:
     bool hasGravity;
     bool isStatic;
     bool shouldRotate;
+    bool isRotating = false;
     glm::vec3 g = glm::vec3(0.0f, -90.82f, 0.0f);
 
     bool asleep = false;
@@ -110,8 +111,8 @@ public:
             verticesPositions.push_back(vertex.position);
 
         setModelMatrix();
-        AABB.Init(verticesPositions, scale);
-        AABB.update(verticesPositions, modelMatrix, position);
+        AABB.Init(verticesPositions);
+        AABB.update(modelMatrix, position, scale, isRotating);
         OOBB.Init(verticesPositions, modelMatrix);
 
         aabbRenderer.setupWireframeBox(AABB);

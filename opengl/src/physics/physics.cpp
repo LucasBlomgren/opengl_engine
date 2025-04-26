@@ -90,13 +90,23 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
             // set awake
             float velocityThreshold = 2;
             float angularVelocityThreshold = 2;
+
+            float velocityThreshold2 = velocityThreshold * velocityThreshold;
+            float angularVelocityThreshold2 = angularVelocityThreshold * angularVelocityThreshold;
+
+            float linearVelocityLen;
+            float angularVelocityLen;
             if (objA.asleep) {
-                if (std::abs(glm::length(objB.linearVelocity)) > velocityThreshold or std::abs(glm::length(objB.angularVelocity)) > angularVelocityThreshold) {
+                linearVelocityLen = glm::dot(objB.linearVelocity, objB.linearVelocity);
+                angularVelocityLen = glm::dot(objB.angularVelocity, objB.angularVelocity);
+                if (linearVelocityLen > velocityThreshold2 or angularVelocityLen > angularVelocityThreshold2) {
                     objA.setAwake();
                 }
             }
             if (objB.asleep) {
-                if (std::abs(glm::length(objA.linearVelocity)) > velocityThreshold or std::abs(glm::length(objA.angularVelocity)) > angularVelocityThreshold) {
+                linearVelocityLen = glm::dot(objA.linearVelocity, objA.linearVelocity);
+                angularVelocityLen = glm::dot(objA.angularVelocity, objA.angularVelocity);
+                if (linearVelocityLen > velocityThreshold2 or angularVelocityLen > angularVelocityThreshold2) {
                     objB.setAwake();
                 }
             }
@@ -128,7 +138,7 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                 std::shuffle(contact.points.begin(), contact.points.begin() + contact.counter, rng);
 
                 // PGS solver
-                int maxIterations = 8;
+                int maxIterations = 4;
                 for (int i = 0; i < maxIterations; i++) {
                     bool converged = true;
 
@@ -152,7 +162,8 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                         glm::vec3 deltaNormalImpulse = deltaImpulse * contact.normal;
 
                         // Apply impulses
-                        if (glm::length(deltaNormalImpulse) > 1e-6f) {
+                        float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
+                        if (deltaNormalImpulseLen > 1e-6f) {
                             objA.linearVelocity -= deltaNormalImpulse * objA.invMass;
                             objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, deltaNormalImpulse);
 
@@ -168,17 +179,23 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                         float v_t1 = glm::dot(relativeVelocity, cp.t1);
                         float v_t2 = glm::dot(relativeVelocity, cp.t2);
                         // Combine the tangential velocities to a vector
-                        float vtMagnitude = glm::sqrt(v_t1 * v_t1 + v_t2 * v_t2);
+                        float vtMagnitude = v_t1 * v_t1 + v_t2 * v_t2;
+
+                        glm::vec3 rA_t1 = glm::cross(cp.rA, cp.t1);
+                        glm::vec3 rB_t1 = glm::cross(cp.rB, cp.t1);
+                        glm::vec3 rA_t2 = glm::cross(cp.rA, cp.t2);
+                        glm::vec3 rB_t2 = glm::cross(cp.rB, cp.t2);
+
+                        glm::vec3 invIA_rA_t1 = objA.inverseInertia * rA_t1;
+                        glm::vec3 invIB_rB_t1 = objB.inverseInertia * rB_t1;
+                        glm::vec3 invIA_rA_t2 = objA.inverseInertia * rA_t2;
+                        glm::vec3 invIB_rB_t2 = objB.inverseInertia * rB_t2;
 
                         // Beräkna effektiv massa längs cp.t1 och cp.t2 (som tidigare)
-                        float k_t1 = (objA.invMass + objB.invMass)
-                            + glm::dot(glm::cross(cp.rA, cp.t1), objA.inverseInertia * glm::cross(cp.rA, cp.t1))
-                            + glm::dot(glm::cross(cp.rB, cp.t1), objB.inverseInertia * glm::cross(cp.rB, cp.t1));
+                        float k_t1 = (objA.invMass + objB.invMass) + glm::dot(rA_t1, invIA_rA_t1) + glm::dot(rB_t1, invIB_rB_t1);
                         float invMassT1 = 1.0f / k_t1;
 
-                        float k_t2 = (objA.invMass + objB.invMass)
-                            + glm::dot(glm::cross(cp.rA, cp.t2), objA.inverseInertia * glm::cross(cp.rA, cp.t2))
-                            + glm::dot(glm::cross(cp.rB, cp.t2), objB.inverseInertia * glm::cross(cp.rB, cp.t2));
+                        float k_t2 = (objA.invMass + objB.invMass) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
                         float invMassT2 = 1.0f / k_t2;
 
                         // Beräkna preliminära impulser i varje riktning:
@@ -186,18 +203,21 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                         float J2 = -v_t2 * invMassT2;
 
                         // ---------- Static friction ----------
-                        if (vtMagnitude < 0.8f)
+                        if (vtMagnitude < 0.8f * 0.8f)
                         {
                             // Den totala önskade friktionsimpulsen i tangentplanet:
                             glm::vec3 desiredFrictionImpulse = (J1 * cp.t1) + (J2 * cp.t2);
+                            float imp2 = glm::dot(desiredFrictionImpulse, desiredFrictionImpulse);
 
                             // Beräkna maximal statisk friktionsimpuls (mu_static * |accumulatedImpulse|)
                             float mu_static = 0.9f; // Justera beroende på material
                             float maxStaticImpulse = mu_static * fabs(cp.accumulatedImpulse);
+                            float max2 = maxStaticImpulse * maxStaticImpulse;
 
                             float impulseMag = glm::length(desiredFrictionImpulse);
-                            if (impulseMag > maxStaticImpulse) {
-                                desiredFrictionImpulse *= (maxStaticImpulse / impulseMag);
+                            if (imp2 > max2) {
+                                float invMag = 1.0f / glm::sqrt(imp2);
+                                desiredFrictionImpulse *= (maxStaticImpulse * invMag);
                             }
 
                             // Applicera den statiska friktionsimpulsen:
@@ -237,7 +257,8 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                             glm::vec3 frictionImpulse = (deltaFrictionImpulse1 * cp.t1) + (deltaFrictionImpulse2 * cp.t2);
 
                             // Applicera impulsen:
-                            if (glm::length(frictionImpulse) > 1e-6f) {
+                            float frictionImpulseLen = glm::dot(frictionImpulse, frictionImpulse);
+                            if (frictionImpulseLen > 1e-6f) {
                                 objA.linearVelocity -= frictionImpulse * objA.invMass;
                                 objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, frictionImpulse);
 
@@ -277,7 +298,8 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                         glm::vec3 twistImpulseVec = deltaTwistImpulse * contact.normal;
 
                         // Applicera twistimpulsen på kropparnas angulära hastigheter
-                        if (glm::length(twistImpulseVec) > 1e-6f) {
+                        float twistImpulseVecLen = glm::dot(twistImpulseVec, twistImpulseVec);
+                        if (twistImpulseVecLen > 1e-6f) {
                             objA.angularVelocity -= objA.inverseInertia * twistImpulseVec;
                             objB.angularVelocity += objB.inverseInertia * twistImpulseVec;
                             converged = false;

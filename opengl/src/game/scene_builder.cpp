@@ -34,7 +34,7 @@ void SceneBuilder::toggleDayTime() {
     }
 }
 
-void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>& cubeVertices, std::vector<unsigned int>& indices)
+void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 {
     objectId = 0;
     GameObjectList.clear();
@@ -46,22 +46,22 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     for (int i = 0; i < floorWidth; i++)
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-            createObject(physicsEngine, "uvmap", glm::vec3(250 + i * 500, -5, 250 + j * 500), glm::vec3(500, 10, 500), 0, 1, cubeVertices, indices, orientation);
+            createObject(physicsEngine, "uvmap", glm::vec3(250 + i * 500, -5, 250 + j * 500), glm::vec3(500, 10, 500), 0, 1, orientation);
             
         }
 
     // ----------- slanted platform -----------
     glm::quat orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    createObject(physicsEngine, "crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, cubeVertices, indices, orientation);
+    createObject(physicsEngine, "crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, orientation);
 
     // ----------- catapult -----------
     // support
-    createObject(physicsEngine,  "crate", glm::vec3(345, 15, 200), glm::vec3(5, 30, 20), 1, 1, cubeVertices, indices);
+    createObject(physicsEngine,  "crate", glm::vec3(345, 15, 200), glm::vec3(5, 30, 20), 1, 1);
 
     // plank
     int mass = 50;
     glm::vec3 size = glm::vec3(140, 2, 5);
-    createObject(physicsEngine, "crate", glm::vec3(345, 31, 200), size, mass, 0, cubeVertices, indices, {}, 999);
+    createObject(physicsEngine, "crate", glm::vec3(345, 31, 200), size, mass, 0, {}, 999);
 
     float I_x = (1.0f / 12.0f) * mass * (size.y * size.y + size.z * size.z);
     float I_y = (1.0f / 12.0f) * mass * (size.x * size.x + size.y * size.y);
@@ -73,9 +73,9 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     );
 
     // projectile
-    createObject(physicsEngine, "crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, cubeVertices, indices, {}, 999);
+    createObject(physicsEngine, "crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, {}, 999);
     // projectile2
-    createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, cubeVertices, indices, {}, 999);
+    createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, {}, 999);
     // counterweight
     //createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, cubeVertices, indices);
 
@@ -84,12 +84,12 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     int amountStacks = 1;
     for (int j = 0; j < amountStacks; j++)
         for (int i = 0; i < amountObjects; i++)
-            createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, 5 + (10 * i), 245), glm::vec3(10, 10, 10), 1, 0, cubeVertices, indices);
+            createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, 5 + (10 * i), 245), glm::vec3(10, 10, 10), 1, 0);
 
 
     // ----------- brick wall -----------
     int wallHeight = 4;
-    int wallWidth = 100;
+    int wallWidth = 0;
     int brickWidth = 10;
     int brickLength = 10;
     int brickHeight = 10;
@@ -102,14 +102,14 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
             float y = brickHeight / 2 + row * brickHeight;
             float z = 80 + row * brickWidth / 2 + (col * (brickWidth + brickDistance / 2));
 
-            createObject(physicsEngine, "crate", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), 1, 0, cubeVertices, indices);
+            createObject(physicsEngine, "crate", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), 1, 0);
         }
         wallWidth -= 1;
     }
 
     // ----------- pyramid -----------
     int pyramidHeight = 8;
-    int pyramidWidth = 10;
+    int pyramidWidth = 0;
     int stoneWidth = 10;
     int stoneLength = 10;
     int stoneHeight = 10;
@@ -122,7 +122,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
                 float xPos = 80 + x * (stoneWidth + stoneDistance) + y * (stoneWidth/2 + stoneDistance);
                 float yPos = stoneHeight / 2 + y * stoneHeight;
                 float zPos = 345 + z * (stoneWidth + stoneDistance) + y * (stoneWidth / 2 + stoneDistance);
-                createObject(physicsEngine, "crate", glm::vec3(xPos, yPos, zPos), glm::vec3(stoneWidth, stoneHeight, stoneLength), 1, 0, cubeVertices, indices);
+                createObject(physicsEngine, "crate", glm::vec3(xPos, yPos, zPos), glm::vec3(stoneWidth, stoneHeight, stoneLength), 1, 0);
             }
         }
         pyramidWidth -= 1;
@@ -149,7 +149,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, std::vector<Vertex>
     }
 
     // sphere
-    //GameObject& sphere = createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(10), 1, 0, sphereVertices, sphereIndices);
+    //GameObject& sphere = createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(10), 1, 0);
     //sphere.textureID = 999;
 }
 
@@ -161,8 +161,6 @@ GameObject& SceneBuilder::createObject
     glm::vec3 size,
     float mass,
     bool isStatic,
-    std::vector<Vertex>& cubeVertices,
-    std::vector<unsigned int>& indices,
     glm::quat orientation,
     float sleepCounterThreshold
 )

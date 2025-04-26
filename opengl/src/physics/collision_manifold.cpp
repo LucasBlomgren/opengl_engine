@@ -15,21 +15,21 @@ std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& n
     // välj vilket face som är mest parallellt med normalen
     if (absNormal.x >= absNormal.y && absNormal.x >= absNormal.z) {
         if (rotatedNormal.x > 0)
-            selectedFace = obj.AABB.defaultFaces.maxX;
+            selectedFace = obj.AABB.localFaces.maxX;
         else
-            selectedFace = obj.AABB.defaultFaces.minX;
+            selectedFace = obj.AABB.localFaces.minX;
     }
     else if (absNormal.y >= absNormal.x && absNormal.y >= absNormal.z) {
         if (rotatedNormal.y > 0)
-            selectedFace = obj.AABB.defaultFaces.maxY;
+            selectedFace = obj.AABB.localFaces.maxY;
         else
-            selectedFace = obj.AABB.defaultFaces.minY;
+            selectedFace = obj.AABB.localFaces.minY;
     }
     else {
         if (rotatedNormal.z > 0)
-            selectedFace = obj.AABB.defaultFaces.maxZ;
+            selectedFace = obj.AABB.localFaces.maxZ;
         else
-            selectedFace = obj.AABB.defaultFaces.minZ;
+            selectedFace = obj.AABB.localFaces.minZ;
     }
 
     // transformera face till globala koordinater
@@ -276,7 +276,7 @@ void PreComputeContactData(Contact& contact) {
 
 size_t generateKey(int idA, int idB) {
     if (idA > idB) std::swap(idA, idB);
-    return static_cast<size_t>(idA) * 500 + static_cast<size_t>(idB);
+    return static_cast<size_t>(idA) * 9999 + static_cast<size_t>(idB);
 }
 
 void integrateContact(std::unordered_map<size_t, Contact>& contactCache, InitialContact& initialContact, Contact& finalContact)

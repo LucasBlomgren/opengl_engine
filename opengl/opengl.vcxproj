@@ -26,6 +26,7 @@
     <ClCompile Include="src\game\editor\editor.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
+    <ClCompile Include="src\geometry\cube_data.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
@@ -51,12 +52,13 @@
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
     <ClInclude Include="src\core\input_manager.h" />
-    <ClInclude Include="src\game\cube_data.h" />
     <ClInclude Include="src\game\editor\editor.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
-    <ClInclude Include="src\game\sphere_data.h" />
+    <ClInclude Include="src\geometry\cube_data.h" />
+    <ClInclude Include="src\geometry\sphere_data.h" />
+    <ClInclude Include="src\geometry\vertex.h" />
     <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_contact_points.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_line.h" />
@@ -76,7 +78,6 @@
     <ClInclude Include="src\physics\ray_cast_finite.h" />
     <ClInclude Include="src\physics\sat.h" />
     <ClInclude Include="src\physics\sweep_and_prune.h" />
-    <ClInclude Include="src\vertex.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\assets\crate.jpg" />
@@ -187,7 +188,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -205,7 +206,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

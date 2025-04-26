@@ -7,8 +7,9 @@
 class AABBRenderer
 {
 public:
+    void updateModel(const AABB& box, const bool asleep);
     void setupWireframeBox(const AABB& box);
-    void drawBox(const AABB& box, Shader& shader, const bool asleep);
+    void drawBox(Shader& shader);
 
 private:
     unsigned int VAO, VBO;

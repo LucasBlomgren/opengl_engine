@@ -1,17 +1,15 @@
 #include "aabb_renderer.h"
 
-void AABBRenderer::drawBox(const AABB& box, Shader& shader, const bool asleep)
+void AABBRenderer::updateModel(const AABB& box, const bool asleep)
 {
-    if (!asleep) {
-        glm::vec3 min{ box.Box.min.x.coord, box.Box.min.y.coord, box.Box.min.z.coord };
-        glm::vec3 max{ box.Box.max.x.coord, box.Box.max.y.coord, box.Box.max.z.coord };
+    if (asleep)
+        return;
 
-        glm::vec3 c = (min + max) * 0.5f;
-        glm::vec3 he = (max - min) * 0.5f;
+    model = glm::translate(glm::mat4(1.0f), box.worldCenter) * glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
+}
 
-        model = glm::translate(glm::mat4(1.0f), c) * glm::scale(glm::mat4(1.0f), he * 2.0f);
-    }
-
+void AABBRenderer::drawBox(Shader& shader)
+{
     shader.use();
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);

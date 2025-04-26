@@ -1,7 +1,6 @@
-#include <vector>
-#include "vertex.h"
+#include "cube_data.h"
 
-std::vector<Vertex> cubeVertices = {
+extern std::vector<Vertex> cubeVertices = {
     {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},  // FRONT
     {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 0.0f)},
     {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
@@ -45,7 +44,7 @@ std::vector<Vertex> cubeVertices = {
     {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)}
 };
 
-std::vector<unsigned int> indices = {
+extern std::vector<unsigned int> indices = {
     0, 1, 2,
     3, 4, 5,
     6, 7, 8,

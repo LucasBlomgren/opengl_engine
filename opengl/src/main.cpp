@@ -18,11 +18,8 @@
 #include "texture_manager.h"
 
 #include "game_object.h"
-#include "cube_data.h"
-
 #include "light.h"
 #include "light_manager.h"
-
 #include "editor/editor.h"
 
 void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera);
@@ -82,7 +79,7 @@ int main()
 
     // setup scene 
     sceneBuilder.setPointers(&textureManager, &lightManager);
-    sceneBuilder.createScene(physicsEngine, cubeVertices, indices);
+    sceneBuilder.createScene(physicsEngine);
 
     // setup physics
     physicsEngine.setPointers(&sceneBuilder.getGameObjectList());
