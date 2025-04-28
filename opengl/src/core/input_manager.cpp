@@ -99,31 +99,8 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
         camera->ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera->ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         camera->ProcessKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
         camera->ProcessKeyboard(DOWN, deltaTime);
-
-    //Mesh& obj = meshList[1];
-    //Mesh& obj = *light;
-    //float speed = 750;
-    //if(!paused)
-    //{
-    //    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 0, 1) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 0, -1) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(1, 0, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(-1, 0, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, 1, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-    //        obj.addForce(glm::vec3(0, -1, 0) * speed);
-    //    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
-    //        obj.linearVelocity = glm::vec3();
-    //        obj.angularVelocity = glm::vec3();
-    //    }
-    //}
 }

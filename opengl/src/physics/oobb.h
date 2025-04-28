@@ -113,7 +113,6 @@ private:
         normals[2] = normal;
     }
 
-    // måste optimeras
     void updateNormals(const glm::mat4& M) {
         glm::mat3 R = glm::mat3(M);
         normals[0] = glm::normalize(R * localAxes[0]);

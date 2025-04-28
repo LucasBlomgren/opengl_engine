@@ -89,7 +89,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 
     // ----------- brick wall -----------
     int wallHeight = 4;
-    int wallWidth = 0;
+    int wallWidth = 80;
     int brickWidth = 10;
     int brickLength = 10;
     int brickHeight = 10;
@@ -109,7 +109,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 
     // ----------- pyramid -----------
     int pyramidHeight = 8;
-    int pyramidWidth = 0;
+    int pyramidWidth = 9;
     int stoneWidth = 10;
     int stoneLength = 10;
     int stoneHeight = 10;

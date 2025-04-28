@@ -97,7 +97,6 @@ private:
         float  a, b;
         float  Amin[3], Amax[3];
         float  Bmin[3], Bmax[3];
-        int  i, j;
 
         Amin[0] = localMin.x; Amax[0] = localMax.x;
         Amin[1] = localMin.y; Amax[1] = localMax.y;
@@ -107,8 +106,8 @@ private:
         Bmin[1] = Bmax[1] = T.y;
         Bmin[2] = Bmax[2] = T.z;
 
-        for (i = 0; i < 3; i++)
-        for (j = 0; j < 3; j++) {
+        for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
             a = (M[j][i] * Amin[j]);
             b = (M[j][i] * Amax[j]);
 

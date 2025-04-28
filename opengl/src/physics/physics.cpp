@@ -138,7 +138,7 @@ void PhysicsEngine::step(float deltaTime, bool showNormals, std::mt19937 rng)
                 std::shuffle(contact.points.begin(), contact.points.begin() + contact.counter, rng);
 
                 // PGS solver
-                int maxIterations = 4;
+                int maxIterations = 20;
                 for (int i = 0; i < maxIterations; i++) {
                     bool converged = true;
 

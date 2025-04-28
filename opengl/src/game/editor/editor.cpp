@@ -38,7 +38,7 @@ void Editor::update(float deltaTime)
     }
     if (engineState->GetPressedKey() == "Mouse3") {
         GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 1, 0);
-        newObject.linearVelocity = camera->Front * 2500.0f;
+        newObject.linearVelocity = camera->Front *  2500.0f;//2500.0f;
         newObject.asleep = false;
     }
 
@@ -97,7 +97,7 @@ void Editor::updateSelectedObject(float deltaTime)
 
 RaycastHit Editor::rayCast()
 {
-    float rayLength = 200.0f;
+    float rayLength = 200000.0f;
     Physics::Ray ray(camera->Position, camera->Front, rayLength);
     RaycastHit hitData = physicsEngine->performRayCastFinite(ray);
 

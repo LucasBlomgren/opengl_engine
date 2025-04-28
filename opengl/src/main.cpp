@@ -87,11 +87,6 @@ int main()
     // setup editor
     editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
 
-    // set camera starting angle
-    camera.Yaw += 130;
-    camera.Pitch -= 30;
-    camera.ProcessMouseMovement(0,0);
-
     // setup rng
     std::random_device rd;
     std::mt19937 g(rd());
@@ -208,7 +203,7 @@ void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera)
         glEnableVertexAttribArray(0);
     }
 
-
+    shader.use();
     shader.setBool("useTexture", false);
     shader.setBool("useUniformColor", true);
     shader.setVec3("uColor", { 0.9f,0.7f,0.2f });
