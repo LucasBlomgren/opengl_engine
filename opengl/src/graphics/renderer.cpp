@@ -56,6 +56,16 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     }
 }
 
+void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line) const
+{
+    if (!engineState->getShowBVH()) return;
+
+    for (auto& node : tree.nodes) {
+        node.aabbRenderer.updateModel(node.fatBox, /*asleep=*/false);
+        node.aabbRenderer.drawBox(*debugShader);
+    }
+}
+
 void Renderer::drawLights() const
 {
     const std::vector<Light>& lights = lightManager->getLights();

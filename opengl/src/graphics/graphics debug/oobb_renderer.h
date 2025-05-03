@@ -7,7 +7,7 @@ class OOBBRenderer
 {
 public:
     void setupWireframeBox();
-    void drawBox(Shader& shader, const glm::mat4& model, const bool asleep);
+    void drawBox(Shader& shader, glm::mat4& model, const bool asleep);
 
     void setupNormals();
     void drawNormals(Shader& shader, const glm::mat4& model);

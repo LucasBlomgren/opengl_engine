@@ -36,9 +36,31 @@ void SceneBuilder::toggleDayTime() {
 
 void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 {
+    bool onlyFloor = 0;
+
     objectId = 0;
     GameObjectList.clear();
     physicsEngine.clearPhysicsData();
+
+    // ----------- light sources -----------
+    lightManager->clearLights();
+    lightManager->clearDirectionalLight();
+
+    if (this->dayTime) {
+        // sun light
+        lightManager->setDirectionalLight(glm::vec3(0.8f, -1.0f, 0.4f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
+    }
+    else {
+        // red light
+        Light light(glm::vec3(350, 160, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 60);
+        lightManager->addLight(light);
+        // green
+        Light light2(glm::vec3(150, 220, 200), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 75);
+        lightManager->addLight(light2);
+        // blue light
+        Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 100);
+        lightManager->addLight(light3);
+    }
 
     // ----------- floor tiles -----------
     int floorWidth = 5; 
@@ -49,6 +71,13 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
             createObject(physicsEngine, "uvmap", glm::vec3(250 + i * 500, -5, 250 + j * 500), glm::vec3(500, 10, 500), 0, 1, orientation);
             
         }
+
+    if (onlyFloor) {
+        return;
+    }
+
+    createObject(physicsEngine, "crate", glm::vec3(50,50,50), glm::vec3(10, 10, 10), 1, 0);
+    createObject(physicsEngine, "crate", glm::vec3(70, 70, 70), glm::vec3(10, 10, 10), 1, 0);
 
     // ----------- slanted platform -----------
     glm::quat orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
@@ -77,7 +106,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     // projectile2
     createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, {}, 999);
     // counterweight
-    //createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, cubeVertices, indices);
+    createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, {}, 999);
 
     // ----------- box stacks -----------
     int amountObjects = 5;
@@ -86,21 +115,20 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         for (int i = 0; i < amountObjects; i++)
             createObject(physicsEngine, "crate", glm::vec3(245 + j * 10.2, 5 + (10 * i), 245), glm::vec3(10, 10, 10), 1, 0);
 
-
     // ----------- brick wall -----------
     int wallHeight = 4;
-    int wallWidth = 80;
+    int wallWidth = 100;
     int brickWidth = 10;
     int brickLength = 10;
     int brickHeight = 10;
-    int brickDistance = 0;
+    int brickDistance = 5;
 
     for (int row = 0; row < wallHeight; row++) {
         for (int col = 0; col < wallWidth; col++)
         {
             float x = 545;
             float y = brickHeight / 2 + row * brickHeight;
-            float z = 80 + row * brickWidth / 2 + (col * (brickWidth + brickDistance / 2));
+            float z = 80 + row * brickLength / 2 + (col * (brickLength + brickDistance / 2));
 
             createObject(physicsEngine, "crate", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), 1, 0);
         }
@@ -108,8 +136,8 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     }
 
     // ----------- pyramid -----------
-    int pyramidHeight = 8;
-    int pyramidWidth = 9;
+    int pyramidHeight = 7;
+    int pyramidWidth = 8;
     int stoneWidth = 10;
     int stoneLength = 10;
     int stoneHeight = 10;
@@ -128,27 +156,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         pyramidWidth -= 1;
     }
 
-    // ----------- light sources -----------
-    lightManager->clearLights();
-    lightManager->clearDirectionalLight();
-
-    if (this->dayTime) {
-        // sun light
-        lightManager->setDirectionalLight(glm::vec3(0.8f, -1.0f, 0.4f), glm::vec3(0.1), glm::vec3(1.0), glm::vec3(0.5));
-    }
-    else {
-        // red light
-        Light light(glm::vec3(350, 160, 320), glm::vec3(5, 2, 5), glm::vec3(1.0, 0.0, 0.0), 60);
-        lightManager->addLight(light);
-        // green
-        Light light2(glm::vec3(150, 220, 200), glm::vec3(20, 2, 20), glm::vec3(0.0, 1.0, 0.0), 75);
-        lightManager->addLight(light2);
-        // blue light
-        Light light3(glm::vec3(1050, 220, 1000), glm::vec3(20, 2, 20), glm::vec3(0.0, 0.0, 1.0), 100);
-        lightManager->addLight(light3);
-    }
-
-    // sphere
+    //// sphere
     //GameObject& sphere = createObject(physicsEngine, "crate", glm::vec3(500,500,500), glm::vec3(10), 1, 0);
     //sphere.textureID = 999;
 }

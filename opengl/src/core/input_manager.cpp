@@ -64,6 +64,10 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->toggleShowOOBB();
         if (key == GLFW_KEY_4)
             engineState->toggleShowContactPoints();
+        if (key == GLFW_KEY_5)
+            engineState->toggleShowBVH();
+        if (key == GLFW_KEY_0)
+            engineState->toggleShowFPS();
 
         if (key == GLFW_KEY_G)
             engineState->togglePause();
@@ -71,8 +75,8 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->setPressedKey("H");
         if (key == GLFW_KEY_K)
             engineState->setPressedKey("K");
-        if (key == GLFW_KEY_5)
-            engineState->setPressedKey("5");
+        if (key == GLFW_KEY_6)
+            engineState->setPressedKey("6");
     }
 }
 

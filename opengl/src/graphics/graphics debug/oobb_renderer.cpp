@@ -1,17 +1,22 @@
 #include "oobb_renderer.h"
 
-void OOBBRenderer::drawBox(Shader& shader, const glm::mat4& model, const bool asleep)
+void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep)
 {
+    static constexpr float epsilon = 0.07f;
+    glm::mat4 lift = glm::translate(glm::mat4(1.0f), glm::vec3(0, epsilon, 0));
+    glm::mat4 displacedModel = lift * model;
+
     shader.use();
-    shader.setMat4("model", model);
+    shader.setMat4("model", displacedModel);
     shader.setInt("debug.objectType", 0);
     shader.setBool("debug.useUniformColor", true);
     if (asleep) { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
     else { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
 
-    glLineWidth(1.0f);
+    glLineWidth(2.0f);
     glBindVertexArray(VAO_box);
     glDrawArrays(GL_LINES, 0, 24);
+
 }
 
 void OOBBRenderer::drawNormals(Shader& shader, const glm::mat4& model)

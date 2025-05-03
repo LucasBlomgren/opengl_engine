@@ -5,7 +5,11 @@ void AABBRenderer::updateModel(const AABB& box, const bool asleep)
     if (asleep)
         return;
 
-    model = glm::translate(glm::mat4(1.0f), box.worldCenter) * glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
+    static constexpr float epsilon = 0.07f;
+    glm::vec3 liftedCenter = box.centroid + glm::vec3(0, epsilon, 0);
+
+    model = glm::translate(glm::mat4(1.0f), liftedCenter)
+        * glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
 }
 
 void AABBRenderer::drawBox(Shader& shader)
@@ -16,20 +20,14 @@ void AABBRenderer::drawBox(Shader& shader)
     shader.setBool("debug.useUniformColor", true);
     shader.setVec3("debug.uColor", color);
 
-    glLineWidth(1.0f);
+    glLineWidth(2.0f);
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINES, 0, 24);
 }
 
 void AABBRenderer::setupWireframeBox(const AABB& box)
 {
-    glm::vec3 min{ box.Box.min.x.coord, box.Box.min.y.coord, box.Box.min.z.coord };
-    glm::vec3 max{ box.Box.max.x.coord, box.Box.max.y.coord, box.Box.max.z.coord };
-
-    glm::vec3 c = (min + max) * 0.5f;
-    glm::vec3 he = (max - min) * 0.5f;
-
-    model = glm::translate(glm::mat4(1.0f), c) * glm::scale(glm::mat4(1.0f), he * 2.0f);
+    model = glm::translate(glm::mat4(1.0f), box.centroid) * glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
 
     // lines
     float cubeWire[72] = {
@@ -60,4 +58,9 @@ void AABBRenderer::setupWireframeBox(const AABB& box)
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
+}
+
+void AABBRenderer::cleanup() {
+    if (VAO) { glDeleteVertexArrays(1, &VAO); VAO = 0; }
+    if (VBO) { glDeleteBuffers(1, &VBO); VBO = 0; }
 }

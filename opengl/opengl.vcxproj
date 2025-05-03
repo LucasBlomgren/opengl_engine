@@ -38,6 +38,7 @@
     <ClCompile Include="src\graphics\renderer.cpp" />
     <ClCompile Include="src\graphics\texture_manager.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\physics\bvh.cpp" />
     <ClCompile Include="src\physics\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
     <ClCompile Include="src\physics\ray_cast_finite.cpp" />
@@ -71,6 +72,7 @@
     <ClInclude Include="src\graphics\shader.h" />
     <ClInclude Include="src\graphics\texture_manager.h" />
     <ClInclude Include="src\physics\aabb.h" />
+    <ClInclude Include="src\physics\bvh.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\oobb.h" />
     <ClInclude Include="src\physics\physics.h" />

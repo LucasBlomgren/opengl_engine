@@ -112,6 +112,7 @@ public:
 
         setModelMatrix();
         AABB.Init(verticesPositions);
+        if (orientation != glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) { isRotating = true; }
         AABB.update(modelMatrix, position, scale, isRotating);
         OOBB.Init(verticesPositions, modelMatrix);
 

@@ -67,7 +67,7 @@ std::vector<Edge>* findMaxVarianceAxis(const float& variancex, const float& vari
 void findOverlap(const std::vector<Edge>& edges, std::vector<std::pair<int, int>>& collisionCouplesList)
 {
     std::unordered_set<int> currentTouching;
-    collisionCouplesList.reserve(edges.size());
+    collisionCouplesList.reserve(edges.size() * edges.size());
 
     for (const Edge& edge : edges) {
         if (edge.isMin) {

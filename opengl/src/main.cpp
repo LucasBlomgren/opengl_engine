@@ -1,4 +1,4 @@
-#define GLM_FORCE_SIMD_AVX2 
+﻿#define GLM_FORCE_SIMD_AVX2 
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <iostream>
@@ -21,6 +21,8 @@
 #include "light.h"
 #include "light_manager.h"
 #include "editor/editor.h"
+
+#include "bvh.h"
 
 void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera);
 
@@ -81,6 +83,9 @@ int main()
     sceneBuilder.setPointers(&textureManager, &lightManager);
     sceneBuilder.createScene(physicsEngine);
 
+    BVHTree bvhTree;
+    bvhTree.build(sceneBuilder.getGameObjectList());
+
     // setup physics
     physicsEngine.setPointers(&sceneBuilder.getGameObjectList());
 
@@ -101,6 +106,9 @@ int main()
     float accumulator = 0.0f;
     float lastFrame = static_cast<float>(glfwGetTime());
 
+    float bvhInterval = 1.0f / 180.0f;  // sekunder mellan BVH‑uppdateringar
+    float bvhAccumulator = 0.0f;
+
     // setup help VAOs
     unsigned int VAO_line = setupLine();
     unsigned int VAO_xyz = setup_xyzObject();
@@ -108,8 +116,11 @@ int main()
     unsigned int VAO_contactPoint = setupContactPoint();
 
     // main loop
-    while (!glfwWindowShouldClose(window))
+    while (true)
     {
+        glfwPollEvents();
+        if (glfwWindowShouldClose(window)) break;
+
         // update time
         auto current_time = std::chrono::high_resolution_clock::now();
         float currentFrame = static_cast<float>(glfwGetTime());
@@ -126,16 +137,15 @@ int main()
                 physicsEngine.step(fixedTimeStep, engineState.getShowNormals(), g);
                 accumulator -= fixedTimeStep;
             }
+            bvhAccumulator += deltaTime;
+            if (bvhAccumulator >= bvhInterval) {
+                bvhTree.update(sceneBuilder.getGameObjectList());
+                bvhAccumulator -= bvhInterval;
+            }
         }
 
         // editor functions
         editor.update(deltaTime);
-
-        if (editor.getRayCastHasHit()) {
-            RaycastHit rayHit = editor.getLastRayHit();
-            GameObject& obj = sceneBuilder.getGameObjectList()[rayHit.objIndex];
-            if (!obj.isStatic) { obj.asleep = false; }
-        }
 
         // rendering
         renderer.beginFrame();
@@ -144,33 +154,35 @@ int main()
         renderer.uploadLightsToShader();
         renderer.drawLights();
         renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
+        renderer.drawBVH(bvhTree, VAO_line);
         renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 
         //drawAABB(editor.getLastRayHit(), shader, camera);
 
         // print FPS and object count
-        float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-        if (seconds > last_second) {
-            last_second = seconds;
-            std::cout << "FPS: " << frames << "\n";
-            std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;
-            std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
+        if (engineState.getShowFPS()) {
+            float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+            if (seconds > last_second) {
+                last_second = seconds;
+                std::cout << "FPS: " << frames << "\n";
+                std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;
+                std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
+                std::cout << "BVH rebuilds: " << bvhTree.numRebuilds << std::endl;
 
-            if (deltaTime > 0.016f) {
-                std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << std::endl;
-                std::cout << "Collision pairs: " << physicsEngine.amountCollisionPairs << std::endl;
-            }
-            std::cout << "--------------" << std::endl;
-            frames = 0;
-        };
-        frames++;
+                if (deltaTime > 0.016f) {
+                    std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << std::endl;
+                    std::cout << "Collision pairs: " << physicsEngine.amountCollisionPairs << std::endl;
+                }
+                std::cout << "--------------" << std::endl;
+                frames = 0;
+                bvhTree.numRebuilds = 0;
+            };
+            frames++;
+        }
 
-        // swap buffers and poll IO events
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
     glfwTerminate();
-    return 0;
 }
 
 void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera)

@@ -24,7 +24,7 @@ void Editor::update(float deltaTime)
         sceneBuilder->createScene(*physicsEngine);
         selectedObject = nullptr;
     }
-    if (engineState->GetPressedKey() == "5") {
+    if (engineState->GetPressedKey() == "6") {
         sceneBuilder->toggleDayTime();
     }
 
