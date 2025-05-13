@@ -19,10 +19,10 @@ public:
     void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader, Shader& debugShader);
     void beginFrame() const;
     void setViewProjection(Camera& camera);
-    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const;
+    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
     void drawLights() const;
     void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
-    void drawBVH(BVHTree& tree, unsigned int VAO_line) const;
+    void drawBVH(BVHTree& tree, unsigned int VAO_line);
 
     void uploadLightsToShader();
     void uploadDirectionalLight();
@@ -36,5 +36,7 @@ private:
     Shader* shader = nullptr;
     Shader* debugShader = nullptr;
 
-    float maxViewDistance = 5000.0f;
+    AABBRenderer aabbRenderer;
+
+    float maxViewDistance = 10000.0f;
 };

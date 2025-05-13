@@ -1,6 +1,6 @@
 #include "oobb_renderer.h"
 
-void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep)
+void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
 {
     static constexpr float epsilon = 0.07f;
     glm::mat4 lift = glm::translate(glm::mat4(1.0f), glm::vec3(0, epsilon, 0));
@@ -10,8 +10,9 @@ void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep)
     shader.setMat4("model", displacedModel);
     shader.setInt("debug.objectType", 0);
     shader.setBool("debug.useUniformColor", true);
-    if (asleep) { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
-    else { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
+    if (raycastHit) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
+    else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
+    else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
 
     glLineWidth(2.0f);
     glBindVertexArray(VAO_box);

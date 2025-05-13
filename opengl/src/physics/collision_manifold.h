@@ -52,6 +52,7 @@ struct ContactPoint
     glm::vec3 t2;
     float depth;
     float targetBounceVelocity;
+    float biasVelocity;
 };
 
 struct Contact
@@ -74,7 +75,7 @@ struct Contact
 
 std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& normal);
 std::array<Plane, 4> createClippingPlanes(const std::array<glm::vec3, 4>& face, const glm::vec3& faceNormal);
-glm::vec3 getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane);
+std::optional<glm::vec3> getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane);
 bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint);
 void createContactPoints(InitialContact& initialContact);
 void createLocalCoordinates(InitialContact& initialContact);

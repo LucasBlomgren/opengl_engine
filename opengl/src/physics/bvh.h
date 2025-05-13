@@ -26,24 +26,27 @@ struct Node {
 };
 
 class BVHTree {
-    float updateInterval             = 1.0f / 180.0f;
+    float updateInterval             = 240.0f;
     int   leafThreshold              = 1;
-    int   fatBoxMargin               = 1;
     int   numRefits                  = 0;
     int   numIterationsSinceRebuild  = 0;
     int   rebuildThreshold           = 0;        // räknas om i build()
     int   minRebuildThreshold        = 5;        // min 10 refits innan rebuild
-    float rebuildRatio               = 0.20f;    // 20 % av lövkorrektioner → rebuild
+    float rebuildRatio               = 0.40f;    // 40 % av lövkorrektioner → rebuild
+    glm::vec3 fatBoxMargin { 1.0f };
 
 public:
     Node* root;
     std::vector<Node> nodes;
     void build(std::vector<GameObject>& objects);
     void update(std::vector<GameObject>& objects);
+    int query(AABB& qBox);
 
     void printNodeASCII(const Node* node, const std::string& prefix, bool isLeft) const;
     int numRebuilds = 0;
-    
+
+    mutable std::vector<Node*> queryStack;
+    std::vector<GameObject*> collisions;
 private:
     std::vector<BVHPrimitive> prims;
 

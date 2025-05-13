@@ -7,40 +7,6 @@
 #include "shader.h"
 #include "vertex.h"
 
-struct Edge {
-    int id;
-    bool isMin;
-    float coord;
-
-    Edge(int id = 0, bool isMin = 0, float coord = 0)
-        : id(id), isMin(isMin), coord(coord) {}
-};
-
-struct Box {
-    struct Min {
-        Edge x, y, z;
-        Min()                       // ← default-ctor
-            : x(0, true, 0), y(0, true, 0), z(0, true, 0)
-        {}
-        Min(int id)                 // ← id-ctor kvar som förut
-            : x(id, true, 0), y(id, true, 0), z(id, true, 0)
-        {}
-    } min;
-
-    struct Max {
-        Edge x, y, z;
-        Max()                       // ← default-ctor
-            : x(0, false, 0), y(0, false, 0), z(0, false, 0)
-        {}
-        Max(int id)
-            : x(id, false, 0), y(id, false, 0), z(id, false, 0)
-        {}
-    } max;
-
-    Box() : min(), max() {}      // ← anropar ovanstående
-    Box(int id) : min(id), max(id) {}
-};
-
 struct localFaces {
     std::array<glm::vec3, 4> minX;
     std::array<glm::vec3, 4> maxX;
@@ -53,7 +19,6 @@ struct localFaces {
 class AABB
 {
 public:
-    Box Box;
     localFaces localFaces;
 
     // local
@@ -65,9 +30,6 @@ public:
 
     glm::vec3 centroid;
     glm::vec3 halfExtents;
-
-    AABB() = default;
-    AABB(int id) : Box(id) { }
 
     void Init(const std::vector<glm::vec3>& vertices) {
         computeFromVertices(vertices);
@@ -87,17 +49,17 @@ public:
         halfExtents = (wMax - wMin) * 0.5f;
     }
 
-    inline bool intersects(const AABB& other) const {
-        return
-            (wMin.x <= other.wMax.x && wMax.x >= other.wMin.x) &&
-            (wMin.y <= other.wMax.y && wMax.y >= other.wMin.y) &&
-            (wMin.z <= other.wMax.z && wMax.z >= other.wMin.z);
+    __forceinline bool intersects(const AABB& b) const {
+        const bool x = (wMin.x <= b.wMax.x) & (wMax.x >= b.wMin.x);
+        const bool y = (wMin.y <= b.wMax.y) & (wMax.y >= b.wMin.y);
+        const bool z = (wMin.z <= b.wMax.z) & (wMax.z >= b.wMin.z);
+        return x & y & z;
     }
 
     inline bool contains(const AABB& other) const {
         return 
-            wMin.x <= other.wMin.x && wMin.y <= other.wMin.y && wMin.z <= other.wMin.z && 
-            wMax.x >= other.wMax.x && wMax.y >= other.wMax.y && wMax.z >= other.wMax.z;
+            (wMin.x <= other.wMin.x) & (wMin.y <= other.wMin.y) & (wMin.z <= other.wMin.z) & 
+            (wMax.x >= other.wMax.x) & (wMax.y >= other.wMax.y) & (wMax.z >= other.wMax.z);
     }
 
     inline void growToInclude(const glm::vec3& p) {
@@ -105,10 +67,83 @@ public:
         wMax = glm::max(wMax, p);
     }
 
-    inline void grow(float m) {
-        glm::vec3 delta{ m, m, m };
-        wMin -= delta;
-        wMax += delta;
+    inline void grow(glm::vec3 m) {
+        wMin -= m;
+        wMax += m;
+    }
+
+    glm::vec3 getCollisionNormal(const AABB& other) const {
+        // Skillnad i centrum
+        float dx = other.centroid.x - centroid.x;
+        float dy = other.centroid.y - centroid.y;
+        float dz = other.centroid.z - centroid.z;
+
+        // Totala halv-extent per axel
+        float combinedHalfX = halfExtents.x + other.halfExtents.x;
+        float combinedHalfY = halfExtents.y + other.halfExtents.y;
+        float combinedHalfZ = halfExtents.z + other.halfExtents.z;
+
+        // Överlapp längs vardera axel
+        float overlapX = combinedHalfX - std::fabs(dx);
+        float overlapY = combinedHalfY - std::fabs(dy);
+        float overlapZ = combinedHalfZ - std::fabs(dz);
+
+        // Ingen kollision
+        if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f) {
+            return glm::vec3(0.0f, 0.0f, 0.0f);
+        }
+
+        if (overlapX < overlapY && overlapX < overlapZ) {
+            // om other ligger åt +X så vill vi separera längs -X
+            float signX = (dx >= 0.0f) ? -1.0f : 1.0f;
+            return glm::vec3(signX, 0.0f, 0.0f);
+        }
+        // motsvarande för Y och Z:
+        else if (overlapY < overlapZ) {
+            float signY = (dy >= 0.0f) ? -1.0f : 1.0f;
+            return glm::vec3(0.0f, signY, 0.0f);
+        }
+        else {
+            float signZ = (dz >= 0.0f) ? -1.0f : 1.0f;
+            return glm::vec3(0.0f, 0.0f, signZ);
+        }
+    }
+
+    glm::vec3 getOverlapDepth(const AABB & other) const {
+        // Skillnad i centrum
+        float dx = other.centroid.x - centroid.x;
+        float dy = other.centroid.y - centroid.y;
+        float dz = other.centroid.z - centroid.z;
+
+        // Totala halv-extent per axel
+        float combinedHalfX = halfExtents.x + other.halfExtents.x;
+        float combinedHalfY = halfExtents.y + other.halfExtents.y;
+        float combinedHalfZ = halfExtents.z + other.halfExtents.z;
+
+        // Beräkna överlapp (kan vara negativt om ingen kollision)
+        float overlapX = combinedHalfX - std::fabs(dx);
+        float overlapY = combinedHalfY - std::fabs(dy);
+        float overlapZ = combinedHalfZ - std::fabs(dz);
+
+        // Kläm överlapp till noll
+        float depthX = (overlapX > 0.0f) ? overlapX : 0.0f;
+        float depthY = (overlapY > 0.0f) ? overlapY : 0.0f;
+        float depthZ = (overlapZ > 0.0f) ? overlapZ : 0.0f;
+
+        return glm::vec3(depthX, depthY, depthZ);
+    }
+
+    float getMinOverlapDepth(const AABB& other) const {
+        glm::vec3 depth = getOverlapDepth(other);
+        // Hitta minsta positiva djup
+        float minDepth = depth.x;
+        if (depth.y > 0.0f && (minDepth <= 0.0f || depth.y < minDepth)) {
+            minDepth = depth.y;
+        }
+        if (depth.z > 0.0f && (minDepth <= 0.0f || depth.z < minDepth)) {
+            minDepth = depth.z;
+        }
+        return (minDepth > 0.0f) ? minDepth : 0.0f;
     }
 
 private:
@@ -120,11 +155,8 @@ private:
         wMax.x = lMax.x * S.x + T.x;
         wMax.y = lMax.y * S.y + T.y;
         wMax.z = lMax.z * S.z + T.z;
-
-        Box.min.x.coord = wMin.x; Box.max.x.coord = wMax.x;
-        Box.min.y.coord = wMin.y; Box.max.y.coord = wMax.y;
-        Box.min.z.coord = wMin.z; Box.max.z.coord = wMax.z;
     }
+
     void transform_withRotation(const glm::mat3& M, const glm::vec3& T) {
         float  a, b;
         float  Amin[3], Amax[3];
@@ -156,10 +188,6 @@ private:
         wMin.x = Bmin[0]; wMax.x = Bmax[0];
         wMin.y = Bmin[1]; wMax.y = Bmax[1];
         wMin.z = Bmin[2]; wMax.z = Bmax[2];
-
-        Box.min.x.coord = wMin.x; Box.max.x.coord = wMax.x;
-        Box.min.y.coord = wMin.y; Box.max.y.coord = wMax.y;
-        Box.min.z.coord = wMin.z; Box.max.z.coord = wMax.z;
     }
 
     void computeFromVertices(const std::vector<glm::vec3>& vertices) {

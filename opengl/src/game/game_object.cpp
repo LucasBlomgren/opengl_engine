@@ -1,7 +1,6 @@
-#include "game_object.h"
+﻿#include "game_object.h"
 
-void GameObject::setModelMatrix()
-{
+void GameObject::setModelMatrix() {
     if (modelMatrixShouldUpdate) {
         modelMatrix = glm::mat4(1.0f);
         modelMatrix = glm::translate(modelMatrix, position);
@@ -15,21 +14,30 @@ void GameObject::calculateInverseInertiaForCube() {
     float value = 6.0f / (mass * scale.x * scale.x);
 
     inverseInertia = glm::mat3(
-        glm::vec3(value, 0.0f, 0.0f), // Row 1
-        glm::vec3(0.0f, value, 0.0f), // Row 2
-        glm::vec3(0.0f, 0.0f, value)  // Row 3
+        glm::vec3(value, 0.0f, 0.0f),
+        glm::vec3(0.0f, value, 0.0f),
+        glm::vec3(0.0f, 0.0f, value)
     );
 }
 
-void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime)
-{
+void GameObject::calculateInverseInertiaForCuboid() {
+   float I_x = (1.0f / 12.0f) * mass * (scale.y * scale.y + scale.z * scale.z);
+   float I_y = (1.0f / 12.0f) * mass * (scale.x * scale.x + scale.z * scale.z);
+   float I_z = (1.0f / 12.0f) * mass * (scale.x * scale.x + scale.y * scale.y);
+
+   inverseInertia = glm::mat3(
+      glm::vec3(1.0f / I_x, 0.0f, 0.0f),
+      glm::vec3(0.0f, 1.0f / I_y, 0.0f),
+      glm::vec3(0.0f, 0.0f, 1.0f / I_z));
+}
+
+void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime) {
     glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
     orientation += 0.5f * deltaTime * (omegaQuat * orientation);
     orientation = glm::normalize(orientation);
 }
 
-void GameObject::drawMesh(Shader& shader)
-{
+void GameObject::drawMesh(Shader& shader) {
     shader.use();
     setModelMatrix();
     shader.setMat4("model", modelMatrix);
@@ -41,34 +49,30 @@ void GameObject::drawMesh(Shader& shader)
     else {
         shader.setBool("useTexture", false);
         shader.setBool("useUniformColor", true);
-        shader.setVec3("uColor", glm::vec3(0.9,0.9,0.9));
+        shader.setVec3("uColor", this->color);
     }
     glBindTexture(GL_TEXTURE_2D, textureID);
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }
 
-void GameObject::updateAABB()
-{
+void GameObject::updateAABB() {
     setModelMatrix();
 
     if ((AABB_ShouldUpdate and !asleep) or isStatic) 
         AABB.update(modelMatrix, position, scale, isRotating);
 }
 
-void GameObject::updateOOBB()
-{
+void GameObject::updateOOBB() {
     setModelMatrix();
 
-    if (OOBB_shouldUpdate and !asleep) 
-    {
+    if (OOBB_shouldUpdate and !asleep) {
         OOBB.update(verticesPositions, modelMatrix);
         OOBB_shouldUpdate = false;
     }
 }
 
-void GameObject::updatePos(const float& deltaTime)
-{
+void GameObject::updatePos(const float& deltaTime) {
     if (isStatic)
         return;
 
@@ -87,39 +91,34 @@ void GameObject::updatePos(const float& deltaTime)
     angularVelocity *= std::pow(0.94f, deltaTime);
     biasLinearVelocity *= std::pow(0.96f, deltaTime);
 
-    glm::vec3 summedLinearVelocity = linearVelocity + biasLinearVelocity;
+    glm::vec3 summedLinearVelocity = linearVelocity;
     biasLinearVelocity = glm::vec3();
+
+    if (!canMoveLinearly) summedLinearVelocity = glm::vec3(0.0f);
 
     lastPosition = position;
     position += summedLinearVelocity * deltaTime;
     updateOrientation(orientation, angularVelocity, deltaTime);
 
-    if (orientation.x == 0.0f && orientation.y == 0.0f && orientation.z == 0.0f && orientation.w == 1.0f) {
+    if (orientation.x == 0.0f and orientation.y == 0.0f and orientation.z == 0.0f and orientation.w == 1.0f)
         isRotating = false;
-    }
-    else {
+    else
         isRotating = true;
-    }
 
-    if (selectedByEditor) {
+    if (selectedByEditor) 
         angularVelocity = glm::vec3(0.0f);
-    }
 
     // sleep counter
     float velocityThreshold = 2;
     float angularVelocityThreshold = 2;
-    if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) {
+    if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
         sleepCounter += deltaTime;
-    }
-    else {
+    else 
         sleepCounter = 0.0f;
-    }
 }
 
-void GameObject::setAsleep()
-{
+void GameObject::setAsleep() {
     OOBB_shouldUpdate = true;
-    OOBB_shouldUpdateBuffer = true;
     updateOOBB();
 
     linearVelocity = glm::vec3(0, 0, 0);
@@ -129,8 +128,7 @@ void GameObject::setAsleep()
     asleep = true;
 }
 
-void GameObject::setAwake() 
-{
+void GameObject::setAwake() {
     if (isStatic)
         return;
 
@@ -138,8 +136,7 @@ void GameObject::setAwake()
     sleepCounter = 0.0f;
 }
 
-void GameObject::setupMesh()
-{
+void GameObject::setupMesh() {
     unsigned int VBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);

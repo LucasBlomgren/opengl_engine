@@ -1,4 +1,4 @@
-#include "renderer.h"
+﻿#include "renderer.h"
 
 void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader, Shader& debugShader)
 {   
@@ -7,6 +7,8 @@ void Renderer::init(unsigned int width, unsigned int height, EngineState& engine
 
     this->engineState = &engineState;
     this->lightManager = &lightManager;
+
+    aabbRenderer.InitShared();
 
     this->shader = &shader;
     this->debugShader = &debugShader;
@@ -37,32 +39,36 @@ void Renderer::setViewProjection(Camera& camera)
     debugShader->setVec3("viewPos", camera.Position);
 }
 
-void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) const
+void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
 {
     for (GameObject& obj : objects) {
         obj.drawMesh(*shader);
 
-        obj.aabbRenderer.updateModel(obj.AABB, obj.asleep);
-
         if (engineState->getShowAABB()) {
-            obj.aabbRenderer.drawBox(*debugShader);
+            glm::vec3 color{ 0.9f, 0.7f, 0.2f };
+            aabbRenderer.updateModel(obj.AABB, false);
+            aabbRenderer.draw(color, *debugShader);
         }
-        if (engineState->getShowOOBB()) {
-            obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep);
+        if (engineState->getShowOOBB() or obj.isRaycastHit) {
+            obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
         }
         if (engineState->getShowNormals()) {
             obj.oobbRenderer.drawNormals(*debugShader, obj.modelMatrix);
         }
+
+        obj.isRaycastHit = false;
     }
 }
 
-void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line) const
+void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line)
 {
     if (!engineState->getShowBVH()) return;
 
-    for (auto& node : tree.nodes) {
-        node.aabbRenderer.updateModel(node.fatBox, /*asleep=*/false);
-        node.aabbRenderer.drawBox(*debugShader);
+    glm::vec3 color = glm::vec3(1, 0, 1);
+    for (auto& node : tree.nodes) 
+    {
+        aabbRenderer.updateModel(node.fatBox, false);
+        aabbRenderer.draw(color, *debugShader);
     }
 }
 

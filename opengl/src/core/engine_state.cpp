@@ -1,5 +1,7 @@
 #include "engine_state.h"
 
+void EngineState::setAdvanceStep(bool arg) { advanceStep = arg; }
+void EngineState::setPaused(bool arg) { paused = arg; }
 void EngineState::togglePause() { paused = !paused; }
 void EngineState::toggleShowFPS() { showFPS = !showFPS; }
 void EngineState::toggleShowAABB() { showAABB = !showAABB; }
@@ -11,6 +13,7 @@ void EngineState::toggleShowBVH() { showBVH = !showBVH; }
 void EngineState::setPressedKey(const std::string& key) { pressedKey = key; }
 void EngineState::clearPressedKey() { pressedKey.clear(); }
 
+bool EngineState::getAdvanceStep() const { return advanceStep; }
 bool EngineState::isPaused() const { return paused; }
 bool EngineState::getShowFPS() const { return showFPS; }
 bool EngineState::getShowAABB() const { return showAABB; }

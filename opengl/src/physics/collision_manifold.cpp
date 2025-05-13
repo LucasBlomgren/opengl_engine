@@ -1,4 +1,4 @@
-#include "collision_manifold.h"
+Ôªø#include "collision_manifold.h"
 
 std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& normal)
 {
@@ -12,7 +12,7 @@ std::array<glm::vec3, 4> selectCollisionFace(GameObject& obj, const glm::vec3& n
     glm::vec3 absNormal = glm::abs(rotatedNormal);
     std::array<glm::vec3, 4> selectedFace;
 
-    // v‰lj vilket face som ‰r mest parallellt med normalen
+    // v√§lj vilket face som √§r mest parallellt med normalen
     if (absNormal.x >= absNormal.y && absNormal.x >= absNormal.z) {
         if (rotatedNormal.x > 0)
             selectedFace = obj.AABB.localFaces.maxX;
@@ -48,6 +48,7 @@ std::array<Plane, 4> createClippingPlanes(const std::array<glm::vec3,4>& face, c
     // create clipping planes
     for (int i = 0; i < face.size(); i++) {
         glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
+        float length = glm::length(edge); 
         glm::vec3 planeNormal = (glm::normalize(glm::cross(faceNormal, edge)));
 
         clippingPlanes[i] = Plane(planeNormal, face[i]);
@@ -56,11 +57,21 @@ std::array<Plane, 4> createClippingPlanes(const std::array<glm::vec3,4>& face, c
     return clippingPlanes;
 }
 
-glm::vec3 getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane) 
+std::optional<glm::vec3> getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane)
 {
     glm::vec3 lineDir = v2 - v1;
     float denominator = glm::dot(plane.normal, lineDir);
+
+    if (abs(denominator) < 1e-6f) {
+       // Linjen √§r parallell med planet
+       return std::nullopt;
+    }
+
     float t = glm::dot(plane.normal, plane.point - v1) / denominator;
+
+    if (t < 0.0f || t > 1.0f)
+       return std::nullopt;
+
     glm::vec3 intersectionPoint = v1 + t * lineDir;
 
     return intersectionPoint;
@@ -68,7 +79,7 @@ glm::vec3 getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const P
 
 bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint)
 {
-    if (glm::dot(planeNormal, point - planePoint) < 0)
+    if (glm::dot(planeNormal, point - planePoint) < 1e-2f)
         return true;
 
     return false;
@@ -76,54 +87,56 @@ bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, co
 
 void createContactPoints(InitialContact& initialContact)
 {
-    std::array<glm::vec3, 4> referenceFace = initialContact.referenceFace; 
-    std::array<glm::vec3, 4> incidentFace = initialContact.incidentFace;
-    glm::vec3 referenceFaceNormal = initialContact.referenceFaceNormal; 
+   std::array<glm::vec3, 4> referenceFace = initialContact.referenceFace; 
+   std::array<glm::vec3, 4> incidentFace = initialContact.incidentFace;
+   glm::vec3 referenceFaceNormal = initialContact.referenceFaceNormal; 
 
-    std::array<Plane, 4> clippingPlanes = createClippingPlanes(referenceFace, referenceFaceNormal);
-    //drawClippingPlanes(shader, VAO, clippingPlanes, referenceFace);
+   std::array<Plane, 4> clippingPlanes = createClippingPlanes(referenceFace, referenceFaceNormal);
+   //drawClippingPlanes(shader, VAO, clippingPlanes, referenceFace);
     
-    std::array<glm::vec3, 8> contactPoints{};
-    for (int i = 0; i < incidentFace.size(); i++) {
-        contactPoints[i] = incidentFace[i];
-    }
-    std::array<glm::vec3, 8> nextContactPoints{};
-    std::array<bool, 8> clippingStatus{};
-    int counter = 4;
-    int counter2 = 4;
+   std::array<glm::vec3, 8> contactPoints{};
+   for (int i = 0; i < incidentFace.size(); i++) {
+      contactPoints[i] = incidentFace[i];
+   }
+   std::array<glm::vec3, 8> nextContactPoints{};
+   std::array<bool, 8> clippingStatus{};
+   int counter = 4;
+   int counter2 = 4;
 
-    // clip alla punkter mot alla plan
-    for (const Plane& plane : clippingPlanes) {
-        for (int i = 0; i < counter; i++) {
-            clippingStatus[i] = isPointInsidePlane(contactPoints[i], plane.normal, plane.point);  // hÂll koll pÂ vilka punkter som ‰r innanfˆr detta specifika plan
-        }
+   // clip alla punkter mot alla plan
+   for (const Plane& plane : clippingPlanes) {
+      for (int i = 0; i < counter; i++) {
+         clippingStatus[i] = isPointInsidePlane(contactPoints[i], plane.normal, plane.point);  // h√•ll koll p√• vilka punkter som √§r innanf√∂r detta specifika plan
+      }
 
-        counter2 = counter;
-        counter = 0;
+      counter2 = counter;
+      counter = 0;
 
-        // polygon clipping algorithm
-        for (int i = 0; i < counter2; i++) {
-            int nextIndex = (i + 1) % counter2;
+      // polygon clipping algorithm
+      for (int i = 0; i < counter2; i++) {
+         int nextIndex = (i + 1) % counter2;
 
-            if (!clippingStatus[i] and clippingStatus[nextIndex]) {
-                nextContactPoints[counter++] = getIntersectionPoint(contactPoints[i], contactPoints[nextIndex], plane);
-                nextContactPoints[counter++] = contactPoints[nextIndex];
-            }
-            else if (clippingStatus[i] and clippingStatus[nextIndex]) {
-                nextContactPoints[counter++] = contactPoints[nextIndex];
-            }
-            else if (clippingStatus[i] and !clippingStatus[nextIndex]) {
-                nextContactPoints[counter++] = getIntersectionPoint(contactPoints[i], contactPoints[nextIndex], plane);
-            }
-        }
-        contactPoints = nextContactPoints;
-    }
+         if (!clippingStatus[i] and clippingStatus[nextIndex]) {
+            auto optP = getIntersectionPoint(contactPoints[i], contactPoints[nextIndex], plane);
+            if (optP) nextContactPoints[counter++] = *optP;
+            nextContactPoints[counter++] = contactPoints[nextIndex];
+         }
+         else if (clippingStatus[i] and clippingStatus[nextIndex]) {
+            nextContactPoints[counter++] = contactPoints[nextIndex];
+         }
+         else if (clippingStatus[i] and !clippingStatus[nextIndex]) {
+            auto optP = getIntersectionPoint(contactPoints[i], contactPoints[nextIndex], plane);
+            if (optP) nextContactPoints[counter++] = *optP;
+         }
+      }
+      contactPoints = nextContactPoints;
+   }
 
-    // behÂll de punkter som ‰r innanfˆr referensface
-    for (int i = 0; i < counter; i++) {
-        if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0])) 
-            initialContact.globalCoords[initialContact.counter++] = contactPoints[i];
-    }
+   // beh√•ll de punkter som √§r innanf√∂r referensface
+   for (int i = 0; i < counter; i++) {
+      if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0])) 
+         initialContact.globalCoords[initialContact.counter++] = contactPoints[i];
+   }
 }
 
 void createLocalCoordinates(InitialContact& initialContact)
@@ -141,7 +154,7 @@ void contactPointReduction(InitialContact& contactPoints)
     std::array<glm::vec3, 4>  finalGlobalPoints{};
     std::array<glm::vec3, 4>  finalLocalPoints{};
 
-    // hitta den punkt (supportPoint) som ‰r l‰ngst bort i x-led
+    // hitta den punkt (supportPoint) som √§r l√§ngst bort i x-led
     glm::vec3 supportPoint;
     const glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f);
     float maxDot = std::numeric_limits<float>::lowest();
@@ -159,7 +172,7 @@ void contactPointReduction(InitialContact& contactPoints)
     finalGlobalPoints[0] = contactPoints.globalCoords[supportPointIndex];
     finalLocalPoints[0] = contactPoints.localCoords[supportPointIndex];
 
-    // hitta den punkt som ‰r l‰ngst bort frÂn supportPoint
+    // hitta den punkt som √§r l√§ngst bort fr√•n supportPoint
     int farthestPointIndex = 0;
     glm::vec3 farthestPoint{};
     float maxDistance = std::numeric_limits<float>::lowest();
@@ -176,7 +189,7 @@ void contactPointReduction(InitialContact& contactPoints)
     finalGlobalPoints[1] = contactPoints.globalCoords[farthestPointIndex];
     finalLocalPoints[1] = contactPoints.localCoords[farthestPointIndex];
 
-    // hitta den punkt som bildar den stˆrsta positiva triangeln med supportPoint och farthestPoint (pga crossproduct winding order)
+    // hitta den punkt som bildar den st√∂rsta positiva triangeln med supportPoint och farthestPoint (pga crossproduct winding order)
     int trianglePointIndex = 0;
     float maxArea = std::numeric_limits<float>::lowest();
     for (int i = 0; i < contactPoints.counter; i++) {
@@ -191,7 +204,7 @@ void contactPointReduction(InitialContact& contactPoints)
     finalGlobalPoints[2] = contactPoints.globalCoords[trianglePointIndex];
     finalLocalPoints[2] = contactPoints.localCoords[trianglePointIndex];
 
-    // hitta den punkt som bildar den stˆrsta negativa triangeln med supportPoint och farthestPoint (pga motsatt crossproduct winding order)
+    // hitta den punkt som bildar den st√∂rsta negativa triangeln med supportPoint och farthestPoint (pga motsatt crossproduct winding order)
     int negTrianglePointIndex = 0;
     maxArea = std::numeric_limits<float>::max();
     for (int i = 0; i < contactPoints.counter; i++) {
@@ -235,7 +248,7 @@ void PreComputeContactData(Contact& contact) {
             glm::dot(glm::cross(cp.rA, contact.normal), objA.inverseInertia * glm::cross(cp.rA, contact.normal)) +
             glm::dot(glm::cross(cp.rB, contact.normal), objB.inverseInertia * glm::cross(cp.rB, contact.normal)));
 
-        // R‰kna ut den relativa hastigheten vid kontaktpunkten, baserat pÂ de aktuella kropparnas tillstÂnd
+        // R√§kna ut den relativa hastigheten vid kontaktpunkten, baserat p√• de aktuella kropparnas tillst√•nd
         glm::vec3 relativeVelocity = (objB.linearVelocity + glm::cross(objB.angularVelocity, cp.rB)) -
             (objA.linearVelocity + glm::cross(objA.angularVelocity, cp.rA));
 
@@ -247,14 +260,14 @@ void PreComputeContactData(Contact& contact) {
         glm::vec3 t1, t2;
         float epsilon = 1e-3f;
 
-        // Om den tangentiella hastigheten ‰r signifikant, anv‰nd den fˆr att best‰mma t1
+        // Om den tangentiella hastigheten √§r signifikant, anv√§nd den f√∂r att best√§mma t1
         if (vtMagnitude > epsilon) {
             t1 = glm::normalize(v_tangent);
-            // t2 ‰r vinkelr‰t mot bÂde kontaktnormalen och t1
+            // t2 √§r vinkelr√§t mot b√•de kontaktnormalen och t1
             t2 = glm::normalize(glm::cross(contact.normal, t1));
         }
         else {
-            // Om relativeVelocity ‰r n‰ra noll, v‰lj en standardreferens som inte ‰r parallell med kontaktnormalen
+            // Om relativeVelocity √§r n√§ra noll, v√§lj en standardreferens som inte √§r parallell med kontaktnormalen
             glm::vec3 reference = (fabs(contact.normal.y) < 0.9f) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
             t1 = glm::normalize(glm::cross(contact.normal, reference));
             t2 = glm::normalize(glm::cross(contact.normal, t1));
@@ -262,7 +275,7 @@ void PreComputeContactData(Contact& contact) {
         cp.t1 = t1;
         cp.t2 = t2;
 
-        const float restitutionThreshold = 0.5f; // Minsta hastighet fˆr att restitution ska aktiveras
+        const float restitutionThreshold = 0.5f; // Minsta hastighet f√∂r att restitution ska aktiveras
         float restitution = 0.2f; // exempelmaterial
         float normalVelocity = glm::dot(relativeVelocity, contact.normal);
         if (normalVelocity < -restitutionThreshold) {
@@ -281,7 +294,7 @@ size_t generateKey(int idA, int idB) {
 
 void integrateContact(std::unordered_map<size_t, Contact>& contactCache, InitialContact& initialContact, Contact& finalContact)
 {
-    // kopiera ˆver punkterna frÂn initialContact till finalContact
+    // kopiera √∂ver punkterna fr√•n initialContact till finalContact
     for (int i = 0; i < initialContact.counter; i++) {
         finalContact.points[i].globalCoord = initialContact.globalCoords[i];
         finalContact.points[i].localCoord = initialContact.localCoords[i];
@@ -312,10 +325,10 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
     glm::vec3 referenceFaceNormal = initialContact.referenceFaceNormal;
     std::array<glm::vec3, 4> referenceFace = initialContact.referenceFace;
 
-    // -------------- behˆver ‰ndras till att vara en faktor av objektens storlekar -------------
-    const float threshold = 0.2f;
+    // -------------- beh√∂ver √§ndras till att vara en faktor av objektens storlekar -------------
+    const float threshold = 0.5f;
 
-    // iterera ˆver alla nya contact points och se om nÂgon ‰r n‰ra en existerande
+    // iterera √∂ver alla nya contact points och se om n√•gon √§r n√§ra en existerande
     for (int i = 0; i < finalContact.counter; i++) {
         ContactPoint& newPoint = finalContact.points[i];
         for (int j = 0; j < cachedContact.counter; j++) {
@@ -325,13 +338,26 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
 
             ContactPoint& cachedPoint = cachedContact.points[j];
 
-            // nya punkten ‰r n‰ra en cached punkt = warm start
-            if (glm::distance(newPoint.localCoord, cachedPoint.localCoord) < threshold) {
-                newPoint.accumulatedImpulse = cachedPoint.accumulatedImpulse;
-                newPoint.accumulatedFrictionImpulse1 = cachedPoint.accumulatedFrictionImpulse1;
-                newPoint.accumulatedFrictionImpulse2 = cachedPoint.accumulatedFrictionImpulse2;
+            // nya punkten √§r n√§ra en cached punkt = warm start
+            if (glm::distance(newPoint.localCoord, cachedPoint.localCoord) < threshold)
+            {
+                if (glm::dot(cachedPoint.t1, newPoint.t1) < 0) newPoint.t1 = -newPoint.t1;
+                if (glm::dot(cachedPoint.t2, newPoint.t2) < 0) newPoint.t2 = -newPoint.t2;
+
+                // 1) G√∂r om gamla skal√§rer till en v√§rldsrums‚Äëvektor
+                glm::vec3 oldImpulseWorld =
+                    cachedPoint.accumulatedImpulse * cachedContact.normal +
+                    cachedPoint.accumulatedFrictionImpulse1 * cachedPoint.t1 +
+                    cachedPoint.accumulatedFrictionImpulse2 * cachedPoint.t2;
+
+                // 2) Projicera p√• den NYA basen
+                newPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, finalContact.normal);
+                newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, newPoint.t1);
+                newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, newPoint.t2);
+
+                // 3) Twist‚Äëimpulsen f√∂ljer bara normala rotationsaxeln ‚áí kopiera
                 newPoint.accumulatedTwistImpulse = cachedPoint.accumulatedTwistImpulse;
-                
+
                 matchedFinalPoints[i] = true;
                 matchedCachedPoints[j] = true;
                 break;
@@ -339,7 +365,8 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
         }
     }
 
-    // fyll pÂ med cachade punkter som inte blivit matchade med en ny punkt
+    // fyll p√• med cachade punkter som inte blivit matchade med en ny punkt
+    bool addedCachedPoint = false;
     if (finalContact.counter < 4) {
         for (int i = 0; i < cachedContact.counter; i++) {
             if (matchedCachedPoints[i] == true)
@@ -351,10 +378,14 @@ void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Initial
             }
 
             finalContact.points[finalContact.counter++] = cachedPoint;
+            addedCachedPoint = true;
             if (finalContact.counter >= 4) {
                 break;
             }
         }
+    }
+    if (addedCachedPoint) {
+        PreComputeContactData(finalContact);
     }
 
     contactCache[key] = finalContact;
@@ -365,7 +396,7 @@ Contact createContact(std::unordered_map<size_t, Contact>& contactCache, GameObj
     std::array<glm::vec3, 4> referenceFace;
     std::array<glm::vec3, 4> incidentFace;
 
-    // v‰lj vilken som ‰r referensface och incidentface
+    // v√§lj vilken som √§r referensface och incidentface
     if (collisionNormalOwner == 0) {
         referenceFace = selectCollisionFace(objA, normal); 
         incidentFace = selectCollisionFace(objB, -normal);
@@ -375,7 +406,7 @@ Contact createContact(std::unordered_map<size_t, Contact>& contactCache, GameObj
         incidentFace = selectCollisionFace(objA, normal);
     }
 
-    // r‰kna ut normalen fˆr referensface
+    // r√§kna ut normalen f√∂r referensface
     glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
     glm::vec3 edgeB = referenceFace[0] - referenceFace[2];
     glm::vec3 referenceFaceNormal = glm::normalize(glm::cross(edgeA, edgeB));

@@ -8,44 +8,32 @@
 #include "vertex.h"
 #include "draw_line.h"
 
-class OOBB
-{
+class OOBB {
 public:
     std::array<glm::vec3, 8> vertices;
     std::array<glm::vec3, 8> transformedVertices;
     std::array<glm::vec3, 3> normals;
 
-    std::array<glm::vec3, 3> localAxes = {
-        glm::vec3(1, 0, 0),
-        glm::vec3(0, 1, 0),
-        glm::vec3(0, 0, 1),
-    };
-
-    void Init(std::vector<glm::vec3>& vertices, const glm::mat4& M)
-    {
+    void Init(std::vector<glm::vec3>& vertices, const glm::mat4& M) {
         std::array<float, 6> extremePoints = getExtremePoints(vertices);
         createVertices(extremePoints);
-        createNormals();
         updateNormals(M);
         getTransformedVertices(M);
     }
 
-    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M)
-    {
+    void update(std::vector<glm::vec3>& verticesPositions, const glm::mat4& M) {
         updateNormals(M);
         getTransformedVertices(M);
     }
 
 private:
-    void getTransformedVertices(const glm::mat4& M)
-    {
+    void getTransformedVertices(const glm::mat4& M) {
         for (int i = 0; i < vertices.size(); i++) {
             transformedVertices[i] = glm::vec3(M * glm::vec4(vertices[i], 1.0f));
         }
     }
 
-    void createVertices(const std::array<float,6>& extremePoints)
-    {
+    void createVertices(const std::array<float,6>& extremePoints) {
         float min_X = extremePoints[0];
         float min_Y = extremePoints[1];
         float min_Z = extremePoints[2];
@@ -63,8 +51,7 @@ private:
         vertices[7] = { glm::vec3(max_X, max_Y, max_Z) };
     }
 
-    std::array<float,6> getExtremePoints(const std::vector<glm::vec3>& vertices)
-    {
+    std::array<float,6> getExtremePoints(const std::vector<glm::vec3>& vertices) {
         // Initialize min and max values
         float max_X = std::numeric_limits<float>::lowest();
         float min_X = std::numeric_limits<float>::max();
@@ -74,8 +61,7 @@ private:
         float min_Z = std::numeric_limits<float>::max();
 
         // Loop through the vertices and update min and max values
-        for (size_t i = 0; i < vertices.size(); i++)
-        {
+        for (size_t i = 0; i < vertices.size(); i++) {
             float x = vertices[i].x;
             float y = vertices[i].y;
             float z = vertices[i].z;
@@ -91,32 +77,10 @@ private:
         return { min_X, min_Y, min_Z, max_X, max_Y, max_Z };
     }
 
-    void createNormals()
-    {
-        glm::vec3 edgeA;
-        glm::vec3 edgeB;
-        glm::vec3 normal;
-
-        edgeA = vertices[0] - vertices[2];
-        edgeB = vertices[0] - vertices[6];
-        normal = glm::normalize(glm::cross(edgeA, edgeB));
-        normals[0] = normal;
-
-        edgeA = vertices[7] - vertices[3];
-        edgeB = vertices[7] - vertices[2];
-        normal = glm::normalize(glm::cross(edgeA, edgeB));
-        normals[1] = normal;
-
-        edgeA = vertices[0] - vertices[1];
-        edgeB = vertices[0] - vertices[2];
-        normal = glm::normalize(glm::cross(edgeA, edgeB));
-        normals[2] = normal;
-    }
-
     void updateNormals(const glm::mat4& M) {
         glm::mat3 R = glm::mat3(M);
-        normals[0] = glm::normalize(R * localAxes[0]);
-        normals[1] = glm::normalize(R * localAxes[1]);
-        normals[2] = glm::normalize(R * localAxes[2]);
+        normals[0] = glm::normalize(R * glm::vec3(1, 0, 0));
+        normals[1] = glm::normalize(R * glm::vec3(0, 1, 0));
+        normals[2] = glm::normalize(R * glm::vec3(0, 0, 1));
     }
 };

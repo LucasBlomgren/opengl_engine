@@ -10,7 +10,6 @@
     <ClCompile Include="src\physics\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
     <ClCompile Include="src\physics\sat.cpp" />
-    <ClCompile Include="src\physics\sweep_and_prune.cpp" />
     <ClCompile Include="src\graphics\light.cpp" />
     <ClCompile Include="src\graphics\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer.cpp" />
@@ -23,7 +22,7 @@
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor\editor.cpp" />
-    <ClCompile Include="src\physics\ray_cast_finite.cpp" />
+    <ClCompile Include="src\physics\raycast.cpp" />
     <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
     <ClCompile Include="src\geometry\cube_data.cpp" />
@@ -63,12 +62,9 @@
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
     <ClInclude Include="src\core\input_manager.h" />
-    <ClInclude Include="src\physics\aabb.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\sat.h" />
-    <ClInclude Include="src\physics\sweep_and_prune.h" />
-    <ClInclude Include="src\physics\oobb.h" />
     <ClInclude Include="src\graphics\light.h" />
     <ClInclude Include="src\graphics\light_manager.h" />
     <ClInclude Include="src\graphics\renderer.h" />
@@ -82,14 +78,15 @@
     <ClInclude Include="src\game\rotate_cube.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\game\editor\editor.h" />
-    <ClInclude Include="src\physics\ray_cast_finite.h" />
-    <ClInclude Include="src\physics\ray.h" />
+    <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\graphics\graphics debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
     <ClInclude Include="src\geometry\cube_data.h" />
     <ClInclude Include="src\geometry\sphere_data.h" />
     <ClInclude Include="src\geometry\vertex.h" />
     <ClInclude Include="src\physics\bvh.h" />
+    <ClInclude Include="src\physics\colliders\aabb.h" />
+    <ClInclude Include="src\physics\colliders\oobb.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

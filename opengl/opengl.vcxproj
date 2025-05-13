@@ -41,9 +41,8 @@
     <ClCompile Include="src\physics\bvh.cpp" />
     <ClCompile Include="src\physics\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
-    <ClCompile Include="src\physics\ray_cast_finite.cpp" />
+    <ClCompile Include="src\physics\raycast.cpp" />
     <ClCompile Include="src\physics\sat.cpp" />
-    <ClCompile Include="src\physics\sweep_and_prune.cpp" />
     <None Include="src\shaders\debug.frag">
       <FileType>Document</FileType>
     </None>
@@ -71,15 +70,13 @@
     <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="src\graphics\shader.h" />
     <ClInclude Include="src\graphics\texture_manager.h" />
-    <ClInclude Include="src\physics\aabb.h" />
     <ClInclude Include="src\physics\bvh.h" />
+    <ClInclude Include="src\physics\colliders\aabb.h" />
+    <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
-    <ClInclude Include="src\physics\oobb.h" />
     <ClInclude Include="src\physics\physics.h" />
-    <ClInclude Include="src\physics\ray.h" />
-    <ClInclude Include="src\physics\ray_cast_finite.h" />
+    <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\physics\sat.h" />
-    <ClInclude Include="src\physics\sweep_and_prune.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\assets\crate.jpg" />
@@ -190,7 +187,9 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -208,7 +207,9 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

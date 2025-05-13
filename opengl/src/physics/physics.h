@@ -1,42 +1,38 @@
 #pragma once
 
+#include "engine_state.h"
+
 #include <glm/glm.hpp>
 #include <unordered_map>
 #include <random>
 
 #include "aabb.h"
-#include "sweep_and_prune.h"
 #include "sat.h"
 #include "collision_manifold.h"
-#include "ray_cast_finite.h"
+#include "raycast.h"
 #include "game_object.h"
 #include "rotate_cube.h"
-#include "ray.h"
+#include "bvh.h"
 
 class PhysicsEngine 
 {
 public:
-    void setPointers(std::vector<GameObject>* gameObjectList);
+    void setPointers(std::vector<GameObject>* gameObjectList, BVHTree* tree);
     void step(float deltaTime, bool showNormals, std::mt19937 rng);
     void clearPhysicsData();
-    void addAabbEdges(const AABB& box);
 
     void updatePositions(float deltaTime);
 
+    BVHTree* getBvhTree() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
-    std::vector<Edge>* getSortedEdges() const;
-    int getSelectedAxis() const;
-    RaycastHit performRayCastFinite(Physics::Ray& ray);
+    RaycastHit performRaycast(Ray& ray);
 
     int amountCollisionPairs = 0;
 
+    EngineState* engineState = nullptr;
+
 private:
     std::vector<GameObject>* gameObjectList;
-    std::vector<Edge> allEdgesX;
-    std::vector<Edge> allEdgesY;
-    std::vector<Edge> allEdgesZ;
-    std::vector<Edge>* sortedEdges;
-    int selectedAxis;
-
+    BVHTree* bvhTree;
     std::unordered_map<size_t, Contact> contactCache;
 };

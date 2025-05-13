@@ -1,6 +1,8 @@
 ﻿#define GLM_FORCE_SIMD_AVX2 
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include <windows.h>
+
 #include <iostream>
 #include <vector>
 #include <random>
@@ -24,15 +26,12 @@
 
 #include "bvh.h"
 
-void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera);
-
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
     return os;
 }
 
-// window resize callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -64,167 +63,188 @@ Editor editor;
 
 int main()
 {
-    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+   GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
-    // setup input
-    inputManager.setPointers(&engineState, &camera);
-    inputManager.init(window);
+   // setup rng
+   std::mt19937 rng(std::random_device{}());
 
-    // setup rendering
-    Shader shader("src/shaders/object.vert", "src/shaders/object.frag");
-    Shader debugShader("src/shaders/debug.vert", "src/shaders/debug.frag");
-    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader, debugShader);
+   // ---------- Clocks ----------
+   auto start_time = std::chrono::high_resolution_clock::now();
+   int frames = 0;
+   int last_second = 0;
+   // fixed timestep
+   const float fixedTimeStep = 1.0f / 240.0f;
+   float accumulator = 0.0f;
+   float lastFrame = static_cast<float>(glfwGetTime());
+   float bvhInterval = fixedTimeStep;  // sekunder mellan BVH‑uppdateringar
+   float bvhAccumulator = 0.0f;
 
-    // load textures
-    textureManager.loadTexture("crate", "src/assets/crate.jpg");
-    textureManager.loadTexture("uvmap", "src/assets/UV0.png");
+   // setup input
+   inputManager.setPointers(&engineState, &camera);
+   inputManager.init(window);
 
-    // setup scene 
-    sceneBuilder.setPointers(&textureManager, &lightManager);
-    sceneBuilder.createScene(physicsEngine);
+   // setup rendering
+   Shader shader("src/shaders/object.vert", "src/shaders/object.frag");
+   Shader debugShader("src/shaders/debug.vert", "src/shaders/debug.frag");
+   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader, debugShader);
 
-    BVHTree bvhTree;
-    bvhTree.build(sceneBuilder.getGameObjectList());
+   // load textures
+   textureManager.loadTexture("crate", "src/assets/crate.jpg");
+   textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
 
-    // setup physics
-    physicsEngine.setPointers(&sceneBuilder.getGameObjectList());
+   // setup scene 
+   sceneBuilder.setPointers(&textureManager, &lightManager, rng);
+   sceneBuilder.createScene(physicsEngine);
 
-    // setup editor
-    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
+   // setup bvh
+   BVHTree bvhTree;
+   bvhTree.build(sceneBuilder.getGameObjectList());
 
-    // setup rng
-    std::random_device rd;
-    std::mt19937 g(rd());
+   // setup physics
+   physicsEngine.setPointers(&sceneBuilder.getGameObjectList(), &bvhTree);
+   physicsEngine.engineState = &engineState;
 
-    // setup clock
-    auto start_time = std::chrono::high_resolution_clock::now();
-    int frames = 0;
-    int last_second = 0;
+   // setup editor
+   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
 
-    // fixed timestep
-    const float fixedTimeStep = 1.0f / 360.0f;
-    float accumulator = 0.0f;
-    float lastFrame = static_cast<float>(glfwGetTime());
+   // setup help VAOs
+   unsigned int VAO_line = setupLine();
+   unsigned int VAO_xyz = setup_xyzObject();
+   unsigned int VAO_worldFrame = setup_worldFrame();
+   unsigned int VAO_contactPoint = setupContactPoint();
 
-    float bvhInterval = 1.0f / 180.0f;  // sekunder mellan BVH‑uppdateringar
-    float bvhAccumulator = 0.0f;
+   // main loop
+   while (true)
+   {
+      float cpuClockStart = static_cast<float>(glfwGetTime());
+      glfwPollEvents();
+      if (glfwWindowShouldClose(window)) break;
 
-    // setup help VAOs
-    unsigned int VAO_line = setupLine();
-    unsigned int VAO_xyz = setup_xyzObject();
-    unsigned int VAO_worldFrame = setup_worldFrame();
-    unsigned int VAO_contactPoint = setupContactPoint();
+      // update time
+      auto current_time = std::chrono::high_resolution_clock::now();
+      float currentFrame = static_cast<float>(glfwGetTime());
+      deltaTime = currentFrame - lastFrame;
+      lastFrame = currentFrame;
 
-    // main loop
-    while (true)
-    {
-        glfwPollEvents();
-        if (glfwWindowShouldClose(window)) break;
+      // continous input 
+      inputManager.processInput(window, deltaTime);
 
-        // update time
-        auto current_time = std::chrono::high_resolution_clock::now();
-        float currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+      // physics step
+      float stepClockStart = static_cast<float>(glfwGetTime());
+      if (!engineState.isPaused() or engineState.getAdvanceStep()) {
+         accumulator += deltaTime;
 
-        // continous input 
-        inputManager.processInput(window, deltaTime);
+         if (engineState.getAdvanceStep())
+            accumulator = fixedTimeStep;
 
-        // physics step
-        if (!engineState.isPaused()) {
-            accumulator += deltaTime;
-            while (accumulator >= fixedTimeStep) {
-                physicsEngine.step(fixedTimeStep, engineState.getShowNormals(), g);
-                accumulator -= fixedTimeStep;
+         while (accumulator >= fixedTimeStep) {
+            physicsEngine.step(fixedTimeStep, engineState.getShowNormals(), rng);
+            accumulator -= fixedTimeStep;
+            //std::cout << "------------------" << "\n";
+         }
+         bvhAccumulator += deltaTime;
+         if (bvhAccumulator >= bvhInterval) {
+            bvhTree.update(sceneBuilder.getGameObjectList());
+            bvhAccumulator -= bvhInterval;
+         }
+      }
+
+      if (engineState.getAdvanceStep()) {
+            engineState.setAdvanceStep(false);
+      }
+
+      // calculate step time
+      float stepClockStop = static_cast<float>(glfwGetTime());
+      float stepClock = stepClockStop - stepClockStart;
+      float stepClockMs = stepClock * 1000.0f;
+
+      // rendering
+      float renderClockStart = static_cast<float>(glfwGetTime());
+      renderer.beginFrame();
+      renderer.setViewProjection(camera);
+      renderer.uploadDirectionalLight();
+      renderer.uploadLightsToShader();
+      renderer.drawLights();
+      renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
+      renderer.drawBVH(bvhTree, VAO_line);
+      renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
+      // calculate render time
+      float renderClockEnd = static_cast<float>(glfwGetTime());
+      float renderClock = renderClockEnd - renderClockStart;
+      float renderClockMs = renderClock * 1000.0f;
+
+      // editor functions
+      editor.update(deltaTime, debugShader);
+
+      // swap buffers
+      float t1 = static_cast<float>(glfwGetTime());
+      glfwSwapBuffers(window);
+      float t2 = static_cast<float>(glfwGetTime());
+      float swapTime = (t2 - t1);
+
+      // calculate CPU time
+      float cpuClockStop = static_cast<float>(glfwGetTime());
+      float cpuClock = (cpuClockStop - cpuClockStart) - swapTime;
+      float cpuClockMs = cpuClock * 1000.0f;
+      float frameTimeMs = (cpuClockStop - cpuClockStart) * 1000.0f;
+
+      // print FPS and other stats
+      if (engineState.getShowFPS()) {
+         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+         if (seconds > last_second) {
+            last_second = seconds;
+            const int LABEL_W = 10;
+            const int VALUE_W = 0;
+
+            std::cout
+               // FPS
+               << std::setw(LABEL_W) << std::left
+               << "FPS:"
+               // värdefält, vänster-justerat
+               << std::setw(VALUE_W) << std::left
+               << frames << "\n"
+
+               // CPU Time
+               << std::setw(LABEL_W) << std::left
+               << "CPU:"
+               // värdefält, vänster-justerat
+               << std::setw(VALUE_W) << std::left
+               << std::fixed << std::setprecision(1) << frameTimeMs << " ms\n"
+
+               // Physics Time
+               << std::setw(LABEL_W) << std::left
+               << "Physics:"
+               << std::setw(VALUE_W) << std::left
+               << std::setprecision(1) << stepClockMs << " ms\n"
+
+               // Render Time
+               << std::setw(LABEL_W) << std::left
+               << "Render:"
+               << std::setw(VALUE_W) << std::left
+               << std::setprecision(1) << renderClockMs << " ms\n"
+
+               // BVH rebuilds
+               << std::setw(LABEL_W) << std::left
+               << "BVH:"
+               << std::setw(VALUE_W) << std::left
+               << bvhTree.numRebuilds << "\n"
+
+               // Objects
+               << std::setw(LABEL_W) << std::left
+               << "Objects:"
+               << std::setw(VALUE_W) << std::left
+               << sceneBuilder.getGameObjectList().size() 
+               << std::defaultfloat << "\n";
+
+            if (deltaTime > 0.016f) {
+               std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << "\n";
             }
-            bvhAccumulator += deltaTime;
-            if (bvhAccumulator >= bvhInterval) {
-                bvhTree.update(sceneBuilder.getGameObjectList());
-                bvhAccumulator -= bvhInterval;
-            }
-        }
-
-        // editor functions
-        editor.update(deltaTime);
-
-        // rendering
-        renderer.beginFrame();
-        renderer.setViewProjection(camera);
-        renderer.uploadDirectionalLight();
-        renderer.uploadLightsToShader();
-        renderer.drawLights();
-        renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
-        renderer.drawBVH(bvhTree, VAO_line);
-        renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
-
-        //drawAABB(editor.getLastRayHit(), shader, camera);
-
-        // print FPS and object count
-        if (engineState.getShowFPS()) {
-            float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-            if (seconds > last_second) {
-                last_second = seconds;
-                std::cout << "FPS: " << frames << "\n";
-                std::cout << "Step: " << std::fixed << std::setprecision(4) << deltaTime << std::endl;
-                std::cout << "Objects: " << sceneBuilder.getGameObjectList().size() << "\n";
-                std::cout << "BVH rebuilds: " << bvhTree.numRebuilds << std::endl;
-
-                if (deltaTime > 0.016f) {
-                    std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << std::endl;
-                    std::cout << "Collision pairs: " << physicsEngine.amountCollisionPairs << std::endl;
-                }
-                std::cout << "--------------" << std::endl;
-                frames = 0;
-                bvhTree.numRebuilds = 0;
-            };
-            frames++;
-        }
-
-        glfwSwapBuffers(window);
-    }
-    glfwTerminate();
-}
-
-void drawAABB(RaycastHit& hitData, Shader& shader, Camera& camera)
-{
-    glm::vec3 min = camera.Position + camera.Front * 100.0f - 5.0f;
-    glm::vec3 max = camera.Position + camera.Front * 100.0f + 5.0f;
-
-    std::array<float, 72> buf = {
-        min.x,min.y,min.z,  max.x,min.y,min.z,
-        min.x,min.y,min.z,  min.x,max.y,min.z,
-        min.x,min.y,min.z,  min.x,min.y,max.z,
-        max.x,max.y,min.z,  max.x,min.y,min.z,
-        max.x,max.y,min.z,  min.x,max.y,min.z,
-        max.x,max.y,min.z,  max.x,max.y,max.z,
-        min.x,max.y,max.z,  min.x,min.y,max.z,
-        min.x,max.y,max.z,  min.x,max.y,min.z,
-        min.x,max.y,max.z,  max.x,max.y,max.z,
-        max.x,min.y,max.z,  max.x,max.y,max.z,
-        max.x,min.y,max.z,  min.x,min.y,max.z,
-        max.x,min.y,max.z,  max.x,min.y,min.z
-    };
-
-    static GLuint vao = 0, vbo = 0; 
-    if (vao == 0) {
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(0);
-    }
-
-    shader.use();
-    shader.setBool("useTexture", false);
-    shader.setBool("useUniformColor", true);
-    shader.setVec3("uColor", { 0.9f,0.7f,0.2f });
-    shader.setMat4("model", glm::mat4(1.0f));
-
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf.data(), GL_DYNAMIC_DRAW);
-
-    glLineWidth(2.0f);
-    glDrawArrays(GL_LINES, 0, 24);
+            std::cout << "-----------------------" << "\n";
+            frames = 0;
+            bvhTree.numRebuilds = 0;
+         }
+         frames++;
+      }
+   }
+   glfwTerminate();
 }

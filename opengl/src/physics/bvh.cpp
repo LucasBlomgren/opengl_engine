@@ -1,7 +1,39 @@
 ﻿#include "bvh.h"
 
+int BVHTree::query(AABB& qBox) {
+    int hc = 0;
+    constexpr int MaxDepth = 64;
+    Node* stack[MaxDepth];
+    int   sp = 0;
+    stack[sp++] = root;
+
+    // iterate through the tree
+    while (sp) {
+        Node* n = stack[--sp];
+        if (!qBox.intersects(n->fatBox))
+            continue;
+
+        // leaf node
+        if (!n->childA && !n->childB)
+        {
+            if (hc >= collisions.size()) {
+                collisions.resize(collisions.size() * 4);
+            }
+            if (qBox.intersects(*n->tightBox))
+                this->collisions[hc++] = n->object;
+        }
+        // internal node
+        else {
+            if (n->childA) stack[sp++] = n->childA;
+            if (n->childB) stack[sp++] = n->childB;
+        }
+    }
+
+    return hc;
+}
+
 void BVHTree::update(std::vector<GameObject>& objects) {
-    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= 120) {
+    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
         // för många refits, bygg om trädet
         build(objects);
         numRefits = 0;
@@ -20,25 +52,15 @@ void BVHTree::update(std::vector<GameObject>& objects) {
 void BVHTree::updateLeaves() {
 
     for (auto& n : nodes) {
-        if (n.childA && n.childB)
+        if (n.childA && n.childB) 
+            continue;
+        if (n.fatBox.contains(*n.tightBox)) 
             continue;
 
         const AABB& tight = *n.tightBox;
-        if (n.fatBox.contains(tight))
-            continue;
-
-        // --- expand leaf
-        // hitta den största hastighets-komponenten
-        glm::vec3 v = n.object->linearVelocity;
-        float ax = std::abs(v.x);
-        float ay = std::abs(v.y);
-        float az = std::abs(v.z);
-        float vmax = ax > ay ? (ax > az ? ax : az) : (ay > az ? ay : az);
-        // slack = max‐komponent * tidssteg * safety‐faktor
-        float slack = vmax * updateInterval * 1.732f;
-
-        n.fatBox = tight;
-        n.fatBox.grow(slack);
+        n.fatBox.wMin = tight.wMin;
+        n.fatBox.wMax = tight.wMax;
+        n.fatBox.grow(fatBoxMargin);
         this->numRefits++;
 
         n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
@@ -91,48 +113,6 @@ void BVHTree::createPrimitives(std::vector<GameObject>& objects) {
     }
 }
 
-void BVHTree::build(std::vector<GameObject>& objects) {
-    root = nullptr;
-    for (auto& node : nodes) {
-        node.aabbRenderer.cleanup();
-    }
-    nodes.clear();
-
-    // Fyll primitives
-    createPrimitives(objects);
-
-    if (prims.empty())
-        return;
-
-    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
-
-    // Förallokera nod-poolen
-    nodes.reserve(prims.size() * 2);
-
-    // Skapa root-nod
-    root = &nodes.emplace_back();
-    root->start = 0;
-    root->count = prims.size();
-
-    // Beräkna root->aabb som union av alla primitiva
-    root->fatBox.wMin = prims[0].min;
-    root->fatBox.wMax = prims[0].max;
-    for (int i = 1; i < prims.size(); i++) {
-        root->fatBox.growToInclude(prims[i].min);
-        root->fatBox.growToInclude(prims[i].max);
-    }
-    root->fatBox.grow(fatBoxMargin);
-
-    // setup fatBoxRenderer
-    root->fatBox.centroid = (root->fatBox.wMin + root->fatBox.wMax) * 0.5f;
-    root->fatBox.halfExtents = (root->fatBox.wMax - root->fatBox.wMin) * 0.5f;
-    root->aabbRenderer.color = { 1.0f, 0.0f, 1.0f };
-    root->aabbRenderer.setupWireframeBox(root->fatBox);
-
-    // Splittra in i children
-    split(*root);
-}
-
 void BVHTree::split(Node& parent) {
     int start = parent.start;
     int count = parent.count;
@@ -141,24 +121,12 @@ void BVHTree::split(Node& parent) {
     if (count <= leafThreshold) {
         parent.object = prims[start].object;
         parent.tightBox = &parent.object->AABB;
-
-        glm::vec3 v = parent.object->linearVelocity;
-        float ax = std::abs(v.x);
-        float ay = std::abs(v.y);
-        float az = std::abs(v.z);
-        // hitta den största komponenten
-        float vmax = ax > ay ? (ax > az ? ax : az) : (ay > az ? ay : az);
-        // slack = max‐komponent * tidssteg * safety‐faktor
-        float slack = vmax * updateInterval * 1.732f;
-
         parent.fatBox = *parent.tightBox;
-        parent.fatBox.grow(slack);
+        parent.fatBox.grow(fatBoxMargin);
 
         // setup aabbRenderer wireframe
         parent.fatBox.centroid = (parent.fatBox.wMin + parent.fatBox.wMax) * 0.5f;
         parent.fatBox.halfExtents = (parent.fatBox.wMax - parent.fatBox.wMin) * 0.5f;
-        parent.aabbRenderer.color = { 1.0f, 0.0f, 1.0f };
-        parent.aabbRenderer.setupWireframeBox(parent.fatBox);
 
         return;
     }
@@ -210,15 +178,48 @@ void BVHTree::split(Node& parent) {
     // setup aabbRenderer wireframe
     A->fatBox.centroid = (A->fatBox.wMin + A->fatBox.wMax) * 0.5f;
     A->fatBox.halfExtents = (A->fatBox.wMax - A->fatBox.wMin) * 0.5f;
-    A->aabbRenderer.color = { 1.0f, 0.0f, 1.0f };
-    A->aabbRenderer.setupWireframeBox(A->fatBox);
-
     B->fatBox.centroid = (B->fatBox.wMin + B->fatBox.wMax) * 0.5f;
     B->fatBox.halfExtents = (B->fatBox.wMax - B->fatBox.wMin) * 0.5f;
-    B->aabbRenderer.color = { 1.0f, 0.0f, 1.0f };
-    B->aabbRenderer.setupWireframeBox(B->fatBox);
-    
+
     // rekursivt splitta vidare
     split(*A);
     split(*B);
+}
+
+void BVHTree::build(std::vector<GameObject>& objects) {
+    root = nullptr;
+    nodes.clear();
+    collisions.resize(16);
+
+    // Fyll primitives
+    createPrimitives(objects);
+
+    if (prims.empty())
+        return;
+
+    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
+
+    // Förallokera nod-poolen
+    nodes.reserve(prims.size() * 2);
+
+    // Skapa root-nod
+    root = &nodes.emplace_back();
+    root->start = 0;
+    root->count = prims.size();
+
+    // Beräkna root->aabb som union av alla primitiva
+    root->fatBox.wMin = prims[0].min;
+    root->fatBox.wMax = prims[0].max;
+    for (int i = 1; i < prims.size(); i++) {
+        root->fatBox.growToInclude(prims[i].min);
+        root->fatBox.growToInclude(prims[i].max);
+    }
+    root->fatBox.grow(fatBoxMargin);
+
+    // setup fatBoxRenderer
+    root->fatBox.centroid = (root->fatBox.wMin + root->fatBox.wMax) * 0.5f;
+    root->fatBox.halfExtents = (root->fatBox.wMax - root->fatBox.wMin) * 0.5f;
+
+    // Splittra in i children
+    split(*root);
 }

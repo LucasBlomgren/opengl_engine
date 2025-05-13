@@ -13,8 +13,8 @@ uniform mat4 projection;
 struct debugSettings {
 	int objectType; 
 
-    bool useUniformColor;
-    vec3 uColor;
+	bool useUniformColor;
+	vec3 uColor;
 
 	vec3 contactPointOffset;
 
@@ -27,7 +27,7 @@ uniform debugSettings debug;
 void main() 
 {
 
-    FragPos = vec3(model * vec4(aPos, 1.0));
+	FragPos = vec3(model * vec4(aPos, 1.0));
 
 	// regular object
 	if (debug.objectType == 0) {

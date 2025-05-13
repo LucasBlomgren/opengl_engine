@@ -7,15 +7,16 @@
 class AABBRenderer
 {
 public:
-    void updateModel(const AABB& box, const bool asleep);
-    void setupWireframeBox(const AABB& box);
-    void drawBox(Shader& shader);
+    static void InitShared();
+    static void CleanupShared();
 
-    void cleanup();
+    void updateModel(const AABB& box, const bool asleep);
+    void draw(const glm::vec3& color, Shader& shader) const;
 
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };
+    glm::mat4 model{ 1.0f };
 
 private:
-    unsigned int VAO, VBO;
-    glm::mat4 model{ 1.0f };
+    static unsigned int sVAO, sVBO;
+    static bool         sInitialized;
 };

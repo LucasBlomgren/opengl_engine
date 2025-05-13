@@ -5,6 +5,9 @@
 class EngineState 
 {
 public:
+
+    void setAdvanceStep(bool);
+    void setPaused(bool);
     void togglePause();
     void toggleShowFPS();
     void toggleShowAABB();
@@ -18,6 +21,7 @@ public:
     void clearPressedKey();
 
     bool isPaused() const;
+    bool getAdvanceStep() const;
     bool getShowFPS() const;
     bool getShowNormals() const;
     bool getShowAABB() const;
@@ -28,7 +32,8 @@ public:
     std::string GetPressedKey() const;
 
 private:
-    bool paused = false;
+    bool advanceStep = false;
+    bool paused = true;
     bool showFPS = true;
     bool showAABB = false;
     bool showOOBB = false;

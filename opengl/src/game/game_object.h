@@ -15,8 +15,8 @@
 #include <array>
 
 #include "shader.h"
-#include "aabb.h"
-#include "oobb.h"
+#include "colliders/aabb.h"
+#include "colliders/oobb.h"
 #include "oobb_renderer.h"
 #include "aabb_renderer.h"
 
@@ -48,9 +48,6 @@ public:
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
 
-    float staticFriction;
-    float dynamicFriction;
-    float restitution;
     float mass;
     float invMass;
     float invInertia;
@@ -58,7 +55,7 @@ public:
     bool isStatic;
     bool shouldRotate;
     bool isRotating = false;
-    glm::vec3 g = glm::vec3(0.0f, -90.82f, 0.0f);
+    glm::vec3 g = glm::vec3(0.0f, -98.1f, 0.0f);
 
     bool asleep = false;
     float sleepCounter = 0;
@@ -68,18 +65,32 @@ public:
     OOBB OOBB;
     bool AABB_ShouldUpdate = true;
     bool OOBB_shouldUpdate = false;
-    bool OOBB_shouldUpdateBuffer = false;
     OOBBRenderer oobbRenderer;
-    AABBRenderer aabbRenderer;
 
     bool isUniformlyScaled;
     bool selectedByEditor = false;
+    bool isRaycastHit = false;
     glm::vec3 lastPosition;
     glm::vec3 pushCorrection;
 
-    GameObject(int id, std::vector<Vertex> vertices, std::vector<unsigned int> indices, glm::vec3 position, glm::vec3 scale, float mass, bool isStatic, int textureID, glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f), float sleepCounterThreshold = 0.5f)
+    bool canMoveLinearly = true;
+    glm::vec3 color;
+
+    GameObject(
+       int id,
+       std::vector<Vertex> vertices,
+       std::vector<unsigned int> indices,
+       glm::vec3 position,
+       glm::vec3 scale,
+       float mass,
+       bool isStatic,
+       int textureID,
+       glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+       float sleepCounterThreshold = 0.2f,
+       bool asleep = false,
+       glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f) 
+    )
         : id(id),
-        AABB(id),
         vertices(vertices),
         indices(indices),
         position(position),
@@ -88,17 +99,22 @@ public:
         hasGravity(true),
         isStatic(isStatic),
         mass(mass),
-        restitution(0.1f),
         textureID(textureID),
         orientation(orientation),
-        sleepCounterThreshold(sleepCounterThreshold)
+        sleepCounterThreshold(sleepCounterThreshold),
+        asleep(asleep),
+        color(color)
     {
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
 
         if (!isStatic) {
-            calculateInverseInertiaForCube();
-            invMass = 1.0 / mass;
+            invMass = 1.0f / mass;
             asleep = false;
+
+            if (isUniformlyScaled) 
+               calculateInverseInertiaForCube();
+            else 
+               calculateInverseInertiaForCuboid();
         }
         else {
             mass = 0;
@@ -106,6 +122,9 @@ public:
             inverseInertia = glm::mat3(0.0f);
             asleep = true;
         }
+
+        if (textureID == 999)
+           this->color = color / 255.0f;
 
         for (const Vertex& vertex : this->vertices)
             verticesPositions.push_back(vertex.position);
@@ -116,7 +135,6 @@ public:
         AABB.update(modelMatrix, position, scale, isRotating);
         OOBB.Init(verticesPositions, modelMatrix);
 
-        aabbRenderer.setupWireframeBox(AABB);
         oobbRenderer.setupWireframeBox();
         oobbRenderer.setupNormals();
 
@@ -125,6 +143,7 @@ public:
 
     void setModelMatrix();
     void calculateInverseInertiaForCube();
+    void calculateInverseInertiaForCuboid();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
     void drawMesh(Shader& shader);
     void updateAABB();

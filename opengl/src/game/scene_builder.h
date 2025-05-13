@@ -13,30 +13,35 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-class SceneBuilder 
-{
+class SceneBuilder {
 public:
-    void setPointers(TextureManager* tm, LightManager* lm);
-    void createScene(PhysicsEngine& physicsEngine);
-    GameObject& createObject(
-        PhysicsEngine& physicsEngine,
-        const std::string& textureName,
-        glm::vec3 pos,
-        glm::vec3 size,
-        float mass,
-        bool isStatic,
-        glm::quat orientation = glm::quat(1, 0, 0, 0),
-        float sleepCounterThreshold = 0.5f
-    );
-    std::vector<GameObject>& getGameObjectList();
-    void toggleDayTime();
+   void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
+   void createScene(PhysicsEngine& physicsEngine);
+   GameObject& createObject(
+      PhysicsEngine& physicsEngine,
+      const std::string& textureName,
+      glm::vec3 pos,
+      glm::vec3 size,
+      float mass,
+      bool isStatic,
+      glm::quat orientation = glm::quat(1, 0, 0, 0),
+      float sleepCounterThreshold = 0.5f,
+      bool asleep = 0,
+      glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
+   );
+   std::vector<GameObject>& getGameObjectList();
+   void toggleDayTime();
+
+   int randomRange(int start, int end);
 
 private:
-    TextureManager* textureManager = nullptr;
-    LightManager* lightManager = nullptr;
+   TextureManager* textureManager = nullptr;
+   LightManager* lightManager = nullptr;
 
-    bool dayTime = false;
+   bool dayTime = false;
 
-    int objectId;
-    std::vector<GameObject> GameObjectList;
+   int objectId;
+   std::vector<GameObject> GameObjectList;
+
+   std::mt19937* rng;
 };

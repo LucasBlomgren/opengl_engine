@@ -20,8 +20,8 @@ std::pair<float, float> ProjectVertices(const std::array<glm::vec3, 8>& vertices
 
 bool IntersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner)
 {
-    OOBB& boxA = objA.OOBB;
-    OOBB& boxB = objB.OOBB;
+	OOBB& boxA = objA.OOBB;
+	OOBB& boxB = objB.OOBB;
 
 	const std::array<glm::vec3, 8>& verticesA = boxA.transformedVertices;
 	const std::array<glm::vec3, 8>& verticesB = boxB.transformedVertices;

@@ -77,17 +77,25 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->setPressedKey("K");
         if (key == GLFW_KEY_6)
             engineState->setPressedKey("6");
+
+        if (key == GLFW_KEY_F)
+           engineState->setAdvanceStep(true);
     }
 }
 
 void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) 
 {
+    // PRESS
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
-        engineState->setPressedKey("Mouse1");
+        engineState->setPressedKey("M1_PRESS");
     if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS)
-        engineState->setPressedKey("Mouse2");
+        engineState->setPressedKey("M2_PRESS");
     if (button == GLFW_MOUSE_BUTTON_3 && action == GLFW_PRESS)
-        engineState->setPressedKey("Mouse3");
+        engineState->setPressedKey("M3_PRESS");
+
+    // RELEASE
+    if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_RELEASE)
+        engineState->setPressedKey("M2_RELEASE");
 }
 
 void InputManager::processInput(GLFWwindow* window, float deltaTime)
@@ -105,6 +113,11 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
         camera->ProcessKeyboard(RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         camera->ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera->ProcessKeyboard(DOWN, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        camera->MovementSpeed = 1500.0f;
+    else
+        camera->MovementSpeed = 300.0f;
 }

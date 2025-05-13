@@ -3,11 +3,12 @@
 #include "engine_state.h"
 #include "scene_builder.h"
 #include "physics.h"
-#include "ray.h"
 #include "game_object.h"
 #include "camera.h"
 #include "vertex.h"
 #include <vector>
+
+#define objPlaceSize 10.0f, 10.0f, 10.0f
 
 struct rayCast {
     glm::vec3 start;
@@ -25,15 +26,22 @@ public:
         std::vector<Vertex>* cubeVertices,
         std::vector<unsigned int>* indices
     );
-    void update(float deltaTime);
-    RaycastHit rayCast();
+    void update(float deltaTime, Shader& shader);
+    RaycastHit rayCast(float length);
     RaycastHit& getLastRayHit();
-    bool getRayCastHasHit() const;
 
+    // select object
     void selectObject();
+    void dropObject();
     void updateSelectedObject(float deltaTime);
     GameObject* selectedObject = nullptr;
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
+
+    void placeObject();
+    void createPlaceObjectAABB(Shader& shader);
+    void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
+    AABB aabbToPlace;
+    bool placementObstructed = true;
 
 private:
     EngineState* engineState = nullptr;
@@ -45,5 +53,4 @@ private:
     std::vector<unsigned int>* indices = nullptr;
 
     RaycastHit lastHitData;
-    bool rayCastHasHit = false;
 };

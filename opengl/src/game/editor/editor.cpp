@@ -16,38 +16,124 @@ void Editor::setPointers(
         this->indices = indices;
 }
 
-void Editor::update(float deltaTime) 
+void Editor::update(float deltaTime, Shader& shader)
 {
     updateSelectedObject(deltaTime);
 
     if (engineState->GetPressedKey() == "H") {
         sceneBuilder->createScene(*physicsEngine);
+        physicsEngine->getBvhTree()->build(sceneBuilder->getGameObjectList());    
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "6") {
         sceneBuilder->toggleDayTime();
     }
 
-    if (engineState->GetPressedKey() == "Mouse1") {
-        glm::vec3 spawnPos = camera->Position + camera->Front * 100.0f;
-        GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", spawnPos, glm::vec3(10.0f), 1, 0);
-        newObject.linearVelocity = camera->Front * 0.0f;
-    }
-    if (engineState->GetPressedKey() == "Mouse2") {
+    if (engineState->GetPressedKey() == "M1_PRESS") 
+        placeObject();
+    if (engineState->GetPressedKey() == "M2_RELEASE")
+        dropObject();
+    if (engineState->GetPressedKey() == "M2_PRESS") 
         selectObject();
-    }
-    if (engineState->GetPressedKey() == "Mouse3") {
+
+    if (engineState->GetPressedKey() == "M3_PRESS") {
         GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 1, 0);
-        newObject.linearVelocity = camera->Front *  2500.0f;//2500.0f;
+        newObject.linearVelocity = camera->Front *  1000.0f;
         newObject.asleep = false;
     }
 
     engineState->clearPressedKey();
+
+    if (selectedObject == nullptr) {
+        RaycastHit hitData = rayCast(5000);
+        if (hitData.object != nullptr) {
+            hitData.object->isRaycastHit = true;
+        }
+
+        createPlaceObjectAABB(shader);
+    }
 }
 
-void Editor::selectObject() 
+void Editor::placeObject() {
+    if (placementObstructed) 
+        return;
+
+    glm::vec3 size{ objPlaceSize };
+    glm::vec3 spawnPos = aabbToPlace.centroid;
+    GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", spawnPos, size, 1, 0);
+    newObject.asleep = true;
+    newObject.linearVelocity = camera->Front * 0.0f;
+}
+
+void Editor::createPlaceObjectAABB(Shader& shader)
 {
-    // drop object if an object is selected
+    float placeDist = 150.0f;
+    glm::vec3 size{ objPlaceSize };
+
+    AABB aabb;
+    aabb.centroid = camera->Position + camera->Front * placeDist;
+    aabb.halfExtents = glm::vec3(size / 2.0f);
+
+    RaycastHit hitData = rayCast(placeDist);
+    glm::vec3 normal = hitData.normal;
+    if (hitData.object != nullptr) {
+        if (glm::dot(hitData.normal, camera->Front) > 0.0f)
+            normal = -normal;
+
+        glm::vec3 absN = glm::abs(normal);
+        float extentOnN = glm::dot(aabb.halfExtents, absN);
+
+        float margin = 0.1f;
+        aabb.centroid = hitData.point + normal * (extentOnN - margin);
+    }
+
+    aabb.wMin = aabb.centroid - aabb.halfExtents;
+    aabb.wMax = aabb.centroid + aabb.halfExtents;
+
+    BVHTree* bvhTree = physicsEngine->getBvhTree();
+    int maxIter = 8;
+    int iter = 0;
+    for (int i = 0; i < maxIter; i++) {
+        int count = bvhTree->query(aabb);
+
+        if (count == 0) {
+            break;
+        }
+
+        // min depth collision
+        float min = std::numeric_limits<float>::max();
+        GameObject* minDepthObj = nullptr;
+        for (int j = 0; j < count; j++) {
+            GameObject& objB = *bvhTree->collisions[j];
+
+            float depth = aabb.getMinOverlapDepth(objB.AABB);
+            if (depth < min) {
+                min = depth;
+                minDepthObj = &objB;
+            }
+        }
+
+        // move AABB away from collision
+        glm::vec3 normal = aabb.getCollisionNormal(minDepthObj->AABB);
+        aabb.centroid += normal * min * 1.2f;
+        aabb.wMin = aabb.centroid - aabb.halfExtents;
+        aabb.wMax = aabb.centroid + aabb.halfExtents;
+
+        iter++;
+    }
+
+    if (iter >= maxIter) {
+        this->placementObstructed = true;
+        drawAABB(aabb, shader, glm::vec3{ 1,0,0 });
+    }
+    else {
+        this->placementObstructed = false;
+        aabbToPlace = aabb;
+        drawAABB(aabb, shader);
+    }
+}
+
+void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
         selectedObject->hasGravity = true;
@@ -56,14 +142,19 @@ void Editor::selectObject()
         selectedObject = nullptr;
         return;
     }
+}
 
-    RaycastHit hitData = rayCast();
+void Editor::selectObject() {
+    if (selectedObject)
+        return;
+
+    RaycastHit hitData = rayCast(5000);
 
     // no hit return
-    if (hitData.objIndex == -1) {
+    if (hitData.object == nullptr) {
         return;
     }
-    selectedObject = &sceneBuilder->getGameObjectList()[hitData.objIndex];
+    selectedObject = hitData.object;
     if (selectedObject->isStatic) {
         selectedObject = nullptr;
         return;
@@ -95,11 +186,11 @@ void Editor::updateSelectedObject(float deltaTime)
     selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / deltaTime;
 }
 
-RaycastHit Editor::rayCast()
+RaycastHit Editor::rayCast(float length)
 {
-    float rayLength = 200000.0f;
-    Physics::Ray ray(camera->Position, camera->Front, rayLength);
-    RaycastHit hitData = physicsEngine->performRayCastFinite(ray);
+    float rLength = length;
+    Ray r(camera->Position, camera->Front, rLength);
+    RaycastHit hitData = physicsEngine->performRaycast(r);
 
     lastHitData = hitData;
     return hitData;
@@ -108,6 +199,47 @@ RaycastHit Editor::rayCast()
 RaycastHit& Editor::getLastRayHit() {
     return lastHitData;
 }
-bool Editor::getRayCastHasHit() const {
-    return rayCastHasHit;
+
+
+void Editor::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color)
+{
+    glm::vec3 min = aabb.wMin;
+    glm::vec3 max = aabb.wMax;
+
+    std::array<float, 72> buf = {
+        min.x,min.y,min.z,  max.x,min.y,min.z,
+        min.x,min.y,min.z,  min.x,max.y,min.z,
+        min.x,min.y,min.z,  min.x,min.y,max.z,
+        max.x,max.y,min.z,  max.x,min.y,min.z,
+        max.x,max.y,min.z,  min.x,max.y,min.z,
+        max.x,max.y,min.z,  max.x,max.y,max.z,
+        min.x,max.y,max.z,  min.x,min.y,max.z,
+        min.x,max.y,max.z,  min.x,max.y,min.z,
+        min.x,max.y,max.z,  max.x,max.y,max.z,
+        max.x,min.y,max.z,  max.x,max.y,max.z,
+        max.x,min.y,max.z,  min.x,min.y,max.z,
+        max.x,min.y,max.z,  max.x,min.y,min.z
+    };
+
+    static GLuint vao = 0, vbo = 0;
+    if (vao == 0) {
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(0);
+    }
+
+    shader.use();
+    shader.setMat4("model", glm::mat4(1.0f));
+    shader.setBool("debug.useUniformColor", true);
+    shader.setVec3("debug.uColor", color);
+  
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf.data(), GL_DYNAMIC_DRAW);
+
+    glLineWidth(2.0f);
+    glDrawArrays(GL_LINES, 0, 24);
 }
