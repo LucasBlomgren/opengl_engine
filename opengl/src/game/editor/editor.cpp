@@ -28,6 +28,12 @@ void Editor::update(float deltaTime, Shader& shader)
     if (engineState->GetPressedKey() == "6") {
         sceneBuilder->toggleDayTime();
     }
+    if (engineState->GetPressedKey() == "7") {
+        this->drawPlacementAABB = !this->drawPlacementAABB;
+    }
+    if (engineState->GetPressedKey() == "8") {
+        this->objectRain = !this->objectRain;
+    }
 
     if (engineState->GetPressedKey() == "M1_PRESS") 
         placeObject();
@@ -37,7 +43,7 @@ void Editor::update(float deltaTime, Shader& shader)
         selectObject();
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
-        GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 1, 0);
+        GameObject& newObject = sceneBuilder->createObject("crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 1, 0);
         newObject.linearVelocity = camera->Front *  1000.0f;
         newObject.asleep = false;
     }
@@ -60,9 +66,9 @@ void Editor::placeObject() {
 
     glm::vec3 size{ objPlaceSize };
     glm::vec3 spawnPos = aabbToPlace.centroid;
-    GameObject& newObject = sceneBuilder->createObject(*physicsEngine, "crate", spawnPos, size, 1, 0);
-    newObject.asleep = true;
-    newObject.linearVelocity = camera->Front * 0.0f;
+    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+    GameObject& newObject = sceneBuilder->createObject("crate", spawnPos, size, 1, 0, orientation, 0.5f, 1);
+    newObject.linearVelocity = glm::vec3(0.0f);
 }
 
 void Editor::createPlaceObjectAABB(Shader& shader)
@@ -94,7 +100,7 @@ void Editor::createPlaceObjectAABB(Shader& shader)
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        int count = bvhTree->query(aabb);
+        int count = bvhTree->singleQuery(aabb);
 
         if (count == 0) {
             break;
@@ -122,15 +128,19 @@ void Editor::createPlaceObjectAABB(Shader& shader)
         iter++;
     }
 
+    glm::vec3 color;
     if (iter >= maxIter) {
         this->placementObstructed = true;
-        drawAABB(aabb, shader, glm::vec3{ 1,0,0 });
+        color = glm::vec3{ 1,0,0 };
     }
     else {
         this->placementObstructed = false;
         aabbToPlace = aabb;
-        drawAABB(aabb, shader);
+        color = glm::vec3{ 0.9f, 0.7f, 0.2f };
     }
+
+    if (drawPlacementAABB)
+        drawAABB(aabb, shader, color);
 }
 
 void Editor::dropObject() {

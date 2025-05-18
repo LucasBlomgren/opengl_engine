@@ -77,6 +77,10 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->setPressedKey("K");
         if (key == GLFW_KEY_6)
             engineState->setPressedKey("6");
+        if (key == GLFW_KEY_7)
+            engineState->setPressedKey("7");
+        if (key == GLFW_KEY_8)
+            engineState->setPressedKey("8");
 
         if (key == GLFW_KEY_F)
            engineState->setAdvanceStep(true);

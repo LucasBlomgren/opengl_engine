@@ -24,29 +24,62 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
 }
 
-class GameObject
-{
+struct CollisionHistory {
+   static constexpr int SLOTS = 10;
+   int buffer[SLOTS] = { 0 };
+   int index = 0;
+   int count = 0;
+
+   // Ska köras varje frame med det nya värdet:
+   void push(int newCount) {
+      buffer[index] = newCount;
+      index = (index + 1) % SLOTS;
+      if (count < SLOTS) ++count;
+   }
+
+   // Ger medelvärdet över de senast count värdena (upp till 5)
+   float average() const {
+      if (count == 0) return 0.0f;
+      
+      int sum = 0;
+      for (int i = 0; i < count; ++i) {
+         sum += buffer[i];
+      }
+      return (float)sum / (float)count;
+   }
+};
+
+class GameObject {
 public:
+   // mesh variables
     int id;
     glm::vec3 position;
     std::vector<Vertex> vertices;
+    std::vector<glm::vec3> verticesPositions;
     std::vector<unsigned int> indices;
     unsigned int VAO;
+
     glm::mat4 modelMatrix;
     bool modelMatrixShouldUpdate = true;
 
+    glm::mat4 invModelMatrix;
+    glm::mat3 rotationMatrix;
+    glm::mat3 invRotationMatrix;
+    bool helperMatrixesHasUpdated = false;
+
     int textureID;
+    glm::vec3 color;
 
-    std::vector<glm::vec3> verticesPositions;
-
+    // physics variables
     glm::quat orientation;
     glm::mat3 inverseInertia;
-
     glm::vec3 scale;
     glm::vec3 linearVelocity;
     glm::vec3 angularVelocity;
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
+    float linearVelocityLen;
+    float angularVelocityLen;
 
     float mass;
     float invMass;
@@ -55,12 +88,22 @@ public:
     bool isStatic;
     bool shouldRotate;
     bool isRotating = false;
+    bool canMoveLinearly = true;
     glm::vec3 g = glm::vec3(0.0f, -98.1f, 0.0f);
+    float invRadius;
 
+    // sleep variables
     bool asleep = false;
     float sleepCounter = 0;
     float sleepCounterThreshold;
+    float velocityThreshold = 2;
+    float angularVelocityThreshold = 3;
 
+    int totalCollisionCount = 0;
+    float lastAvg = 0.0f;
+    CollisionHistory collisionHistory;
+
+    // collision variables
     AABB AABB;
     OOBB OOBB;
     bool AABB_ShouldUpdate = true;
@@ -72,10 +115,7 @@ public:
     bool isRaycastHit = false;
     glm::vec3 lastPosition;
     glm::vec3 pushCorrection;
-
-    bool canMoveLinearly = true;
-    glm::vec3 color;
-
+    
     GameObject(
        int id,
        std::vector<Vertex> vertices,
@@ -106,6 +146,7 @@ public:
         color(color)
     {
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
+        invRadius = 1.0f / (0.5f * glm::length(scale));
 
         if (!isStatic) {
             invMass = 1.0f / mass;
@@ -114,7 +155,9 @@ public:
             if (isUniformlyScaled) 
                calculateInverseInertiaForCube();
             else 
-               calculateInverseInertiaForCuboid();
+            {
+                calculateInverseInertiaForCuboid();
+            }
         }
         else {
             mass = 0;
@@ -142,6 +185,7 @@ public:
     }
 
     void setModelMatrix();
+    void setHelperMatrixes();
     void calculateInverseInertiaForCube();
     void calculateInverseInertiaForCuboid();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);

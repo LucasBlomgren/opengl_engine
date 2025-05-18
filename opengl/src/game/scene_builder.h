@@ -16,9 +16,9 @@
 class SceneBuilder {
 public:
    void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
+   void objectRain(float& current_time, std::mt19937& rng);
    void createScene(PhysicsEngine& physicsEngine);
    GameObject& createObject(
-      PhysicsEngine& physicsEngine,
       const std::string& textureName,
       glm::vec3 pos,
       glm::vec3 size,
@@ -38,10 +38,11 @@ private:
    TextureManager* textureManager = nullptr;
    LightManager* lightManager = nullptr;
 
-   bool dayTime = false;
+   bool dayTime = true;
 
    int objectId;
    std::vector<GameObject> GameObjectList;
 
    std::mt19937* rng;
+   float lastTime = 0.0f;
 };

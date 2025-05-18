@@ -60,20 +60,20 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     }
 }
 
-void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line)
-{
+void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line) {
     if (!engineState->getShowBVH()) return;
 
-    glm::vec3 color = glm::vec3(1, 0, 1);
-    for (auto& node : tree.nodes) 
-    {
+    glm::vec3 color;
+    for (auto& node : tree.nodes) {
+        if (node.isLeaf) color = glm::vec3(0, 1, 1);
+        else color = glm::vec3(1, 0, 1);
+
         aabbRenderer.updateModel(node.fatBox, false);
         aabbRenderer.draw(color, *debugShader);
     }
 }
 
-void Renderer::drawLights() const
-{
+void Renderer::drawLights() const {
     const std::vector<Light>& lights = lightManager->getLights();
     for (const Light& light : lights) {
         light.draw(*shader);

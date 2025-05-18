@@ -33,7 +33,7 @@ public:
 
 private:
     bool advanceStep = false;
-    bool paused = true;
+    bool paused = false;
     bool showFPS = true;
     bool showAABB = false;
     bool showOOBB = false;

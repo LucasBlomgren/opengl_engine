@@ -12,7 +12,7 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree* b
     GameObject* bestObj = nullptr;
     float bestT = std::numeric_limits<float>::max();
 
-    int collisionCounter = bvhTree->query(rayAABB);
+    int collisionCounter = bvhTree->singleQuery(rayAABB);
 
     for (int i = 0; i < collisionCounter; i++) {
         GameObject& obj = *bvhTree->collisions[i];

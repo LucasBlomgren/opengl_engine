@@ -14,25 +14,24 @@
 #include "rotate_cube.h"
 #include "bvh.h"
 
-class PhysicsEngine 
-{
+class PhysicsEngine {
 public:
-    void setPointers(std::vector<GameObject>* gameObjectList, BVHTree* tree);
-    void step(float deltaTime, bool showNormals, std::mt19937 rng);
+    void init(std::vector<GameObject>* gameObjectList, EngineState* engineState, BVHTree* tree);
+    void step(float deltaTime, std::mt19937 rng);
     void clearPhysicsData();
-
-    void updatePositions(float deltaTime);
 
     BVHTree* getBvhTree() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
     RaycastHit performRaycast(Ray& ray);
 
-    int amountCollisionPairs = 0;
-
-    EngineState* engineState = nullptr;
-
 private:
+    EngineState* engineState = nullptr;
     std::vector<GameObject>* gameObjectList;
     BVHTree* bvhTree;
+    CollisionManifold* collisionManifold;
     std::unordered_map<size_t, Contact> contactCache;
+
+    void updatePositions(float deltaTime);
+    void updateSleepThresholds(GameObject& obj);
+    void updateContactCache();
 };

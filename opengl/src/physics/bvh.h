@@ -14,7 +14,8 @@ struct BVHPrimitive {
 
 struct Node {
     GameObject* object;
-    AABB* tightBox = nullptr;     // endast för lövnoder
+    bool isLeaf = false;
+    AABB  tightBox;               // endast för lövnoder
     AABB  fatBox;                 // för alla noder
     Node* parent = nullptr;       // för att kunna gå uppåt i trädet
     Node* childA = nullptr;
@@ -25,6 +26,16 @@ struct Node {
     AABBRenderer aabbRenderer;
 };
 
+struct NodePair { 
+    Node* A; 
+    Node* B; 
+};
+
+struct CollisionPair {
+    GameObject* A;
+    GameObject* B;
+};
+
 class BVHTree {
     float updateInterval             = 240.0f;
     int   leafThreshold              = 1;
@@ -33,26 +44,34 @@ class BVHTree {
     int   rebuildThreshold           = 0;        // räknas om i build()
     int   minRebuildThreshold        = 5;        // min 10 refits innan rebuild
     float rebuildRatio               = 0.40f;    // 40 % av lövkorrektioner → rebuild
-    glm::vec3 fatBoxMargin { 1.0f };
+    glm::vec3 fatBoxMargin { 2.0f };
 
 public:
     Node* root;
     std::vector<Node> nodes;
     void build(std::vector<GameObject>& objects);
     void update(std::vector<GameObject>& objects);
-    int query(AABB& qBox);
+    int treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB);
 
-    void printNodeASCII(const Node* node, const std::string& prefix, bool isLeft) const;
-    int numRebuilds = 0;
-
-    mutable std::vector<Node*> queryStack;
+    int singleQuery(AABB& qBox);
     std::vector<GameObject*> collisions;
+
+    // debug
+    int numRebuilds = 0;
+    CollisionPair* collisionBuf = new CollisionPair[MaxCollisionBuf];
+
 private:
     std::vector<BVHPrimitive> prims;
-
     void createPrimitives(std::vector<GameObject>& objects);
     void split(Node& parent);
-
     void updateLeaves();
     void refitNode(Node* node);
+
+    // single query
+    std::vector<Node*> queryStack;
+
+    // tree vs tree query
+    static constexpr int MaxStackSize = 1 << 14;
+    static constexpr int MaxCollisionBuf = 1 << 16;
+    NodePair* nodeStack = new NodePair[MaxStackSize];
 };

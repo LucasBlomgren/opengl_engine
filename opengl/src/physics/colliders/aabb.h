@@ -7,19 +7,18 @@
 #include "shader.h"
 #include "vertex.h"
 
-struct localFaces {
-    std::array<glm::vec3, 4> minX;
-    std::array<glm::vec3, 4> maxX;
-    std::array<glm::vec3, 4> minY;
-    std::array<glm::vec3, 4> maxY;
-    std::array<glm::vec3, 4> minZ;
-    std::array<glm::vec3, 4> maxZ;
+struct Faces {
+    std::array<glm::vec3, 4> minX, maxX;
+    std::array<glm::vec3, 4> minY, maxY;
+    std::array<glm::vec3, 4> minZ, maxZ;
 };
 
 class AABB
 {
 public:
-    localFaces localFaces;
+    Faces lFaces;
+    Faces wFaces;
+    bool facesHasUpdated = false;
 
     // local
     glm::vec3 lMin; 
@@ -47,6 +46,24 @@ public:
 
         centroid = (wMin + wMax) * 0.5f;
         halfExtents = (wMax - wMin) * 0.5f;
+    }
+
+    void updateFaces(glm::mat4& model) {
+        auto transformPoint = [&](const glm::vec3& p) {
+            glm::vec4 tp = model * glm::vec4(p, 1.0f);
+            return glm::vec3(tp);
+            };
+
+        for (int i = 0; i < 4; ++i) {
+            wFaces.minX[i] = transformPoint(lFaces.minX[i]);
+            wFaces.maxX[i] = transformPoint(lFaces.maxX[i]);
+            wFaces.minY[i] = transformPoint(lFaces.minY[i]);
+            wFaces.maxY[i] = transformPoint(lFaces.maxY[i]);
+            wFaces.minZ[i] = transformPoint(lFaces.minZ[i]);
+            wFaces.maxZ[i] = transformPoint(lFaces.maxZ[i]);
+        }
+
+        facesHasUpdated = true;
     }
 
     __forceinline bool intersects(const AABB& b) const {
@@ -204,42 +221,42 @@ private:
     }
 
     void setLocalFaces() {
-        localFaces.minX = {
+        lFaces.minX = {
             glm::vec3(lMin.x, lMin.y, lMin.z),
             glm::vec3(lMin.x, lMin.y, lMax.z),
             glm::vec3(lMin.x, lMax.y, lMax.z),
             glm::vec3(lMin.x, lMax.y, lMin.z)
         };
 
-        localFaces.maxX = {
+        lFaces.maxX = {
             glm::vec3(lMax.x, lMin.y, lMax.z),
             glm::vec3(lMax.x, lMin.y, lMin.z),
             glm::vec3(lMax.x, lMax.y, lMin.z),
             glm::vec3(lMax.x, lMax.y, lMax.z)
         };
 
-        localFaces.minY = {
+        lFaces.minY = {
             glm::vec3(lMax.x, lMin.y, lMin.z),
             glm::vec3(lMax.x, lMin.y, lMax.z),
             glm::vec3(lMin.x, lMin.y, lMax.z),
             glm::vec3(lMin.x, lMin.y, lMin.z)
         };
 
-        localFaces.maxY = {
+        lFaces.maxY = {
             glm::vec3(lMin.x, lMax.y, lMin.z),
             glm::vec3(lMin.x, lMax.y, lMax.z),
             glm::vec3(lMax.x, lMax.y, lMax.z),
             glm::vec3(lMax.x, lMax.y, lMin.z)
         };
 
-        localFaces.minZ = {
+        lFaces.minZ = {
             glm::vec3(lMin.x, lMin.y, lMin.z),
             glm::vec3(lMin.x, lMax.y, lMin.z),
             glm::vec3(lMax.x, lMax.y, lMin.z),
             glm::vec3(lMax.x, lMin.y, lMin.z)
         };
 
-        localFaces.maxZ = {
+        lFaces.maxZ = {
             glm::vec3(lMin.x, lMin.y, lMax.z),
             glm::vec3(lMax.x, lMin.y, lMax.z),
             glm::vec3(lMax.x, lMax.y, lMax.z),

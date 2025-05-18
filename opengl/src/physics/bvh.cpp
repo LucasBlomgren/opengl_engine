@@ -1,6 +1,62 @@
 ﻿#include "bvh.h"
 
-int BVHTree::query(AABB& qBox) {
+
+int BVHTree::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
+    int sp = 0;  // index för nodeStack
+    int outSp = 0;  // index för collisionBuf
+
+    nodeStack[sp++] = { bvhA.root, bvhB.root };
+
+    while (sp > 0) {
+        // pop
+        NodePair cur = nodeStack[--sp];
+        Node* A = cur.A;
+        Node* B = cur.B;
+
+        // leaf–leaf: tight‐test
+        if (A->isLeaf && B->isLeaf) {
+            if (A->tightBox.intersects(B->tightBox) &&
+                A->object->id < B->object->id &&
+                outSp < (int)MaxCollisionBuf)
+            {
+                collisionBuf[outSp++] = { A->object, B->object };
+            }
+            continue;
+        }
+
+        // prune på fat‐box
+        if (!A->fatBox.intersects(B->fatBox))
+            continue;
+
+        // expandera utan STL: kontrollera alltid sp < MaxStackSize
+        if (A->isLeaf) {
+            if (B->childA && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A, B->childA };
+            if (B->childB && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A, B->childB };
+        }
+        else if (B->isLeaf) {
+            if (A->childA && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childA, B };
+            if (A->childB && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childB, B };
+        }
+        else {
+            if (A->childA && B->childA && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childA, B->childA };
+            if (A->childA && B->childB && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childA, B->childB };
+            if (A->childB && B->childA && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childB, B->childA };
+            if (A->childB && B->childB && sp < (int)MaxStackSize)
+                nodeStack[sp++] = { A->childB, B->childB };
+        }
+    }
+
+    return outSp;
+}
+
+int BVHTree::singleQuery(AABB& qBox) {
     int hc = 0;
     constexpr int MaxDepth = 64;
     Node* stack[MaxDepth];
@@ -10,22 +66,22 @@ int BVHTree::query(AABB& qBox) {
     // iterate through the tree
     while (sp) {
         Node* n = stack[--sp];
-        if (!qBox.intersects(n->fatBox))
-            continue;
+
+        if (!n->isLeaf) {
+            if (!qBox.intersects(n->fatBox))
+                continue;
+
+            if (n->childA) stack[sp++] = n->childA;
+            if (n->childB) stack[sp++] = n->childB;
+        }   
 
         // leaf node
-        if (!n->childA && !n->childB)
-        {
+        else {
             if (hc >= collisions.size()) {
                 collisions.resize(collisions.size() * 4);
             }
-            if (qBox.intersects(*n->tightBox))
+            if (qBox.intersects(n->tightBox))
                 this->collisions[hc++] = n->object;
-        }
-        // internal node
-        else {
-            if (n->childA) stack[sp++] = n->childA;
-            if (n->childB) stack[sp++] = n->childB;
         }
     }
 
@@ -50,16 +106,16 @@ void BVHTree::update(std::vector<GameObject>& objects) {
 }
 
 void BVHTree::updateLeaves() {
-
     for (auto& n : nodes) {
-        if (n.childA && n.childB) 
-            continue;
-        if (n.fatBox.contains(*n.tightBox)) 
+        if (!n.isLeaf) 
             continue;
 
-        const AABB& tight = *n.tightBox;
-        n.fatBox.wMin = tight.wMin;
-        n.fatBox.wMax = tight.wMax;
+        n.tightBox = n.object->AABB;
+        if (n.fatBox.contains(n.tightBox)) 
+            continue;
+
+        n.fatBox.wMin = n.tightBox.wMin;
+        n.fatBox.wMax = n.tightBox.wMax;
         n.fatBox.grow(fatBoxMargin);
         this->numRefits++;
 
@@ -76,9 +132,10 @@ void BVHTree::refitNode(Node* node) {
     if (!node or !node->dirty)
         return;
 
-    if (!node->childA && !node->childB)
+    if (node->isLeaf) {
         // blad: fatBox är redan expanderad vid containment‐kontrollen
         return;
+    }
 
     // först barnen
     refitNode(node->childA);
@@ -119,9 +176,10 @@ void BVHTree::split(Node& parent) {
 
     // create leaf node
     if (count <= leafThreshold) {
+        parent.isLeaf = true;
         parent.object = prims[start].object;
-        parent.tightBox = &parent.object->AABB;
-        parent.fatBox = *parent.tightBox;
+        parent.tightBox = parent.object->AABB;
+        parent.fatBox = parent.tightBox;
         parent.fatBox.grow(fatBoxMargin);
 
         // setup aabbRenderer wireframe
@@ -189,7 +247,7 @@ void BVHTree::split(Node& parent) {
 void BVHTree::build(std::vector<GameObject>& objects) {
     root = nullptr;
     nodes.clear();
-    collisions.resize(16);
+    collisions.resize(objects.size() * 2);
 
     // Fyll primitives
     createPrimitives(objects);

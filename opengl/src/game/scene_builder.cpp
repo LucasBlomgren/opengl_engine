@@ -11,7 +11,7 @@ void SceneBuilder::setPointers(TextureManager* tm, LightManager* lm, std::mt1993
 }
 
 int SceneBuilder::randomRange(int start, int end) {
-   if (start > end or start == end or start < 0 or end < 0) {
+   if (start > end or start == end) {
       std::cerr << "Invalid range: " << start << " to " << end << std::endl;
       return -1; 
    }
@@ -51,6 +51,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 
     objectId = 0;
     GameObjectList.clear();
+    GameObjectList.reserve(10000);
     physicsEngine.clearPhysicsData();
 
     // ________________________________________________________
@@ -78,10 +79,15 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     // ------------------------ floor tiles ----------------------
     int floorWidth = 5; 
     int floorHeight = 5;
+
+    if (onlyFloor) {
+       floorWidth = 1;
+       floorHeight = 1;
+    }
     for (int i = 0; i < floorWidth; i++)
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-            createObject(physicsEngine, "uvmap", glm::vec3(250 + i * 500, -5, 250 + j * 500), glm::vec3(500, 10, 500), 0, 1, orientation);
+            createObject("uvmap", glm::vec3(250 + i * 500, -5, 250 + j * 500), glm::vec3(500, 10, 500), 0, 1, orientation);
             
         }
 
@@ -117,16 +123,16 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         // main platform 
         glm::vec3 pos{ slopeLeftX, slopeLeftY + i * distHeight, slopeLeftZ };
         glm::vec3 size{ slopeWidth, slopeHeight, slopeLength };
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
         // guard rails
 
         pos = glm::vec3(slopeLeftX + (railWidth / 2) + (slopeWidth / 2), slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
 
         pos = glm::vec3(slopeLeftX - (railWidth / 2) - (slopeWidth / 2), slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
     }
     // right
     for (int i = 0; i < 3; i++) {
@@ -134,16 +140,16 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         // main platform
         glm::vec3 pos{ slopeRightX, slopeRightY + i * distHeight, slopeRightZ };
         glm::vec3 size{ slopeWidth, slopeHeight, slopeLength };
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
 
         // guard rails
         pos = glm::vec3(slopeRightX + (railWidth / 2) + (slopeWidth / 2), slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
 
         pos = glm::vec3(slopeRightX - (railWidth / 2) - (slopeWidth / 2), slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        createObject(physicsEngine, "plain", pos, size, 0, 1, orientation);
+        createObject("plain", pos, size, 0, 1, orientation);
     
     }
     // falling pyramid
@@ -161,16 +167,19 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
                 float yPos = 1450 + sHeight / 2 + y * sHeight;
                 float zPos = 800 + z * (sWidth + sDist) + y * (sWidth / 2 + sDist);
 
+                float xSize;
+                float ySize;
+                float zSize;
+                xSize = sWidth;
+                ySize = sHeight;
+                zSize = sLength;
 
-                //float xSize = randomRange(5, 10);
-                //float ySize = randomRange(5, 10);
-                //float zSize = randomRange(5, 10);
-                float xSize = sWidth;
-                float ySize = sHeight;
-                float zSize = sLength;
+                //xSize = randomRange(1, 50);
+                //ySize = randomRange(1, 50);
+                //zSize = randomRange(1, 50);
                 glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
-                createObject(physicsEngine, "plain", glm::vec3(xPos, yPos, zPos), glm::vec3(xSize, ySize, zSize), 1, 0, glm::quat(1, 0, 0, 0), 2.0f, 0, color);
+                createObject("plain", glm::vec3(xPos, yPos, zPos), glm::vec3(xSize, ySize, zSize), 1, 0, glm::quat(1, 0, 0, 0), 2.0f, 1, color);
             }
         }
         pWidthCounter -= 1;
@@ -179,49 +188,49 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
     glm::quat orientation1 = glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
-    createObject(physicsEngine, "uvmap", glm::vec3(800,0,1500), glm::vec3(300, 5, 300), 0, 1, orientation1);
+    createObject("uvmap", glm::vec3(800,0,1500), glm::vec3(300, 5, 300), 0, 1, orientation1);
     GameObject& obj = GameObjectList.back();
     obj.textureID = 999;
 
     // ___________________________________________________________
     // ------------------------ slanted platform -----------------
     glm::quat orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    createObject(physicsEngine, "crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, orientation);
+    createObject("crate", glm::vec3(245, 30, 100), glm::vec3(40, 2, 40), 0, 1, orientation);
 
     // ___________________________________________________________
     // ------------------------ catapult -------------------------
     // support
-    createObject(physicsEngine,  "crate", glm::vec3(345, 15, 200), glm::vec3(5, 30, 20), 1, 1);
+    createObject( "crate", glm::vec3(345, 15, 200), glm::vec3(5, 30, 20), 1, 1);
 
     // plank
     int mass = 50;
     glm::vec3 size = glm::vec3(140, 2, 5);
-    createObject(physicsEngine, "crate", glm::vec3(345, 31, 200), size, mass, 0, {}, 999);
+    createObject("crate", glm::vec3(345, 31, 200), size, mass, 0, {}, 999);
     GameObjectList.back().canMoveLinearly = false;
 
     // projectile
-    createObject(physicsEngine, "crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 1, 0, {}, 999);
+    createObject("crate", glm::vec3(412.5, 34.5, 200), glm::vec3(5, 5, 5), 1, 0, {}, 999);
     // projectile2
-    //createObject(physicsEngine, "crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, {}, 999);
+    //createObject("crate", glm::vec3(277.5, 34.5, 200), glm::vec3(5, 5, 5), 5, 0, {}, 999);
     // counterweight
-    createObject(physicsEngine, "crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, {}, 999);
+    createObject("crate", glm::vec3(282.5, 200, 200), glm::vec3(12, 12, 12), 100, 0, {}, 999);
 
     // ____________________________________________________________
     // ----------------------- box stacks -------------------------
     int amountObjects = 5;
     for (int i = 0; i < amountObjects; i++)
-       createObject(physicsEngine, "crate", glm::vec3(245, 10 + (12 * i), 245), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
+       createObject("crate", glm::vec3(245, 10 + (12 * i), 245), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
     for (int i = 0; i < amountObjects; i++)
-       createObject(physicsEngine, "crate", glm::vec3(255, 10 + (12 * i), 245), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
+       createObject("crate", glm::vec3(255, 10 + (12 * i), 245), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
     for (int i = 0; i < amountObjects; i++)
-       createObject(physicsEngine, "crate", glm::vec3(245, 10 + (12 * i), 255), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
+       createObject("crate", glm::vec3(245, 10 + (12 * i), 255), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
     for (int i = 0; i < amountObjects; i++)
-       createObject(physicsEngine, "crate", glm::vec3(255, 10 + (12 * i), 255), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
+       createObject("crate", glm::vec3(255, 10 + (12 * i), 255), glm::vec3(10, 10, 10), 1, 0, {}, 0.5);
 
 
     // ____________________________________________________________
     // ----------------------- brick wall -------------------------
-    int wallHeight = 10;
+    int wallHeight = 15;
     int wallWidth = 20;
     int brickWidth = 10;
     int brickLength = 10;
@@ -243,7 +252,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
           float y = brickHeight / 2 + col * brickHeight * 2;
           float z = 80 + row * brickLength + brickDistance * row;
           glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-          createObject(physicsEngine, "plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
+          createObject("plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
        }
        brickWeight--;
        // row 1, 3, 5, 7...
@@ -252,21 +261,47 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
           float y = brickHeight + brickHeight / 2 + col * brickHeight * 2;
           float z = 86 + row * brickLength + brickDistance * row;
           glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-          createObject(physicsEngine, "plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
+          createObject("plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
+       }
+       brickWeight--;
+    }
+
+    brickWeight = 10;
+    if (brickWeight < wallHeight) {
+       brickWeight = wallHeight;
+    }
+    // col
+    for (int col = 0; col < wallHeight / 2; col++) {
+       // row 0, 2, 4, 6...
+       for (int row = 0; row < wallWidth; row++) {
+          float x = 550 + row * brickLength + brickDistance * row;
+          float y = brickHeight + brickHeight / 2 + col * brickHeight * 2;
+          float z = 70;
+          glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+          createObject("plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
+       }
+       brickWeight--;
+       // row 1, 3, 5, 7...
+       for (int row = 0; row < wallWidth-1; row++) {
+          float x = 556 + row * brickLength + brickDistance * row;
+          float y = brickHeight / 2 + col * brickHeight * 2;
+          float z = 70;
+          glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+          createObject("plain", glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, randomColor);
        }
        brickWeight--;
     }
 
     // _____________________________________________________________
     // ----------------------- pyramids ----------------------------
-    int numPyramidsX = 1;
-    int numPyramidsZ = 1;
+    int numPyramidsX = 2;
+    int numPyramidsZ = 2;
 
-    int pyramidHeight = 12;
-    int pyramidWidth = 14;
-    int stoneWidth = 10;
-    int stoneLength = 10;
-    int stoneHeight = 8;
+    int pyramidHeight = 8;
+    int pyramidWidth = 10;
+    int stoneWidth = 5;
+    int stoneLength = 5;
+    int stoneHeight = 20;
     int stoneDistance = 0;
 
     int stoneWeight = 1;
@@ -286,7 +321,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
                         //glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                         glm::vec3 color = glm::vec3(246, 215, 176);
 
-                        createObject(physicsEngine, "plain", glm::vec3(xPos, yPos, zPos), glm::vec3(stoneWidth, stoneHeight, stoneLength), stoneWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, color);
+                        createObject("plain", glm::vec3(xPos, yPos, zPos), glm::vec3(stoneWidth, stoneHeight, stoneLength), stoneWeight, 0, glm::quat(1, 0, 0, 0), 0.2f, 1, color);
                     }
                 }
                 pyramidWidthCounter -= 1;
@@ -299,9 +334,32 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     ////sphere.textureID = 999;
 }
 
+void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
+    constexpr float interval = 1.0f / 200.0f;
+    if (current_time - lastTime < interval)
+        return;
+
+    lastTime = current_time;
+
+    // position
+    constexpr glm::vec3 spawnPoint = glm::vec3(1250, 650, 1250);
+    float varianceRange = 1100.0f;
+    float xVariance = randomRange(-varianceRange, varianceRange);
+    float yVariance = randomRange(-25, 25);
+    float zVariance = randomRange(-varianceRange, varianceRange);
+    glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+    glm::vec3 spawnPos = spawnPoint + glm::vec3(xVariance, yVariance, zVariance);
+
+    // orientation
+    float randomAng = randomRange(0, 360);
+    glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
+    glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
+
+    createObject("plain", spawnPos, glm::vec3(10.0f), 1, 0, orientation, 2.0f, 0, color);
+}
+
 GameObject& SceneBuilder::createObject
 (
-    PhysicsEngine& physicsEngine,
     const std::string& textureName,
     glm::vec3 pos,
     glm::vec3 size,

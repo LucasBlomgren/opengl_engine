@@ -10,6 +10,13 @@ void GameObject::setModelMatrix() {
     }
 }
 
+void GameObject::setHelperMatrixes() {
+    invModelMatrix = glm::inverse(modelMatrix);
+    rotationMatrix = glm::mat3(modelMatrix);
+    invRotationMatrix = glm::transpose(rotationMatrix);
+    helperMatrixesHasUpdated = true;
+}
+
 void GameObject::calculateInverseInertiaForCube() {
     float value = 6.0f / (mass * scale.x * scale.x);
 
@@ -65,22 +72,17 @@ void GameObject::updateAABB() {
 
 void GameObject::updateOOBB() {
     setModelMatrix();
-
-    if (OOBB_shouldUpdate and !asleep) {
-        OOBB.update(verticesPositions, modelMatrix);
-        OOBB_shouldUpdate = false;
-    }
+    OOBB.update(verticesPositions, modelMatrix);
 }
 
 void GameObject::updatePos(const float& deltaTime) {
-    if (isStatic)
+    if (isStatic or asleep)
         return;
 
-    if (sleepCounter > sleepCounterThreshold)
-        setAsleep();
-
-    if (asleep)
-        return;
+    if (sleepCounter >= sleepCounterThreshold) {
+       setAsleep();
+       return;
+    }
 
     modelMatrixShouldUpdate = true;
 
@@ -109,8 +111,6 @@ void GameObject::updatePos(const float& deltaTime) {
         angularVelocity = glm::vec3(0.0f);
 
     // sleep counter
-    float velocityThreshold = 2;
-    float angularVelocityThreshold = 2;
     if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
         sleepCounter += deltaTime;
     else 
@@ -118,8 +118,8 @@ void GameObject::updatePos(const float& deltaTime) {
 }
 
 void GameObject::setAsleep() {
-    OOBB_shouldUpdate = true;
-    updateOOBB();
+    if (isStatic)
+        return;
 
     linearVelocity = glm::vec3(0, 0, 0);
     angularVelocity = glm::vec3(0, 0, 0);

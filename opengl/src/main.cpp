@@ -73,7 +73,7 @@ int main()
    int frames = 0;
    int last_second = 0;
    // fixed timestep
-   const float fixedTimeStep = 1.0f / 240.0f;
+   const float fixedTimeStep = 1.0f / 120.0f;
    float accumulator = 0.0f;
    float lastFrame = static_cast<float>(glfwGetTime());
    float bvhInterval = fixedTimeStep;  // sekunder mellan BVH‑uppdateringar
@@ -101,8 +101,7 @@ int main()
    bvhTree.build(sceneBuilder.getGameObjectList());
 
    // setup physics
-   physicsEngine.setPointers(&sceneBuilder.getGameObjectList(), &bvhTree);
-   physicsEngine.engineState = &engineState;
+   physicsEngine.init(&sceneBuilder.getGameObjectList(), &engineState, &bvhTree);
 
    // setup editor
    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
@@ -138,7 +137,7 @@ int main()
             accumulator = fixedTimeStep;
 
          while (accumulator >= fixedTimeStep) {
-            physicsEngine.step(fixedTimeStep, engineState.getShowNormals(), rng);
+            physicsEngine.step(fixedTimeStep, rng);
             accumulator -= fixedTimeStep;
             //std::cout << "------------------" << "\n";
          }
@@ -175,6 +174,9 @@ int main()
 
       // editor functions
       editor.update(deltaTime, debugShader);
+
+      if (!engineState.isPaused() and editor.objectRain)
+        sceneBuilder.objectRain(currentFrame, rng);
 
       // swap buffers
       float t1 = static_cast<float>(glfwGetTime());
