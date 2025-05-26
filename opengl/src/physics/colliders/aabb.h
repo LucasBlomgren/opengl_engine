@@ -79,6 +79,10 @@ public:
             (wMax.x >= other.wMax.x) & (wMax.y >= other.wMax.y) & (wMax.z >= other.wMax.z);
     }
 
+    float surfaceArea() const {
+        return 2.0f * (halfExtents.x * halfExtents.y + halfExtents.y * halfExtents.z + halfExtents.z * halfExtents.x);
+    }
+
     inline void growToInclude(const glm::vec3& p) {
         wMin = glm::min(wMin, p);
         wMax = glm::max(wMax, p);

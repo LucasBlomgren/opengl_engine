@@ -16,8 +16,7 @@ void Editor::setPointers(
         this->indices = indices;
 }
 
-void Editor::update(float deltaTime, Shader& shader)
-{
+void Editor::update(float& deltaTime, Shader& shader) {
     updateSelectedObject(deltaTime);
 
     if (engineState->GetPressedKey() == "H") {
@@ -43,7 +42,7 @@ void Editor::update(float deltaTime, Shader& shader)
         selectObject();
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
-        GameObject& newObject = sceneBuilder->createObject("crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 1, 0);
+        GameObject& newObject = sceneBuilder->createObject("crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 100, 0);
         newObject.linearVelocity = camera->Front *  1000.0f;
         newObject.asleep = false;
     }
@@ -71,8 +70,7 @@ void Editor::placeObject() {
     newObject.linearVelocity = glm::vec3(0.0f);
 }
 
-void Editor::createPlaceObjectAABB(Shader& shader)
-{
+void Editor::createPlaceObjectAABB(Shader& shader) {
     float placeDist = 150.0f;
     glm::vec3 size{ objPlaceSize };
 
@@ -149,6 +147,7 @@ void Editor::dropObject() {
         selectedObject->hasGravity = true;
         selectedObject->sleepCounterThreshold = 0.5f;
         selectedObject->sleepCounter = 0.0f;
+        selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
         return;
     }
@@ -174,6 +173,7 @@ void Editor::selectObject() {
     selectedObject->asleep = false;
     selectedObject->hasGravity = false;
     selectedObject->sleepCounterThreshold = 1000000.0f;
+    selectedObject->lastPosition = selectedObject->position;
 
     selectedObject->linearVelocity = glm::vec3(0.0f);
     selectedObject->angularVelocity = glm::vec3(0.0f);
@@ -185,19 +185,22 @@ void Editor::selectObject() {
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->Front);
 }
 
-void Editor::updateSelectedObject(float deltaTime) 
-{
-    if (!selectedObject) { return; }
+void Editor::updateSelectedObject(float fixedTimeStep) {
+    if (!selectedObject) 
+        return; 
 
     glm::vec3 worldOffset = camera->Right * selectionOffsetLocal.x + camera->Up * selectionOffsetLocal.y + camera->Front * selectionOffsetLocal.z;
 
-    // Slutgiltig position:
+    // position
     glm::vec3 newPos = camera->Position + worldOffset;
-    selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / deltaTime;
+    selectedObject->position = newPos;
+    // velocity
+    selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
+
+    selectedObject->lastPosition = newPos;
 }
 
-RaycastHit Editor::rayCast(float length)
-{
+RaycastHit Editor::rayCast(float length) {
     float rLength = length;
     Ray r(camera->Position, camera->Front, rLength);
     RaycastHit hitData = physicsEngine->performRaycast(r);
@@ -211,8 +214,7 @@ RaycastHit& Editor::getLastRayHit() {
 }
 
 
-void Editor::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color)
-{
+void Editor::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
     glm::vec3 min = aabb.wMin;
     glm::vec3 max = aabb.wMax;
 

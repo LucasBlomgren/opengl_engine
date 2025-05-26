@@ -26,7 +26,7 @@ public:
         std::vector<Vertex>* cubeVertices,
         std::vector<unsigned int>* indices
     );
-    void update(float deltaTime, Shader& shader);
+    void update(float& deltaTime, Shader& shader);
     RaycastHit rayCast(float length);
     RaycastHit& getLastRayHit();
 
@@ -46,6 +46,7 @@ public:
 
 private:
     bool drawPlacementAABB = false;
+    glm::vec3 selectedObjVelocity = { 0.0f, 0.0f, 0.0f };
 
     EngineState* engineState = nullptr;
     SceneBuilder* sceneBuilder = nullptr;

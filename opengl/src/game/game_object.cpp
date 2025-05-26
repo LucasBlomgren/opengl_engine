@@ -86,6 +86,9 @@ void GameObject::updatePos(const float& deltaTime) {
 
     modelMatrixShouldUpdate = true;
 
+    if (selectedByEditor)
+        return;
+
     if (hasGravity)
         linearVelocity += g * deltaTime;
 
@@ -106,9 +109,6 @@ void GameObject::updatePos(const float& deltaTime) {
         isRotating = false;
     else
         isRotating = true;
-
-    if (selectedByEditor) 
-        angularVelocity = glm::vec3(0.0f);
 
     // sleep counter
     if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 

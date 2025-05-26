@@ -39,6 +39,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
+const bool debug = 0;
 
 // timing
 float deltaTime = 0.0f;	
@@ -139,7 +140,6 @@ int main()
          while (accumulator >= fixedTimeStep) {
             physicsEngine.step(fixedTimeStep, rng);
             accumulator -= fixedTimeStep;
-            //std::cout << "------------------" << "\n";
          }
          bvhAccumulator += deltaTime;
          if (bvhAccumulator >= bvhInterval) {
@@ -247,6 +247,12 @@ int main()
          }
          frames++;
       }
+
+      if (debug)
+        if (current_time - start_time > std::chrono::seconds(8))
+            break;
    }
    glfwTerminate();
+
+   return 0;
 }

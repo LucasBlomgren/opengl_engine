@@ -37,13 +37,14 @@ struct CollisionPair {
 };
 
 class BVHTree {
-    float updateInterval             = 240.0f;
+    int minOverlapDepth              = 6;
+    float updateInterval             = 120.0f;
     int   leafThreshold              = 1;
     int   numRefits                  = 0;
     int   numIterationsSinceRebuild  = 0;
     int   rebuildThreshold           = 0;        // räknas om i build()
     int   minRebuildThreshold        = 5;        // min 10 refits innan rebuild
-    float rebuildRatio               = 0.40f;    // 40 % av lövkorrektioner → rebuild
+    float rebuildRatio               = 0.20f;    // 40 % av lövkorrektioner → rebuild
     glm::vec3 fatBoxMargin { 2.0f };
 
 public:
@@ -60,10 +61,17 @@ public:
     int numRebuilds = 0;
     CollisionPair* collisionBuf = new CollisionPair[MaxCollisionBuf];
 
+    void printNode(const Node* node,
+        const std::string& prefix,
+        bool isLast) const;
+
 private:
     std::vector<BVHPrimitive> prims;
     void createPrimitives(std::vector<GameObject>& objects);
-    void split(Node& parent);
+    void makeLeaf(Node& parent);
+    void initChild(Node& parent, Node* node, bool isLeft, int start, int end, int count);
+    int chooseAxisByMinOverlap(int start, int count, const AABB& fatBox);
+    void split(Node& parent, int depth);
     void updateLeaves();
     void refitNode(Node* node);
 

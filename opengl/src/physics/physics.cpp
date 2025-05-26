@@ -84,7 +84,7 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
     obj.lastAvg = avg;
 
     // set thresholds
-    float factor = 0.8f;
+    float factor = 1.0f;
     obj.velocityThreshold = avg * factor;
     obj.angularVelocityThreshold = (avg * factor) * 1.5f * obj.invRadius;
 }
@@ -92,8 +92,8 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     updatePositions(deltaTime);
 
-    constexpr float velocityThreshold = 8;
-    constexpr float angularVelocityThreshold = 16;
+    constexpr float velocityThreshold = 6;
+    constexpr float angularVelocityThreshold = 8;
     constexpr float velocityThreshold2 = velocityThreshold * velocityThreshold;
     constexpr float angularVelocityThreshold2 = angularVelocityThreshold * angularVelocityThreshold;
 

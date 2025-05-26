@@ -38,5 +38,5 @@ private:
 
     AABBRenderer aabbRenderer;
 
-    float maxViewDistance = 10000.0f;
+    float maxViewDistance = 10000000000.0f;
 };

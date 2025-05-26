@@ -89,7 +89,7 @@ int BVHTree::singleQuery(AABB& qBox) {
 }
 
 void BVHTree::update(std::vector<GameObject>& objects) {
-    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
+    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= 120) {
         // för många refits, bygg om trädet
         build(objects);
         numRefits = 0;
@@ -158,9 +158,6 @@ void BVHTree::createPrimitives(std::vector<GameObject>& objects) {
     prims.reserve(objects.size());
 
     for (GameObject& obj : objects) {
-        //if (obj.isStatic) {
-        //    continue; // skip static objects
-        //}
         BVHPrimitive prim;
         prim.min = obj.AABB.wMin;
         prim.max = obj.AABB.wMax;
@@ -170,29 +167,132 @@ void BVHTree::createPrimitives(std::vector<GameObject>& objects) {
     }
 }
 
-void BVHTree::split(Node& parent) {
+// Hjälpfunktion: välj axel som minimerar volym‐overlap
+int BVHTree::chooseAxisByMinOverlap(int start, int count, const AABB& /*parentBox*/) {
+    // 1) Se till att vår centroid‐buffert är stor nog
+    static std::vector<float> cents;
+    cents.resize(count);
+
+    float bestOverlap = std::numeric_limits<float>::infinity();
+    int   bestAxis   = 0;
+
+    // 2) Loop över axlar
+    for (int axis = 0; axis < 3; ++axis) {
+        // a) extrahera centroid‐värden
+        for (int i = 0; i < count; ++i) {
+            cents[i] = prims[start + i].centroid[axis];
+        }
+
+        // b) hitta pivot = median i cents
+        int midIdx = count / 2;
+        std::nth_element(cents.begin(),
+                         cents.begin() + midIdx,
+                         cents.end());
+        float pivot = cents[midIdx];
+
+        // c) beräkna AABB and overlap‐volym *utan* ytterligare vektor‐kopiering
+        AABB L, R;
+        bool initedL = false, initedR = false;
+        int  countL = 0, countR = 0;
+
+        for (int i = 0; i < count; ++i) {
+            auto& p = prims[start + i];
+            if (p.centroid[axis] < pivot) {
+                if (!initedL) {
+                    L.wMin = p.min; L.wMax = p.max;
+                    initedL = true;
+                } else {
+                    L.growToInclude(p.min);
+                    L.growToInclude(p.max);
+                }
+                ++countL;
+            } else {
+                if (!initedR) {
+                    R.wMin = p.min; R.wMax = p.max;
+                    initedR = true;
+                } else {
+                    R.growToInclude(p.min);
+                    R.growToInclude(p.max);
+                }
+                ++countR;
+            }
+        }
+
+        // d) intersection‐boxen
+        glm::vec3 iMin = glm::max(L.wMin, R.wMin);
+        glm::vec3 iMax = glm::min(L.wMax, R.wMax);
+        glm::vec3 d    = iMax - iMin;
+        float overlapVol = (d.x > 0 && d.y > 0 && d.z > 0)
+            ? d.x * d.y * d.z
+            : 0.0f;
+
+        // e) uppdatera bästa axel
+        if (overlapVol < bestOverlap) {
+            bestOverlap = overlapVol;
+            bestAxis   = axis;
+        }
+    }
+
+    return bestAxis;
+}
+
+void BVHTree::makeLeaf(Node& parent) {
+    parent.isLeaf = true;
+    parent.object = prims[parent.start].object;
+    parent.tightBox = parent.object->AABB;
+    parent.fatBox = parent.tightBox;
+    parent.fatBox.grow(fatBoxMargin);
+
+    // setup aabbRenderer wireframe
+    parent.fatBox.centroid = (parent.fatBox.wMin + parent.fatBox.wMax) * 0.5f;
+    parent.fatBox.halfExtents = (parent.fatBox.wMax - parent.fatBox.wMin) * 0.5f;
+}
+
+void BVHTree::initChild(Node& parent, Node* n, bool isLeft, int start, int end, int count) {
+    n->parent = &parent;
+    if (isLeft) parent.childA = n;
+    else        parent.childB = n;
+
+    // initiera child-intervall
+    n->start = start;
+    n->count = count;
+
+    // beräkna båda childs fatBox
+    n->fatBox.wMin = prims[start].min;
+    n->fatBox.wMax = prims[start].max;
+    for (int i = start + 1; i < end; ++i) {
+        n->fatBox.growToInclude(prims[i].min);
+        n->fatBox.growToInclude(prims[i].max);
+    }
+    n->fatBox.grow(fatBoxMargin);
+
+    // setup aabbRenderer wireframe
+    n->fatBox.centroid = (n->fatBox.wMin + n->fatBox.wMax) * 0.5f;
+    n->fatBox.halfExtents = (n->fatBox.wMax - n->fatBox.wMin) * 0.5f;
+}
+
+void BVHTree::split(Node& parent, int depth) {
     int start = parent.start;
     int count = parent.count;
 
     // create leaf node
     if (count <= leafThreshold) {
-        parent.isLeaf = true;
-        parent.object = prims[start].object;
-        parent.tightBox = parent.object->AABB;
-        parent.fatBox = parent.tightBox;
-        parent.fatBox.grow(fatBoxMargin);
-
-        // setup aabbRenderer wireframe
-        parent.fatBox.centroid = (parent.fatBox.wMin + parent.fatBox.wMax) * 0.5f;
-        parent.fatBox.halfExtents = (parent.fatBox.wMax - parent.fatBox.wMin) * 0.5f;
-
+        makeLeaf(parent);
         return;
     }
 
-    // välj split-axel via extent
-    glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
-    int axis = extent.x > extent.y ? (extent.x > extent.z ? 0 : 2) : (extent.y > extent.z ? 1 : 2);
-
+    int axis;
+    if (depth < minOverlapDepth) {
+        // minimera överlapp mellan barn
+        axis = chooseAxisByMinOverlap(start, count, parent.fatBox);
+    }
+    else {
+        // enkelt: välj enligt största extent + median
+        glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
+        axis = (extent.x > extent.y
+            ? (extent.x > extent.z ? 0 : 2)
+            : (extent.y > extent.z ? 1 : 2));
+    }
     // median‐partition av primitives
     int mid = start + count / 2;
     std::nth_element(
@@ -201,47 +301,15 @@ void BVHTree::split(Node& parent) {
             return a.centroid[axis] < b.centroid[axis];
         });
 
-    // skapa child-nodes
+    // skapa child-nodes och initiera dem
     Node* A = &nodes.emplace_back();
     Node* B = &nodes.emplace_back();
-
-    A->parent = &parent;
-    B->parent = &parent;
-    parent.childA = A;
-    parent.childB = B;
-
-    // initiera child-intervall
-    A->start = start;
-    A->count = mid - start;
-    B->start = mid;
-    B->count = start + count - mid;
-
-    // beräkna båda childs fatBox
-    A->fatBox.wMin = prims[start].min;
-    A->fatBox.wMax = prims[start].max;
-    for (int i = start + 1; i < mid; ++i) {
-        A->fatBox.growToInclude(prims[i].min);
-        A->fatBox.growToInclude(prims[i].max);
-    }
-    A->fatBox.grow(fatBoxMargin);
-
-    B->fatBox.wMin = prims[mid].min;
-    B->fatBox.wMax = prims[mid].max;
-    for (int i = mid + 1; i < start + count; ++i) {
-        B->fatBox.growToInclude(prims[i].min);
-        B->fatBox.growToInclude(prims[i].max);
-    }
-    B->fatBox.grow(fatBoxMargin);
-
-    // setup aabbRenderer wireframe
-    A->fatBox.centroid = (A->fatBox.wMin + A->fatBox.wMax) * 0.5f;
-    A->fatBox.halfExtents = (A->fatBox.wMax - A->fatBox.wMin) * 0.5f;
-    B->fatBox.centroid = (B->fatBox.wMin + B->fatBox.wMax) * 0.5f;
-    B->fatBox.halfExtents = (B->fatBox.wMax - B->fatBox.wMin) * 0.5f;
+    initChild(parent, A, true, start, mid, mid - start);
+    initChild(parent, B, false, mid, start + count, start + count - mid);
 
     // rekursivt splitta vidare
-    split(*A);
-    split(*B);
+    split(*A, depth + 1);
+    split(*B, depth + 1);
 }
 
 void BVHTree::build(std::vector<GameObject>& objects) {
@@ -279,5 +347,6 @@ void BVHTree::build(std::vector<GameObject>& objects) {
     root->fatBox.halfExtents = (root->fatBox.wMax - root->fatBox.wMin) * 0.5f;
 
     // Splittra in i children
-    split(*root);
+    int depth = 0;
+    split(*root, depth);
 }
