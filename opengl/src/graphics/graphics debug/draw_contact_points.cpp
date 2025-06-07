@@ -2,7 +2,7 @@
 
 unsigned int setupContactPoint() {
     // Hörn för en kub centrerad i origo med storlek 1
-    float halfSize = 0.3f;
+    float halfSize = 0.03f;
     std::vector<float> vertices = {
         // Bakre yta
         -halfSize, -halfSize, -halfSize,  // p1

@@ -2,7 +2,7 @@
 
 void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
 {
-    static constexpr float epsilon = 0.07f;
+    static constexpr float epsilon = 0.00f;
     glm::mat4 lift = glm::translate(glm::mat4(1.0f), glm::vec3(0, epsilon, 0));
     glm::mat4 displacedModel = lift * model;
 
@@ -17,7 +17,6 @@ void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, 
     glLineWidth(2.0f);
     glBindVertexArray(VAO_box);
     glDrawArrays(GL_LINES, 0, 24);
-
 }
 
 void OOBBRenderer::drawNormals(Shader& shader, const glm::mat4& model)

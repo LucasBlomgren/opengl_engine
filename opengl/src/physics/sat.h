@@ -8,5 +8,14 @@
 
 #include "game_object.h"
 
-std::pair<float, float> ProjectVertices(const std::array<glm::vec3, 8>& vertices, const glm::vec3& axis);
-bool IntersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner);
+bool SATQuery(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner);
+
+bool cuboidVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+bool sphereVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+bool sphereVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+bool triVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+bool triVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+bool triVsTri(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+
+std::pair<float, float> projectVertices(const std::array<glm::vec3, 8>& vertices, const glm::vec3& axis);
+bool intersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner);

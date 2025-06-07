@@ -25,7 +25,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "6") {
-        sceneBuilder->toggleDayTime();
+        sceneBuilder->toggleLightsState();
     }
     if (engineState->GetPressedKey() == "7") {
         this->drawPlacementAABB = !this->drawPlacementAABB;
@@ -42,8 +42,8 @@ void Editor::update(float& deltaTime, Shader& shader) {
         selectObject();
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
-        GameObject& newObject = sceneBuilder->createObject("crate", (camera->Position + camera->Front * 30.0f), glm::vec3(10), 100, 0);
-        newObject.linearVelocity = camera->Front *  1000.0f;
+        GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
+        newObject.linearVelocity = camera->front *  100.0f;
         newObject.asleep = false;
     }
 
@@ -66,7 +66,7 @@ void Editor::placeObject() {
     glm::vec3 size{ objPlaceSize };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    GameObject& newObject = sceneBuilder->createObject("crate", spawnPos, size, 1, 0, orientation, 0.5f, 1);
+    GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 0.5f, 1);
     newObject.linearVelocity = glm::vec3(0.0f);
 }
 
@@ -75,13 +75,13 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     glm::vec3 size{ objPlaceSize };
 
     AABB aabb;
-    aabb.centroid = camera->Position + camera->Front * placeDist;
+    aabb.centroid = camera->position + camera->front * placeDist;
     aabb.halfExtents = glm::vec3(size / 2.0f);
 
     RaycastHit hitData = rayCast(placeDist);
     glm::vec3 normal = hitData.normal;
     if (hitData.object != nullptr) {
-        if (glm::dot(hitData.normal, camera->Front) > 0.0f)
+        if (glm::dot(hitData.normal, camera->front) > 0.0f)
             normal = -normal;
 
         glm::vec3 absN = glm::abs(normal);
@@ -94,7 +94,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree* bvhTree = physicsEngine->getBvhTree();
+    BVHTree<GameObject>* bvhTree = physicsEngine->getBvhTree();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
@@ -110,7 +110,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
         for (int j = 0; j < count; j++) {
             GameObject& objB = *bvhTree->collisions[j];
 
-            float depth = aabb.getMinOverlapDepth(objB.AABB);
+            float depth = aabb.getMinOverlapDepth(objB.aabb);
             if (depth < min) {
                 min = depth;
                 minDepthObj = &objB;
@@ -118,7 +118,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
         }
 
         // move AABB away from collision
-        glm::vec3 normal = aabb.getCollisionNormal(minDepthObj->AABB);
+        glm::vec3 normal = aabb.getCollisionNormal(minDepthObj->aabb);
         aabb.centroid += normal * min * 1.2f;
         aabb.wMin = aabb.centroid - aabb.halfExtents;
         aabb.wMax = aabb.centroid + aabb.halfExtents;
@@ -178,21 +178,21 @@ void Editor::selectObject() {
     selectedObject->linearVelocity = glm::vec3(0.0f);
     selectedObject->angularVelocity = glm::vec3(0.0f);
 
-    glm::vec3 worldOffset = selectedObject->position - camera->Position;
+    glm::vec3 worldOffset = selectedObject->position - camera->position;
     // Projicera worldOffset på kamerans lokala axlar:
-    selectionOffsetLocal.x = glm::dot(worldOffset, camera->Right);
-    selectionOffsetLocal.y = glm::dot(worldOffset, camera->Up);
-    selectionOffsetLocal.z = glm::dot(worldOffset, camera->Front);
+    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 }
 
 void Editor::updateSelectedObject(float fixedTimeStep) {
     if (!selectedObject) 
         return; 
 
-    glm::vec3 worldOffset = camera->Right * selectionOffsetLocal.x + camera->Up * selectionOffsetLocal.y + camera->Front * selectionOffsetLocal.z;
+    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
     // position
-    glm::vec3 newPos = camera->Position + worldOffset;
+    glm::vec3 newPos = camera->position + worldOffset;
     selectedObject->position = newPos;
     // velocity
     selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
@@ -202,7 +202,7 @@ void Editor::updateSelectedObject(float fixedTimeStep) {
 
 RaycastHit Editor::rayCast(float length) {
     float rLength = length;
-    Ray r(camera->Position, camera->Front, rLength);
+    Ray r(camera->position, camera->front, rLength);
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
     lastHitData = hitData;

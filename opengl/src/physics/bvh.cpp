@@ -1,8 +1,11 @@
 ﻿#include "bvh.h"
 
+template class BVHTree<GameObject>;
+template class BVHTree<Tri>;
 
-int BVHTree::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
-    int sp = 0;  // index för nodeStack
+template<typename E>
+int BVHTree<E>::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
+    int sp = 0;     // index för nodeStack
     int outSp = 0;  // index för collisionBuf
 
     nodeStack[sp++] = { bvhA.root, bvhB.root };
@@ -15,11 +18,8 @@ int BVHTree::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
 
         // leaf–leaf: tight‐test
         if (A->isLeaf && B->isLeaf) {
-            if (A->tightBox.intersects(B->tightBox) &&
-                A->object->id < B->object->id &&
-                outSp < (int)MaxCollisionBuf)
-            {
-                collisionBuf[outSp++] = { A->object, B->object };
+            if (A->tightBox.intersects(B->tightBox) && A->element < B->element && outSp < (int)MaxCollisionBuf) {
+                collisionBuf[outSp++] = { A->element, B->element };
             }
             continue;
         }
@@ -56,7 +56,8 @@ int BVHTree::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
     return outSp;
 }
 
-int BVHTree::singleQuery(AABB& qBox) {
+template<typename E>
+int BVHTree<E>::singleQuery(AABB& qBox) {
     int hc = 0;
     constexpr int MaxDepth = 64;
     Node* stack[MaxDepth];
@@ -81,17 +82,18 @@ int BVHTree::singleQuery(AABB& qBox) {
                 collisions.resize(collisions.size() * 4);
             }
             if (qBox.intersects(n->tightBox))
-                this->collisions[hc++] = n->object;
+                this->collisions[hc++] = n->element;
         }
     }
 
     return hc;
 }
 
-void BVHTree::update(std::vector<GameObject>& objects) {
+template<typename E>
+void BVHTree<E>::update(std::vector<E>& elements) {
     if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= 120) {
         // för många refits, bygg om trädet
-        build(objects);
+        build(elements);
         numRefits = 0;
         numRebuilds++;
         numIterationsSinceRebuild = 0;
@@ -105,12 +107,13 @@ void BVHTree::update(std::vector<GameObject>& objects) {
     if (root) refitNode(root);
 }
 
-void BVHTree::updateLeaves() {
+template<typename E>
+void BVHTree<E>::updateLeaves() {
     for (auto& n : nodes) {
         if (!n.isLeaf) 
             continue;
 
-        n.tightBox = n.object->AABB;
+        n.tightBox = n.element->getAABB();
         if (n.fatBox.contains(n.tightBox)) 
             continue;
 
@@ -128,7 +131,8 @@ void BVHTree::updateLeaves() {
     }
 }
 
-void BVHTree::refitNode(Node* node) {
+template<typename E>
+void BVHTree<E>::refitNode(Node* node) {
     if (!node or !node->dirty)
         return;
 
@@ -153,22 +157,9 @@ void BVHTree::refitNode(Node* node) {
     node->dirty = false;
 }
 
-void BVHTree::createPrimitives(std::vector<GameObject>& objects) {
-    prims.clear();
-    prims.reserve(objects.size());
-
-    for (GameObject& obj : objects) {
-        BVHPrimitive prim;
-        prim.min = obj.AABB.wMin;
-        prim.max = obj.AABB.wMax;
-        prim.centroid = obj.AABB.centroid;
-        prim.object = &obj;
-        prims.push_back(prim);
-    }
-}
-
 // Hjälpfunktion: välj axel som minimerar volym‐overlap
-int BVHTree::chooseAxisByMinOverlap(int start, int count, const AABB& /*parentBox*/) {
+template<typename E>
+int BVHTree<E>::chooseAxisByMinOverlap(int start, int count, const AABB& /*parentBox*/) {
     // 1) Se till att vår centroid‐buffert är stor nog
     static std::vector<float> cents;
     cents.resize(count);
@@ -236,10 +227,11 @@ int BVHTree::chooseAxisByMinOverlap(int start, int count, const AABB& /*parentBo
     return bestAxis;
 }
 
-void BVHTree::makeLeaf(Node& parent) {
+template<typename E>
+void BVHTree<E>::makeLeaf(Node& parent) {
     parent.isLeaf = true;
-    parent.object = prims[parent.start].object;
-    parent.tightBox = parent.object->AABB;
+    parent.element = prims[parent.start].element;
+    parent.tightBox = parent.element->getAABB();
     parent.fatBox = parent.tightBox;
     parent.fatBox.grow(fatBoxMargin);
 
@@ -248,7 +240,8 @@ void BVHTree::makeLeaf(Node& parent) {
     parent.fatBox.halfExtents = (parent.fatBox.wMax - parent.fatBox.wMin) * 0.5f;
 }
 
-void BVHTree::initChild(Node& parent, Node* n, bool isLeft, int start, int end, int count) {
+template<typename E>
+void BVHTree<E>::initChild(Node& parent, Node* n, bool isLeft, int start, int end, int count) {
     n->parent = &parent;
     if (isLeft) parent.childA = n;
     else        parent.childB = n;
@@ -271,7 +264,8 @@ void BVHTree::initChild(Node& parent, Node* n, bool isLeft, int start, int end, 
     n->fatBox.halfExtents = (n->fatBox.wMax - n->fatBox.wMin) * 0.5f;
 }
 
-void BVHTree::split(Node& parent, int depth) {
+template<typename E>
+void BVHTree<E>::split(Node& parent, int depth) {
     int start = parent.start;
     int count = parent.count;
 
@@ -312,13 +306,30 @@ void BVHTree::split(Node& parent, int depth) {
     split(*B, depth + 1);
 }
 
-void BVHTree::build(std::vector<GameObject>& objects) {
+template<typename E>
+void BVHTree<E>::createPrimitives(std::vector<E>& elements) {
+    prims.clear();
+    prims.reserve(elements.size());
+
+    for (auto& elem : elements) {
+        BVHPrimitive prim;
+        AABB Ebox = elem.getAABB();
+        prim.min = Ebox.wMin;
+        prim.max = Ebox.wMax;
+        prim.centroid = Ebox.centroid;
+        prim.element = &elem;
+        prims.push_back(prim);
+    }
+}
+
+template<typename E>
+void BVHTree<E>::build(std::vector<E>& elements) {
     root = nullptr;
     nodes.clear();
-    collisions.resize(objects.size() * 2);
+    collisions.resize(elements.size() * 2);
 
     // Fyll primitives
-    createPrimitives(objects);
+    createPrimitives(elements);
 
     if (prims.empty())
         return;

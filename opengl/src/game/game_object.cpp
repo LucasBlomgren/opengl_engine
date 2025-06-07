@@ -1,5 +1,10 @@
 ﻿#include "game_object.h"
 
+AABB GameObject::getAABB() const {
+    return aabb;
+
+}
+
 void GameObject::setModelMatrix() {
     if (modelMatrixShouldUpdate) {
         modelMatrix = glm::mat4(1.0f);
@@ -65,20 +70,31 @@ void GameObject::drawMesh(Shader& shader) {
 
 void GameObject::updateAABB() {
     setModelMatrix();
-
-    if ((AABB_ShouldUpdate and !asleep) or isStatic) 
-        AABB.update(modelMatrix, position, scale, isRotating);
+    aabb.update(modelMatrix, position, scale, isRotated);
 }
 
-void GameObject::updateOOBB() {
+void GameObject::updateCollider() {
     setModelMatrix();
-    OOBB.update(verticesPositions, modelMatrix);
+
+    std::visit([&](auto& shape) {
+        using T = std::decay_t<decltype(shape)>;
+
+        // OOBB
+        if constexpr (std::is_same_v<T, OOBB>) {
+            shape.update(verticesPositions, modelMatrix);
+        }
+        // Sphere
+        else if constexpr (std::is_same_v<T, Sphere>) {
+
+        }
+        // TriMesh
+        else if constexpr (std::is_same_v<T, TriMesh>) {
+
+        }
+    }, collider.shape);
 }
 
 void GameObject::updatePos(const float& deltaTime) {
-    if (isStatic or asleep)
-        return;
-
     if (sleepCounter >= sleepCounterThreshold) {
        setAsleep();
        return;
@@ -94,24 +110,24 @@ void GameObject::updatePos(const float& deltaTime) {
 
     linearVelocity *= std::pow(0.96f, deltaTime);
     angularVelocity *= std::pow(0.94f, deltaTime);
-    biasLinearVelocity *= std::pow(0.96f, deltaTime);
 
-    glm::vec3 summedLinearVelocity = linearVelocity;
-    biasLinearVelocity = glm::vec3();
-
-    if (!canMoveLinearly) summedLinearVelocity = glm::vec3(0.0f);
-
+    if (!canMoveLinearly) {
+        linearVelocity = glm::vec3(0.0f);
+        angularVelocity.x = 0.0f;
+        angularVelocity.y = 0.0f;
+    }
+        
     lastPosition = position;
-    position += summedLinearVelocity * deltaTime;
+    position += linearVelocity * deltaTime;
     updateOrientation(orientation, angularVelocity, deltaTime);
 
-    if (orientation.x == 0.0f and orientation.y == 0.0f and orientation.z == 0.0f and orientation.w == 1.0f)
-        isRotating = false;
+    if (orientation == glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
+        isRotated = false;
     else
-        isRotating = true;
+        isRotated = true;
 
     // sleep counter
-    if (std::abs(glm::length(summedLinearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
+    if (std::abs(glm::length(linearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
         sleepCounter += deltaTime;
     else 
         sleepCounter = 0.0f;
@@ -123,7 +139,6 @@ void GameObject::setAsleep() {
 
     linearVelocity = glm::vec3(0, 0, 0);
     angularVelocity = glm::vec3(0, 0, 0);
-    biasLinearVelocity = glm::vec3(0, 0, 0);
 
     asleep = true;
 }

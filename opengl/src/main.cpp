@@ -57,7 +57,7 @@ SceneBuilder sceneBuilder;
 LightManager lightManager;
 
 // view
-Camera camera(glm::vec3(-50.0f, 200.0f, 3.0f));
+Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
 
 // editor
 Editor editor;
@@ -98,7 +98,7 @@ int main()
    sceneBuilder.createScene(physicsEngine);
 
    // setup bvh
-   BVHTree bvhTree;
+   BVHTree<GameObject> bvhTree;
    bvhTree.build(sceneBuilder.getGameObjectList());
 
    // setup physics
@@ -148,8 +148,59 @@ int main()
          }
       }
 
+      // rotate halos
+      if (!engineState.isPaused() or engineState.getAdvanceStep()) {
+          glm::quat perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 1.0f, 0.0f));
+          for (int i = 0; i < sceneBuilder.haloA.size(); i++) {
+              // increase orientation in x-axis by a small amoount
+              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloA[i]];
+
+              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
+              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+              obj.position = sceneBuilder.haloACenter + rotatedRelPos;
+
+              obj.orientation = perFrameRot * obj.orientation;
+              obj.modelMatrixShouldUpdate = true;
+              obj.setModelMatrix();
+              obj.updateAABB();
+              obj.updateCollider();
+          }
+
+          perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(1.0f, 0.0f, 0.0f));
+          for (int i = 0; i < sceneBuilder.haloB.size(); i++) {
+              // increase orientation in x-axis by a small amoount
+              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloB[i]];
+
+              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
+              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+              obj.position = sceneBuilder.haloBCenter + rotatedRelPos;
+
+              obj.orientation = perFrameRot * obj.orientation;
+              obj.modelMatrixShouldUpdate = true;
+              obj.setModelMatrix();
+              obj.updateAABB();
+              obj.updateCollider();
+          }
+
+          perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 0.0f, 1.0f));
+          for (int i = 0; i < sceneBuilder.haloC.size(); i++) {
+              // increase orientation in x-axis by a small amoount
+              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloC[i]];
+
+              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
+              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+              obj.position = sceneBuilder.haloCCenter + rotatedRelPos;
+
+              obj.orientation = perFrameRot * obj.orientation;
+              obj.modelMatrixShouldUpdate = true;
+              obj.setModelMatrix();
+              obj.updateAABB();
+              obj.updateCollider();
+          }
+      }
+
       if (engineState.getAdvanceStep()) {
-            engineState.setAdvanceStep(false);
+          engineState.setAdvanceStep(false);
       }
 
       // calculate step time
@@ -211,7 +262,7 @@ int main()
                << "CPU:"
                // värdefält, vänster-justerat
                << std::setw(VALUE_W) << std::left
-               << std::fixed << std::setprecision(1) << frameTimeMs << " ms\n"
+               << std::fixed << std::setprecision(1) << cpuClockMs << " ms\n"
 
                // Physics Time
                << std::setw(LABEL_W) << std::left

@@ -8,7 +8,7 @@
 #include "vertex.h"
 #include <vector>
 
-#define objPlaceSize 10.0f, 10.0f, 10.0f
+#define objPlaceSize 1.0f, 1.0f, 1.0f
 
 struct rayCast {
     glm::vec3 start;

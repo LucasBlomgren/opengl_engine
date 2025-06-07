@@ -24,19 +24,19 @@ void Renderer::beginFrame() const
 void Renderer::setViewProjection(Camera& camera)
 {
     // projection matrix 
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
 
     shader->use();
     shader->setMat4("projection", projection);
     shader->setMat4("view", view);
-    shader->setVec3("viewPos", camera.Position);
+    shader->setVec3("viewPos", camera.position);
 
     debugShader->use();
     debugShader->setMat4("projection", projection);
     debugShader->setMat4("view", view);
-    debugShader->setVec3("viewPos", camera.Position);
+    debugShader->setVec3("viewPos", camera.position);
 }
 
 void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
@@ -46,7 +46,7 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
 
         if (engineState->getShowAABB()) {
             glm::vec3 color{ 0.9f, 0.7f, 0.2f };
-            aabbRenderer.updateModel(obj.AABB, false);
+            aabbRenderer.updateModel(obj.aabb, false);
             aabbRenderer.draw(color, *debugShader);
         }
         if (engineState->getShowOOBB() or obj.isRaycastHit) {
@@ -60,7 +60,7 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     }
 }
 
-void Renderer::drawBVH(BVHTree& tree, unsigned int VAO_line) {
+void Renderer::drawBVH(BVHTree<GameObject>& tree, unsigned int VAO_line) {
     if (!engineState->getShowBVH()) return;
 
     glm::vec3 color;

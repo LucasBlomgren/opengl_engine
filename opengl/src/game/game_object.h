@@ -8,15 +8,12 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/component_wise.hpp>
 
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <set>
-#include <array>
-
 #include "shader.h"
+#include "colliders/collider.h"
 #include "colliders/aabb.h"
 #include "colliders/oobb.h"
+#include "colliders/sphere.h"
+#include "colliders/tri_mesh.h"
 #include "oobb_renderer.h"
 #include "aabb_renderer.h"
 
@@ -25,7 +22,7 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
 }
 
 struct CollisionHistory {
-   static constexpr int SLOTS = 10;
+   static constexpr int SLOTS = 3;
    int buffer[SLOTS] = { 0 };
    int index = 0;
    int count = 0;
@@ -87,9 +84,10 @@ public:
     bool hasGravity;
     bool isStatic;
     bool shouldRotate;
-    bool isRotating = false;
+    bool isRotated = false;
     bool canMoveLinearly = true;
-    glm::vec3 g = glm::vec3(0.0f, -98.1f, 0.0f);
+    bool isUniformlyScaled;
+    glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
     float invRadius;
 
     // sleep variables
@@ -104,32 +102,33 @@ public:
     CollisionHistory collisionHistory;
 
     // collision variables
-    AABB AABB;
-    OOBB OOBB;
+    AABB aabb;
     bool AABB_ShouldUpdate = true;
-    bool OOBB_shouldUpdate = false;
+    Collider collider;
     OOBBRenderer oobbRenderer;
 
-    bool isUniformlyScaled;
+    // editor variables
     bool selectedByEditor = false;
     bool isRaycastHit = false;
     glm::vec3 lastPosition;
     glm::vec3 pushCorrection;
     
+    // constructor
     GameObject(
-       int id,
-       std::vector<Vertex> vertices,
-       std::vector<unsigned int> indices,
-       glm::vec3 position,
-       glm::vec3 scale,
-       float mass,
-       bool isStatic,
-       int textureID,
-       glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-       float sleepCounterThreshold = 0.2f,
-       bool asleep = false,
-       glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f) 
-    )
+        int id,
+        std::vector<Vertex> vertices,
+        std::vector<unsigned int> indices,
+        glm::vec3 position,
+        glm::vec3 scale,
+        ColliderType colliderType,
+        float mass,
+        bool isStatic,
+        int textureID,
+        glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        float sleepCounterThreshold = 1.0f,
+        bool asleep = false,
+        glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f) 
+        )
         : id(id),
         vertices(vertices),
         indices(indices),
@@ -145,9 +144,12 @@ public:
         asleep(asleep),
         color(color)
     {
+        // physics stuff
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
+        if (orientation != glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) { isRotated = true; }
         invRadius = 1.0f / (0.5f * glm::length(scale));
 
+        // dynamic
         if (!isStatic) {
             invMass = 1.0f / mass;
             asleep = false;
@@ -155,10 +157,9 @@ public:
             if (isUniformlyScaled) 
                calculateInverseInertiaForCube();
             else 
-            {
-                calculateInverseInertiaForCuboid();
-            }
+               calculateInverseInertiaForCuboid();
         }
+        // static
         else {
             mass = 0;
             invMass = 0;
@@ -166,6 +167,7 @@ public:
             asleep = true;
         }
 
+        // plain color
         if (textureID == 999)
            this->color = color / 255.0f;
 
@@ -173,15 +175,31 @@ public:
             verticesPositions.push_back(vertex.position);
 
         setModelMatrix();
-        AABB.Init(verticesPositions);
-        if (orientation != glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) { isRotating = true; }
-        AABB.update(modelMatrix, position, scale, isRotating);
-        OOBB.Init(verticesPositions, modelMatrix);
 
-        oobbRenderer.setupWireframeBox();
-        oobbRenderer.setupNormals();
+        // render mesh
+        setupMesh();
 
-        this->setupMesh();
+        // AABB 
+        aabb.Init(verticesPositions);
+        aabb.update(modelMatrix, position, scale, isRotated);
+
+        // Collider
+        if (colliderType == ColliderType::CUBOID) {
+            OOBB oobb;
+            oobb.Init(verticesPositions, modelMatrix);
+            collider.shape = oobb;
+
+            oobbRenderer.setupWireframeBox();
+            oobbRenderer.setupNormals();
+        }
+        else if (colliderType == ColliderType::SPHERE) {
+            Sphere sphere;
+            collider.shape = sphere;
+        }
+        else if (colliderType == ColliderType::MESH) {
+            TriMesh triMesh;
+            collider.shape = triMesh;
+        }
     }
 
     void setModelMatrix();
@@ -191,10 +209,12 @@ public:
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
     void drawMesh(Shader& shader);
     void updateAABB();
-    void updateOOBB();
+    void updateCollider();
     void updatePos(const float& deltaTime);
     void setAsleep();
     void setAwake();
+
+    AABB getAABB() const;
 
 private:
     void setupMesh();

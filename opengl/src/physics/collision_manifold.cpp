@@ -1,15 +1,89 @@
 ﻿#include "collision_manifold.h"
 
+static constexpr int N = 3;
+using ContactFn = void(CollisionManifold::*)(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+
+static ContactFn dispatchTable[N][N] = {
+    { &CollisionManifold::cuboidVsCuboid,   nullptr,                            nullptr                        },
+    { &CollisionManifold::sphereVsCuboid,   &CollisionManifold::sphereVsSphere, nullptr                        },
+    { &CollisionManifold::meshVsCuboid,     &CollisionManifold::meshVsSphere,   &CollisionManifold::meshVsMesh }
+};
+
+// skapa en struct som håller pekare till 3 olika cases: 1. gameobject 2. gameobject + chosenTri (från BVH som hittat rätt tri på mesh) 3. tri-primitive
+// skicka in två av dessa Collider A och Collider B till createContact istället för GameObject A och GameObject B
+// detta för att kunna skicka in collider som inte är GameObject, t.ex. tri-primitive
+// 
+// collider struct ska ha getter-metoder för t.ex. PreComputePointData(), så att antingen får man 0 angularVelocity/invMass etc. ->
+// -> om det är en tri-primitive, annars får man GameObjects värde
+
+void CollisionManifold::createContact(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    int i = int(A.collider.shape.index());
+    int j = int(B.collider.shape.index());
+
+    if (i < j)  std::swap(i, j); // Ensure i >= j for the dispatch table
+
+    auto fn = dispatchTable[i][j];
+    (this->*fn)(outContact, contactCache, A, B, n, normalOwner);
+}
+
+void CollisionManifold::cuboidVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    // välj vilken som är referensface och incidentface
+    std::array<glm::vec3, 4> referenceFace;
+    std::array<glm::vec3, 4> incidentFace;
+    if (normalOwner == 0) {
+        selectCollisionFace(A, n, referenceFace);
+        selectCollisionFace(B, -n, incidentFace);
+    }
+    else {
+        selectCollisionFace(B, -n, referenceFace);
+        selectCollisionFace(A, n, incidentFace);
+    }
+
+    // räkna ut normalen för referensface
+    glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
+    glm::vec3 edgeB = referenceFace[0] - referenceFace[2];
+    glm::vec3 referenceFaceNormal = glm::normalize(glm::cross(edgeA, edgeB));
+
+    InitialContact initialContact{ &A, &B, referenceFace, incidentFace, referenceFaceNormal };
+
+    createContactPoints(initialContact);
+    createLocalCoordinates(initialContact);
+    if (initialContact.counter > 4) { contactPointReduction(initialContact); }
+    computePenetrationDepth(initialContact);
+
+    outContact.objA_ptr = &A;
+    outContact.objB_ptr = &B;
+    outContact.normal = n;
+
+    integrateContact(contactCache, initialContact, outContact);
+}
+
+void CollisionManifold::sphereVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    
+}
+void CollisionManifold::sphereVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    
+}
+void CollisionManifold::meshVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    
+}
+void CollisionManifold::meshVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    
+}
+void CollisionManifold::meshVsMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+    
+}
+
 void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
     glm::vec3 rotated = obj.invRotationMatrix * normal;
     glm::vec3 absN = glm::abs(rotated);
 
-    if (absN.x >= absN.y && absN.x >= absN.z) 
-        outFace = (rotated.x > 0) ? obj.AABB.wFaces.maxX : obj.AABB.wFaces.minX;
-    else if (absN.y >= absN.x && absN.y >= absN.z)
-        outFace = (rotated.y > 0) ? obj.AABB.wFaces.maxY : obj.AABB.wFaces.minY;
+    if (absN.x >= absN.y and absN.x >= absN.z) 
+        outFace = (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX;
+    else if (absN.y >= absN.x and absN.y >= absN.z)
+        outFace = (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY;
     else 
-        outFace = (rotated.z > 0) ? obj.AABB.wFaces.maxZ : obj.AABB.wFaces.minZ;
+        outFace = (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ;
 }
 
 void CollisionManifold::createClippingPlanes(const std::array<glm::vec3,4>& face, const glm::vec3& faceNormal) {
@@ -176,7 +250,7 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
         glm::vec3& point = contactPoints.localCoords[i];
 
         float area = 0.5f * glm::dot(glm::cross(supportPoint - farthestPoint, supportPoint - point), normal);
-        if (area < 0 && area < maxArea) {
+        if (area < 0 and area < maxArea) {
             maxArea = area;
             negTrianglePointIndex = i;
         }
@@ -190,15 +264,12 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
 }
 
 void CollisionManifold::computePenetrationDepth(InitialContact& initialContact) {
-    glm::vec3 referenceFacePoint = initialContact.referenceFace[0];
-    glm::vec3 referenceFaceNormal = initialContact.referenceFaceNormal;
-
     for (int i = 0; i < initialContact.counter; i++)
-        initialContact.pointDepths[i] = -glm::dot(initialContact.globalCoords[i] - referenceFacePoint, referenceFaceNormal);
+        initialContact.pointDepths[i] = -glm::dot(initialContact.globalCoords[i] - initialContact.referenceFace[0], initialContact.referenceFaceNormal);
 }
 
 void CollisionManifold::PreComputePointData(ContactPoint& cp, glm::vec3& normal, GameObject& objA, GameObject& objB) {
-    constexpr float restitutionThreshold = 0.5f; // Minsta hastighet för att restitution ska aktiveras
+    constexpr float restitutionThreshold = 0.1f; // Minsta hastighet för att restitution ska aktiveras
     constexpr float restitution = 0.1f; // exempelmaterial
 
     // pre-calculate rA, rB, EffectiveMass
@@ -365,36 +436,4 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     }
 
     contactCache[key] = finalContact;
-}
-
-void CollisionManifold::createContact(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& objA, GameObject& objB, glm::vec3 normal, int& collisionNormalOwner) {
-    // välj vilken som är referensface och incidentface
-    std::array<glm::vec3, 4> referenceFace;
-    std::array<glm::vec3, 4> incidentFace;
-    if (collisionNormalOwner == 0) {
-        selectCollisionFace(objA, normal, referenceFace);
-        selectCollisionFace(objB, -normal, incidentFace);
-    }
-    else {
-        selectCollisionFace(objB, -normal, referenceFace);
-        selectCollisionFace(objA, normal, incidentFace);
-    }
-
-    // räkna ut normalen för referensface
-    glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
-    glm::vec3 edgeB = referenceFace[0] - referenceFace[2];
-    glm::vec3 referenceFaceNormal = glm::normalize(glm::cross(edgeA, edgeB));
-
-    InitialContact initialContact{ &objA, &objB, referenceFace, incidentFace, referenceFaceNormal };
-
-    createContactPoints(initialContact);
-    createLocalCoordinates(initialContact);     
-    if (initialContact.counter > 4) { contactPointReduction(initialContact); }
-    computePenetrationDepth(initialContact);
-
-    outContact.objA_ptr = &objA;
-    outContact.objB_ptr = &objB;
-    outContact.normal = normal;
-
-    integrateContact(contactCache, initialContact, outContact);
 }

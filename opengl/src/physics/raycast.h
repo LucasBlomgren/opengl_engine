@@ -28,4 +28,4 @@ struct RaycastHit {
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree* tree);
+RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>* tree);

@@ -56,34 +56,33 @@ void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yof
 void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     if (action == GLFW_PRESS) {
-        if (key == GLFW_KEY_1)
-            engineState->toggleShowNormals();
+        if (key == GLFW_KEY_1) 
+            engineState->toggleShowNormals();       // Toggle the visibility of normals in the scene
         if (key == GLFW_KEY_2)
-            engineState->toggleShowAABB();
+            engineState->toggleShowAABB();          // Toggle the visibility of axis-aligned bounding boxes in the scene
         if (key == GLFW_KEY_3)
-            engineState->toggleShowOOBB();
+            engineState->toggleShowOOBB();          // Toggle the visibility of oriented bounding boxes in the scene
         if (key == GLFW_KEY_4)
-            engineState->toggleShowContactPoints();
+            engineState->toggleShowContactPoints(); // Toggle the visibility of contact points in the scene
         if (key == GLFW_KEY_5)
-            engineState->toggleShowBVH();
+            engineState->toggleShowBVH();           // Toggle the visibility of the BVH tree in the scene
+        if (key == GLFW_KEY_6)
+            engineState->setPressedKey("6");        // Toggle lights in the scene
+        if (key == GLFW_KEY_7)
+            engineState->setPressedKey("7");        // Toggle placement AABB in the scene
+        if (key == GLFW_KEY_8)
+            engineState->setPressedKey("8");        // Toggle object rain in the scene
         if (key == GLFW_KEY_0)
-            engineState->toggleShowFPS();
+            engineState->toggleShowFPS();           // Toggle std::cout of metrics in the console
 
         if (key == GLFW_KEY_G)
-            engineState->togglePause();
-        if (key == GLFW_KEY_H)
-            engineState->setPressedKey("H");
-        if (key == GLFW_KEY_K)
-            engineState->setPressedKey("K");
-        if (key == GLFW_KEY_6)
-            engineState->setPressedKey("6");
-        if (key == GLFW_KEY_7)
-            engineState->setPressedKey("7");
-        if (key == GLFW_KEY_8)
-            engineState->setPressedKey("8");
-
+            engineState->togglePause();             // Toggle pause/resume of the physics simulation
         if (key == GLFW_KEY_F)
-           engineState->setAdvanceStep(true);
+            engineState->setAdvanceStep(true);      // Advance the physics simulation by one step
+        if (key == GLFW_KEY_H)
+            engineState->setPressedKey("H");        // Reset the scene
+        if (key == GLFW_KEY_K)
+            engineState->setPressedKey("K");        // Toggle debug mode
     }
 }
 
@@ -91,22 +90,20 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 {
     // PRESS
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
-        engineState->setPressedKey("M1_PRESS");
+        engineState->setPressedKey("M1_PRESS");                 // Place an object in the scene
     if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_PRESS)
-        engineState->setPressedKey("M2_PRESS");
+        engineState->setPressedKey("M2_PRESS");                 // Select an object in the scene
     if (button == GLFW_MOUSE_BUTTON_3 && action == GLFW_PRESS)
-        engineState->setPressedKey("M3_PRESS");
+        engineState->setPressedKey("M3_PRESS");                 // Create a new object in the scene with high velocity
 
     // RELEASE
     if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_RELEASE)
-        engineState->setPressedKey("M2_RELEASE");
+        engineState->setPressedKey("M2_RELEASE");               // Drop the selected object in the scene
 }
 
 void InputManager::processInput(GLFWwindow* window, float deltaTime)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-
+    // Camera controls
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera->ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -120,8 +117,13 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera->ProcessKeyboard(DOWN, deltaTime);
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera->MovementSpeed = 1500.0f;
+    // Hold shift to move faster
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) 
+        camera->movementSpeed = camera->fastSpeed;
     else
-        camera->MovementSpeed = 300.0f;
+        camera->movementSpeed = camera->standardSpeed;
+
+    // Exit 
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 }

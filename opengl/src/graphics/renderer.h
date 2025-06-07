@@ -22,7 +22,7 @@ public:
     void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
     void drawLights() const;
     void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
-    void drawBVH(BVHTree& tree, unsigned int VAO_line);
+    void drawBVH(BVHTree<GameObject>& tree, unsigned int VAO_line);
 
     void uploadLightsToShader();
     void uploadDirectionalLight();

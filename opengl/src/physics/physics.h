@@ -16,18 +16,18 @@
 
 class PhysicsEngine {
 public:
-    void init(std::vector<GameObject>* gameObjectList, EngineState* engineState, BVHTree* tree);
+    void init(std::vector<GameObject>* gameObjectList, EngineState* engineState, BVHTree<GameObject>* tree);
     void step(float deltaTime, std::mt19937 rng);
     void clearPhysicsData();
 
-    BVHTree* getBvhTree() const;
+    BVHTree<GameObject>* getBvhTree() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
     RaycastHit performRaycast(Ray& ray);
 
 private:
     EngineState* engineState = nullptr;
     std::vector<GameObject>* gameObjectList;
-    BVHTree* bvhTree;
+    BVHTree<GameObject>* bvhTree;
     CollisionManifold* collisionManifold;
     std::unordered_map<size_t, Contact> contactCache;
 

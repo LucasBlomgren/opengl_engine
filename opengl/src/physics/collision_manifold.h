@@ -68,7 +68,14 @@ struct Contact {
 
 class CollisionManifold {
 public:
-    void createContact(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& objA, GameObject& objB, glm::vec3 normal, int& collisionNormalOwner);
+    void createContact(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& objA, GameObject& objB, glm::vec3 normal, int& collisionNormalOwner);
+
+    void cuboidVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+    void sphereVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+    void sphereVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+    void meshVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+    void meshVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
+    void meshVsMesh(Contact& outContact, std::unordered_map<size_t, Contact>& cache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
 
 private:
     // createContactPoints

@@ -3,8 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "shader.h"
 
-class OOBBRenderer
-{
+class OOBBRenderer {
 public:
     void setupWireframeBox();
     void drawBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit);

@@ -19,7 +19,7 @@ public:
 
     float constant = 1.0f;
     float linear = 0.0145f;
-    float quadratic = 0.00175f;
+    float quadratic = 0.0175f;
 
     Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity);
 

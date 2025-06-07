@@ -3,7 +3,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
-RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree* bvhTree)
+RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>* bvhTree)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
@@ -17,8 +17,8 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree* b
     for (int i = 0; i < collisionCounter; i++) {
         GameObject& obj = *bvhTree->collisions[i];
 
-        glm::vec3 min = obj.AABB.wMin;
-        glm::vec3 max = obj.AABB.wMax;
+        glm::vec3 min = obj.aabb.wMin;
+        glm::vec3 max = obj.aabb.wMax;
 
         glm::vec3 tMin = (min - ray.start) / ray.direction;
         glm::vec3 tMax = (max - ray.start) / ray.direction;
@@ -50,8 +50,8 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree* b
     hitData.t = bestT;
 
     // Åter­beräkna t1 per axel
-    glm::vec3 min = bestObj->AABB.wMin;
-    glm::vec3 max = bestObj->AABB.wMax;
+    glm::vec3 min = bestObj->aabb.wMin;
+    glm::vec3 max = bestObj->aabb.wMax;
     glm::vec3 tMin = (min - ray.start) / ray.direction;
     glm::vec3 tMax = (max - ray.start) / ray.direction;
     glm::vec3 t1 = glm::min(tMin, tMax);  // entry‐tider
