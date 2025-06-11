@@ -1,7 +1,11 @@
 ﻿#include "scene_builder.h"
 
-std::vector<GameObject>& SceneBuilder::getGameObjectList() {
-    return GameObjectList;
+std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
+    return dynamicObjects;
+}
+
+std::vector<Tri>& SceneBuilder::getTerrainTriangles() {
+    return terrainTriangles;
 }
 
 void SceneBuilder::setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng) {
@@ -59,10 +63,15 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 
     // reset scene        
     objectId = 0;
-    GameObjectList.clear();
-    GameObjectList.reserve(10000);
-    physicsEngine.clearPhysicsData();
 
+    dynamicObjects.clear();
+    dynamicObjects.reserve(10000);
+    //staticObjects.clear();
+    //staticObjects.reserve(10000);
+    terrainTriangles.clear();
+    terrainTriangles.reserve(10000);
+
+    physicsEngine.clearPhysicsData();
     setLights();
 
     haloA.clear();
@@ -121,17 +130,17 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         lastOrient = newOrientLocal;
         lastPos = newPosLocal;
 
-        haloA.push_back(GameObjectList.back().id);
+        haloA.push_back(dynamicObjects.back().id);
     }
 
     // calculate haloACenter
     glm::vec3 sum = glm::vec3(0.0f);
     for (int i = 0; i < haloA.size(); i++)
-        sum += GameObjectList[haloA[i]].position;
+        sum += dynamicObjects[haloA[i]].position;
     haloACenter = sum / static_cast<float>(haloA.size());
 
     for (int i = 0; i < haloA.size(); i++) {
-        GameObject& obj = GameObjectList[haloA[i]];
+        GameObject& obj = dynamicObjects[haloA[i]];
         glm::vec3 relativePos = desiredCenter - haloACenter;
         obj.position += relativePos;
     }
@@ -169,17 +178,17 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         lastOrient = newOrientLocal;
         lastPos = newPosLocal;
 
-        haloB.push_back(GameObjectList.back().id);
+        haloB.push_back(dynamicObjects.back().id);
     }
 
     // calculate haloBCenter
     sum = glm::vec3(0.0f);
     for (int i = 0; i < haloB.size(); i++)
-        sum += GameObjectList[haloB[i]].position;
+        sum += dynamicObjects[haloB[i]].position;
     haloBCenter = sum / static_cast<float>(haloB.size());
 
     for (int i = 0; i < haloB.size(); i++) {
-        GameObject& obj = GameObjectList[haloB[i]];
+        GameObject& obj = dynamicObjects[haloB[i]];
         glm::vec3 relativePos = desiredCenter - haloBCenter;
         obj.position += relativePos;
     }
@@ -217,17 +226,17 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
         lastOrient = newOrientLocal;
         lastPos = newPosLocal;
 
-        haloC.push_back(GameObjectList.back().id);
+        haloC.push_back(dynamicObjects.back().id);
     }
 
     // calculate haloCCenter
     sum = glm::vec3(0.0f);
     for (int i = 0; i < haloC.size(); i++)
-        sum += GameObjectList[haloC[i]].position;
+        sum += dynamicObjects[haloC[i]].position;
     haloCCenter = sum / static_cast<float>(haloC.size());
 
     for (int i = 0; i < haloC.size(); i++) {
-        GameObject& obj = GameObjectList[haloC[i]];
+        GameObject& obj = dynamicObjects[haloC[i]];
         glm::vec3 relativePos = desiredCenter - haloCCenter;
         obj.position += relativePos;
     }
@@ -386,7 +395,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     // ------------------------ ramp -----------------------------
     glm::quat orientation1 = glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
     createObject("uvmap", ColliderType::CUBOID, glm::vec3(80, 0, 120), glm::vec3(30, 0.5, 30), 0, 1, orientation1);
-    GameObject& obj = GameObjectList.back();
+    GameObject& obj = dynamicObjects.back();
     obj.textureID = 999;
 
     // ___________________________________________________________
@@ -403,7 +412,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     int mass = 50;
     glm::vec3 size = glm::vec3(14, 0.2, 0.5);
     createObject("crate", ColliderType::CUBOID, glm::vec3(34.5, 3.1, 20), size, mass, 0, {}, 999);
-    GameObjectList.back().canMoveLinearly = false;
+    dynamicObjects.back().canMoveLinearly = false;
 
     // projectile
     createObject("crate", ColliderType::CUBOID, glm::vec3(41.25, 3.45, 20), glm::vec3(0.5), 1, 0, {}, 999);
@@ -428,7 +437,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     // ____________________________________________________________
     // ----------------------- brick wall -------------------------
     int wallHeight = 15;
-    int wallWidth = 80;
+    int wallWidth = 20;
     float brickWidth = 1.0f;
     float brickLength = 1.0f;
     float brickHeight = 0.5f;
@@ -526,6 +535,17 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
             }
         }
     }
+
+    //createTerrain();
+
+    generateFlatTerrain(
+        /*gridX=*/1,
+        /*gridZ=*/1,
+        /*cellSize=*/25.0f,
+        /*maxHeight=*/35.0f,
+        /*flatness=*/0.7f);
+
+    physicsEngine.setupScene(&dynamicObjects, &terrainTriangles);
 }
 
 void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
@@ -574,8 +594,66 @@ GameObject& SceneBuilder::createObject
 
     GameObject object(objectId, cubeVertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
 
-    GameObjectList.emplace_back(object);
+    dynamicObjects.emplace_back(object);
     objectId++;
 
-    return GameObjectList.back();
+    return dynamicObjects.back();
+}
+
+void SceneBuilder::createTerrain() {
+    glm::vec2 distPos(-100.0f, -30.0f);
+    glm::vec2 distOff(-1.0f, 1.0f);
+    const float maxSize = 2.0f;             // maximal diameter på triangel
+    const float halfSize = maxSize * 0.5f;
+
+    for (int i = 0; i < 20; ++i) {
+        // slumpa triangelns mittpunkt
+        glm::vec3 centroid{ randomRange(distPos.x, distPos.y), randomRange(distPos.x, distPos.y), randomRange(distPos.x, distPos.y) };
+
+        // slumpa tre små offset-vektorer inom [-halfSize, halfSize]
+        glm::vec3 off0{ randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize };
+        glm::vec3 off1{ randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize };
+        glm::vec3 off2{ randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize, randomRange(distPos.x, distPos.y) * halfSize };
+
+        terrainTriangles.emplace_back(centroid + off0, centroid + off1, centroid + off2);
+    }
+}
+
+void SceneBuilder::generateFlatTerrain(
+    int   gridSizeX,
+    int   gridSizeZ,
+    float cellSize,
+    float maxHeight,
+    float flatness /* i [0,1], 0 = helt plant, 1 = full variation */
+) {
+    // 1) Skapa en hödkarta: slumpa eller perlin-noise-baserad, här enkel rand
+    std::mt19937                             rng{ std::random_device{}() };
+    std::uniform_real_distribution<float>    distH(0.0f, maxHeight * flatness);
+
+    // 2) Fyll en (gridSizeX+1)x(gridSizeZ+1)-array med höjder
+    std::vector<std::vector<float>> heightMap(gridSizeX + 1, std::vector<float>(gridSizeZ + 1));
+
+    for (int x = 0; x <= gridSizeX; ++x) {
+        for (int z = 0; z <= gridSizeZ; ++z) {
+            heightMap[x][z] = distH(rng);
+        }
+    }
+
+    glm::vec3 offset{ -500.0f, 0.0f, 0.0f };
+    // 3) Bygg trianglar: två per cell
+    for (int x = 0; x < gridSizeX; ++x) {
+        for (int z = 0; z < gridSizeZ; ++z) {
+            // hörnen i cellen
+            glm::vec3 v00 = offset + glm::vec3{ x * cellSize, heightMap[x][z],     z * cellSize };
+            glm::vec3 v10 = offset + glm::vec3{ (x + 1) * cellSize, heightMap[x + 1][z],   z * cellSize }; 
+            glm::vec3 v01 = offset + glm::vec3{ x * cellSize, heightMap[x][z + 1],   (z + 1) * cellSize };
+            glm::vec3 v11 = offset + glm::vec3{ (x + 1) * cellSize, heightMap[x + 1][z + 1], (z + 1) * cellSize }; 
+
+            // dela cellen diagonalt: diagonal v00→v11
+            // triangel 1: v00, v10, v11
+            terrainTriangles.emplace_back(v00, v10, v11);
+            // triangel 2: v00, v11, v01
+            terrainTriangles.emplace_back(v00, v11, v01);
+        }
+    }
 }

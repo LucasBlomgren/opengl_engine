@@ -13,8 +13,7 @@
 
 #include "bvh.h"
 
-class Renderer 
-{
+class Renderer {
 public:
     void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader, Shader& debugShader);
     void beginFrame() const;
@@ -22,10 +21,14 @@ public:
     void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
     void drawLights() const;
     void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
-    void drawBVH(BVHTree<GameObject>& tree, unsigned int VAO_line);
+
+    template<typename E>
+    void drawBVH(BVHTree<E>& tree, unsigned int VAO_line);
 
     void uploadLightsToShader();
     void uploadDirectionalLight();
+
+    void drawTerrain(std::vector<Tri> triangles);
 
 private:
     float screenWidth;

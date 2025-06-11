@@ -4,8 +4,7 @@
 #include "shader.h"
 #include "aabb.h"
 
-class AABBRenderer
-{
+class AABBRenderer {
 public:
     static void InitShared();
     static void CleanupShared();

@@ -106,7 +106,7 @@
     <ProjectGuid>{e3991bff-67d1-490f-b41a-5e0885582a8d}</ProjectGuid>
     <RootNamespace>opengl</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>opengl_tutorial</ProjectName>
+    <ProjectName>opengl_engine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

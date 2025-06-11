@@ -3,7 +3,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
-RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>* bvhTree)
+RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>& dynamicBvh)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
@@ -12,10 +12,10 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<Ga
     GameObject* bestObj = nullptr;
     float bestT = std::numeric_limits<float>::max();
 
-    int collisionCounter = bvhTree->singleQuery(rayAABB);
+    int collisionCounter = dynamicBvh.singleQuery(rayAABB);
 
     for (int i = 0; i < collisionCounter; i++) {
-        GameObject& obj = *bvhTree->collisions[i];
+        GameObject& obj = *dynamicBvh.collisions[i];
 
         glm::vec3 min = obj.aabb.wMin;
         glm::vec3 max = obj.aabb.wMax;

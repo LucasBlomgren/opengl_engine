@@ -21,7 +21,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
 
     if (engineState->GetPressedKey() == "H") {
         sceneBuilder->createScene(*physicsEngine);
-        physicsEngine->getBvhTree()->build(sceneBuilder->getGameObjectList());    
+        physicsEngine->getDynamicBvh().build(sceneBuilder->getDynamicObjects());    
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "6") {
@@ -94,11 +94,11 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree<GameObject>* bvhTree = physicsEngine->getBvhTree();
+    BVHTree<GameObject>& dynamicBvh = physicsEngine->getDynamicBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        int count = bvhTree->singleQuery(aabb);
+        int count = dynamicBvh.singleQuery(aabb);
 
         if (count == 0) {
             break;
@@ -108,7 +108,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
         float min = std::numeric_limits<float>::max();
         GameObject* minDepthObj = nullptr;
         for (int j = 0; j < count; j++) {
-            GameObject& objB = *bvhTree->collisions[j];
+            GameObject& objB = *dynamicBvh.collisions[j];
 
             float depth = aabb.getMinOverlapDepth(objB.aabb);
             if (depth < min) {

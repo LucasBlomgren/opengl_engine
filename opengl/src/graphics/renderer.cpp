@@ -1,5 +1,8 @@
 ﻿#include "renderer.h"
 
+template void Renderer::drawBVH(BVHTree<GameObject>&, unsigned int);
+template void Renderer::drawBVH(BVHTree<Tri>&, unsigned int);
+
 void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, Shader& shader, Shader& debugShader)
 {   
     screenWidth = (float) width;
@@ -60,7 +63,8 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     }
 }
 
-void Renderer::drawBVH(BVHTree<GameObject>& tree, unsigned int VAO_line) {
+template<typename E>
+void Renderer::drawBVH(BVHTree<E>& tree, unsigned int VAO_line) {
     if (!engineState->getShowBVH()) return;
 
     glm::vec3 color;
@@ -127,4 +131,59 @@ void Renderer::uploadDirectionalLight() {
     shader->setVec3("dirLight.ambient", light.ambient);
     shader->setVec3("dirLight.diffuse", light.diffuse);
     shader->setVec3("dirLight.specular", light.specular);
+}
+
+void Renderer::drawTerrain(std::vector<Tri> triangles) {
+    // --- Wireframe setup: skapas bara en gång ----
+    static GLuint triVAO = 0, triVBO = 0;
+    if (triVAO == 0) {
+        glGenVertexArrays(1, &triVAO);
+        glGenBuffers(1, &triVBO);
+
+        glBindVertexArray(triVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, triVBO);
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+
+    // Lägg ihop alla vertexdata i en enkel float-array
+    std::vector<float> vertexData;
+    vertexData.reserve(triangles.size() * 3 * 3);
+    for (auto& tri : triangles) {
+        vertexData.push_back(tri.v0.x);
+        vertexData.push_back(tri.v0.y);
+        vertexData.push_back(tri.v0.z);
+
+        vertexData.push_back(tri.v1.x);
+        vertexData.push_back(tri.v1.y);
+        vertexData.push_back(tri.v1.z);
+
+        vertexData.push_back(tri.v2.x);
+        vertexData.push_back(tri.v2.y);
+        vertexData.push_back(tri.v2.z);
+    }
+
+    glm::mat4 model = glm::mat4(1.0f);
+    debugShader->use();
+    debugShader->setMat4("model", model);
+    debugShader->setBool("debug.useUniformColor", true);
+    debugShader->setVec3("debug.uColor", glm::vec3{ 0.9f, 0.7f, 0.2f });
+
+    glBindBuffer(GL_ARRAY_BUFFER, triVBO);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
+    glBindVertexArray(triVAO);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glDisable(GL_CULL_FACE);
+    glLineWidth(2.0f);
+
+    GLsizei vertexCount = GLsizei(vertexData.size() / 3);
+    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_CULL_FACE);
 }

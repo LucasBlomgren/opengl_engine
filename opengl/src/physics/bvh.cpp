@@ -4,59 +4,6 @@ template class BVHTree<GameObject>;
 template class BVHTree<Tri>;
 
 template<typename E>
-int BVHTree<E>::treeVsTreeQuery(BVHTree& bvhA, BVHTree& bvhB) {
-    int sp = 0;     // index för nodeStack
-    int outSp = 0;  // index för collisionBuf
-
-    nodeStack[sp++] = { bvhA.root, bvhB.root };
-
-    while (sp > 0) {
-        // pop
-        NodePair cur = nodeStack[--sp];
-        Node* A = cur.A;
-        Node* B = cur.B;
-
-        // leaf–leaf: tight‐test
-        if (A->isLeaf && B->isLeaf) {
-            if (A->tightBox.intersects(B->tightBox) && A->element < B->element && outSp < (int)MaxCollisionBuf) {
-                collisionBuf[outSp++] = { A->element, B->element };
-            }
-            continue;
-        }
-
-        // prune på fat‐box
-        if (!A->fatBox.intersects(B->fatBox))
-            continue;
-
-        // expandera utan STL: kontrollera alltid sp < MaxStackSize
-        if (A->isLeaf) {
-            if (B->childA && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A, B->childA };
-            if (B->childB && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A, B->childB };
-        }
-        else if (B->isLeaf) {
-            if (A->childA && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childA, B };
-            if (A->childB && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childB, B };
-        }
-        else {
-            if (A->childA && B->childA && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childA, B->childA };
-            if (A->childA && B->childB && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childA, B->childB };
-            if (A->childB && B->childA && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childB, B->childA };
-            if (A->childB && B->childB && sp < (int)MaxStackSize)
-                nodeStack[sp++] = { A->childB, B->childB };
-        }
-    }
-
-    return outSp;
-}
-
-template<typename E>
 int BVHTree<E>::singleQuery(AABB& qBox) {
     int hc = 0;
     constexpr int MaxDepth = 64;
@@ -91,7 +38,7 @@ int BVHTree<E>::singleQuery(AABB& qBox) {
 
 template<typename E>
 void BVHTree<E>::update(std::vector<E>& elements) {
-    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= 120) {
+    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
         // för många refits, bygg om trädet
         build(elements);
         numRefits = 0;
@@ -157,76 +104,6 @@ void BVHTree<E>::refitNode(Node* node) {
     node->dirty = false;
 }
 
-// Hjälpfunktion: välj axel som minimerar volym‐overlap
-template<typename E>
-int BVHTree<E>::chooseAxisByMinOverlap(int start, int count, const AABB& /*parentBox*/) {
-    // 1) Se till att vår centroid‐buffert är stor nog
-    static std::vector<float> cents;
-    cents.resize(count);
-
-    float bestOverlap = std::numeric_limits<float>::infinity();
-    int   bestAxis   = 0;
-
-    // 2) Loop över axlar
-    for (int axis = 0; axis < 3; ++axis) {
-        // a) extrahera centroid‐värden
-        for (int i = 0; i < count; ++i) {
-            cents[i] = prims[start + i].centroid[axis];
-        }
-
-        // b) hitta pivot = median i cents
-        int midIdx = count / 2;
-        std::nth_element(cents.begin(),
-                         cents.begin() + midIdx,
-                         cents.end());
-        float pivot = cents[midIdx];
-
-        // c) beräkna AABB and overlap‐volym *utan* ytterligare vektor‐kopiering
-        AABB L, R;
-        bool initedL = false, initedR = false;
-        int  countL = 0, countR = 0;
-
-        for (int i = 0; i < count; ++i) {
-            auto& p = prims[start + i];
-            if (p.centroid[axis] < pivot) {
-                if (!initedL) {
-                    L.wMin = p.min; L.wMax = p.max;
-                    initedL = true;
-                } else {
-                    L.growToInclude(p.min);
-                    L.growToInclude(p.max);
-                }
-                ++countL;
-            } else {
-                if (!initedR) {
-                    R.wMin = p.min; R.wMax = p.max;
-                    initedR = true;
-                } else {
-                    R.growToInclude(p.min);
-                    R.growToInclude(p.max);
-                }
-                ++countR;
-            }
-        }
-
-        // d) intersection‐boxen
-        glm::vec3 iMin = glm::max(L.wMin, R.wMin);
-        glm::vec3 iMax = glm::min(L.wMax, R.wMax);
-        glm::vec3 d    = iMax - iMin;
-        float overlapVol = (d.x > 0 && d.y > 0 && d.z > 0)
-            ? d.x * d.y * d.z
-            : 0.0f;
-
-        // e) uppdatera bästa axel
-        if (overlapVol < bestOverlap) {
-            bestOverlap = overlapVol;
-            bestAxis   = axis;
-        }
-    }
-
-    return bestAxis;
-}
-
 template<typename E>
 void BVHTree<E>::makeLeaf(Node& parent) {
     parent.isLeaf = true;
@@ -275,18 +152,13 @@ void BVHTree<E>::split(Node& parent, int depth) {
         return;
     }
 
+    // välj enligt största extent + median
     int axis;
-    if (depth < minOverlapDepth) {
-        // minimera överlapp mellan barn
-        axis = chooseAxisByMinOverlap(start, count, parent.fatBox);
-    }
-    else {
-        // enkelt: välj enligt största extent + median
-        glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
-        axis = (extent.x > extent.y
-            ? (extent.x > extent.z ? 0 : 2)
-            : (extent.y > extent.z ? 1 : 2));
-    }
+    glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
+    axis = (extent.x > extent.y
+        ? (extent.x > extent.z ? 0 : 2)
+        : (extent.y > extent.z ? 1 : 2));
+   
     // median‐partition av primitives
     int mid = start + count / 2;
     std::nth_element(

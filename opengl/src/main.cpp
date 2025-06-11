@@ -24,8 +24,6 @@
 #include "light_manager.h"
 #include "editor/editor.h"
 
-#include "bvh.h"
-
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -72,7 +70,7 @@ int main()
    // ---------- Clocks ----------
    auto start_time = std::chrono::high_resolution_clock::now();
    int frames = 0;
-   int last_second = 0;
+   float last_second = 0.0f;
    // fixed timestep
    const float fixedTimeStep = 1.0f / 120.0f;
    float accumulator = 0.0f;
@@ -97,12 +95,8 @@ int main()
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);
    sceneBuilder.createScene(physicsEngine);
 
-   // setup bvh
-   BVHTree<GameObject> bvhTree;
-   bvhTree.build(sceneBuilder.getGameObjectList());
-
    // setup physics
-   physicsEngine.init(&sceneBuilder.getGameObjectList(), &engineState, &bvhTree);
+   physicsEngine.init(&engineState);
 
    // setup editor
    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
@@ -114,11 +108,12 @@ int main()
    unsigned int VAO_contactPoint = setupContactPoint();
 
    // main loop
-   while (true)
-   {
+   while (true) {
       float cpuClockStart = static_cast<float>(glfwGetTime());
+
       glfwPollEvents();
-      if (glfwWindowShouldClose(window)) break;
+      if (glfwWindowShouldClose(window)) 
+          break;
 
       // update time
       auto current_time = std::chrono::high_resolution_clock::now();
@@ -143,7 +138,8 @@ int main()
          }
          bvhAccumulator += deltaTime;
          if (bvhAccumulator >= bvhInterval) {
-            bvhTree.update(sceneBuilder.getGameObjectList());
+            physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
+            physicsEngine.getTerrainBvh().update(sceneBuilder.getTerrainTriangles());
             bvhAccumulator -= bvhInterval;
          }
       }
@@ -153,7 +149,7 @@ int main()
           glm::quat perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 1.0f, 0.0f));
           for (int i = 0; i < sceneBuilder.haloA.size(); i++) {
               // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloA[i]];
+              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloA[i]];
 
               glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
               glm::vec3 rotatedRelPos = perFrameRot * relativePos;
@@ -169,7 +165,7 @@ int main()
           perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(1.0f, 0.0f, 0.0f));
           for (int i = 0; i < sceneBuilder.haloB.size(); i++) {
               // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloB[i]];
+              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloB[i]];
 
               glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
               glm::vec3 rotatedRelPos = perFrameRot * relativePos;
@@ -185,7 +181,7 @@ int main()
           perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 0.0f, 1.0f));
           for (int i = 0; i < sceneBuilder.haloC.size(); i++) {
               // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getGameObjectList()[sceneBuilder.haloC[i]];
+              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloC[i]];
 
               glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
               glm::vec3 rotatedRelPos = perFrameRot * relativePos;
@@ -215,9 +211,14 @@ int main()
       renderer.uploadDirectionalLight();
       renderer.uploadLightsToShader();
       renderer.drawLights();
-      renderer.drawGameObjects(sceneBuilder.getGameObjectList(), VAO_line);
-      renderer.drawBVH(bvhTree, VAO_line);
+      renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), VAO_line);
+      renderer.drawTerrain(sceneBuilder.getTerrainTriangles());
+
+      //renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
+      renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
+
       renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
+
       // calculate render time
       float renderClockEnd = static_cast<float>(glfwGetTime());
       float renderClock = renderClockEnd - renderClockStart;
@@ -280,13 +281,13 @@ int main()
                << std::setw(LABEL_W) << std::left
                << "BVH:"
                << std::setw(VALUE_W) << std::left
-               << bvhTree.numRebuilds << "\n"
+               << physicsEngine.getDynamicBvh().numRebuilds << "\n"
 
                // Objects
                << std::setw(LABEL_W) << std::left
                << "Objects:"
                << std::setw(VALUE_W) << std::left
-               << sceneBuilder.getGameObjectList().size() 
+               << sceneBuilder.getDynamicObjects().size() 
                << std::defaultfloat << "\n";
 
             if (deltaTime > 0.016f) {
@@ -294,7 +295,7 @@ int main()
             }
             std::cout << "-----------------------" << "\n";
             frames = 0;
-            bvhTree.numRebuilds = 0;
+            physicsEngine.getDynamicBvh().numRebuilds = 0;
          }
          frames++;
       }

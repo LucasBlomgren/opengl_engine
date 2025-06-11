@@ -1,29 +1,46 @@
 ﻿#include "physics.h"
 
-void PhysicsEngine::init(std::vector<GameObject>* gameObjectList, EngineState* engineState, BVHTree<GameObject>* tree) {
-    this->gameObjectList = gameObjectList;
-    this->bvhTree = tree;
+// ----- init -----
+void PhysicsEngine::init(EngineState* engineState) {
     this->engineState = engineState;
     this->collisionManifold = new CollisionManifold();
 }
 
-BVHTree<GameObject>* PhysicsEngine::getBvhTree() const {
-    return bvhTree;
+// ----- setup scene -----
+void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTriangles) {
+    this->dynamicObjects = gameObjects;
+    dynamicBvh.build(*gameObjects); 
+
+    this->terrainTriangles = terrainTriangles;
+    terrainBvh.build(*terrainTriangles); 
 }
 
-RaycastHit PhysicsEngine::performRaycast(Ray& r) {
-    RaycastHit hitData = raycast(r, this->gameObjectList, this->bvhTree);
-    return hitData;
-}
-
-const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
-    return contactCache;
-}
-
+// ----- clear -----
 void PhysicsEngine::clearPhysicsData() {
     contactCache.clear();
 }
 
+// ----- Getters -----
+BVHTree<GameObject>& PhysicsEngine::getDynamicBvh() {
+    return dynamicBvh;
+}
+BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
+    return staticBvh;
+}
+BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
+    return terrainBvh;
+}
+const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
+    return contactCache;
+}
+
+// ----- raycast -----
+RaycastHit PhysicsEngine::performRaycast(Ray& r) {
+    RaycastHit hitData = raycast(r, this->dynamicObjects, this->dynamicBvh);
+    return hitData;
+}
+
+// ----- Update methods -----
 void PhysicsEngine::updateContactCache() {
     constexpr int maxFramesWithoutCollision = 10;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
@@ -79,7 +96,7 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
 }
 
 void PhysicsEngine::updatePositions(float deltaTime) {
-    for (GameObject& obj : *gameObjectList) {
+    for (GameObject& obj : *dynamicObjects) {
         if (!obj.isStatic and !obj.asleep) {
             obj.updatePos(deltaTime);
             obj.updateAABB();
@@ -94,6 +111,65 @@ void PhysicsEngine::updatePositions(float deltaTime) {
     }
 }
 
+void PhysicsEngine::broadPhase(std::vector<TerrainHits>& tHits, std::pair<GameObject*, GameObject*>* dHits, int& dCount) {
+    // ----- dynamic vs terrain -----
+    static std::pair<GameObject*, Tri*> hitsBufTerrain[BVHTree<GameObject>::MaxCollisionBuf];  // hits buffer
+    int terrainCounter = treeVsTreeQuery(dynamicBvh, terrainBvh, hitsBufTerrain);              // query terrain vs dynamic objects
+    
+    // Sort terrain hits by GameObject to avoid duplicates 
+    static std::unordered_map<GameObject*, std::vector<Tri*>> temp; 
+    temp.clear();
+    if (temp.bucket_count() < terrainCounter)
+        temp.reserve(terrainCounter);
+
+    for (int i = 0; i < terrainCounter; ++i) { 
+        auto [obj, tri] = hitsBufTerrain[i];  
+        temp[obj].push_back(tri);  
+    }
+
+    // Finalize terrain hits
+    tHits.clear(); 
+    if (tHits.capacity() < temp.size()) 
+        tHits.reserve(temp.size()); 
+
+    for (auto& [obj, tris] : temp)
+        tHits.push_back({ obj, std::move(tris) });   
+
+    // ----- dynamic vs dynamic -----
+    dCount = treeVsTreeQuery(dynamicBvh, dynamicBvh, dHits);    // query dynamic vs dynamic objects
+}
+
+void PhysicsEngine::detectCollisions(std::pair<GameObject*, GameObject*>* dHits, int& dCount) 
+{
+    static std::vector<TerrainHits> terrainHits;   // TerrainHits: gameobjects with terrain vector
+    //static std::pair<GameObject*, GameObject*> dynamicHits[BVHTree<GameObject>::MaxCollisionBuf];
+    //int dynamicCount = 0;
+
+    broadPhase(terrainHits, dHits, dCount);     // Färdig
+    // midPhase();                              // Gå igenom tHits och dHits och kör individuella gameobject BVH-trees mot varandra om collider == TRIANGLE_MESH
+    // narrowPhase();                           // SAT + collisionManifold
+}
+
+void PhysicsEngine::midPhase() {
+    //
+    // 1) Gå igenom terrainHits och kör gameobject BVH-trees mot varje tri i terrainHits om gameobject.collider == TRIANGLE_MESH.
+    // 
+    // 2) Gå igenom dHits (behövs en speciell struct med CollisionDetail = std::variant<MeshVsMesh, MeshVsCollider, ColliderVsCollider>) 
+    // case1: båda har bvhTree, kör treeVsTreeQuery.
+    // case2: om bara en har bvhTree, kör treeVsTreeQuery mot AABB.
+    // case3: om ingen har bvhTree, gör inget
+    // 
+    // 3) Spara alla kollisioner i en lista och skicka den till narrowPhase.
+}
+void PhysicsEngine::narrowPhase() {
+    // 1) Gå igenom listan med kollisioner från midPhase och kör SATQuery mellan alla i listan.
+    // 2) Om SATQuery returnerar true, skapa en Contact med collisionManifold.
+}
+void PhysicsEngine::resolveCollisions() {
+
+}
+
+// ----- Time step -----
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     updatePositions(deltaTime);
 
@@ -107,15 +183,29 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     constexpr float dynamicFriction = 0.5f;
     constexpr float twistFriction = 0.2f;
 
-    // ------ Broad phase ------
-    int count = this->bvhTree->treeVsTreeQuery(*bvhTree, *bvhTree);
+    // Broad phase:
+    // 1. sweep and prune (dynamic vs dynamic)
+    // 2. treeVsTreeQuery (dynamic vs static)
+    // 3. treeVsTreeQuery (dynamic vs triprimitives)
+    // Spara alla kollisioner i en lista
+    // 
+    // Mid phase:
+    // Gå igenom listan 
+    // if GameObject.collider == TRIANGLE_MESH: GameObject.bvhTree vs GameObject.bvhTree / GameObject.AABB / triprimitive
+    //
+    // Narrow phase:
+    // Gå igenom nya listan
+    // SATQuery mellan alla i listan
 
-    for (int i = 0; i < count; i++) {
-        GameObject& objA = *bvhTree->collisionBuf[i].A;
-        GameObject& objB = *bvhTree->collisionBuf[i].B;
+    static std::pair<GameObject*, GameObject*> dynamicHits[BVHTree<GameObject>::MaxCollisionBuf];
+    int dynamicCount = 0;
+    detectCollisions(dynamicHits, dynamicCount);
 
-        if (objB.id < objA.id) continue;
-        if (objA.id == objB.id) continue;
+    for (int i = 0; i < dynamicCount; i++) {
+        GameObject& objA = *dynamicHits[i].first;
+        GameObject& objB = *dynamicHits[i].second;
+
+        //if (objB.id <= objA.id) continue;
         if (objA.isStatic and objB.isStatic) 
             continue;
 
@@ -177,7 +267,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         }
 
         // ------ PGS solver ------
-        int maxIterations = 20;
+        int maxIterations = 8;
         for (int i = 0; i < maxIterations; i++) {
             bool converged = true;
 
@@ -206,7 +296,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 
                 // Apply impulses
                 float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
-                if (deltaNormalImpulseLen > 1e-10f) {
+                if (deltaNormalImpulseLen > 1e-6f) {
                     objA.linearVelocity -= deltaNormalImpulse * objA.invMass;
                     objA.angularVelocity -= objA.inverseInertia * glm::cross(cp.rA, deltaNormalImpulse);
 
@@ -319,7 +409,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         }
     }
     
-    for (GameObject& obj : *gameObjectList)
+    for (GameObject& obj : *dynamicObjects)
         updateSleepThresholds(obj);
 
     updateContactCache();

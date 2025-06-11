@@ -31,7 +31,18 @@ public:
       bool asleep = 0,
       glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
    );
-   std::vector<GameObject>& getGameObjectList();
+   void createTerrain();
+
+   void generateFlatTerrain(
+       int   gridSizeX,
+       int   gridSizeZ,
+       float cellSize,
+       float maxHeight,
+       float flatness /* i [0,1], 0 = helt plant, 1 = full variation */
+   );
+
+   std::vector<Tri>& getTerrainTriangles();
+   std::vector<GameObject>& getDynamicObjects();
    void toggleLightsState();
    void setLights();
 
@@ -54,7 +65,9 @@ private:
    int lightsState = 0;
 
    int objectId;
-   std::vector<GameObject> GameObjectList;
+   std::vector<GameObject> dynamicObjects;
+   std::vector<GameObject> staticObjects;
+   std::vector<Tri> terrainTriangles;
 
    std::mt19937* rng;
    float lastTime = 0.0f;
