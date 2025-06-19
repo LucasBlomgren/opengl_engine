@@ -111,60 +111,147 @@ void PhysicsEngine::updatePositions(float deltaTime) {
     }
 }
 
-void PhysicsEngine::broadPhase(std::vector<TerrainHits>& tHits, std::pair<GameObject*, GameObject*>* dHits, int& dCount) {
+void PhysicsEngine::detectCollisions(std::vector<DynamicHit>& dHits) {
+    static std::vector<TerrainHit> tHits; 
+    // static std::vector<DynamicHit>& dynamicHits;    
+
+    tHits.reserve(BVHTree<Tri>::MaxCollisionBuf); 
+    dHits.reserve(BVHTree<GameObject>::MaxCollisionBuf); 
+
+    broadPhase(tHits, dHits);       // hashmap kanske långsam? 
+    midPhase(tHits, dHits);         // reserve behöver definieras (inte 16).
+    narrowPhase(tHits, dHits);      // SAT + collisionManifold
+}
+
+void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
     // ----- dynamic vs terrain -----
-    static std::pair<GameObject*, Tri*> hitsBufTerrain[BVHTree<GameObject>::MaxCollisionBuf];  // hits buffer
-    int terrainCounter = treeVsTreeQuery(dynamicBvh, terrainBvh, hitsBufTerrain);              // query terrain vs dynamic objects
+    static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;  // hits buffer
+    hitsBufTerrain.clear();
+    treeVsTreeQuery(dynamicBvh, terrainBvh, hitsBufTerrain);          // query terrain vs dynamic objects
     
     // Sort terrain hits by GameObject to avoid duplicates 
     static std::unordered_map<GameObject*, std::vector<Tri*>> temp; 
     temp.clear();
-    if (temp.bucket_count() < terrainCounter)
-        temp.reserve(terrainCounter);
+    if (temp.bucket_count() < hitsBufTerrain.size())
+        temp.reserve(hitsBufTerrain.size());
 
-    for (int i = 0; i < terrainCounter; ++i) { 
+    for (int i = 0; i < hitsBufTerrain.size(); i++) {
         auto [obj, tri] = hitsBufTerrain[i];  
-        temp[obj].push_back(tri);  
+        temp[obj].push_back(tri);
     }
 
     // Finalize terrain hits
-    tHits.clear(); 
-    if (tHits.capacity() < temp.size()) 
-        tHits.reserve(temp.size()); 
+    tHits.clear();
+    int cap = static_cast<int>(temp.size());
+    tHits.resize(cap); 
+    int sp = 0;
 
-    for (auto& [obj, tris] : temp)
-        tHits.push_back({ obj, std::move(tris) });   
+    for (auto& [obj, trisVec] : temp) {
+        tHits[sp++] = TerrainHit{ obj, std::move(trisVec) };
+    }
+    tHits.resize(sp);
 
     // ----- dynamic vs dynamic -----
-    dCount = treeVsTreeQuery(dynamicBvh, dynamicBvh, dHits);    // query dynamic vs dynamic objects
+    static std::vector<std::pair<GameObject*, GameObject*>> hitsBufDynamic; // hits buffer
+    hitsBufDynamic.clear();
+    treeVsTreeQuery(dynamicBvh, dynamicBvh, hitsBufDynamic);                // query dynamic vs dynamic objects
+
+    dHits.clear();
+    cap = static_cast<int>(hitsBufDynamic.size()); 
+    dHits.resize(cap);         
+    sp = 0; 
+
+    for (auto& hp : hitsBufDynamic) { 
+        GameObject* A = hp.first, * B = hp.second; 
+
+        if ((A->isStatic and B->isStatic) or A == B) 
+            continue; 
+
+        dHits[sp++] = DynamicHit{ A,B };
+    }
+    dHits.resize(sp);
 }
 
-void PhysicsEngine::detectCollisions(std::pair<GameObject*, GameObject*>* dHits, int& dCount) 
-{
-    static std::vector<TerrainHits> terrainHits;   // TerrainHits: gameobjects with terrain vector
-    //static std::pair<GameObject*, GameObject*> dynamicHits[BVHTree<GameObject>::MaxCollisionBuf];
-    //int dynamicCount = 0;
+void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
+    // gameobject.collider == TriMesh: run BVH queries
+    for (TerrainHit& th : tHits) {
+        if (th.obj->colliderType != ColliderType::MESH)
+            continue;
 
-    broadPhase(terrainHits, dHits, dCount);     // Färdig
-    // midPhase();                              // Gå igenom tHits och dHits och kör individuella gameobject BVH-trees mot varandra om collider == TRIANGLE_MESH
-    // narrowPhase();                           // SAT + collisionManifold
+        TriMesh* triMeshPtr = std::get_if<TriMesh>(&th.obj->collider.shape);
+        int cap = static_cast<int>(th.coarse.size());
+        th.refined.resize(cap);
+
+        int sp = 0;
+        BVHTree<Tri>& bvh = triMeshPtr->bvh;
+
+        for (Tri* tri : th.coarse) {
+            std::vector<Tri*> hitsBuf;
+            hitsBuf.reserve(16);
+
+            bvh.singleQuery(tri->getAABB(), hitsBuf);
+            th.refined[sp++] = { tri, std::move(hitsBuf) };
+        }
+
+        th.refined.resize(sp);
+    }
+
+    // gameobject.collider == TriMesh: run BVH queries 
+    for (DynamicHit& dh : dHits) {
+        if ((dh.A->colliderType != ColliderType::MESH) and (dh.B->colliderType != ColliderType::MESH))
+            continue;
+
+        TriMesh* meshA = std::get_if<TriMesh>(&dh.A->collider.shape);
+        TriMesh* meshB = std::get_if<TriMesh>(&dh.B->collider.shape);
+
+        if (meshA and meshB) {
+            dh.doubleMeshTris.reserve(16);
+            treeVsTreeQuery(meshA->bvh, meshB->bvh, dh.doubleMeshTris);
+        }
+
+        else if (meshA) {
+            AABB& boxB = dh.B->collider.getAABB();
+            dh.singleMeshTris.reserve(16);
+            meshA->bvh.singleQuery(boxB, dh.singleMeshTris);
+        }
+
+        else {
+            AABB& boxA = dh.A->collider.getAABB();
+            dh.singleMeshTris.reserve(16);
+            meshB->bvh.singleQuery(boxA, dh.singleMeshTris);
+        }
+    }
 }
 
-void PhysicsEngine::midPhase() {
-    //
-    // 1) Gå igenom terrainHits och kör gameobject BVH-trees mot varje tri i terrainHits om gameobject.collider == TRIANGLE_MESH.
-    // 
-    // 2) Gå igenom dHits (behövs en speciell struct med CollisionDetail = std::variant<MeshVsMesh, MeshVsCollider, ColliderVsCollider>) 
-    // case1: båda har bvhTree, kör treeVsTreeQuery.
-    // case2: om bara en har bvhTree, kör treeVsTreeQuery mot AABB.
-    // case3: om ingen har bvhTree, gör inget
-    // 
-    // 3) Spara alla kollisioner i en lista och skicka den till narrowPhase.
+void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
+    for (TerrainHit& th : tHits) 
+    {
+        if (th.obj->colliderType == ColliderType::MESH) {
+            // gå igenom refined
+        }
+        else {
+            // gå igenom coarse
+        }
+            
+    }
+
+    for (DynamicHit& dh : dHits) 
+    {
+        if (dh.singleMeshTris.size() > 0) {
+            // collider vs tris
+        }
+
+        else if (dh.doubleMeshTris.size() > 0) {
+            // tris vs tris
+        }
+
+        else {
+            // collider vs collider
+        }
+
+    }
 }
-void PhysicsEngine::narrowPhase() {
-    // 1) Gå igenom listan med kollisioner från midPhase och kör SATQuery mellan alla i listan.
-    // 2) Om SATQuery returnerar true, skapa en Contact med collisionManifold.
-}
+
 void PhysicsEngine::resolveCollisions() {
 
 }
@@ -183,27 +270,15 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     constexpr float dynamicFriction = 0.5f;
     constexpr float twistFriction = 0.2f;
 
-    // Broad phase:
-    // 1. sweep and prune (dynamic vs dynamic)
-    // 2. treeVsTreeQuery (dynamic vs static)
-    // 3. treeVsTreeQuery (dynamic vs triprimitives)
-    // Spara alla kollisioner i en lista
-    // 
-    // Mid phase:
-    // Gå igenom listan 
-    // if GameObject.collider == TRIANGLE_MESH: GameObject.bvhTree vs GameObject.bvhTree / GameObject.AABB / triprimitive
-    //
-    // Narrow phase:
-    // Gå igenom nya listan
-    // SATQuery mellan alla i listan
+    static std::vector<DynamicHit> dynamicHits;
+    dynamicHits.reserve(BVHTree<GameObject>::MaxCollisionBuf);
+    dynamicHits.clear();
 
-    static std::pair<GameObject*, GameObject*> dynamicHits[BVHTree<GameObject>::MaxCollisionBuf];
-    int dynamicCount = 0;
-    detectCollisions(dynamicHits, dynamicCount);
+    detectCollisions(dynamicHits);
 
-    for (int i = 0; i < dynamicCount; i++) {
-        GameObject& objA = *dynamicHits[i].first;
-        GameObject& objB = *dynamicHits[i].second;
+    for (int i = 0; i < dynamicHits.size(); i++) {
+        GameObject& objA = *dynamicHits[i].A;
+        GameObject& objB = *dynamicHits[i].B;
 
         //if (objB.id <= objA.id) continue;
         if (objA.isStatic and objB.isStatic) 

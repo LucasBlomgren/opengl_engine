@@ -139,7 +139,7 @@ int main()
          bvhAccumulator += deltaTime;
          if (bvhAccumulator >= bvhInterval) {
             physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
-            physicsEngine.getTerrainBvh().update(sceneBuilder.getTerrainTriangles());
+            //physicsEngine.getTerrainBvh().update(sceneBuilder.getTerrainTriangles());
             bvhAccumulator -= bvhInterval;
          }
       }
@@ -214,8 +214,23 @@ int main()
       renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), VAO_line);
       renderer.drawTerrain(sceneBuilder.getTerrainTriangles());
 
-      //renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
-      renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
+      //GameObject& obj = sceneBuilder.getDynamicObjects()[1];
+      //ColliderShape& shape = obj.collider.shape;
+      //if (auto mesh = std::get_if<TriMesh>(&shape)) {
+      //    auto& tris = mesh->tris;
+      //    renderer.drawTerrain(tris);
+      //    renderer.drawBVH(mesh->bvh, VAO_line);  // draw TriMesh BVH
+      //}
+      //GameObject& obj2 = sceneBuilder.getDynamicObjects()[2];
+      //ColliderShape& shape2 = obj2.collider.shape;
+      //if (auto mesh = std::get_if<TriMesh>(&shape2)) {
+      //    auto& tris = mesh->tris;
+      //    renderer.drawTerrain(tris);
+      //    renderer.drawBVH(mesh->bvh, VAO_line);  // draw TriMesh BVH
+      //}
+
+      renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
+      //renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
 
       renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
 

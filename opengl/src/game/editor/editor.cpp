@@ -98,17 +98,18 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        int count = dynamicBvh.singleQuery(aabb);
+        std::vector<GameObject*> collisions;
+        dynamicBvh.singleQuery(aabb, collisions);
 
-        if (count == 0) {
+        if (collisions.size() == 0) {
             break;
         }
 
         // min depth collision
         float min = std::numeric_limits<float>::max();
         GameObject* minDepthObj = nullptr;
-        for (int j = 0; j < count; j++) {
-            GameObject& objB = *dynamicBvh.collisions[j];
+        for (int j = 0; j < collisions.size(); j++) {
+            GameObject& objB = *collisions[j];
 
             float depth = aabb.getMinOverlapDepth(objB.aabb);
             if (depth < min) {
@@ -145,6 +146,7 @@ void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
         selectedObject->hasGravity = true;
+        selectedObject->asleep = true;
         selectedObject->sleepCounterThreshold = 0.5f;
         selectedObject->sleepCounter = 0.0f;
         selectedObject->angularVelocity = glm::vec3(0.0f);

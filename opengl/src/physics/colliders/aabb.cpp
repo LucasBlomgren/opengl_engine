@@ -37,10 +37,9 @@ void AABB::updateFaces(glm::mat4& model) {
 }
 
 bool AABB::intersects(const AABB& b) const {
-    const bool x = (wMin.x <= b.wMax.x) & (wMax.x >= b.wMin.x);
-    const bool y = (wMin.y <= b.wMax.y) & (wMax.y >= b.wMin.y);
-    const bool z = (wMin.z <= b.wMax.z) & (wMax.z >= b.wMin.z);
-    return x & y & z;
+    return (wMin.x <= b.wMax.x && wMax.x >= b.wMin.x)
+        && (wMin.y <= b.wMax.y && wMax.y >= b.wMin.y)
+        && (wMin.z <= b.wMax.z && wMax.z >= b.wMin.z);
 }
 
 // ----- bvh funktioner -----

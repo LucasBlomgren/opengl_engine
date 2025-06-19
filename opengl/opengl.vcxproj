@@ -25,6 +25,7 @@
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor\editor.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
+    <ClCompile Include="src\game\scenes.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\geometry\cube_data.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
@@ -44,7 +45,6 @@
     <ClCompile Include="src\physics\colliders\oobb.cpp" />
     <ClCompile Include="src\physics\colliders\sphere.cpp" />
     <ClCompile Include="src\physics\colliders\tri.cpp" />
-    <ClCompile Include="src\physics\colliders\tri_mesh.cpp" />
     <ClCompile Include="src\physics\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
     <ClCompile Include="src\physics\raycast.cpp" />
@@ -61,6 +61,7 @@
     <ClInclude Include="src\game\editor\editor.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />
+    <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\geometry\cube_data.h" />
     <ClInclude Include="src\geometry\sphere_data.h" />

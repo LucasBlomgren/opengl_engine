@@ -65,15 +65,26 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
 
 template<typename E>
 void Renderer::drawBVH(BVHTree<E>& tree, unsigned int VAO_line) {
-    if (!engineState->getShowBVH()) return;
+    if (!engineState->getShowBVH()) 
+        return;
 
     glm::vec3 color;
-    for (auto& node : tree.nodes) {
-        if (node.isLeaf) color = glm::vec3(0, 1, 1);
-        else color = glm::vec3(1, 0, 1);
+    AABB toDraw;
 
-        aabbRenderer.updateModel(node.fatBox, false);
-        aabbRenderer.draw(color, *debugShader);
+    for (auto& node : tree.nodes) {
+        if (node.isLeaf) {
+            toDraw = node.tightBox; 
+            toDraw.centroid = (toDraw.wMin + toDraw.wMax) * 0.5f; 
+            toDraw.halfExtents = (toDraw.wMax - toDraw.wMin) * 0.5f; 
+            color = glm::vec3(0, 1, 1); 
+        }
+        else {
+            toDraw = node.fatBox; 
+            color = glm::vec3(1, 0, 1); 
+        }
+
+        aabbRenderer.updateModel(toDraw, /*asleep=*/false); 
+        aabbRenderer.draw(color, *debugShader); 
     }
 }
 
@@ -133,7 +144,7 @@ void Renderer::uploadDirectionalLight() {
     shader->setVec3("dirLight.specular", light.specular);
 }
 
-void Renderer::drawTerrain(std::vector<Tri> triangles) {
+void Renderer::drawTerrain(std::vector<Tri>& triangles) {
     // --- Wireframe setup: skapas bara en gång ----
     static GLuint triVAO = 0, triVBO = 0;
     if (triVAO == 0) {
@@ -179,7 +190,7 @@ void Renderer::drawTerrain(std::vector<Tri> triangles) {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glDisable(GL_CULL_FACE);
-    glLineWidth(2.0f);
+    glLineWidth(1.0f);
 
     GLsizei vertexCount = GLsizei(vertexData.size() / 3);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);

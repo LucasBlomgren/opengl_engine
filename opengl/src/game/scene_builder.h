@@ -1,18 +1,17 @@
 #pragma once
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include "physics.h"
 #include "game_object.h"
 #include "geometry/vertex.h"
 #include "texture_manager.h"
 #include "light_manager.h"
 #include "collider.h"
-
 #include "geometry/sphere_data.h"
 #include "geometry/cube_data.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 class SceneBuilder {
 public:
@@ -31,7 +30,9 @@ public:
       bool asleep = 0,
       glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
    );
-   void createTerrain();
+
+   void mainScene();
+   void testScene();
 
    void generateFlatTerrain(
        int   gridSizeX,

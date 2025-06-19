@@ -28,7 +28,7 @@ public:
     void uploadLightsToShader();
     void uploadDirectionalLight();
 
-    void drawTerrain(std::vector<Tri> triangles);
+    void drawTerrain(std::vector<Tri>& triangles);
 
 private:
     float screenWidth;

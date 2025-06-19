@@ -29,10 +29,10 @@
     <ClCompile Include="src\physics\bvh.cpp" />
     <ClCompile Include="src\physics\colliders\collider.cpp" />
     <ClCompile Include="src\physics\colliders\sphere.cpp" />
-    <ClCompile Include="src\physics\colliders\tri_mesh.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp" />
     <ClCompile Include="src\physics\colliders\oobb.cpp" />
     <ClCompile Include="src\physics\colliders\tri.cpp" />
+    <ClCompile Include="src\game\scenes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -97,6 +97,7 @@
     <ClInclude Include="src\physics\colliders\sphere.h" />
     <ClInclude Include="src\physics\colliders\tri_mesh.h" />
     <ClInclude Include="src\physics\colliders\tri.h" />
+    <ClInclude Include="src\game\scenes.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

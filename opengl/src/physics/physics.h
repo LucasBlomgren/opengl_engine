@@ -48,18 +48,26 @@ private:
     void updateContactCache();
 
     // --- collision detection ---
-    struct TerrainHits {
+    struct TerrainHit {
         GameObject* obj;
-        std::vector<Tri*> tris;
+        std::vector<Tri*> coarse;                                // original bvh query
+        std::vector<std::pair<Tri*, std::vector<Tri*>>> refined; // refined trimesh vs coarse
+    };
+
+    struct DynamicHit {
+        GameObject* A;
+        GameObject* B;
+        std::vector<Tri*> singleMeshTris;                   // one mesh             
+        std::vector<std::pair<Tri*, Tri*>> doubleMeshTris;  // two meshes
     };
 
     CollisionManifold* collisionManifold;
     std::unordered_map<size_t, Contact> contactCache;
 
-    void detectCollisions(std::pair<GameObject*, GameObject*>* dHits, int& dCount);
-    void broadPhase(std::vector<TerrainHits>& terrainHits, std::pair<GameObject*, GameObject*>* dynamicHits, int& dynamicCount);
-    void midPhase();
-    void narrowPhase();
+    void detectCollisions(std::vector<DynamicHit>& dHits);
+    void broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
+    void midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits); 
+    void narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
 
     // --- collision resolution ---
     void resolveCollisions();

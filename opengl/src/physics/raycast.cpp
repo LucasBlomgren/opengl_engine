@@ -12,10 +12,11 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<Ga
     GameObject* bestObj = nullptr;
     float bestT = std::numeric_limits<float>::max();
 
-    int collisionCounter = dynamicBvh.singleQuery(rayAABB);
+    std::vector<GameObject*> collisions;
+    dynamicBvh.singleQuery(rayAABB, collisions);
 
-    for (int i = 0; i < collisionCounter; i++) {
-        GameObject& obj = *dynamicBvh.collisions[i];
+    for (int i = 0; i < collisions.size(); i++) {
+        GameObject& obj = *collisions[i];
 
         glm::vec3 min = obj.aabb.wMin;
         glm::vec3 max = obj.aabb.wMax;

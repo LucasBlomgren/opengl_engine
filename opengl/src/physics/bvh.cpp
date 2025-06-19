@@ -1,39 +1,39 @@
 ﻿#include "bvh.h"
+#include "game_object.h"
 
 template class BVHTree<GameObject>;
 template class BVHTree<Tri>;
 
 template<typename E>
-int BVHTree<E>::singleQuery(AABB& qBox) {
-    int hc = 0;
+void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
+    // 1) Pre-allocate the output vector once per call
+    constexpr int MaxExpected = BVHTree<E>::MaxCollisionBuf;
+    out.clear();
+    out.reserve(MaxExpected);
+
+    // 2) Fast, stack-allocated traversal stack
     constexpr int MaxDepth = 64;
     Node* stack[MaxDepth];
     int   sp = 0;
     stack[sp++] = root;
 
-    // iterate through the tree
+    // 3) Traverse without any heap-allocations
     while (sp) {
         Node* n = stack[--sp];
 
         if (!n->isLeaf) {
             if (!qBox.intersects(n->fatBox))
                 continue;
-
             if (n->childA) stack[sp++] = n->childA;
             if (n->childB) stack[sp++] = n->childB;
-        }   
-
-        // leaf node
+        }
         else {
-            if (hc >= collisions.size()) {
-                collisions.resize(collisions.size() * 4);
+            if (qBox.intersects(n->tightBox)) {
+                // bara en enkel branch + push_back (ingen omallokering pga reserve)
+                out.push_back(n->element);
             }
-            if (qBox.intersects(n->tightBox))
-                this->collisions[hc++] = n->element;
         }
     }
-
-    return hc;
 }
 
 template<typename E>
@@ -41,9 +41,9 @@ void BVHTree<E>::update(std::vector<E>& elements) {
     if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
         // för många refits, bygg om trädet
         build(elements);
-        numRefits = 0;
-        numRebuilds++;
-        numIterationsSinceRebuild = 0;
+        numRefits = 0; 
+        numRebuilds++; 
+        numIterationsSinceRebuild = 0; 
         return;
     }
     numIterationsSinceRebuild++;
@@ -198,7 +198,6 @@ template<typename E>
 void BVHTree<E>::build(std::vector<E>& elements) {
     root = nullptr;
     nodes.clear();
-    collisions.resize(elements.size() * 2);
 
     // Fyll primitives
     createPrimitives(elements);

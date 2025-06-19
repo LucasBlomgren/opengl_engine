@@ -8,6 +8,7 @@
 #include "tri_mesh.h"
 
 class GameObject;
+class TriMesh;
 
 enum class ColliderType {
     CUBOID,
@@ -21,5 +22,8 @@ struct Collider {
     GameObject* owner;
     ColliderShape shape;
 
-    AABB getAABB() const;
+    Collider(GameObject* o) 
+        : owner(o) {}
+
+    AABB& getAABB() const;
 };

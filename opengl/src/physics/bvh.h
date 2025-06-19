@@ -2,8 +2,8 @@
 #include <glm/glm.hpp>
 #include <unordered_set>
 #include <algorithm>
+#include <vector>
 
-#include "game_object.h"
 #include "aabb.h"
 #include "aabb_renderer.h"
 
@@ -15,8 +15,8 @@ class BVHTree {
     int   numRefits                  = 0;        // debug
     int   numIterationsSinceRebuild  = 0;
     int   rebuildThreshold           = 0;        // räknas om i build()
-    int   minRebuildThreshold        = 5;        // min 10 refits innan rebuild
-    float rebuildRatio               = 0.20f;    // 40 % av lövkorrektioner → rebuild
+    int   minRebuildThreshold        = 5;        // min refits innan rebuild
+    float rebuildRatio               = 0.20f;    // % av lövkorrektioner innan rebuild
     glm::vec3 fatBoxMargin { 0.2f };
 
     struct BVHPrimitive {
@@ -24,11 +24,6 @@ class BVHTree {
         glm::vec3 max;
         glm::vec3 centroid;
         E* element;
-    };
-
-    struct CollisionPair {
-        E* A;
-        E* B;
     };
 
 public:
@@ -51,14 +46,12 @@ public:
         Node* B;
     };
 
-    Node* root;
+    Node* root = nullptr;
     std::vector<Node> nodes;
 
     void build(std::vector<E>& elements);
     void update(std::vector<E>& elements);
-
-    int singleQuery(AABB& qBox);
-    std::vector<E*> collisions;
+    void singleQuery(const AABB& qBox, std::vector<E*>& out); 
 
     // debug
     int numRebuilds = 0;
@@ -81,51 +74,48 @@ private:
 };
 
 template<typename Ea, typename Eb>
-int treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::pair<Ea*, Eb*> outBuf[])
+void treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::vector<std::pair<Ea*, Eb*>>& out)
 {
     constexpr bool sameType = std::is_same_v<Ea, Eb>;
     constexpr int  MaxStack = BVHTree<Ea>::MaxStackSize;
     constexpr int  MaxBuf = BVHTree<Ea>::MaxCollisionBuf;
 
-    // den här buffern är shared för alla instanser, men det är OK
+    // --- FIXED‐SIZE traversal‐stack på stacken (ingen heap‐allokering) ---
     std::pair<typename BVHTree<Ea>::Node*, typename BVHTree<Eb>::Node*> stack[MaxStack];
+    int sp = 0;
+    stack[sp++] = { a.root, b.root };
 
-    int sp = 0, outSp = 0;
+    out.clear();
 
-    // körs bara i de instanser där Ea==Eb, i övrigt ignoreras helt
+    // Endast relevant när Ea==Eb
     bool sameTree = false;
     if constexpr (sameType) {
         sameTree = std::addressof(a) == std::addressof(b);
     }
 
-    // initiera
-    stack[sp++] = { a.root, b.root };
-
     while (sp > 0) {
         auto [nA, nB] = stack[--sp];
 
+        // Prune
         if (!nA->fatBox.intersects(nB->fatBox))
             continue;
 
-        // löv–löv fallet
+        // Leaf–leaf
         if (nA->isLeaf && nB->isLeaf) {
             if (!nA->tightBox.intersects(nB->tightBox))
                 continue;
 
             if constexpr (sameType) {
-                // Om det är *samma* träd, pruna bort (B,A)-ordern
-                if ((!sameTree || nA->element < nB->element) && outSp < MaxBuf)
-                    outBuf[outSp++] = { nA->element, nB->element };
+                if (!sameTree || nA->element < nB->element)
+                    out.emplace_back(nA->element, nB->element);
             }
             else {
-                // Olik typ → vi vet att det aldrig blir “reverserade”
-                if (outSp < MaxBuf)
-                    outBuf[outSp++] = { nA->element, nB->element };
+                out.emplace_back(nA->element, nB->element);
             }
             continue;
         }
 
-        // övriga noder: expandera precis som förut
+        // Expand children, precis som förut
         if (nA->isLeaf) {
             if (nB->childA) stack[sp++] = { nA, nB->childA };
             if (nB->childB) stack[sp++] = { nA, nB->childB };
@@ -141,6 +131,4 @@ int treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::pair<Ea*, E
             if (nA->childB && nB->childB) stack[sp++] = { nA->childB, nB->childB };
         }
     }
-
-    return outSp;
 }

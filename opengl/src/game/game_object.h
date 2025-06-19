@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -27,14 +27,14 @@ struct CollisionHistory {
    int index = 0;
    int count = 0;
 
-   // Ska köras varje frame med det nya värdet:
+   // Ska kÃ¶ras varje frame med det nya vÃ¤rdet:
    void push(int newCount) {
       buffer[index] = newCount;
       index = (index + 1) % SLOTS;
       if (count < SLOTS) ++count;
    }
 
-   // Ger medelvärdet över de senast count värdena (upp till 5)
+   // Ger medelvÃ¤rdet Ã¶ver de senast count vÃ¤rdena (upp till 5)
    float average() const {
       if (count == 0) return 0.0f;
       
@@ -105,6 +105,7 @@ public:
     AABB aabb;
     bool AABB_ShouldUpdate = true;
     Collider collider;
+    ColliderType colliderType;
     OOBBRenderer oobbRenderer;
 
     // editor variables
@@ -127,8 +128,8 @@ public:
         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float sleepCounterThreshold = 1.0f,
         bool asleep = false,
-        glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f) 
-        )
+        glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
+    )
         : id(id),
         vertices(vertices),
         indices(indices),
@@ -142,7 +143,9 @@ public:
         orientation(orientation),
         sleepCounterThreshold(sleepCounterThreshold),
         asleep(asleep),
-        color(color)
+        color(color),
+        colliderType(colliderType),
+        collider(this)
     {
         // physics stuff
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
@@ -196,9 +199,19 @@ public:
             Sphere sphere;
             collider.shape = sphere;
         }
-        else if (colliderType == ColliderType::MESH) {
-            TriMesh triMesh;
-            collider.shape = triMesh;
+        else if (colliderType == ColliderType::MESH) 
+        {
+            std::vector<Tri> worldTris;
+            worldTris.reserve(verticesPositions.size() / 3);
+
+            for (size_t i = 0; i < verticesPositions.size(); i += 3) {
+                glm::vec4 v0 = modelMatrix * glm::vec4(verticesPositions[i + 0], 1.0f);
+                glm::vec4 v1 = modelMatrix * glm::vec4(verticesPositions[i + 1], 1.0f);
+                glm::vec4 v2 = modelMatrix * glm::vec4(verticesPositions[i + 2], 1.0f);
+                worldTris.emplace_back(glm::vec3(v0), glm::vec3(v1), glm::vec3(v2));
+            }
+
+            collider.shape.emplace<TriMesh>(worldTris);
         }
     }
 
