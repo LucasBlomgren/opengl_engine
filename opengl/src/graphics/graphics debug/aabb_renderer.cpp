@@ -49,7 +49,6 @@ void AABBRenderer::CleanupShared() {
 
 void AABBRenderer::draw(const glm::vec3& color, Shader& shader) const
 {
-    shader.use();
     shader.setMat4("model", model);
     shader.setBool("debug.useUniformColor", true);
     shader.setVec3("debug.uColor", color);

@@ -1,48 +1,102 @@
-#include "SAT.h"
+ï»¿#include "SAT.h"
+#include <glm/gtx/string_cast.hpp>
 
-static constexpr int N = 3;
-
-// Typ för alla collisons-funktioner
-using CollisionFn = bool(*)(GameObject&, GameObject&, glm::vec3&, float&, int&);
-
-// Dispatch-tabellen (måste initieras i en .cpp-fil)
-static CollisionFn dispatchTable[N][N] = {
-    { cuboidVsCuboid, nullptr,        nullptr    }, 
-    { sphereVsCuboid, sphereVsSphere, nullptr    }, 
-    { triVsCuboid,    triVsSphere,   triVsTri    }  
-};
-
-bool SATQuery(GameObject& A, GameObject& B, glm::vec3& normal, float& depth, int& normalOwner) {
-    int i = int(A.collider.shape.index());
-    int j = int(B.collider.shape.index());
-
-    if (i < j)  std::swap(i, j); 
-
-    auto fn = dispatchTable[i][j];
-    return fn(A, B, normal, depth, normalOwner);
+void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) { 
+    glm::vec3 direction = posA - posB;
+    if (glm::dot(direction, normal) > 0) { 
+        normal = -normal; 
+    }
 }
 
-// skapa contact manifolds här inne och returnera manifold, sen kör PGS-solver i physics.cpp
-bool cuboidVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
-    return intersectPolygons(a, b, n, d, o);
+void SAT::findBestTriangles(std::vector<SAT::Result>& results) { 
+    if (results.size() <= 4)
+        return; 
+
+    std::vector<int> indices; 
+    indices.reserve(4); 
+    indices.push_back(0);
+
+    // Sort results by depth
+    std::sort(results.begin(), results.end(), [](const Result a, const Result b) { 
+        return a.depth > b.depth;
+        });  
+
+    int loopRange = std::min(3, static_cast<int>(results.size()));
+    for (int i = 0; i < loopRange; i++) {
+        addFurthestTriangle(results, indices); 
+    }
+
+    std::vector<SAT::Result> temp;
+    temp.reserve(indices.size());
+    for (int idx : indices) {
+        temp.push_back(results[idx]);
+    } 
+
+    results.swap(temp);
 }
-bool sphereVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
-    return false; 
+
+void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>& indices) {
+    int bestIdx = -1;
+    float bestDist = std::numeric_limits<float>::lowest();
+
+    for (int i = 0; i < result.size(); i++)  
+    { 
+        // Skip if already added
+        bool alreadyAdded = false;
+        for (int j = 0; j < indices.size(); j++) { 
+            if (i == indices[j]) {
+                alreadyAdded = true;
+                break;
+            }
+        }
+        if (alreadyAdded) 
+            continue; 
+
+        float shortestDist = std::numeric_limits<float>::max();
+        for (int j = 0; j < indices.size(); j++)
+        { 
+            glm::vec3 diff = result[i].tri_ptr->centroid - result[indices[j]].tri_ptr->centroid;
+            float dist2 = glm::dot(diff, diff);
+
+            if (dist2 < shortestDist) {
+                shortestDist = dist2;
+            } 
+        }
+        if (shortestDist > bestDist) {
+            bestDist = shortestDist; 
+            bestIdx = i; 
+        }
+    }
+
+    indices.push_back(bestIdx);
 }
-bool sphereVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
-    return false; 
+
+bool SAT::cuboidVsCuboid(Collider& A, Collider& B, Result& out) {
+    OOBB& boxA = std::get<OOBB>(A.shape);
+    OOBB& boxB = std::get<OOBB>(B.shape);
+
+    return intersectPolygons(boxA.wVertices, boxB.wVertices, boxA.wAxes, boxB.wAxes, out);
 }
-bool triVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
-    return false; 
+bool SAT::sphereVsCuboid(Collider& A, Collider& B, Result& out) {
+    return false;
 }
-bool triVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
-    return false; 
+bool SAT::sphereVsSphere(Collider& A, Collider& B, Result& out) {
+    return false;
 }
-bool triVsTri(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o) {
+bool SAT::triVsCuboid(Collider& A, Tri& tri, Result& out) {
+    OOBB& boxA = std::get<OOBB>(A.shape);
+    out.tri_ptr = &tri;
+
+    return intersectPolygons(boxA.wVertices, tri.vertices, boxA.wAxes, tri.axes, out);
+}
+bool SAT::triVsSphere(Collider& A, Collider& B, Result& out) {
+    return false;
+}
+bool SAT::triVsTri(Collider& A, Collider& B, Result& out) {
     return false;
 }
 
-std::pair<float, float> projectVertices(const std::array<glm::vec3, 8>& vertices, const glm::vec3& axis) {
+std::pair<float, float> SAT::projectVertices(std::span<const glm::vec3> vertices, const glm::vec3& axis) {
     float min = std::numeric_limits<float>::max();
     float max = std::numeric_limits<float>::lowest();
 
@@ -58,72 +112,72 @@ std::pair<float, float> projectVertices(const std::array<glm::vec3, 8>& vertices
     return std::make_pair(min, max);
 }
 
-bool intersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner){
-    OOBB& boxA = std::get<OOBB>(objA.collider.shape);
-    OOBB& boxB = std::get<OOBB>(objB.collider.shape);
-
-    const std::array<glm::vec3, 8>& verticesA = boxA.transformedVertices;
-    const std::array<glm::vec3, 8>& verticesB = boxB.transformedVertices;
-    const std::array<glm::vec3, 3>& normalsA = boxA.normals;
-    const std::array<glm::vec3, 3>& normalsB = boxB.normals;
-
-    const float epsilon = 1e-6f;
-
-    for (const glm::vec3& faceNormal : normalsA) {
-        auto [minA, maxA] = projectVertices(verticesA, faceNormal);
-        auto [minB, maxB] = projectVertices(verticesB, faceNormal);
+bool SAT::intersectPolygons(
+    std::span<const glm::vec3> vertsA,
+    std::span<const glm::vec3> vertsB,
+    std::span<const glm::vec3> normalsA,
+    std::span<const glm::vec3> normalsB,
+    Result& satResult)
+{
+    // testa normaler frÃ¥n A
+    for (const glm::vec3& A : normalsA) {
+        auto [minA, maxA] = projectVertices(vertsA, A);
+        auto [minB, maxB] = projectVertices(vertsB, A);
 
         if (minA >= maxB or minB >= maxA)
             return false;
 
         float axisDepth = std::min(maxB - minA, maxA - minB);
 
-        if (axisDepth < depth) {
-            depth = axisDepth;
-            normal = faceNormal;
-            collisionNormalOwner = 0;
+        if (axisDepth < satResult.depth) {
+            satResult.depth = axisDepth;
+            satResult.normal = A;
+            satResult.axisType = AxisType::FaceA;
         }
     }
 
-    for (const glm::vec3& faceNormal : normalsB) {
-        auto [minA, maxA] = projectVertices(verticesA, faceNormal);
-        auto [minB, maxB] = projectVertices(verticesB, faceNormal);
+    // testa normaler frÃ¥n B
+    for (const glm::vec3& B : normalsB) {
+        auto [minA, maxA] = projectVertices(vertsA, B);
+        auto [minB, maxB] = projectVertices(vertsB, B);
 
         if (minA >= maxB or minB >= maxA)
             return false;
 
         float axisDepth = std::min(maxB - minA, maxA - minB);
 
-        if (axisDepth < depth) {
-            depth = axisDepth;
-            normal = faceNormal;
-            collisionNormalOwner = 1;
+        if (axisDepth < satResult.depth) {
+            satResult.depth = axisDepth;
+            satResult.normal = B;
+            satResult.axisType = AxisType::FaceB;
         }
     }
 
-    for (const glm::vec3& faceNormalA : normalsA)
-        for (const glm::vec3& faceNormalB : normalsB) {
-            glm::vec3 axis = glm::cross(faceNormalA, faceNormalB);
+    // testa korsprodukter mellan normaler
+    for (const glm::vec3& A : normalsA) {
+        for (const glm::vec3& B : normalsB) {
+            glm::vec3 axis = glm::cross(A, B);
 
-            if (glm::length2(axis) < epsilon)
+            if (glm::length2(axis) < 1e-6f)
                 continue; // Skip degenerate axis
 
             axis = glm::normalize(axis);
 
-            auto [minA, maxA] = projectVertices(verticesA, axis);
-            auto [minB, maxB] = projectVertices(verticesB, axis);
+            auto [minA, maxA] = projectVertices(vertsA, axis);
+            auto [minB, maxB] = projectVertices(vertsB, axis);
 
             if (minA >= maxB or minB >= maxA)
-                return false;			
+                return false;
 
             float axisDepth = std::min(maxB - minA, maxA - minB);
 
-            if (axisDepth < depth) {
-                depth = axisDepth;
-                normal = axis;
-                collisionNormalOwner = 0; // godtyckligt för edge vs edge
+            if (axisDepth < satResult.depth) {
+                satResult.depth = axisDepth;
+                satResult.normal = axis;
+                satResult.axisType = AxisType::EdgeEdge;
             }
         }
+    }
 
     return true;
 }

@@ -1,6 +1,8 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include <span>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -8,14 +10,36 @@
 
 #include "game_object.h"
 
-bool SATQuery(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner);
+namespace SAT { 
+    enum class AxisType { FaceA, FaceB, EdgeEdge };
 
-bool cuboidVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
-bool sphereVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
-bool sphereVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
-bool triVsCuboid(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
-bool triVsSphere(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
-bool triVsTri(GameObject& a, GameObject& b, glm::vec3& n, float& d, int& o);
+    struct Result {
+        float depth = std::numeric_limits<float>::max();
+        glm::vec3 normal;
+        AxisType axisType;
+        int faceIndex;
+        int edgeIndexA;
+        int edgeIndexB;
 
-std::pair<float, float> projectVertices(const std::array<glm::vec3, 8>& vertices, const glm::vec3& axis);
-bool intersectPolygons(GameObject& objA, GameObject& objB, glm::vec3& normal, float& depth, int& collisionNormalOwner);
+        Tri* tri_ptr = nullptr;
+    };
+
+    bool cuboidVsCuboid(Collider& A, Collider& B, Result& out);
+    bool sphereVsCuboid(Collider& A, Collider& B, Result& out);
+    bool sphereVsSphere(Collider& A, Collider& B, Result& out);
+    bool triVsCuboid(Collider& A, Tri& tri, Result& out);
+    bool triVsSphere(Collider& A, Collider& B, Result& out);
+    bool triVsTri(Collider& A, Collider& B, Result& out);
+
+    std::pair<float, float> projectVertices(const std::span<const glm::vec3> vertices, const glm::vec3& axis);
+    bool intersectPolygons(
+        std::span<const glm::vec3> vertsA,
+        std::span<const glm::vec3> vertsB,
+        std::span<const glm::vec3> normalsA,
+        std::span<const glm::vec3> normalsB,
+        Result& satResult);
+
+    void reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal);
+    void findBestTriangles(std::vector<SAT::Result>& results);
+    void addFurthestTriangle(std::vector<SAT::Result>& results, std::vector<int>& addedIndices);
+}

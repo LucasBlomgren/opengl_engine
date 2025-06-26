@@ -13,8 +13,4 @@ public:
     {
         bvh.build(tris);
     }
-
-    void updateBvh() {
-        bvh.update(tris);
-    }
 };

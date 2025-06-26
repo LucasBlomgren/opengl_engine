@@ -17,7 +17,7 @@ class AABB {
 public:
     Faces lFaces;
     Faces wFaces;
-    bool facesHasUpdated = false;
+    bool facesShouldUpdate = true;
 
     // local
     glm::vec3 lMin; 
@@ -47,4 +47,6 @@ private:
     void transform_withRotation(const glm::mat3& M, const glm::vec3& T);
     void computeFromVertices(const std::vector<glm::vec3>& vertices);
     void setLocalFaces();
+
+    void debugPrintFaceWindings();
 };

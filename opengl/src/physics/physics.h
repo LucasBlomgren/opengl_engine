@@ -30,6 +30,7 @@ public:
 
 
 private:
+    float dt;
     EngineState* engineState = nullptr;
 
     // --- objects ---
@@ -43,7 +44,7 @@ private:
     BVHTree<Tri> terrainBvh; 
 
     // --- update functions ---
-    void updatePositions(float deltaTime);
+    void updatePositions();
     void updateSleepThresholds(GameObject& obj);
     void updateContactCache();
 
@@ -64,11 +65,13 @@ private:
     CollisionManifold* collisionManifold;
     std::unordered_map<size_t, Contact> contactCache;
 
-    void detectCollisions(std::vector<DynamicHit>& dHits);
+    void detectAndSolveCollisions();
     void broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
     void midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits); 
     void narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
 
     // --- collision resolution ---
-    void resolveCollisions();
+    void resolveCollision(Contact& contact);
+    bool updateSleep(GameObject& A, GameObject& B);
+    void updateHelpers(GameObject& obj);
 };

@@ -1,6 +1,8 @@
 ﻿#include "bvh.h"
 #include "game_object.h"
 
+#include <glm/gtx/string_cast.hpp>
+
 template class BVHTree<GameObject>;
 template class BVHTree<Tri>;
 

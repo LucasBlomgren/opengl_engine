@@ -16,7 +16,6 @@
     <ClCompile Include="src\graphics\texture_manager.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
-    <ClCompile Include="src\graphics\graphics debug\world_frame.cpp" />
     <ClCompile Include="src\graphics\graphics debug\xyz_object.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
@@ -76,9 +75,7 @@
     <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="src\graphics\shader.h" />
     <ClInclude Include="src\graphics\texture_manager.h" />
-    <ClInclude Include="src\graphics\graphics debug\draw_contact_points.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_line.h" />
-    <ClInclude Include="src\graphics\graphics debug\world_frame.h" />
     <ClInclude Include="src\graphics\graphics debug\xyz_object.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\rotate_cube.h" />

@@ -33,20 +33,20 @@ void AABB::updateFaces(glm::mat4& model) {
         wFaces.maxZ[i] = transformPoint(lFaces.maxZ[i]);
     }
 
-    facesHasUpdated = true;
+    facesShouldUpdate = false;
 }
 
 bool AABB::intersects(const AABB& b) const {
-    return (wMin.x <= b.wMax.x && wMax.x >= b.wMin.x)
-        && (wMin.y <= b.wMax.y && wMax.y >= b.wMin.y)
-        && (wMin.z <= b.wMax.z && wMax.z >= b.wMin.z);
+    return (wMin.x <= b.wMax.x and wMax.x >= b.wMin.x)
+        and (wMin.y <= b.wMax.y and wMax.y >= b.wMin.y)
+        and (wMin.z <= b.wMax.z and wMax.z >= b.wMin.z);
 }
 
 // ----- bvh funktioner -----
 bool AABB::contains(const AABB& other) const {
     return
-        (wMin.x <= other.wMin.x) & (wMin.y <= other.wMin.y) & (wMin.z <= other.wMin.z) &
-        (wMax.x >= other.wMax.x) & (wMax.y >= other.wMax.y) & (wMax.z >= other.wMax.z);
+        (wMin.x <= other.wMin.x) and (wMin.y <= other.wMin.y) and (wMin.z <= other.wMin.z) and
+        (wMax.x >= other.wMax.x) and (wMax.y >= other.wMax.y) and (wMax.z >= other.wMax.z);
 }
 float AABB::surfaceArea() const {
     return 2.0f * (halfExtents.x * halfExtents.y + halfExtents.y * halfExtents.z + halfExtents.z * halfExtents.x);
@@ -231,4 +231,36 @@ void AABB::setLocalFaces() {
         glm::vec3(lMax.x, lMax.y, lMax.z),
         glm::vec3(lMin.x, lMax.y, lMax.z)
     };
+}
+
+void AABB::debugPrintFaceWindings() {
+    struct FaceInfo {
+        const char* name;
+        glm::vec3 theoreticalNormal;
+        const std::array<glm::vec3, 4>& verts;
+    };
+
+    std::array<FaceInfo, 6> faces = { {
+        { "minX", {-1,0,0}, wFaces.minX },
+        { "maxX", {+1,0,0}, wFaces.maxX },
+        { "minY", {0,-1,0}, wFaces.minY },
+        { "maxY", {0,+1,0}, wFaces.maxY },
+        { "minZ", {0,0,-1}, wFaces.minZ },
+        { "maxZ", {0,0,+1}, wFaces.maxZ }
+    } };
+
+    for (auto& fi : faces) {
+        const auto& F = fi.verts;
+        glm::vec3 calcN = glm::normalize(glm::cross(F[1] - F[0], F[2] - F[0]));
+        float dotProd = glm::dot(calcN, fi.theoreticalNormal);
+        std::cout
+            << fi.name
+            << " | calcN = ["
+            << calcN.x << "," << calcN.y << "," << calcN.z << "]"
+            << " | theorN = ["
+            << fi.theoreticalNormal.x << "," << fi.theoreticalNormal.y << "," << fi.theoreticalNormal.z << "]"
+            << " | dot = " << dotProd
+            << (dotProd > 0 ? "  <<< OK (CCW)" : "  <<< WRONG (CW)")
+            << "\n";
+    }
 }

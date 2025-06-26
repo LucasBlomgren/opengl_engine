@@ -47,18 +47,9 @@ void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VA
     for (GameObject& obj : objects) {
         obj.drawMesh(*shader);
 
-        if (engineState->getShowAABB()) {
-            glm::vec3 color{ 0.9f, 0.7f, 0.2f };
-            aabbRenderer.updateModel(obj.aabb, false);
-            aabbRenderer.draw(color, *debugShader);
-        }
-        if (engineState->getShowOOBB() or obj.isRaycastHit) {
+        if (obj.isRaycastHit) {
             obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
         }
-        if (engineState->getShowNormals()) {
-            obj.oobbRenderer.drawNormals(*debugShader, obj.modelMatrix);
-        }
-
         obj.isRaycastHit = false;
     }
 }
@@ -95,19 +86,39 @@ void Renderer::drawLights() const {
     }
 }
 
-void Renderer::drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame) {
+void Renderer::drawDebug(PhysicsEngine& physicsEngine, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
     debugShader->use();
+
+    if (engineState->getShowAABB()) {
+        glm::vec3 color{ 0.9f, 0.7f, 0.2f };
+        for (GameObject& obj : objects) {
+            aabbRenderer.updateModel(obj.aabb, false);
+            aabbRenderer.draw(color, *debugShader);
+        }
+    }
+
+    if (engineState->getShowOOBB()) {
+        for (GameObject& obj : objects) {
+            obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
+        }
+    }
+
+    if (engineState->getShowNormals()) {
+        for (GameObject& obj : objects) {
+            obj.oobbRenderer.drawNormals(*debugShader, obj.modelMatrix);
+        }
+    }
+
     if (engineState->getShowContactPoints()) {
         const auto& contactCache = physicsEngine.GetContactCache();
         for (const auto& pair : contactCache) {
             const Contact& contact = pair.second;
-            for (int i = 0; i < contact.counter; i++)
+            for (int i = 0; i < contact.points.size(); i++)
                 drawContactPoint(*debugShader, VAO_contactPoint, contact.points[i].globalCoord);
         }
     }
 
     draw_xyzObject(*debugShader, VAO_xyz);
-    //draw_worldFrame(*debugShader, VAO_worldFrame);
 }
 
 void Renderer::uploadLightsToShader() {
@@ -178,23 +189,35 @@ void Renderer::drawTerrain(std::vector<Tri>& triangles) {
         vertexData.push_back(tri.v2.z);
     }
 
+    //get min and maxheight of all tris
+    float minHeight = std::numeric_limits<float>::max();
+    float maxHeight = std::numeric_limits<float>::lowest();
+    for (const auto& tri : triangles) {
+        minHeight = std::min({ minHeight, tri.v0.y, tri.v1.y, tri.v2.y });
+        maxHeight = std::max({ maxHeight, tri.v0.y, tri.v1.y, tri.v2.y });
+    }
+
     glm::mat4 model = glm::mat4(1.0f);
     debugShader->use();
     debugShader->setMat4("model", model);
     debugShader->setBool("debug.useUniformColor", true);
-    debugShader->setVec3("debug.uColor", glm::vec3{ 0.9f, 0.7f, 0.2f });
+    //debugShader->setVec3("debug.uColor", glm::vec3{ 0.9f, 0.7f, 0.2f });
+
+    debugShader->setBool("terrain", true);
+    debugShader->setFloat("maxHeight", maxHeight);
+    debugShader->setFloat("minHeight", minHeight);
 
     glBindBuffer(GL_ARRAY_BUFFER, triVBO);
     glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
     glBindVertexArray(triVAO);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glDisable(GL_CULL_FACE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glLineWidth(1.0f);
 
     GLsizei vertexCount = GLsizei(vertexData.size() / 3);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glEnable(GL_CULL_FACE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    debugShader->setBool("terrain", false);
 }

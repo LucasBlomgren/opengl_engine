@@ -21,7 +21,6 @@ void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, 
 
 void OOBBRenderer::drawNormals(Shader& shader, const glm::mat4& model)
 {
-    shader.use();
     shader.setMat4("model", model);
 
     shader.setInt("debug.objectType", 0);

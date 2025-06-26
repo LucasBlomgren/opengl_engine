@@ -1,93 +1,201 @@
 ﻿#include "collision_manifold.h"
 
-static constexpr int N = 3;
-using ContactFn = void(CollisionManifold::*)(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner);
-
-static ContactFn dispatchTable[N][N] = {
-    { &CollisionManifold::cuboidVsCuboid,   nullptr,                            nullptr                        },
-    { &CollisionManifold::sphereVsCuboid,   &CollisionManifold::sphereVsSphere, nullptr                        },
-    { &CollisionManifold::meshVsCuboid,     &CollisionManifold::meshVsSphere,   &CollisionManifold::meshVsMesh }
-};
-
-// skapa en struct som håller pekare till 3 olika cases: 1. gameobject 2. gameobject + chosenTri (från BVH som hittat rätt tri på mesh) 3. tri-primitive
-// skicka in två av dessa Collider A och Collider B till createContact istället för GameObject A och GameObject B
-// detta för att kunna skicka in collider som inte är GameObject, t.ex. tri-primitive
-// 
-// collider struct ska ha getter-metoder för t.ex. PreComputePointData(), så att antingen får man 0 angularVelocity/invMass etc. ->
-// -> om det är en tri-primitive, annars får man GameObjects värde
-
-void CollisionManifold::createContact(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    int i = int(A.collider.shape.index());
-    int j = int(B.collider.shape.index());
-
-    if (i < j)  std::swap(i, j); // Ensure i >= j for the dispatch table
-
-    auto fn = dispatchTable[i][j];
-    (this->*fn)(outContact, contactCache, A, B, n, normalOwner);
-}
-
-void CollisionManifold::cuboidVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
+void CollisionManifold::cuboidVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     // välj vilken som är referensface och incidentface
-    std::array<glm::vec3, 4> referenceFace;
-    std::array<glm::vec3, 4> incidentFace;
-    if (normalOwner == 0) {
-        selectCollisionFace(A, n, referenceFace);
-        selectCollisionFace(B, -n, incidentFace);
+    std::vector<glm::vec3> referenceFace; 
+    std::vector<glm::vec3> incidentFace;
+
+    if (satResult.axisType == SAT::AxisType::FaceA or satResult.axisType == SAT::AxisType::EdgeEdge) {
+        selectCollisionFace(*contact.objA_ptr, satResult.normal);
+        referenceFace = this->selectedFace;
+        selectCollisionFace(*contact.objB_ptr, -satResult.normal);
+        incidentFace = this->selectedFace;
     }
-    else {
-        selectCollisionFace(B, -n, referenceFace);
-        selectCollisionFace(A, n, incidentFace);
+    else if (satResult.axisType == SAT::AxisType::FaceB) {
+        selectCollisionFace(*contact.objB_ptr, -satResult.normal);
+        incidentFace = this->selectedFace;
+        selectCollisionFace(*contact.objA_ptr, satResult.normal);
+        referenceFace = this->selectedFace;
     }
 
     // räkna ut normalen för referensface
+    glm::vec3 edgeA = referenceFace[0] - referenceFace[1]; 
+    glm::vec3 edgeB = referenceFace[0] - referenceFace[2]; 
+    glm::vec3 referenceFaceNormal = glm::normalize(glm::cross(edgeA, edgeB)); 
+
+    contact.hashKey = generateKey(contact.objA_ptr->id, contact.objB_ptr->id); // skapa hash key för contact
+    contact.normal = satResult.normal; 
+    contact.referenceFace = referenceFace; 
+    contact.incidentFace = incidentFace; 
+    contact.referenceFaceNormal = referenceFaceNormal; 
+
+    clipPoints(referenceFace, incidentFace, referenceFaceNormal);
+
+    // skapa contact points från de klippta punkterna
+    contact.points.resize(this->clippedPoints.size());
+    for (int i = 0; i < clippedPoints.size(); i++) {
+        contact.points[i].globalCoord = this->clippedPoints[i];
+    }
+
+    createLocalCoordinates(contact);  
+
+    if (contact.points.size() > 4) { 
+        contactPointReduction(contact);  
+    } 
+
+    computePenetrationDepth(contact);  
+    integrateContact(cache, contact);  
+}
+
+void CollisionManifold::sphereVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+
+}
+void CollisionManifold::sphereVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+
+}
+void CollisionManifold::meshVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+
+}
+void CollisionManifold::meshVsMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+    
+}
+
+void CollisionManifold::meshVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+    std::vector<glm::vec3> referenceFace; 
+    std::vector<glm::vec3> incidentFace; 
+
+    this->allClippedPoints.clear();
+    this->allClippedPointsTriIDs.clear();   
+    this->allClippedPoints.reserve(8 * allResults.size());
+    this->allClippedPointsTriIDs.reserve(8 * allResults.size());
+
+    selectCollisionFace(*contact.objA_ptr, allResults[0].normal);
+    referenceFace = this->selectedFace;
+    contact.referenceFace = referenceFace;
+
     glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
     glm::vec3 edgeB = referenceFace[0] - referenceFace[2];
-    glm::vec3 referenceFaceNormal = glm::normalize(glm::cross(edgeA, edgeB));
+    glm::vec3 refNormal = glm::normalize(glm::cross(edgeA, edgeB));
+    contact.referenceFaceNormal = refNormal;
 
-    InitialContact initialContact{ &A, &B, referenceFace, incidentFace, referenceFaceNormal };
+    // gameobject vs terrain triangles
+    if (contact.objB_ptr == nullptr) { 
 
-    createContactPoints(initialContact);
-    createLocalCoordinates(initialContact);
-    if (initialContact.counter > 4) { contactPointReduction(initialContact); }
-    computePenetrationDepth(initialContact);
+        // --- clip all triangles against the reference face ---
+        for (const SAT::Result& satResult : allResults)   
+        {
+            incidentFace = satResult.tri_ptr->vertices; 
 
-    outContact.objA_ptr = &A;
-    outContact.objB_ptr = &B;
-    outContact.normal = n;
+            clipPoints(referenceFace, incidentFace, refNormal);
+            auto triID = satResult.tri_ptr->id;
 
-    integrateContact(contactCache, initialContact, outContact);
+            // save clipped points for furthest point selection
+            this->allClippedPoints.insert(this->allClippedPoints.end(), this->clippedPoints.begin(), this->clippedPoints.end()); 
+
+            // triangle IDs for hash map 
+            this->allClippedPointsTriIDs.insert(this->allClippedPointsTriIDs.end(), this->clippedPoints.size(), triID); 
+        }
+
+        // --- pick furthest points from all clipped points ---
+        pickFourFurthestPoints();
+
+        // --- create contact points from furthest points ---
+        contact.points.resize(this->furthestPoints.size());
+        for (int i = 0; i < this->furthestPoints.size(); i++) {
+            contact.points[i].globalCoord = this->furthestPoints[i];
+        }
+
+        // create hash key
+        contact.hashKey = generateKey(contact.objA_ptr->id, allResults[0].tri_ptr->id); 
+
+        createLocalCoordinates(contact);
+        computePenetrationDepth(contact);
+        integrateContact(cache, contact);
+    }
 }
 
-void CollisionManifold::sphereVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    
-}
-void CollisionManifold::sphereVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    
-}
-void CollisionManifold::meshVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    
-}
-void CollisionManifold::meshVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    
-}
-void CollisionManifold::meshVsMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, GameObject& A, GameObject& B, glm::vec3 n, int& normalOwner) {
-    
+void CollisionManifold::pickFourFurthestPoints() {
+    if (this->allClippedPoints.size() <= 4) {
+        this->furthestPoints = this->allClippedPoints;
+        return;
+    }
+
+    this->indices.clear();
+    this->indices.reserve(4);
+    this->indices.push_back(0);
+    this->furthestPoints.resize(4);
+    this->furthestPoints[0] = this->allClippedPoints[0];
+
+    for (int i = 0; i < 3; i++) {
+        addFurthestPoint(indices); 
+    }
+
+    std::vector<glm::vec3> temp;
+    temp.reserve(indices.size()); 
+    for (int idx : indices) { 
+        temp.push_back(this->allClippedPoints[idx]); 
+    }
+
+    this->furthestPoints.swap(temp);
 }
 
-void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
+void CollisionManifold::addFurthestPoint(std::vector<int>& indices) {
+    int bestIdx = -1;
+    float bestDist = std::numeric_limits<float>::lowest();
+
+    for (int i = 0; i < this->allClippedPoints.size(); i++)
+    {
+        // Skip if already added
+        bool alreadyAdded = false;
+        for (int j = 0; j < indices.size(); j++) {
+            if (i == indices[j]) {
+                alreadyAdded = true;
+                break;
+            }
+        }
+        if (alreadyAdded)
+            continue;
+
+        float shortestDist = std::numeric_limits<float>::max();
+        for (int j = 0; j < indices.size(); j++)
+        {
+            glm::vec3 diff = this->allClippedPoints[i] - this->allClippedPoints[indices[j]];
+            float dist2 = glm::dot(diff, diff);
+
+            if (dist2 < shortestDist) {
+                shortestDist = dist2;
+            }
+        }
+        if (shortestDist > bestDist) {
+            bestDist = shortestDist;
+            bestIdx = i;
+        }
+    }
+
+    indices.push_back(bestIdx);
+}
+
+void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& normal) {
     glm::vec3 rotated = obj.invRotationMatrix * normal;
     glm::vec3 absN = glm::abs(rotated);
 
-    if (absN.x >= absN.y and absN.x >= absN.z) 
-        outFace = (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX;
+    this->selectedFace.clear();
+
+    if (absN.x >= absN.y and absN.x >= absN.z)
+        for (const auto& face : (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX)
+            this->selectedFace.push_back(face);
+
     else if (absN.y >= absN.x and absN.y >= absN.z)
-        outFace = (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY;
-    else 
-        outFace = (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ;
+        for (const auto& face : (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY)
+            this->selectedFace.push_back(face);
+    else
+        for (const auto& face : (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ)
+            this->selectedFace.push_back(face);
 }
 
-void CollisionManifold::createClippingPlanes(const std::array<glm::vec3,4>& face, const glm::vec3& faceNormal) {
+void CollisionManifold::createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal) {
     this->clippingPlanes = {};
+    this->clippingPlanes.resize(face.size());
     // create clipping planes
     for (int i = 0; i < face.size(); i++) {
         glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
@@ -109,25 +217,24 @@ void CollisionManifold::getIntersectionPoint(const glm::vec3& v1, const glm::vec
 
     float t = glm::dot(plane.normal, plane.point - v1) / denominator;
 
-    if (t < 0.0f || t > 1.0f) {
+    float epsilon = 1e-6f;
+    if (t < -epsilon || t > 1.0f + epsilon) {
         outBool = false;
         return;
     }
 
     outPoint = v1 + t * lineDir;
+    outBool = true;
 }
 
 bool CollisionManifold::isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint) {
-    if (glm::dot(planeNormal, point - planePoint) < 1e-2f)
+    if (glm::dot(planeNormal, point - planePoint) < 0.0f)
         return true;
 
     return false;
 }
 
-void CollisionManifold::createContactPoints(InitialContact& initialContact) {
-   std::array<glm::vec3, 4>& referenceFace = initialContact.referenceFace; 
-   std::array<glm::vec3, 4>& incidentFace = initialContact.incidentFace;
-   glm::vec3& referenceFaceNormal = initialContact.referenceFaceNormal; 
+void CollisionManifold::clipPoints(std::vector<glm::vec3>& referenceFace, std::vector<glm::vec3>& incidentFace, glm::vec3& referenceFaceNormal) {
 
    createClippingPlanes(referenceFace, referenceFaceNormal);
 
@@ -135,11 +242,14 @@ void CollisionManifold::createContactPoints(InitialContact& initialContact) {
    this->nextContactPoints = {};
    this->clippingStatus = {};
 
+   this->clippedPoints.clear();
+   this->clippedPoints.reserve(incidentFace.size()*2);
+
    for (int i = 0; i < incidentFace.size(); i++) {
       contactPoints[i] = incidentFace[i];
    }
-   int counter = 4;
-   int counter2 = 4;
+   int counter = incidentFace.size(); 
+   int counter2 = counter; 
 
    // clip alla punkter mot alla plan
    for (const Plane& plane : this->clippingPlanes) {
@@ -174,22 +284,23 @@ void CollisionManifold::createContactPoints(InitialContact& initialContact) {
 
    // behåll de punkter som är innanför referensface
    for (int i = 0; i < counter; i++) {
-      if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0])) 
-         initialContact.globalCoords[initialContact.counter++] = contactPoints[i];
+      if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0]))
+          this->clippedPoints.push_back(contactPoints[i]);
+
    }
 }
 
-void CollisionManifold::createLocalCoordinates(InitialContact& initialContact) {
-    glm::mat4& invM = initialContact.objA_ptr->invModelMatrix;
+void CollisionManifold::createLocalCoordinates(Contact& contact) {
+    glm::mat4& invM = contact.objA_ptr->invModelMatrix;
 
-    for (int i = 0; i < initialContact.counter; i++) {
-        glm::vec4 local = invM * glm::vec4(initialContact.globalCoords[i], 1.0f);
-        initialContact.localCoords[i] = glm::vec3(local);
+    for (int i = 0; i < contact.points.size(); i++) {
+        glm::vec4 local = invM * glm::vec4(contact.points[i].globalCoord, 1.0f);
+        contact.points[i].localCoord = glm::vec3(local);
     }
 }
 
-void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
-    glm::vec3 normal = contactPoints.referenceFaceNormal;
+void CollisionManifold::contactPointReduction(Contact& contact) {
+    glm::vec3 normal = contact.referenceFaceNormal;
     std::array<glm::vec3, 4>  finalGlobalPoints{};
     std::array<glm::vec3, 4>  finalLocalPoints{};
 
@@ -198,8 +309,8 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
     const glm::vec3 direction = glm::vec3(1.0f, 0.0f, 0.0f);
     float maxDot = std::numeric_limits<float>::lowest();
     int supportPointIndex = 0;
-    for (int i = 0; i < contactPoints.counter; i++) {
-        glm::vec3& point = contactPoints.localCoords[i];
+    for (int i = 0; i < contact.points.size(); i++) {
+        glm::vec3& point = contact.points[i].localCoord;
 
         float dotValue = glm::dot(point, direction);
         if (dotValue > maxDot) {
@@ -208,15 +319,15 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
             supportPointIndex = i;
         }
     }
-    finalGlobalPoints[0] = contactPoints.globalCoords[supportPointIndex];
-    finalLocalPoints[0] = contactPoints.localCoords[supportPointIndex];
+    finalGlobalPoints[0] = contact.points[supportPointIndex].globalCoord;
+    finalLocalPoints[0] = contact.points[supportPointIndex].localCoord;
 
-    // hitta den punkt som är längst bort från supportPoint
+    // hitta den punkt som är längst bort från supportPointout.normal
     int farthestPointIndex = 0;
     glm::vec3 farthestPoint{};
     float maxDistance = std::numeric_limits<float>::lowest();
-    for (int i = 0; i < contactPoints.counter; i++) {
-        glm::vec3& point = contactPoints.localCoords[i];
+    for (int i = 0; i < contact.points.size(); i++) {
+        glm::vec3& point = contact.points[i].localCoord;
 
         float distance = glm::distance2(supportPoint, point);
         if (distance > maxDistance) {
@@ -225,14 +336,14 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
             farthestPointIndex = i;
         }
     }
-    finalGlobalPoints[1] = contactPoints.globalCoords[farthestPointIndex];
-    finalLocalPoints[1] = contactPoints.localCoords[farthestPointIndex];
+    finalGlobalPoints[1] = contact.points[farthestPointIndex].globalCoord;
+    finalLocalPoints[1] = contact.points[farthestPointIndex].localCoord;
 
     // hitta den punkt som bildar den största positiva triangeln med supportPoint och farthestPoint (pga crossproduct winding order)
     int trianglePointIndex = 0;
     float maxArea = std::numeric_limits<float>::lowest();
-    for (int i = 0; i < contactPoints.counter; i++) {
-        glm::vec3& point = contactPoints.localCoords[i];
+    for (int i = 0; i < contact.points.size(); i++) {
+        glm::vec3& point = contact.points[i].localCoord;
 
         float area = 0.5f * glm::dot(glm::cross(supportPoint - farthestPoint, supportPoint - point), normal);
         if (area > maxArea) {
@@ -240,14 +351,14 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
             trianglePointIndex = i;
         }
     }
-    finalGlobalPoints[2] = contactPoints.globalCoords[trianglePointIndex];
-    finalLocalPoints[2] = contactPoints.localCoords[trianglePointIndex];
+    finalGlobalPoints[2] = contact.points[trianglePointIndex].globalCoord;
+    finalLocalPoints[2] = contact.points[trianglePointIndex].localCoord;
 
     // hitta den punkt som bildar den största negativa triangeln med supportPoint och farthestPoint (pga motsatt crossproduct winding order)
     int negTrianglePointIndex = 0;
     maxArea = std::numeric_limits<float>::max();
-    for (int i = 0; i < contactPoints.counter; i++) {
-        glm::vec3& point = contactPoints.localCoords[i];
+    for (int i = 0; i < contact.points.size(); i++) {
+        glm::vec3& point = contact.points[i].localCoord;
 
         float area = 0.5f * glm::dot(glm::cross(supportPoint - farthestPoint, supportPoint - point), normal);
         if (area < 0 and area < maxArea) {
@@ -255,37 +366,70 @@ void CollisionManifold::contactPointReduction(InitialContact& contactPoints) {
             negTrianglePointIndex = i;
         }
     }
-    finalGlobalPoints[3] = contactPoints.globalCoords[negTrianglePointIndex];
-    finalLocalPoints[3] = contactPoints.localCoords[negTrianglePointIndex];
+    finalGlobalPoints[3] = contact.points[negTrianglePointIndex].globalCoord;
+    finalLocalPoints[3] = contact.points[negTrianglePointIndex].localCoord;
 
-    contactPoints.globalCoords = { finalGlobalPoints[0], finalGlobalPoints[1], finalGlobalPoints[2], finalGlobalPoints[3], {}, {}, {}, {} };
-    contactPoints.localCoords = { finalLocalPoints[0], finalLocalPoints[1], finalLocalPoints[2], finalLocalPoints[3], {}, {}, {}, {} };
-    contactPoints.counter = 4;
+    for (int i = 0; i < 4; i++) {
+        contact.points[i].globalCoord = finalGlobalPoints[i];
+        contact.points[i].localCoord = finalLocalPoints[i];
+    }
+    contact.points.resize(4);
 }
 
-void CollisionManifold::computePenetrationDepth(InitialContact& initialContact) {
-    for (int i = 0; i < initialContact.counter; i++)
-        initialContact.pointDepths[i] = -glm::dot(initialContact.globalCoords[i] - initialContact.referenceFace[0], initialContact.referenceFaceNormal);
+void CollisionManifold::computePenetrationDepth(Contact& contact) {
+    for (int i = 0; i < contact.points.size(); i++)
+        contact.points[i].depth = -glm::dot(contact.points[i].globalCoord - contact.referenceFace[0], contact.referenceFaceNormal);
 }
 
-void CollisionManifold::PreComputePointData(ContactPoint& cp, glm::vec3& normal, GameObject& objA, GameObject& objB) {
+void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) {
     constexpr float restitutionThreshold = 0.1f; // Minsta hastighet för att restitution ska aktiveras
     constexpr float restitution = 0.1f; // exempelmaterial
 
-    // pre-calculate rA, rB, EffectiveMass
-    cp.rA = cp.globalCoord - objA.position;
-    cp.rB = cp.globalCoord - objB.position;
+    GameObject& objA = *contact.objA_ptr; 
+    GameObject& objB = *contact.objB_ptr; 
+    glm::vec3 normal = contact.normal; 
 
-    glm::vec3 rA_cross_n = glm::cross(cp.rA, normal);
-    glm::vec3 rB_cross_n = glm::cross(cp.rB, normal);
-    cp.m_eff = 1.0f / (objA.invMass + objB.invMass +
-        glm::dot(rA_cross_n, objA.inverseInertia * rA_cross_n) +
-        glm::dot(rB_cross_n, objB.inverseInertia * rB_cross_n));
+    glm::vec3 rA = cp.globalCoord - objA.position;
+    float invMassA = objA.invMass;
+    glm::mat3 invInertiaA = objA.inverseInertia;
+    glm::vec3 linearVelocityA = objA.linearVelocity;
+    glm::vec3 angularVelocityA = objA.angularVelocity;
+
+    glm::vec3 rB; 
+    float invMassB;
+    glm::mat3 invInertiaB; 
+    glm::vec3 linearVelocityB;
+    glm::vec3 angularVelocityB;
+
+    if (contact.objB_ptr == nullptr) {
+        rB = glm::vec3(0.0f);
+        invMassB = 0.0f;
+        invInertiaB = glm::mat3(0.0f);
+        linearVelocityB = glm::vec3(0.0f);
+        angularVelocityB = glm::vec3(0.0f);
+    }
+    else {
+        rB = cp.globalCoord - objB.position; 
+        invMassB = objB.invMass; 
+        invInertiaB = objB.inverseInertia; 
+        linearVelocityB = objB.linearVelocity; 
+        angularVelocityB = objB.angularVelocity; 
+    }
+
+    // pre-calculate rA, rB, EffectiveMass
+    cp.rA = rA;
+    cp.rB = rB;
+
+    glm::vec3 rA_cross_n = glm::cross(rA, normal);
+    glm::vec3 rB_cross_n = glm::cross(rB, normal);
+    cp.m_eff = 1.0f / (invMassA + invMassB +
+        glm::dot(rA_cross_n, invInertiaA * rA_cross_n) +
+        glm::dot(rB_cross_n, invInertiaB * rB_cross_n));
 
     // Räkna ut den relativa hastigheten vid kontaktpunkten, baserat på de aktuella kropparnas tillstånd
     glm::vec3 relativeVelocity = 
-        (objB.linearVelocity + glm::cross(objB.angularVelocity, cp.rB)) -
-        (objA.linearVelocity + glm::cross(objA.angularVelocity, cp.rA));
+        (linearVelocityB + glm::cross(angularVelocityB, rB)) -
+        (linearVelocityA + glm::cross(angularVelocityA, rA));
 
     // Dela upp i normal- och tangentiell komponent
     glm::vec3 v_normal = glm::dot(relativeVelocity, normal) * normal;
@@ -319,50 +463,52 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, glm::vec3& normal,
         cp.targetBounceVelocity = 0.0f;
     }
 
-    glm::vec3 rA_t1 = glm::cross(cp.rA, t1);
-    glm::vec3 rB_t1 = glm::cross(cp.rB, t1);
-    glm::vec3 rA_t2 = glm::cross(cp.rA, t2);
-    glm::vec3 rB_t2 = glm::cross(cp.rB, t2);
+    glm::vec3 rA_t1 = glm::cross(rA, t1);
+    glm::vec3 rB_t1 = glm::cross(rB, t1);
+    glm::vec3 rA_t2 = glm::cross(rA, t2);
+    glm::vec3 rB_t2 = glm::cross(rB, t2);
 
-    glm::vec3 invIA_rA_t1 = objA.inverseInertia * rA_t1;
-    glm::vec3 invIB_rB_t1 = objB.inverseInertia * rB_t1;
-    glm::vec3 invIA_rA_t2 = objA.inverseInertia * rA_t2;
-    glm::vec3 invIB_rB_t2 = objB.inverseInertia * rB_t2;
+    glm::vec3 invIA_rA_t1 = invInertiaA * rA_t1;
+    glm::vec3 invIB_rB_t1 = invInertiaB * rB_t1;
+    glm::vec3 invIA_rA_t2 = invInertiaA * rA_t2;
+    glm::vec3 invIB_rB_t2 = invInertiaB * rB_t2;
 
     // Beräkna effektiv massa längs cp.t1 och cp.t2 
-    float k_t1 = (objA.invMass + objB.invMass) + glm::dot(rA_t1, invIA_rA_t1) + glm::dot(rB_t1, invIB_rB_t1);
+    float k_t1 = (invMassA + invMassB) + glm::dot(rA_t1, invIA_rA_t1) + glm::dot(rB_t1, invIB_rB_t1);
     cp.invMassT1 = 1.0f / k_t1;
-    float k_t2 = (objA.invMass + objB.invMass) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
+    float k_t2 = (invMassA + invMassB) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
     cp.invMassT2 = 1.0f / k_t2;
 
-    cp.invMassTwist = 1.0f / (glm::dot(normal, objA.inverseInertia * normal) + glm::dot(normal, objB.inverseInertia * normal));
+    cp.invMassTwist = 1.0f / (glm::dot(normal, invInertiaA * normal) + glm::dot(normal, invInertiaB * normal));
 }
 
 size_t CollisionManifold::generateKey(int idA, int idB) {
     return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
 }
 
-void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, InitialContact& initialContact, Contact& finalContact) {
-    // kopiera över punkterna från initialContact till finalContact
-    for (int i = 0; i < initialContact.counter; i++) {
-        finalContact.points[i].globalCoord = initialContact.globalCoords[i];
-        finalContact.points[i].localCoord = initialContact.localCoords[i];
-        finalContact.points[i].depth = initialContact.pointDepths[i];
+size_t CollisionManifold::generateKeyMulti(std::vector<int> ids) {
+    std::sort(ids.begin(), ids.end());   // så ordningen inte spelar någon roll
+
+    size_t seed = 0;
+    for (int x : ids) {
+        // boost::hash_combine–idiomet, med std::hash<>
+        seed ^= std::hash<int>()(x)
+            + 0x9e3779b97f4a7c15ULL
+            + (seed << 6)
+            + (seed >> 2);
     }
-    finalContact.counter = initialContact.counter;
+    return seed;
+}
 
-    for (int i = 0; i < finalContact.counter; i++) 
-        PreComputePointData(finalContact.points[i], finalContact.normal, *finalContact.objA_ptr, *finalContact.objB_ptr);
+void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
+    for (int i = 0; i < contact.points.size(); i++)
+        PreComputePointData(contact.points[i], contact);
 
-    // kolla om det redan finns en contact mellan objA och objB
-    int idA = initialContact.objA_ptr->id;
-    int idB = initialContact.objB_ptr->id;
-    size_t key = generateKey(idA, idB);
-    auto it = contactCache.find(key);
+    auto it = contactCache.find(contact.hashKey);
 
     // ingen matchande cached contact
     if (it == contactCache.end()) {
-        contactCache[key] = finalContact;
+        contactCache[contact.hashKey] = contact;
         return;
     }
 
@@ -372,16 +518,16 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
 
     std::array<bool, 4> matchedFinalPoints{ false };
     std::array<bool, 4> matchedCachedPoints{ false };
-    glm::vec3 referenceFaceNormal = initialContact.referenceFaceNormal;
-    std::array<glm::vec3, 4> referenceFace = initialContact.referenceFace;
+    glm::vec3& referenceFaceNormal = contact.referenceFaceNormal;
+    std::vector<glm::vec3>& referenceFace = contact.referenceFace;
 
     // -------------- behöver ändras till att vara en faktor av objektens storlekar -------------
     const float threshold = 0.5f;
 
     // iterera över alla nya contact points och se om någon är nära en existerande
-    for (int i = 0; i < finalContact.counter; i++) {
-        ContactPoint& newPoint = finalContact.points[i];
-        for (int j = 0; j < cachedContact.counter; j++) {
+    for (int i = 0; i < contact.points.size(); i++) {
+        ContactPoint& newPoint = contact.points[i];
+        for (int j = 0; j < cachedContact.points.size(); j++) {
 
             if (matchedFinalPoints[i]) break;
             if (matchedCachedPoints[j]) continue;
@@ -401,7 +547,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
                     cachedPoint.accumulatedFrictionImpulse2 * cachedPoint.t2;
 
                 // 2) Projicera på den NYA basen
-                newPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, finalContact.normal);
+                newPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, contact.normal);
                 newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, newPoint.t1);
                 newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, newPoint.t2);
 
@@ -416,8 +562,8 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     }
 
     // fyll på med cachade punkter som inte blivit matchade med en ny punkt
-    if (finalContact.counter < 4) {
-        for (int i = 0; i < cachedContact.counter; i++) {
+    if (contact.points.size() < 4) {
+        for (int i = 0; i < cachedContact.points.size(); i++) {
             if (matchedCachedPoints[i] == true)
                 continue;
 
@@ -426,14 +572,14 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
                 continue;
             }
 
-            PreComputePointData(cachedPoint, finalContact.normal, *finalContact.objA_ptr, *finalContact.objB_ptr);
-            finalContact.points[finalContact.counter++] = cachedPoint;
+            PreComputePointData(cachedPoint, contact);
+            contact.points.push_back(cachedPoint);
             
-            if (finalContact.counter >= 4) {
+            if (contact.points.size() >= 4) {
                 break;
             }
         }
     }
 
-    contactCache[key] = finalContact;
+    contactCache[contact.hashKey] = contact;
 }

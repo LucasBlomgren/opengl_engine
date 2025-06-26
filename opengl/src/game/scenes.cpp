@@ -13,14 +13,14 @@ void SceneBuilder::testScene() {
         }
 
 
-    glm::quat newOrient = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    float wWidth = 5.0f;
-    float wHeight = 5.0f;
-    float wLength = 5.0f;
-    glm::vec3 color1 = glm::vec3(255, 0, 0);
-    glm::vec3 color2 = glm::vec3(0, 255, 0);
-    createObject("plain", ColliderType::MESH, glm::vec3(5,7,5), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color1);
-    createObject("plain", ColliderType::MESH, glm::vec3(9,7,9), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color2);
+    //glm::quat newOrient = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    //float wWidth = 5.0f;
+    //float wHeight = 5.0f;
+    //float wLength = 5.0f;
+    //glm::vec3 color1 = glm::vec3(255, 0, 0);
+    //glm::vec3 color2 = glm::vec3(0, 255, 0);
+    //createObject("plain", ColliderType::MESH, glm::vec3(5,7,5), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color1);
+    //createObject("plain", ColliderType::MESH, glm::vec3(9,7,9), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color2);
 }
 
 void SceneBuilder::mainScene() {
@@ -203,38 +203,9 @@ void SceneBuilder::mainScene() {
         lastPos = newPos;
     }
 
-    // falling pyramid
-    int pHeight = 8;
-    int pWidth = 10;
-    float sWidth = 1.0f;
-    float sLength = 1.0f;
-    float sHeight = 1.0f;
-    float sDist = 0;
-    float pWidthCounter = pWidth;
-    for (int y = 0; y < pHeight; y++) {
-        for (int x = 0; x < pWidthCounter; x++) {
-            for (int z = 0; z < pWidthCounter; z++) {
-                float xPos = 140 + x * (sWidth + sDist) + y * (sWidth / 2 + sDist);
-                float yPos = 85 + sHeight / 2 + y * sHeight;
-                float zPos = 175 + z * (sWidth + sDist) + y * (sWidth / 2 + sDist);
-
-                float xSize;
-                float ySize;
-                float zSize;
-                xSize = sWidth;
-                ySize = sHeight;
-                zSize = sLength;
-
-                //xSize = randomRange(1, 50);
-                //ySize = randomRange(1, 50);
-                //zSize = randomRange(1, 50);
-                glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(xSize, ySize, zSize), 1, 0, glm::quat(1, 0, 0, 0), 2.0f, 1, color);
-            }
-        }
-        pWidthCounter -= 1;
-    }
+    // --- falling pyramid ---
+    // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
+    createPyramid("plain", glm::vec3(-1,-1,-1), glm::vec3(140.0f, 85.0f, 175.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1);
 
     // ___________________________________________________________
     // ------------------------ sloped platforms -----------------
@@ -294,37 +265,8 @@ void SceneBuilder::mainScene() {
 
     }
     // falling pyramid
-    pHeight = 8;
-    pWidth = 10;
-    sWidth = 1.0f;
-    sLength = 1.0f;
-    sHeight = 1.0f;
-    sDist = 0;
-    pWidthCounter = pWidth;
-    for (int y = 0; y < pHeight; y++) {
-        for (int x = 0; x < pWidthCounter; x++) {
-            for (int z = 0; z < pWidthCounter; z++) {
-                float xPos = 95 + x * (sWidth + sDist) + y * (sWidth / 2 + sDist);
-                float yPos = 145 + sHeight / 2 + y * sHeight;
-                float zPos = 80 + z * (sWidth + sDist) + y * (sWidth / 2 + sDist);
-
-                float xSize;
-                float ySize;
-                float zSize;
-                xSize = sWidth;
-                ySize = sHeight;
-                zSize = sLength;
-
-                //xSize = randomRange(1, 50);
-                //ySize = randomRange(1, 50);
-                //zSize = randomRange(1, 50);
-                glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(xSize, ySize, zSize), 1, 0, glm::quat(1, 0, 0, 0), 2.0f, 1, color);
-            }
-        }
-        pWidthCounter -= 1;
-    }
+    // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
+    createPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(95.0f, 145.0f, 80.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1);
 
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
@@ -434,40 +376,13 @@ void SceneBuilder::mainScene() {
     }
 
     // _____________________________________________________________
-    // ----------------------- pyramids ----------------------------
-    int numPyramidsX = 1;
-    int numPyramidsZ = 1;
+    // ----------------------- pyramid -----------------------------
+    // 
+    // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
+    //createPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 34.5f), 15, 12, 0.5f, 0.5f, 3, 0, 1);
 
-    int pyramidHeight = 12;
-    int pyramidWidth = 15;
 
-    float stoneWidth = 0.5f;
-    float stoneLength = 0.5f;
-    float stoneHeight = 3.0f;
-    float stoneDistance = 0.0f;
 
-    int stoneWeight = 1;
 
-    // multiple pyramids
-    for (int i = 0; i < numPyramidsX; i++) {
-        for (int j = 0; j < numPyramidsZ; j++) {
-            // single pyramid
-            int pyramidWidthCounter = pyramidWidth;
-            for (int y = 0; y < pyramidHeight; y++) {
-                for (int x = 0; x < pyramidWidthCounter; x++) {
-                    for (int z = 0; z < pyramidWidthCounter; z++) {
-                        float xPos = i * 15 + 8 + x * (stoneWidth + stoneDistance) + y * (stoneWidth / 2 + stoneDistance);
-                        float yPos = stoneHeight / 2 + y * stoneHeight;
-                        float zPos = j * 15 + 34.5 + z * (stoneWidth + stoneDistance) + y * (stoneWidth / 2 + stoneDistance);
-
-                        //glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-                        glm::vec3 color = glm::vec3(246, 215, 176);
-
-                        createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(stoneWidth, stoneHeight, stoneLength), stoneWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
-                    }
-                }
-                pyramidWidthCounter -= 1;
-            }
-        }
-    }
+    //createPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1);
 }

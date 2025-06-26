@@ -5,6 +5,13 @@ AABB GameObject::getAABB() const {
 
 }
 
+void GameObject::applyForceLinear(glm::vec3 f) {
+    linearVelocity += f;
+}
+void GameObject::applyForceAngular(glm::vec3 f) {
+    angularVelocity += f;
+}
+
 void GameObject::setModelMatrix() {
     if (modelMatrixShouldUpdate) {
         modelMatrix = glm::mat4(1.0f);
@@ -19,7 +26,7 @@ void GameObject::setHelperMatrixes() {
     invModelMatrix = glm::inverse(modelMatrix);
     rotationMatrix = glm::mat3(modelMatrix);
     invRotationMatrix = glm::transpose(rotationMatrix);
-    helperMatrixesHasUpdated = true;
+    helperMatrixesShouldUpdate = false;
 }
 
 void GameObject::calculateInverseInertiaForCube() {
@@ -49,24 +56,6 @@ void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angu
     orientation = glm::normalize(orientation);
 }
 
-void GameObject::drawMesh(Shader& shader) {
-    shader.use();
-    setModelMatrix();
-    shader.setMat4("model", modelMatrix);
-
-    if (textureID != 999) {
-        shader.setBool("useTexture", true);
-        shader.setBool("useUniformColor", false);
-    }
-    else {
-        shader.setBool("useTexture", false);
-        shader.setBool("useUniformColor", true);
-        shader.setVec3("uColor", this->color);
-    }
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-}
 
 void GameObject::updateAABB() {
     setModelMatrix();
@@ -81,7 +70,7 @@ void GameObject::updateCollider() {
 
         // OOBB
         if constexpr (std::is_same_v<T, OOBB>) {
-            shape.update(verticesPositions, modelMatrix);
+            shape.update(modelMatrix);
         }
         // Sphere
         else if constexpr (std::is_same_v<T, Sphere>) {
@@ -149,6 +138,25 @@ void GameObject::setAwake() {
 
     asleep = false;
     sleepCounter = 0.0f;
+}
+
+void GameObject::drawMesh(Shader& shader) {
+    shader.use();
+    setModelMatrix();
+    shader.setMat4("model", modelMatrix);
+
+    if (textureID != 999) {
+        shader.setBool("useTexture", true);
+        shader.setBool("useUniformColor", false);
+    }
+    else {
+        shader.setBool("useTexture", false);
+        shader.setBool("useUniformColor", true);
+        shader.setVec3("uColor", this->color);
+    }
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 }
 
 void GameObject::setupMesh() {

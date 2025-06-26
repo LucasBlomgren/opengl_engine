@@ -104,7 +104,6 @@ int main()
    // setup help VAOs
    unsigned int VAO_line = setupLine();
    unsigned int VAO_xyz = setup_xyzObject();
-   unsigned int VAO_worldFrame = setup_worldFrame();
    unsigned int VAO_contactPoint = setupContactPoint();
 
    // main loop
@@ -139,7 +138,6 @@ int main()
          bvhAccumulator += deltaTime;
          if (bvhAccumulator >= bvhInterval) {
             physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
-            //physicsEngine.getTerrainBvh().update(sceneBuilder.getTerrainTriangles());
             bvhAccumulator -= bvhInterval;
          }
       }
@@ -232,7 +230,7 @@ int main()
       renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
       //renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
 
-      renderer.drawDebug(physicsEngine, VAO_contactPoint, VAO_xyz, VAO_worldFrame);
+      renderer.drawDebug(physicsEngine, sceneBuilder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
 
       // calculate render time
       float renderClockEnd = static_cast<float>(glfwGetTime());
@@ -311,6 +309,8 @@ int main()
             std::cout << "-----------------------" << "\n";
             frames = 0;
             physicsEngine.getDynamicBvh().numRebuilds = 0;
+
+            std::cout << std::setprecision(99);
          }
          frames++;
       }

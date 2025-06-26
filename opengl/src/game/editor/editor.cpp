@@ -145,8 +145,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
 void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
-        selectedObject->hasGravity = true;
-        selectedObject->asleep = true;
+        selectedObject->asleep = false;
         selectedObject->sleepCounterThreshold = 0.5f;
         selectedObject->sleepCounter = 0.0f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
@@ -173,7 +172,6 @@ void Editor::selectObject() {
 
     selectedObject->selectedByEditor = true;
     selectedObject->asleep = false;
-    selectedObject->hasGravity = false;
     selectedObject->sleepCounterThreshold = 1000000.0f;
     selectedObject->lastPosition = selectedObject->position;
 

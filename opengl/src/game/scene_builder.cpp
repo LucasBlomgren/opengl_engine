@@ -14,13 +14,13 @@ void SceneBuilder::setPointers(TextureManager* tm, LightManager* lm, std::mt1993
     this->rng = &rng;
 }
 
-int SceneBuilder::randomRange(int start, int end) {
+float SceneBuilder::randomRange(float start, float end) {
    if (start > end or start == end) {
       std::cerr << "Invalid range: " << start << " to " << end << std::endl;
       return -1; 
    }
 
-   std::uniform_int_distribution<int> dist(start, end);
+   std::uniform_real_distribution<float> dist(start, end);
    return dist(*this->rng);
 }
 
@@ -83,10 +83,10 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     mainScene();
 
     generateFlatTerrain(
-        /*gridX=*/100,
-        /*gridZ=*/100,
+        /*gridX=*/20,
+        /*gridZ=*/20,
         /*cellSize=*/5.0f,
-        /*maxHeight=*/5.0f,
+        /*maxHeight=*/30.0f,
         /*flatness=*/1.0f);
 
     std::cout << terrainTriangles.size() << " terrain triangles created." << std::endl;
@@ -96,15 +96,15 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 
 GameObject& SceneBuilder::createObject(
     const std::string& textureName,
-    ColliderType colliderType,
-    glm::vec3 pos,
-    glm::vec3 size,
+    const ColliderType colliderType,
+    const glm::vec3& pos,
+    const glm::vec3& size,
     float mass,
     bool isStatic,
-    glm::quat orientation,
+    const glm::quat& orientation,
     float sleepCounterThreshold,
     bool asleep,
-    glm::vec3 color
+    const glm::vec3& color
 )
 {
     unsigned int textureID;
@@ -126,20 +126,46 @@ void SceneBuilder::generateFlatTerrain(
     float maxHeight,
     float flatness /* i [0,1], 0 = helt plant, 1 = full variation */
 ) {
-    // 1) Skapa en hödkarta: slumpa eller perlin-noise-baserad, här enkel rand
-    std::mt19937                             rng{ std::random_device{}() };
-    std::uniform_real_distribution<float>    distH(0.0f, maxHeight * flatness);
+    float startHeight = maxHeight * flatness * 0.5f;  // t.ex. halvvägs upp
+    float maxStep = maxHeight * 0.2f;                 // hur stort steg vi tillåter 
 
     // 2) Fyll en (gridSizeX+1)x(gridSizeZ+1)-array med höjder
     std::vector<std::vector<float>> heightMap(gridSizeX + 1, std::vector<float>(gridSizeZ + 1));
-
     for (int x = 0; x <= gridSizeX; ++x) {
         for (int z = 0; z <= gridSizeZ; ++z) {
-            heightMap[x][z] = distH(rng);
+            if (x == 0 && z == 0) {
+                heightMap[0][0] = startHeight;
+                continue;
+            }
+
+            float sum = 0.0f;
+            int count = 0;
+
+            // granne bakåt (i X-led)
+            if (x > 0) {
+                sum += heightMap[x - 1][z];
+                ++count;
+            }
+            // granne bakåt (i Z-led)
+            if (z > 0) {
+                sum += heightMap[x][z - 1];
+                ++count;
+            }
+
+            // basera på medelvärdet av befintliga grannar
+            float base = sum / count;
+
+            // nytt slumpsteg
+            float delta = randomRange(-maxStep, +maxStep);
+            float h = base + delta;
+
+            // kläm mellan 0 och maxHeight
+            h = std::max(0.0f, std::min(h, maxHeight));
+            heightMap[x][z] = h;
         }
     }
 
-    glm::vec3 offset{ -600.0f, 0.0f, 0.0f };
+    glm::vec3 offset{ -150.0f, 0.0f, 0.0f };
     // 3) Bygg trianglar: två per cell
     for (int x = 0; x < gridSizeX; ++x) {
         for (int z = 0; z < gridSizeZ; ++z) {
@@ -151,9 +177,9 @@ void SceneBuilder::generateFlatTerrain(
 
             // dela cellen diagonalt: diagonal v00→v11
             // triangel 1: v00, v10, v11
-            terrainTriangles.emplace_back(v00, v10, v11);
+            terrainTriangles.emplace_back(objectId++, v00, v11, v10);
             // triangel 2: v00, v11, v01
-            terrainTriangles.emplace_back(v00, v11, v01);
+            terrainTriangles.emplace_back(objectId++, v00, v01, v11);
         }
     }
 }
@@ -180,4 +206,40 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
     glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
 
     createObject("plain", ColliderType::CUBOID, spawnPos, glm::vec3(10.0f), 1, 0, orientation, 2.0f, 0, color);
+}
+
+void SceneBuilder::createPyramid(
+    const std::string& textureName,
+    glm::vec3 color,
+    const glm::vec3& pos,
+    int pWidth,
+    int pHeight,
+    float sWidth,
+    float sLength,
+    float sHeight,
+    float sDistance,
+    int sWeight)
+{
+    // random color
+    bool randomColor = false;
+    if (color.x == -1 && color.y == -1 && color.z == -1)
+        randomColor = true;
+
+    int pWidthCounter = pWidth;
+    for (int y = 0; y < pHeight; y++) {
+        for (int x = 0; x < pWidthCounter; x++) {
+            for (int z = 0; z < pWidthCounter; z++) {
+                float xPos = pos.x + x * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
+                float yPos = pos.y + sHeight / 2 + y * sHeight;
+                float zPos = pos.z + z * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
+
+                if (randomColor) {
+                    color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                }
+
+                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
+            }
+        }
+        pWidthCounter -= 1;
+    }
 }

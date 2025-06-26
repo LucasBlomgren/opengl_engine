@@ -62,7 +62,7 @@ public:
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
     glm::mat3 invRotationMatrix;
-    bool helperMatrixesHasUpdated = false;
+    bool helperMatrixesShouldUpdate = true;
 
     int textureID;
     glm::vec3 color;
@@ -71,8 +71,8 @@ public:
     glm::quat orientation;
     glm::mat3 inverseInertia;
     glm::vec3 scale;
-    glm::vec3 linearVelocity;
-    glm::vec3 angularVelocity;
+    glm::vec3 linearVelocity{ 0.0f };
+    glm::vec3 angularVelocity{ 0.0f };
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
     float linearVelocityLen;
@@ -188,8 +188,7 @@ public:
 
         // Collider
         if (colliderType == ColliderType::CUBOID) {
-            OOBB oobb;
-            oobb.Init(verticesPositions, modelMatrix);
+            OOBB oobb(verticesPositions, modelMatrix);
             collider.shape = oobb;
 
             oobbRenderer.setupWireframeBox();
@@ -226,6 +225,9 @@ public:
     void updatePos(const float& deltaTime);
     void setAsleep();
     void setAwake();
+
+    void applyForceLinear(glm::vec3 f);
+    void applyForceAngular(glm::vec3 f);
 
     AABB getAABB() const;
 

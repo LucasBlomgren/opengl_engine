@@ -8,7 +8,6 @@
 #include "light_manager.h"
 
 #include "draw_contact_points.h"
-#include "world_frame.h"
 #include "xyz_object.h"
 
 #include "bvh.h"
@@ -20,7 +19,7 @@ public:
     void setViewProjection(Camera& camera);
     void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
     void drawLights() const;
-    void drawDebug(PhysicsEngine& physicsEngine, unsigned int VAO_contactPoint, unsigned int VAO_xyz, unsigned int VAO_worldFrame);
+    void drawDebug(PhysicsEngine& physicsEngine, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
 
     template<typename E>
     void drawBVH(BVHTree<E>& tree, unsigned int VAO_line);

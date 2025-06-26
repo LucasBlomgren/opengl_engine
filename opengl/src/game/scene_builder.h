@@ -17,22 +17,35 @@ class SceneBuilder {
 public:
    void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
    void objectRain(float& current_time, std::mt19937& rng);
-   void createScene(PhysicsEngine& physicsEngine);
-   GameObject& createObject(
-      const std::string& textureName,
-      ColliderType colliderType,
-      glm::vec3 pos,
-      glm::vec3 size,
-      float mass,
-      bool isStatic,
-      glm::quat orientation = glm::quat(1, 0, 0, 0),
-      float sleepCounterThreshold = 1.0f,
-      bool asleep = 0,
-      glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
-   );
 
+   void createScene(PhysicsEngine& physicsEngine);
    void mainScene();
    void testScene();
+
+   GameObject& createObject(
+      const std::string& textureName,
+      const ColliderType colliderType,
+      const glm::vec3& pos,
+      const glm::vec3& size,
+      float mass,
+      bool isStatic,
+      const glm::quat& orientation = glm::quat(1, 0, 0, 0),
+      float sleepCounterThreshold = 1.0f,
+      bool asleep = 0,
+      const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
+   );
+
+   void createPyramid(
+       const std::string& textureName,
+       glm::vec3 color,
+       const glm::vec3& pos,
+       int pWidth,
+       int pHeight,
+       float sWidth,
+       float sLength,
+       float sHeight,
+       float sDistance,
+       int sWeight);
 
    void generateFlatTerrain(
        int   gridSizeX,
@@ -47,7 +60,7 @@ public:
    void toggleLightsState();
    void setLights();
 
-   int randomRange(int start, int end);
+   float randomRange(float start, float end);
 
    // halos
    glm::vec3 haloACenter;
