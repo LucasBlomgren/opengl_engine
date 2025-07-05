@@ -33,7 +33,7 @@ void AABB::updateFaces(glm::mat4& model) {
         wFaces.maxZ[i] = transformPoint(lFaces.maxZ[i]);
     }
 
-    facesShouldUpdate = false;
+    facesDirty = false;
 }
 
 bool AABB::intersects(const AABB& b) const {

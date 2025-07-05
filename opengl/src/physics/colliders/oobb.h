@@ -14,7 +14,7 @@ public:
     OOBB() = default;
     OOBB(std::vector<glm::vec3>& verts, const glm::mat4& M)
     {
-        init(verts);
+        init(verts, M);
         update(M);
     };
 
@@ -45,5 +45,5 @@ public:
     void getFace(int index);
 
 private:
-    void init(std::vector<glm::vec3>& verts);
+    void init(std::vector<glm::vec3>& verts, const glm::mat4& M);
 };

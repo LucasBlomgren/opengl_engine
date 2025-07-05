@@ -17,7 +17,7 @@ class AABB {
 public:
     Faces lFaces;
     Faces wFaces;
-    bool facesShouldUpdate = true;
+    bool facesDirty = true;
 
     // local
     glm::vec3 lMin; 

@@ -41,7 +41,6 @@ struct ContactPoint {
 struct Contact {
     size_t hashKey;
     std::vector<ContactPoint> points;
-    int counter = 0;
     glm::vec3 normal;
 
     GameObject* objA_ptr;
@@ -93,6 +92,5 @@ private:
     void computePenetrationDepth(Contact& contact);
     void PreComputePointData(ContactPoint& cp, Contact& contact);
     size_t generateKey(int idA, int idB);
-    size_t generateKeyMulti(std::vector<int> ids);
     void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
 };

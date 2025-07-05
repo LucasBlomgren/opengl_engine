@@ -48,10 +48,27 @@ void CollisionManifold::cuboidVsCuboid(Contact& contact, std::unordered_map<size
 }
 
 void CollisionManifold::sphereVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+    contact.normal = satResult.normal;
+    contact.points.resize(1); 
+    contact.points[0].globalCoord = satResult.point; // point is the closest point on the cuboid to the sphere
+    contact.points[0].depth = satResult.depth;       // penetration depth
 
+    createLocalCoordinates(contact); 
+
+    contact.hashKey = generateKey(contact.objA_ptr->id, contact.objB_ptr->id); 
+    integrateContact(cache, contact); 
 }
-void CollisionManifold::sphereVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
 
+void CollisionManifold::sphereVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+    contact.normal = satResult.normal;
+    contact.points.resize(1);
+    contact.points[0].globalCoord = satResult.point; // point is the closest point on the sphere to the sphere
+    contact.points[0].depth = satResult.depth;       // penetration depth
+
+    createLocalCoordinates(contact); 
+
+    contact.hashKey = generateKey(contact.objA_ptr->id, contact.objB_ptr->id); 
+    integrateContact(cache, contact); 
 }
 void CollisionManifold::meshVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
 
@@ -181,16 +198,22 @@ void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& no
 
     this->selectedFace.clear();
 
-    if (absN.x >= absN.y and absN.x >= absN.z)
-        for (const auto& face : (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX)
+    if (absN.x >= absN.y and absN.x >= absN.z) {
+        for (const auto& face : (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX) {
             this->selectedFace.push_back(face);
+        }
+    }
 
-    else if (absN.y >= absN.x and absN.y >= absN.z)
-        for (const auto& face : (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY)
+    else if (absN.y >= absN.x and absN.y >= absN.z) {
+        for (const auto& face : (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY) {
             this->selectedFace.push_back(face);
-    else
-        for (const auto& face : (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ)
+        }
+    }
+    else {
+        for (const auto& face : (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ) {
             this->selectedFace.push_back(face);
+        }
+    }
 }
 
 void CollisionManifold::createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal) {
@@ -228,8 +251,9 @@ void CollisionManifold::getIntersectionPoint(const glm::vec3& v1, const glm::vec
 }
 
 bool CollisionManifold::isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint) {
-    if (glm::dot(planeNormal, point - planePoint) < 0.0f)
+    if (glm::dot(planeNormal, point - planePoint) < 0.0f) {
         return true;
+    }
 
     return false;
 }
@@ -391,7 +415,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
 
     glm::vec3 rA = cp.globalCoord - objA.position;
     float invMassA = objA.invMass;
-    glm::mat3 invInertiaA = objA.inverseInertia;
+    glm::mat3 invInertiaA = objA.inverseInertiaWorld;
     glm::vec3 linearVelocityA = objA.linearVelocity;
     glm::vec3 angularVelocityA = objA.angularVelocity;
 
@@ -411,7 +435,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     else {
         rB = cp.globalCoord - objB.position; 
         invMassB = objB.invMass; 
-        invInertiaB = objB.inverseInertia; 
+        invInertiaB = objB.inverseInertiaWorld; 
         linearVelocityB = objB.linearVelocity; 
         angularVelocityB = objB.angularVelocity; 
     }
@@ -486,20 +510,6 @@ size_t CollisionManifold::generateKey(int idA, int idB) {
     return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
 }
 
-size_t CollisionManifold::generateKeyMulti(std::vector<int> ids) {
-    std::sort(ids.begin(), ids.end());   // så ordningen inte spelar någon roll
-
-    size_t seed = 0;
-    for (int x : ids) {
-        // boost::hash_combine–idiomet, med std::hash<>
-        seed ^= std::hash<int>()(x)
-            + 0x9e3779b97f4a7c15ULL
-            + (seed << 6)
-            + (seed >> 2);
-    }
-    return seed;
-}
-
 void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
     for (int i = 0; i < contact.points.size(); i++)
         PreComputePointData(contact.points[i], contact);
@@ -559,6 +569,12 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
                 break;
             }
         }
+    }
+
+    // sphere vs cube
+    if (contact.points.size() == 1) {
+        contactCache[contact.hashKey] = contact;
+        return;
     }
 
     // fyll på med cachade punkter som inte blivit matchade med en ny punkt

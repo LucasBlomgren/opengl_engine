@@ -22,6 +22,7 @@ namespace SAT {
         int edgeIndexB;
 
         Tri* tri_ptr = nullptr;
+        glm::vec3 point; // cube vs sphere
     };
 
     bool cuboidVsCuboid(Collider& A, Collider& B, Result& out);

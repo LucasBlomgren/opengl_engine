@@ -42,13 +42,14 @@ void Renderer::setViewProjection(Camera& camera)
     debugShader->setVec3("viewPos", camera.position);
 }
 
-void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line)
-{
+void Renderer::drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line) {
+    shader->use();
     for (GameObject& obj : objects) {
         obj.drawMesh(*shader);
 
         if (obj.isRaycastHit) {
             obj.oobbRenderer.drawBox(*debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
+            shader->use();
         }
         obj.isRaycastHit = false;
     }
@@ -201,8 +202,6 @@ void Renderer::drawTerrain(std::vector<Tri>& triangles) {
     debugShader->use();
     debugShader->setMat4("model", model);
     debugShader->setBool("debug.useUniformColor", true);
-    //debugShader->setVec3("debug.uColor", glm::vec3{ 0.9f, 0.7f, 0.2f });
-
     debugShader->setBool("terrain", true);
     debugShader->setFloat("maxHeight", maxHeight);
     debugShader->setFloat("minHeight", minHeight);
@@ -211,13 +210,23 @@ void Renderer::drawTerrain(std::vector<Tri>& triangles) {
     glBufferData(GL_ARRAY_BUFFER, vertexData.size() * sizeof(float), vertexData.data(), GL_DYNAMIC_DRAW);
     glBindVertexArray(triVAO);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.0f);
-
     GLsizei vertexCount = GLsizei(vertexData.size() / 3);
+    // --- Fyllning ---
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawArrays(GL_TRIANGLES, 0, vertexCount);
 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
+    debugShader->setVec3("debug.uColor", glm::vec3{ 0.15f });
     debugShader->setBool("terrain", false);
+
+    // --- Wireframe ---
+    glEnable(GL_POLYGON_OFFSET_LINE);
+    // Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
+    glPolygonOffset(-1.0f, -1.0f);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(0.1f);
+    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
+    glDisable(GL_POLYGON_OFFSET_LINE);
+
+    // --- Återställ polygon mode om du vill ---
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

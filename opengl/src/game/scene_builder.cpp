@@ -70,7 +70,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     //staticObjects.clear();
     //staticObjects.reserve(10000);
     terrainTriangles.clear();
-    terrainTriangles.reserve(10000);
+    terrainTriangles.reserve(20000);
 
     physicsEngine.clearPhysicsData();
     setLights();
@@ -83,11 +83,11 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     mainScene();
 
     generateFlatTerrain(
-        /*gridX=*/20,
-        /*gridZ=*/20,
-        /*cellSize=*/5.0f,
-        /*maxHeight=*/30.0f,
-        /*flatness=*/1.0f);
+        /*gridX=*/104,
+        /*gridZ=*/104,
+        /*cellSize=*/1.f,
+        /*maxHeight=*/30.0f
+    );
 
     std::cout << terrainTriangles.size() << " terrain triangles created." << std::endl;
 
@@ -113,7 +113,19 @@ GameObject& SceneBuilder::createObject(
     else 
         textureID = textureManager->getTexture(textureName);
 
-    dynamicObjects.emplace_back(objectId, cubeVertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+
+    if (colliderType == ColliderType::CUBOID) {
+        vertices = cubeVertices;
+        indices = cubeIndices;
+    } 
+    else if (colliderType == ColliderType::SPHERE) {
+        vertices = sphereVertices;
+        indices = sphereIndices;
+    }
+
+    dynamicObjects.emplace_back(objectId, vertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
 
     objectId++;
     return dynamicObjects.back();
@@ -123,13 +135,12 @@ void SceneBuilder::generateFlatTerrain(
     int   gridSizeX,
     int   gridSizeZ,
     float cellSize,
-    float maxHeight,
-    float flatness /* i [0,1], 0 = helt plant, 1 = full variation */
+    float maxHeight
 ) {
-    float startHeight = maxHeight * flatness * 0.5f;  // t.ex. halvvägs upp
-    float maxStep = maxHeight * 0.2f;                 // hur stort steg vi tillåter 
+    float startHeight = maxHeight * 0.5f;  // t.ex. halvvägs upp
+    float maxStep = maxHeight * 0.1f;      // hur stort steg vi tillåter 
 
-    // 2) Fyll en (gridSizeX+1)x(gridSizeZ+1)-array med höjder
+    // Fyll en (gridSizeX+1)x(gridSizeZ+1)-array med höjder
     std::vector<std::vector<float>> heightMap(gridSizeX + 1, std::vector<float>(gridSizeZ + 1));
     for (int x = 0; x <= gridSizeX; ++x) {
         for (int z = 0; z <= gridSizeZ; ++z) {
@@ -165,10 +176,12 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
+    smoothHeightMap(heightMap, 0.7f, 100);
+
     glm::vec3 offset{ -150.0f, 0.0f, 0.0f };
     // 3) Bygg trianglar: två per cell
-    for (int x = 0; x < gridSizeX; ++x) {
-        for (int z = 0; z < gridSizeZ; ++z) {
+    for (int x = 2; x < gridSizeX-2; ++x) {
+        for (int z = 2; z < gridSizeZ-2; ++z) {
             // hörnen i cellen
             glm::vec3 v00 = offset + glm::vec3{ x * cellSize, heightMap[x][z],     z * cellSize };
             glm::vec3 v10 = offset + glm::vec3{ (x + 1) * cellSize, heightMap[x + 1][z],   z * cellSize }; 
@@ -180,6 +193,23 @@ void SceneBuilder::generateFlatTerrain(
             terrainTriangles.emplace_back(objectId++, v00, v11, v10);
             // triangel 2: v00, v11, v01
             terrainTriangles.emplace_back(objectId++, v00, v01, v11);
+        }
+    }
+}
+
+void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes) {
+    int W = H.size(), D = H[0].size();
+    for (int pass = 0; pass < passes; ++pass) {
+        auto copy = H;
+        for (int x = 1; x < W - 1; ++x) {
+            for (int z = 1; z < D - 1; ++z) {
+                float sum = copy[x][z]
+                    + copy[x - 1][z] + copy[x + 1][z]
+                    + copy[x][z - 1] + copy[x][z + 1];
+                float avg = sum / 5.0f;
+                // weight = hur mycket vi drar mot grannarnas medel
+                H[x][z] = glm::mix(copy[x][z], avg, smoothness);
+            }
         }
     }
 }
@@ -208,7 +238,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
     createObject("plain", ColliderType::CUBOID, spawnPos, glm::vec3(10.0f), 1, 0, orientation, 2.0f, 0, color);
 }
 
-void SceneBuilder::createPyramid(
+void SceneBuilder::createBlockPyramid(
     const std::string& textureName,
     glm::vec3 color,
     const glm::vec3& pos,
@@ -230,7 +260,7 @@ void SceneBuilder::createPyramid(
         for (int x = 0; x < pWidthCounter; x++) {
             for (int z = 0; z < pWidthCounter; z++) {
                 float xPos = pos.x + x * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
-                float yPos = pos.y + sHeight / 2 + y * sHeight;
+                float yPos = pos.y + sHeight / 2 + (y * sHeight);
                 float zPos = pos.z + z * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
 
                 if (randomColor) {
@@ -238,6 +268,44 @@ void SceneBuilder::createPyramid(
                 }
 
                 createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
+            }
+        }
+        pWidthCounter -= 1;
+    }
+}
+
+void SceneBuilder::createSpherePyramid(
+    const std::string& textureName,
+    glm::vec3 color,
+    const glm::vec3& pos,
+    int pWidth,
+    int pHeight,
+    float sRadius,
+    float sDistance,
+    int sWeight)
+{
+    const float sqrt2 = sqrt(2.0f);
+
+    // random color
+    bool randomColor = false;
+    if (color.x == -1 && color.y == -1 && color.z == -1)
+        randomColor = true;
+
+    float sDiameter = sRadius * 2.0f;
+
+    int pWidthCounter = pWidth;
+    for (int y = 0; y < pHeight; y++) {
+        for (int x = 0; x < pWidthCounter; x++) {
+            for (int z = 0; z < pWidthCounter; z++) {
+                float xPos = pos.x + x * (sDiameter + sDistance) + y * (sRadius + sDistance);
+                float yPos = pos.y + y * sqrt2 * sRadius; 
+                float zPos = pos.z + z * (sDiameter + sDistance) + y * (sRadius + sDistance);
+
+                if (randomColor) {
+                    color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                }
+
+                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
             }
         }
         pWidthCounter -= 1;

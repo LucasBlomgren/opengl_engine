@@ -99,7 +99,7 @@ int main()
    physicsEngine.init(&engineState);
 
    // setup editor
-   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &indices);
+   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &cubeIndices);
 
    // setup help VAOs
    unsigned int VAO_line = setupLine();
@@ -154,7 +154,7 @@ int main()
               obj.position = sceneBuilder.haloACenter + rotatedRelPos;
 
               obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixShouldUpdate = true;
+              obj.modelMatrixDirty = true;
               obj.setModelMatrix();
               obj.updateAABB();
               obj.updateCollider();
@@ -170,7 +170,7 @@ int main()
               obj.position = sceneBuilder.haloBCenter + rotatedRelPos;
 
               obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixShouldUpdate = true;
+              obj.modelMatrixDirty = true;
               obj.setModelMatrix();
               obj.updateAABB();
               obj.updateCollider();
@@ -186,7 +186,7 @@ int main()
               obj.position = sceneBuilder.haloCCenter + rotatedRelPos;
 
               obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixShouldUpdate = true;
+              obj.modelMatrixDirty = true;
               obj.setModelMatrix();
               obj.updateAABB();
               obj.updateCollider();
@@ -211,22 +211,6 @@ int main()
       renderer.drawLights();
       renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), VAO_line);
       renderer.drawTerrain(sceneBuilder.getTerrainTriangles());
-
-      //GameObject& obj = sceneBuilder.getDynamicObjects()[1];
-      //ColliderShape& shape = obj.collider.shape;
-      //if (auto mesh = std::get_if<TriMesh>(&shape)) {
-      //    auto& tris = mesh->tris;
-      //    renderer.drawTerrain(tris);
-      //    renderer.drawBVH(mesh->bvh, VAO_line);  // draw TriMesh BVH
-      //}
-      //GameObject& obj2 = sceneBuilder.getDynamicObjects()[2];
-      //ColliderShape& shape2 = obj2.collider.shape;
-      //if (auto mesh = std::get_if<TriMesh>(&shape2)) {
-      //    auto& tris = mesh->tris;
-      //    renderer.drawTerrain(tris);
-      //    renderer.drawBVH(mesh->bvh, VAO_line);  // draw TriMesh BVH
-      //}
-
       renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
       //renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
 

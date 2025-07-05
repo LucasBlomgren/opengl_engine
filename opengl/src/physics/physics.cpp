@@ -1,4 +1,5 @@
 ﻿#include "physics.h"
+#include <glm/gtx/string_cast.hpp>
 
 // ----- init -----
 void PhysicsEngine::init(EngineState* engineState) {
@@ -112,12 +113,10 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
 void PhysicsEngine::updatePositions() {
     for (GameObject& obj : *dynamicObjects) {
         if (!obj.isStatic and !obj.asleep) {
+            obj.resetDirtyFlags(); 
             obj.updatePos(this->dt);
             obj.updateAABB();
             obj.updateCollider();
-
-            obj.aabb.facesShouldUpdate = true;
-            obj.helperMatrixesShouldUpdate = true;
 
             obj.linearVelocityLen = glm::dot(obj.linearVelocity, obj.linearVelocity);
             obj.angularVelocityLen = glm::dot(obj.angularVelocity, obj.angularVelocity);
@@ -126,8 +125,8 @@ void PhysicsEngine::updatePositions() {
 }
 
 void PhysicsEngine::updateHelpers(GameObject& obj) {
-    if (obj.helperMatrixesShouldUpdate) obj.setHelperMatrixes();
-    if (obj.aabb.facesShouldUpdate) obj.aabb.updateFaces(obj.modelMatrix);
+    if (obj.helperMatrixesDirty) obj.setHelperMatrixes();
+    if (obj.aabb.facesDirty) obj.aabb.updateFaces(obj.modelMatrix);
 }
 
 bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
@@ -172,8 +171,9 @@ void PhysicsEngine::detectAndSolveCollisions() {
 
 void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
     // ----- dynamic vs terrain -----
-    std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;  // hits buffer
+    static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
     hitsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
+    hitsBufTerrain.clear();
     treeVsTreeQuery(dynamicBvh, terrainBvh, hitsBufTerrain);          // query terrain vs dynamic objects
 
     // Sort terrain hits by GameObject to avoid duplicates 
@@ -277,23 +277,26 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             // gå igenom refined
         }
         else if (th.obj->colliderType == ColliderType::CUBOID) {
-            if (th.obj->asleep)
+            if (th.obj->asleep) {
                 continue;
+            }
 
             static std::vector<SAT::Result> allResults;
-            allResults.clear();
             allResults.reserve(th.coarse.size() * 2); // worst case: all tris collide with collider
+            allResults.clear(); 
 
             for (Tri* tri : th.coarse) {
                 SAT::Result satResult;
-                if (!SAT::triVsCuboid(th.obj->collider, *tri, satResult))
+                if (!SAT::triVsCuboid(th.obj->collider, *tri, satResult)) {
                     continue;
+                }
 
                 allResults.push_back(satResult);
             }
 
-            if (allResults.size() == 0)
-                continue; 
+            if (allResults.size() == 0) {
+                continue;
+            }
 
             SAT::findBestTriangles(allResults);
 
@@ -308,10 +311,23 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
             resolveCollision(contact); // resolve collision
         }
+        else if (th.obj->colliderType == ColliderType::SPHERE) {
+
+        }
     }
 
-    for (DynamicHit& dh : dynamicHits) 
-    {
+    for (DynamicHit& dh : dynamicHits) {
+        if (dh.A->isStatic and dh.B->isStatic) {
+            continue;
+        }
+
+        GameObject* objA = dh.A; 
+        GameObject* objB = dh.B; 
+
+        if (updateSleep(*objA, *objB)) {
+            continue;
+        }
+
         if (dh.singleMeshTris.size() > 0) {
             // collider vs tris
         }
@@ -320,33 +336,76 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             // tris vs tris
         }
 
+        // collider vs collider
         else {
-            // collider vs collider
-            GameObject& objA = *dh.A; 
-            GameObject& objB = *dh.B;
+            // CUBE vs CUBE
+            if (objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::CUBOID)
+            {
+                SAT::Result satResult;
+                if (!SAT::cuboidVsCuboid(objA->collider, objB->collider, satResult)) {
+                    continue;
+                }
 
-            if (objA.isStatic and objB.isStatic)
-                continue;
+                SAT::reverseNormal(objA->position, objB->position, satResult.normal);
 
-            if (updateSleep(objA, objB))
-                continue;
+                objA->totalCollisionCount++;
+                objB->totalCollisionCount++;
 
-            SAT::Result satResult; 
-            if (!SAT::cuboidVsCuboid(objA.collider, objB.collider, satResult))
-                continue;
+                // used only for worldInertia (so far)
+                updateHelpers(*objA);
+                updateHelpers(*objB);
 
-            SAT::reverseNormal(objA.position, objB.position, satResult.normal); 
+                Contact contact(objA, objB);
+                collisionManifold->cuboidVsCuboid(contact, contactCache, satResult);
 
-            objA.totalCollisionCount++; 
-            objB.totalCollisionCount++; 
+                resolveCollision(contact); // resolve collision 
+            }
+            // CUBE vs SPHERE
+            else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or
+                     (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) 
+            {
+                // swap if A is not cuboid
+                if (objA->colliderType != ColliderType::CUBOID) {
+                    std::swap(objA, objB);
+                }
 
-            updateHelpers(objA); // update helper matrixes and aabb faces 
-            updateHelpers(objB);
+                // used in SAT
+                updateHelpers(*objA);  
+                updateHelpers(*objB); 
 
-            Contact contact(&objA, &objB); 
-            collisionManifold->cuboidVsCuboid(contact, contactCache, satResult); 
+                SAT::Result satResult;
+                if (!SAT::sphereVsCuboid(objA->collider, objB->collider, satResult)) {
+                    continue;
+                }
 
-            resolveCollision(contact); // resolve collision 
+                objA->totalCollisionCount++; 
+                objB->totalCollisionCount++; 
+
+                Contact contact(objA, objB); 
+                collisionManifold->sphereVsCuboid(contact, contactCache, satResult); 
+
+                resolveCollision(contact);
+            }
+            // SPHERE vs SPHERE
+            else if (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::SPHERE) 
+            {
+                SAT::Result satResult;
+                if (!SAT::sphereVsSphere(objA->collider, objB->collider, satResult)) {
+                    continue;
+                }
+
+                // used only for worldInertia
+                updateHelpers(*objA); 
+                updateHelpers(*objB); 
+
+                objA->totalCollisionCount++; 
+                objB->totalCollisionCount++; 
+
+                Contact contact(objA, objB); 
+                collisionManifold->sphereVsSphere(contact, contactCache, satResult);  
+
+                resolveCollision(contact); 
+            }
         }
     }
 }
@@ -422,11 +481,11 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
 
                 if (&objA != nullptr) {
                     objA.applyForceLinear(-deltaNormalImpulse * objA.invMass);
-                    objA.applyForceAngular(-objA.inverseInertia * glm::cross(cp.rA, deltaNormalImpulse));
+                    objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
                 }
                 if (&objB != nullptr) {
                     objB.applyForceLinear(deltaNormalImpulse * objB.invMass);
-                    objB.applyForceAngular(objB.inverseInertia * glm::cross(cp.rB, deltaNormalImpulse));
+                    objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
                 }
                 // impulse was changed
                 converged = false;
@@ -473,11 +532,11 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
                 // Applicera den statiska friktionsimpulsen:
                 if (&objA != nullptr) {
                     objA.applyForceLinear(-desiredFrictionImpulse * objA.invMass);
-                    objA.applyForceAngular(-objA.inverseInertia * glm::cross(cp.rA, desiredFrictionImpulse));
+                    objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, desiredFrictionImpulse));
                 }
                 if (&objB != nullptr) {
                     objB.applyForceLinear(desiredFrictionImpulse * objB.invMass); 
-                    objB.applyForceAngular(objB.inverseInertia * glm::cross(cp.rB, desiredFrictionImpulse)); 
+                    objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, desiredFrictionImpulse)); 
                 }
                 if (JtLen2 > 1e-6f)
                     converged = false;
@@ -513,11 +572,11 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
 
                     if (&objA != nullptr) { 
                         objA.applyForceLinear(-frictionImpulse * objA.invMass); 
-                        objA.applyForceAngular(-objA.inverseInertia * glm::cross(cp.rA, frictionImpulse)); 
+                        objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, frictionImpulse)); 
                     }
                     if (&objB != nullptr) { 
                         objB.applyForceLinear(frictionImpulse * objB.invMass); 
-                        objB.applyForceAngular(objB.inverseInertia * glm::cross(cp.rB, frictionImpulse)); 
+                        objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, frictionImpulse)); 
                     } 
                     converged = false;
                 }
@@ -552,10 +611,10 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
             if (twistImpulseVecLen > 1e-6f) {
 
                 if (&objA != nullptr) {
-                    objA.applyForceAngular(-objA.inverseInertia * twistImpulseVec);
+                    objA.applyForceAngular(-objA.inverseInertiaWorld * twistImpulseVec);
                 }
                 if (&objB != nullptr) { 
-                    objB.applyForceAngular(objB.inverseInertia* twistImpulseVec); 
+                    objB.applyForceAngular(objB.inverseInertiaWorld* twistImpulseVec); 
                 }
 
                 converged = false;

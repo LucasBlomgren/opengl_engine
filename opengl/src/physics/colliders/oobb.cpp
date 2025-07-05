@@ -5,12 +5,14 @@ void OOBB::update(const glm::mat4& M) {
 
     // rotate normals
     glm::mat3 R = glm::mat3(M);
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++) {
         wAxes[i] = glm::normalize(R * lAxes[i]);
+    }
 
     // transform world corners
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < 8; ++i) {
         wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
+    }
 }
 
 void OOBB::getFace(int idx) {
@@ -18,7 +20,7 @@ void OOBB::getFace(int idx) {
         wFace[i] = wVertices[faceIndices[idx][i]];
 }
 
-void OOBB::init(std::vector<glm::vec3>& verts) {
+void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
     glm::vec3 lMin(+FLT_MAX), lMax(-FLT_MAX); 
     for (auto const& v : verts) { 
         lMin = glm::min(lMin, v);  
@@ -46,4 +48,9 @@ void OOBB::init(std::vector<glm::vec3>& verts) {
     };
 
     wFace.resize(4);
+
+    // transform world corners
+    for (int i = 0; i < 8; ++i) {
+        wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
+    }
 }

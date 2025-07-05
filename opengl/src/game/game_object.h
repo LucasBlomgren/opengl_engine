@@ -57,12 +57,12 @@ public:
     unsigned int VAO;
 
     glm::mat4 modelMatrix;
-    bool modelMatrixShouldUpdate = true;
+    bool modelMatrixDirty = true;
 
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
     glm::mat3 invRotationMatrix;
-    bool helperMatrixesShouldUpdate = true;
+    bool helperMatrixesDirty = true;
 
     int textureID;
     glm::vec3 color;
@@ -70,6 +70,7 @@ public:
     // physics variables
     glm::quat orientation;
     glm::mat3 inverseInertia;
+    glm::mat3 inverseInertiaWorld;
     glm::vec3 scale;
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
@@ -88,6 +89,7 @@ public:
     bool canMoveLinearly = true;
     bool isUniformlyScaled;
     glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
+    float radius;
     float invRadius;
 
     // sleep variables
@@ -103,7 +105,7 @@ public:
 
     // collision variables
     AABB aabb;
-    bool AABB_ShouldUpdate = true;
+    bool aabbDirty = true;
     Collider collider;
     ColliderType colliderType;
     OOBBRenderer oobbRenderer;
@@ -156,17 +158,11 @@ public:
         if (!isStatic) {
             invMass = 1.0f / mass;
             asleep = false;
-
-            if (isUniformlyScaled) 
-               calculateInverseInertiaForCube();
-            else 
-               calculateInverseInertiaForCuboid();
         }
         // static
         else {
             mass = 0;
             invMass = 0;
-            inverseInertia = glm::mat3(0.0f);
             asleep = true;
         }
 
@@ -193,13 +189,33 @@ public:
 
             oobbRenderer.setupWireframeBox();
             oobbRenderer.setupNormals();
+
+            if (isStatic) {
+                inverseInertia = glm::mat3(0.0f);
+            }
+            else {
+                if (this->isUniformlyScaled)
+                    calculateInverseInertiaForCube();
+                else
+                    calculateInverseInertiaForCuboid();
+            }
         }
+
         else if (colliderType == ColliderType::SPHERE) {
-            Sphere sphere;
-            collider.shape = sphere;
+            Sphere sphere; 
+            radius = scale.x;
+            sphere.radius = scale.x;   // Assuming uniform scaling for sphere
+            collider.shape = sphere; 
+
+            if (isStatic) {
+                inverseInertia = glm::mat3(0.0f); 
+            }
+            else {
+                calculateInverseInertiaForSolidSphere();
+            }
         }
-        else if (colliderType == ColliderType::MESH) 
-        {
+
+        else if (colliderType == ColliderType::MESH) {
             std::vector<Tri> worldTris;
             worldTris.reserve(verticesPositions.size() / 3);
 
@@ -212,12 +228,18 @@ public:
 
             collider.shape.emplace<TriMesh>(worldTris);
         }
+
+        inverseInertiaWorld = inverseInertia; 
     }
 
+    void setPhysicsVariables();
+
+    void resetDirtyFlags();
     void setModelMatrix();
     void setHelperMatrixes();
     void calculateInverseInertiaForCube();
     void calculateInverseInertiaForCuboid();
+    void calculateInverseInertiaForSolidSphere();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
     void drawMesh(Shader& shader);
     void updateAABB();

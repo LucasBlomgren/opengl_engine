@@ -35,7 +35,7 @@ public:
       const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
    );
 
-   void createPyramid(
+   void createBlockPyramid(
        const std::string& textureName,
        glm::vec3 color,
        const glm::vec3& pos,
@@ -47,13 +47,25 @@ public:
        float sDistance,
        int sWeight);
 
+   void createSpherePyramid(
+       const std::string& textureName,
+       glm::vec3 color,
+       const glm::vec3& pos,
+       int pWidth,
+       int pHeight,
+       float sRadius,
+       float sDistance,
+       int sWeight
+   );
+
    void generateFlatTerrain(
        int   gridSizeX,
        int   gridSizeZ,
        float cellSize,
-       float maxHeight,
-       float flatness /* i [0,1], 0 = helt plant, 1 = full variation */
+       float maxHeight
    );
+
+   void smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes);
 
    std::vector<Tri>& getTerrainTriangles();
    std::vector<GameObject>& getDynamicObjects();

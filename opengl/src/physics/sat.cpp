@@ -2,7 +2,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) { 
-    glm::vec3 direction = posA - posB;
+    glm::vec3 direction = posA - posB; 
     if (glm::dot(direction, normal) > 0) { 
         normal = -normal; 
     }
@@ -77,11 +77,69 @@ bool SAT::cuboidVsCuboid(Collider& A, Collider& B, Result& out) {
 
     return intersectPolygons(boxA.wVertices, boxB.wVertices, boxA.wAxes, boxB.wAxes, out);
 }
+
 bool SAT::sphereVsCuboid(Collider& A, Collider& B, Result& out) {
-    return false;
+    // Plocka alltid ut cuboid i A och sphere i B
+    OOBB*   box  = std::get_if<OOBB>(&A.shape);
+    Sphere* sph  = std::get_if<Sphere>(&B.shape);
+
+    // Matriser från GameObject (samma som du använder för rendering och OOBB/AABB)
+    const glm::mat4& M  = A.owner->modelMatrix;
+    const glm::mat4& iM = A.owner->invModelMatrix;
+
+    // Sphere center i värld
+    glm::vec3 worldC = sph->wCenter;
+    // Transformera world → box-local
+    glm::vec3 localC = glm::vec3(iM * glm::vec4(worldC, 1.0f));
+
+    // Clamp i lokal AABB
+    glm::vec3 clamped;
+    clamped.x = glm::clamp(localC.x, -box->halfExtents.x, +box->halfExtents.x);
+    clamped.y = glm::clamp(localC.y, -box->halfExtents.y, +box->halfExtents.y);
+    clamped.z = glm::clamp(localC.z, -box->halfExtents.z, +box->halfExtents.z);
+
+    // Transformera local → world
+    glm::vec3 closestWorld = glm::vec3(M * glm::vec4(clamped, 1.0f));
+
+    // Beräkna delta och dist2
+    glm::vec3 delta = worldC - closestWorld;
+    float dist2     = glm::dot(delta, delta);
+    float r2        = sph->radius * sph->radius;
+
+    // Test mot radie
+    if (dist2 > r2) {
+        return false;
+    }
+
+    // Fyll ut resultat, logga penetration & normal
+    float dist = std::sqrt(dist2);
+    out.depth  = sph->radius - dist;
+    out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f,1.0f,0.0f));
+    out.point = closestWorld;
+
+    return true;
 }
+
+
 bool SAT::sphereVsSphere(Collider& A, Collider& B, Result& out) {
-    return false;
+    Sphere& sphereA = std::get<Sphere>(A.shape);
+    Sphere& sphereB = std::get<Sphere>(B.shape);
+
+    glm::vec3 delta = sphereB.wCenter - sphereA.wCenter; 
+    float dist2 = glm::dot(delta, delta); 
+    float r2 = (sphereA.radius + sphereB.radius) * (sphereA.radius + sphereB.radius); 
+
+    if (dist2 > r2) {
+        return false; // No intersection
+    }
+
+    float dist = std::sqrt(dist2);
+    out.depth = (sphereA.radius + sphereB.radius) - dist;
+    out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f, 1.0f, 0.0f));
+    out.point = sphereB.wCenter + out.normal * sphereB.radius; // Contact point on sphereB
+
+    return true;
+
 }
 bool SAT::triVsCuboid(Collider& A, Tri& tri, Result& out) {
     OOBB& boxA = std::get<OOBB>(A.shape);

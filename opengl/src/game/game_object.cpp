@@ -2,7 +2,30 @@
 
 AABB GameObject::getAABB() const {
     return aabb;
+}
 
+void GameObject::resetDirtyFlags() {
+    modelMatrixDirty = true;
+    helperMatrixesDirty = true;
+    aabbDirty = true;
+
+    aabb.facesDirty = true;
+
+}
+
+void GameObject::setPhysicsVariables() {
+    // dynamic
+    if (!isStatic) {
+        invMass = 1.0f / mass;
+        asleep = false;
+    }
+    // static
+    else {
+        mass = 0;
+        invMass = 0;
+        inverseInertia = glm::mat3(0.0f);
+        asleep = true;
+    }
 }
 
 void GameObject::applyForceLinear(glm::vec3 f) {
@@ -13,29 +36,32 @@ void GameObject::applyForceAngular(glm::vec3 f) {
 }
 
 void GameObject::setModelMatrix() {
-    if (modelMatrixShouldUpdate) {
-        modelMatrix = glm::mat4(1.0f);
-        modelMatrix = glm::translate(modelMatrix, position);
-        modelMatrix *= glm::mat4_cast(orientation);
-        modelMatrix = glm::scale(modelMatrix, scale);
-        modelMatrixShouldUpdate = false;
-    }
+    if (!modelMatrixDirty)
+        return;
+
+    modelMatrix = glm::mat4(1.0f); 
+    modelMatrix = glm::translate(modelMatrix, position); 
+    modelMatrix *= glm::mat4_cast(orientation); 
+    modelMatrix = glm::scale(modelMatrix, scale); 
+    modelMatrixDirty = false; 
 }
 
 void GameObject::setHelperMatrixes() {
     invModelMatrix = glm::inverse(modelMatrix);
-    rotationMatrix = glm::mat3(modelMatrix);
+    rotationMatrix = glm::mat3_cast(orientation);  // enbart ortonormal rotation
     invRotationMatrix = glm::transpose(rotationMatrix);
-    helperMatrixesShouldUpdate = false;
+    inverseInertiaWorld = rotationMatrix * inverseInertia * invRotationMatrix;
+
+    helperMatrixesDirty = false;
 }
 
 void GameObject::calculateInverseInertiaForCube() {
-    float value = 6.0f / (mass * scale.x * scale.x);
+    float I = 6.0f / (mass * scale.x * scale.x);
 
     inverseInertia = glm::mat3(
-        glm::vec3(value, 0.0f, 0.0f),
-        glm::vec3(0.0f, value, 0.0f),
-        glm::vec3(0.0f, 0.0f, value)
+        glm::vec3(I, 0.0f, 0.0f),
+        glm::vec3(0.0f, I, 0.0f),
+        glm::vec3(0.0f, 0.0f, I)
     );
 }
 
@@ -48,6 +74,16 @@ void GameObject::calculateInverseInertiaForCuboid() {
       glm::vec3(1.0f / I_x, 0.0f, 0.0f),
       glm::vec3(0.0f, 1.0f / I_y, 0.0f),
       glm::vec3(0.0f, 0.0f, 1.0f / I_z));
+}
+
+void GameObject::calculateInverseInertiaForSolidSphere() {
+    float I = (2.0f / 5.0f) * (mass * radius * radius);
+    float invI = 1.0f / I;
+
+    inverseInertia = glm::mat3(
+        glm::vec3(invI, 0.0f, 0.0f),
+        glm::vec3(0.0f, invI, 0.0f),
+        glm::vec3(0.0f, 0.0f, invI));
 }
 
 void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime) {
@@ -74,7 +110,7 @@ void GameObject::updateCollider() {
         }
         // Sphere
         else if constexpr (std::is_same_v<T, Sphere>) {
-
+            shape.update(modelMatrix);
         }
         // TriMesh
         else if constexpr (std::is_same_v<T, TriMesh>) {
@@ -88,8 +124,6 @@ void GameObject::updatePos(const float& deltaTime) {
        setAsleep();
        return;
     }
-
-    modelMatrixShouldUpdate = true;
 
     if (selectedByEditor)
         return;
@@ -141,7 +175,6 @@ void GameObject::setAwake() {
 }
 
 void GameObject::drawMesh(Shader& shader) {
-    shader.use();
     setModelMatrix();
     shader.setMat4("model", modelMatrix);
 
@@ -156,7 +189,7 @@ void GameObject::drawMesh(Shader& shader) {
     }
     glBindTexture(GL_TEXTURE_2D, textureID);
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, 0);
 }
 
 void GameObject::setupMesh() {

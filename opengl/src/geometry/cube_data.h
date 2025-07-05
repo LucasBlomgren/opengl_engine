@@ -3,4 +3,4 @@
 #include "vertex.h"
 
 extern std::vector<Vertex> cubeVertices;
-extern std::vector<unsigned int> indices;
+extern std::vector<unsigned int> cubeIndices;
