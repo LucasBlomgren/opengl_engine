@@ -1,6 +1,6 @@
 ﻿#include "collision_manifold.h"
 
-void CollisionManifold::cuboidVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     // välj vilken som är referensface och incidentface
     std::vector<glm::vec3> referenceFace; 
     std::vector<glm::vec3> incidentFace;
@@ -47,7 +47,7 @@ void CollisionManifold::cuboidVsCuboid(Contact& contact, std::unordered_map<size
     integrateContact(cache, contact);  
 }
 
-void CollisionManifold::sphereVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     contact.normal = satResult.normal;
     contact.points.resize(1); 
     contact.points[0].globalCoord = satResult.point; // point is the closest point on the cuboid to the sphere
@@ -59,7 +59,7 @@ void CollisionManifold::sphereVsCuboid(Contact& contact, std::unordered_map<size
     integrateContact(cache, contact); 
 }
 
-void CollisionManifold::sphereVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+void CollisionManifold::sphereSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     contact.normal = satResult.normal;
     contact.points.resize(1);
     contact.points[0].globalCoord = satResult.point; // point is the closest point on the sphere to the sphere
@@ -70,21 +70,43 @@ void CollisionManifold::sphereVsSphere(Contact& contact, std::unordered_map<size
     contact.hashKey = generateKey(contact.objA_ptr->id, contact.objB_ptr->id); 
     integrateContact(cache, contact); 
 }
-void CollisionManifold::meshVsSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+    this->allClippedPoints.clear();
+    
+    this->allClippedPoints.resize(allResults.size());
+    for (int i = 0; i < allResults.size(); i++) {
+        this->allClippedPoints[i] = allResults[i].point;
+    }
 
+    // --- pick furthest points from all "clipped points" ---
+    pickFourFurthestPoints(); 
+
+    // --- create contact points from furthest points ---
+    contact.points.resize(this->furthestPoints.size()); 
+    for (int i = 0; i < this->furthestPoints.size(); i++) { 
+        contact.points[i].globalCoord = this->furthestPoints[i]; 
+    } 
+
+    // add depth for each cp
+    contact.points[0].depth = allResults[0].depth;
+    for (int i = 1; i < this->furthestPoints.size(); i++) {
+        contact.points[i].depth = allResults[indices[i]].depth;
+    }
+
+    createLocalCoordinates(contact);  
+    contact.hashKey = generateKey(contact.objA_ptr->id, allResults[0].tri_ptr->id);  
+    integrateContact(cache, contact); 
 }
-void CollisionManifold::meshVsMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+void CollisionManifold::meshMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     
 }
 
-void CollisionManifold::meshVsCuboid(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
     std::vector<glm::vec3> referenceFace; 
     std::vector<glm::vec3> incidentFace; 
 
     this->allClippedPoints.clear();
-    this->allClippedPointsTriIDs.clear();   
     this->allClippedPoints.reserve(8 * allResults.size());
-    this->allClippedPointsTriIDs.reserve(8 * allResults.size());
 
     selectCollisionFace(*contact.objA_ptr, allResults[0].normal);
     referenceFace = this->selectedFace;
@@ -104,13 +126,9 @@ void CollisionManifold::meshVsCuboid(Contact& contact, std::unordered_map<size_t
             incidentFace = satResult.tri_ptr->vertices; 
 
             clipPoints(referenceFace, incidentFace, refNormal);
-            auto triID = satResult.tri_ptr->id;
 
             // save clipped points for furthest point selection
             this->allClippedPoints.insert(this->allClippedPoints.end(), this->clippedPoints.begin(), this->clippedPoints.end()); 
-
-            // triangle IDs for hash map 
-            this->allClippedPointsTriIDs.insert(this->allClippedPointsTriIDs.end(), this->clippedPoints.size(), triID); 
         }
 
         // --- pick furthest points from all clipped points ---
@@ -122,18 +140,26 @@ void CollisionManifold::meshVsCuboid(Contact& contact, std::unordered_map<size_t
             contact.points[i].globalCoord = this->furthestPoints[i];
         }
 
-        // create hash key
-        contact.hashKey = generateKey(contact.objA_ptr->id, allResults[0].tri_ptr->id); 
-
         createLocalCoordinates(contact);
         computePenetrationDepth(contact);
+
+        contact.hashKey = generateKey(contact.objA_ptr->id, allResults[0].tri_ptr->id);
         integrateContact(cache, contact);
     }
 }
 
 void CollisionManifold::pickFourFurthestPoints() {
-    if (this->allClippedPoints.size() <= 4) {
+    int N = (int)this->allClippedPoints.size();
+    if (N <= 4) {
         this->furthestPoints = this->allClippedPoints;
+        this->indices.clear();
+        this->indices.reserve(N);
+
+        // for sphere vs tri depths index
+        for (int i = 0; i < N; ++i) {
+            this->indices.push_back(i);
+        }
+
         return;
     }
 
@@ -511,8 +537,10 @@ size_t CollisionManifold::generateKey(int idA, int idB) {
 }
 
 void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
-    for (int i = 0; i < contact.points.size(); i++)
+    for (int i = 0; i < contact.points.size(); i++) {
         PreComputePointData(contact.points[i], contact);
+        contact.points[i].wasUsedThisFrame = true;
+    }
 
     auto it = contactCache.find(contact.hashKey);
 
@@ -577,6 +605,12 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         return;
     }
 
+    // sphere vs tri mesh
+    if (contact.objA_ptr->colliderType == ColliderType::SPHERE and contact.objB_ptr == nullptr) {
+        contactCache[contact.hashKey] = contact;
+        return;
+    }
+
     // fyll på med cachade punkter som inte blivit matchade med en ny punkt
     if (contact.points.size() < 4) {
         for (int i = 0; i < cachedContact.points.size(); i++) {
@@ -589,6 +623,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             }
 
             PreComputePointData(cachedPoint, contact);
+            cachedPoint.wasUsedThisFrame = true;
             contact.points.push_back(cachedPoint);
             
             if (contact.points.size() >= 4) {

@@ -24,7 +24,7 @@ public:
 
     // --- getters ---
     BVHTree<GameObject>& getDynamicBvh();
-    BVHTree<GameObject>& getStaticBvh();
+    //BVHTree<GameObject>& getStaticBvh();
     BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
@@ -35,12 +35,12 @@ private:
 
     // --- objects ---
     std::vector<GameObject>* dynamicObjects;
-    std::vector<GameObject> staticObjects;
+    //std::vector<GameObject> staticObjects;
     std::vector<Tri>* terrainTriangles;
 
     // --- bvh trees ---
     BVHTree<GameObject> dynamicBvh;
-    BVHTree<GameObject> staticBvh;
+    //BVHTree<GameObject> staticBvh;
     BVHTree<Tri> terrainBvh; 
 
     // --- update functions ---

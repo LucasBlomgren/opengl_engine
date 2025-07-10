@@ -61,7 +61,7 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
         if (key == GLFW_KEY_2)
             engineState->toggleShowAABB();          // Toggle the visibility of axis-aligned bounding boxes in the scene
         if (key == GLFW_KEY_3)
-            engineState->toggleShowOOBB();          // Toggle the visibility of oriented bounding boxes in the scene
+            engineState->toggleShowColliders();          // Toggle the visibility of oriented bounding boxes in the scene
         if (key == GLFW_KEY_4)
             engineState->toggleShowContactPoints(); // Toggle the visibility of contact points in the scene
         if (key == GLFW_KEY_5)
@@ -71,7 +71,9 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
         if (key == GLFW_KEY_7)
             engineState->setPressedKey("7");        // Toggle placement AABB in the scene
         if (key == GLFW_KEY_8)
-            engineState->setPressedKey("8");        // Toggle object rain in the scene
+            engineState->setPressedKey("8");        // Toggle object blocks rain in the scene
+        if (key == GLFW_KEY_9)
+            engineState->setPressedKey("9");        // Toggle object spheres rain in the scene
         if (key == GLFW_KEY_0)
             engineState->toggleShowFPS();           // Toggle std::cout of metrics in the console
 

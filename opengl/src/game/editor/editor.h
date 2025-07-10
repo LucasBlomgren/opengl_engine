@@ -42,7 +42,8 @@ public:
     void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
     AABB aabbToPlace;
     bool placementObstructed = true;
-    bool objectRain = false;
+    bool objectRainBlocks = false;
+    bool objectRainSpheres = false;
 
 private:
     bool drawPlacementAABB = false;

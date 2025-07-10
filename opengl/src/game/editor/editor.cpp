@@ -31,7 +31,10 @@ void Editor::update(float& deltaTime, Shader& shader) {
         this->drawPlacementAABB = !this->drawPlacementAABB;
     }
     if (engineState->GetPressedKey() == "8") {
-        this->objectRain = !this->objectRain;
+        this->objectRainBlocks = !this->objectRainBlocks;
+    }
+    if (engineState->GetPressedKey() == "9") {
+        this->objectRainSpheres = !this->objectRainSpheres;
     }
 
     if (engineState->GetPressedKey() == "M1_PRESS") 

@@ -8,6 +8,11 @@ template class BVHTree<Tri>;
 
 template<typename E>
 void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
+
+    if (nodes.size() == 0) {
+        return;
+    }
+
     // 1) Pre-allocate the output vector once per call
     constexpr int MaxExpected = BVHTree<E>::MaxCollisionBuf;
     out.clear();

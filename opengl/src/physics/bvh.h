@@ -80,6 +80,10 @@ void treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::vector<std
     constexpr int  MaxStack = BVHTree<Ea>::MaxStackSize;
     constexpr int  MaxBuf = BVHTree<Ea>::MaxCollisionBuf;
 
+    if (a.nodes.size() == 0 or b.nodes.size() == 0) {
+        return;
+    }
+
     // --- FIXED‐SIZE traversal‐stack på stacken (ingen heap‐allokering) ---
     std::pair<typename BVHTree<Ea>::Node*, typename BVHTree<Eb>::Node*> stack[MaxStack];
     int sp = 0;

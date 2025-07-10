@@ -12,7 +12,8 @@ void SAT::findBestTriangles(std::vector<SAT::Result>& results) {
     if (results.size() <= 4)
         return; 
 
-    std::vector<int> indices; 
+    static std::vector<int> indices; 
+    indices.clear();
     indices.reserve(4); 
     indices.push_back(0);
 
@@ -26,7 +27,8 @@ void SAT::findBestTriangles(std::vector<SAT::Result>& results) {
         addFurthestTriangle(results, indices); 
     }
 
-    std::vector<SAT::Result> temp;
+    static std::vector<SAT::Result> temp;
+    temp.clear();
     temp.reserve(indices.size());
     for (int idx : indices) {
         temp.push_back(results[idx]);
@@ -71,14 +73,14 @@ void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>
     indices.push_back(bestIdx);
 }
 
-bool SAT::cuboidVsCuboid(Collider& A, Collider& B, Result& out) {
+bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
     OOBB& boxA = std::get<OOBB>(A.shape);
     OOBB& boxB = std::get<OOBB>(B.shape);
 
     return intersectPolygons(boxA.wVertices, boxB.wVertices, boxA.wAxes, boxB.wAxes, out);
 }
 
-bool SAT::sphereVsCuboid(Collider& A, Collider& B, Result& out) {
+bool SAT::boxSphere(Collider& A, Collider& B, Result& out) {
     // Plocka alltid ut cuboid i A och sphere i B
     OOBB*   box  = std::get_if<OOBB>(&A.shape);
     Sphere* sph  = std::get_if<Sphere>(&B.shape);
@@ -120,8 +122,7 @@ bool SAT::sphereVsCuboid(Collider& A, Collider& B, Result& out) {
     return true;
 }
 
-
-bool SAT::sphereVsSphere(Collider& A, Collider& B, Result& out) {
+bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
     Sphere& sphereA = std::get<Sphere>(A.shape);
     Sphere& sphereB = std::get<Sphere>(B.shape);
 
@@ -136,21 +137,73 @@ bool SAT::sphereVsSphere(Collider& A, Collider& B, Result& out) {
     float dist = std::sqrt(dist2);
     out.depth = (sphereA.radius + sphereB.radius) - dist;
     out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f, 1.0f, 0.0f));
-    out.point = sphereB.wCenter + out.normal * sphereB.radius; // Contact point on sphereB
+    out.point = sphereB.wCenter - out.normal * sphereB.radius; // Contact point on sphereB
 
     return true;
-
 }
-bool SAT::triVsCuboid(Collider& A, Tri& tri, Result& out) {
+
+bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
     OOBB& boxA = std::get<OOBB>(A.shape);
     out.tri_ptr = &tri;
 
     return intersectPolygons(boxA.wVertices, tri.vertices, boxA.wAxes, tri.axes, out);
 }
-bool SAT::triVsSphere(Collider& A, Collider& B, Result& out) {
+bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
+    Sphere& sphere = std::get<Sphere>(A.shape);
+    glm::vec3 P = sphere.wCenter - tri.normal * glm::dot(sphere.wCenter - tri.vertices[0], tri.normal); 
+
+    // test vs edge planes
+    bool isInside = true;
+    for (int i = 0; i < 3; i++) {
+        glm::vec3 planeNormal = (glm::normalize(glm::cross(tri.edges[i], tri.normal)));
+        glm::vec3 planePoint = tri.vertices[i];
+
+        if (glm::dot(planeNormal, P - planePoint) > 0.0f) {
+            isInside = false;
+            break;
+        }
+    }
+
+    float depth = sphere.radius - glm::length(sphere.wCenter - P);
+
+    if (isInside and depth > 0.0f) {
+        out.point = P;
+        out.normal = tri.normal;
+        out.depth = depth;
+        out.tri_ptr = &tri;
+        return true;
+    }
+
+    // not inside planes, project sphere center onto triangle edges
+    float bestDist2 = std::numeric_limits<float>::infinity();
+    glm::vec3 bestQ;
+    for (int i = 0; i < 3; i++) {
+        glm::vec3& edge = tri.edges[i];
+
+        float t = glm::dot(sphere.wCenter - tri.vertices[i], edge) / glm::dot(edge, edge); 
+        t = glm::clamp(t, 0.0f, 1.0f);
+        glm::vec3 Q = tri.vertices[i] + t * edge; 
+
+        float dist2 = glm::dot(sphere.wCenter - Q, sphere.wCenter - Q);
+
+        if (dist2 < bestDist2) { 
+            bestDist2 = dist2;
+            bestQ = Q; 
+        }
+    }
+
+    if (bestDist2 <= sphere.radius * sphere.radius) { 
+        out.point = bestQ; 
+        out.normal = glm::normalize(sphere.wCenter - bestQ); 
+        out.depth = sphere.radius - std::sqrt(bestDist2); 
+        out.tri_ptr = &tri;
+        return true; 
+    }
+
     return false;
 }
-bool SAT::triVsTri(Collider& A, Collider& B, Result& out) {
+
+bool SAT::triTri(Tri& A, Tri& B, Result& out) {
     return false;
 }
 

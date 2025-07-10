@@ -22,6 +22,7 @@
 #include "game_object.h"
 #include "light.h"
 #include "light_manager.h"
+#include "shadow_manager.h"
 #include "editor/editor.h"
 
 // overload operator<< for glm::vec3 
@@ -37,32 +38,36 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
+const unsigned int SHADOW_WIDTH = 1920;
+const unsigned int SHADOW_HEIGHT = 1080;
 const bool debug = 0;
 
 // timing
 float deltaTime = 0.0f;	
 float lastFrame = 0.0f;
 
-// systems
-EngineState engineState;
-PhysicsEngine physicsEngine;
-Renderer renderer;
-
-// managers
-InputManager inputManager;
-TextureManager textureManager;
-SceneBuilder sceneBuilder;
-LightManager lightManager;
-
-// view
-Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
-
-// editor
-Editor editor;
-
 int main()
 {
    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+
+   // systems
+   EngineState engineState;
+   PhysicsEngine physicsEngine;
+   Renderer renderer;
+
+   // managers
+   InputManager inputManager;
+   TextureManager textureManager;
+   SceneBuilder sceneBuilder;
+   LightManager lightManager;
+
+   // view
+   Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
+
+   // editor
+   Editor editor;
+
+   ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
    // setup rng
    std::mt19937 rng(std::random_device{}());
@@ -90,6 +95,7 @@ int main()
    // load textures
    textureManager.loadTexture("crate", "src/assets/crate.jpg");
    textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
+   textureManager.loadTexture("terrain1", "src/assets/terrain_8k.jpg");
 
    // setup scene 
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);
@@ -143,8 +149,8 @@ int main()
       }
 
       // rotate halos
-      if (!engineState.isPaused() or engineState.getAdvanceStep()) {
-          glm::quat perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 1.0f, 0.0f));
+      if (!engineState.isPaused() or engineState.getAdvanceStep()) { 
+          glm::quat perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 1.0f, 0.0f)); 
           for (int i = 0; i < sceneBuilder.haloA.size(); i++) {
               // increase orientation in x-axis by a small amoount
               GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloA[i]];
@@ -202,6 +208,14 @@ int main()
       float stepClock = stepClockStop - stepClockStart;
       float stepClockMs = stepClock * 1000.0f;
 
+      // editor functions
+      editor.update(deltaTime, debugShader);
+
+      if (!engineState.isPaused()) {
+          if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, rng, 0);
+          else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, rng, 1);
+      }
+
       // rendering
       float renderClockStart = static_cast<float>(glfwGetTime());
       renderer.beginFrame();
@@ -209,23 +223,19 @@ int main()
       renderer.uploadDirectionalLight();
       renderer.uploadLightsToShader();
       renderer.drawLights();
-      renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), VAO_line);
-      renderer.drawTerrain(sceneBuilder.getTerrainTriangles());
+      renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), camera);
+      renderer.drawTerrain(sceneBuilder.getTerrainData(), sceneBuilder.sceneDirty);
       renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
       //renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
 
-      renderer.drawDebug(physicsEngine, sceneBuilder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
+      renderer.drawDebug(physicsEngine, camera, sceneBuilder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
 
       // calculate render time
       float renderClockEnd = static_cast<float>(glfwGetTime());
       float renderClock = renderClockEnd - renderClockStart;
       float renderClockMs = renderClock * 1000.0f;
 
-      // editor functions
-      editor.update(deltaTime, debugShader);
-
-      if (!engineState.isPaused() and editor.objectRain)
-        sceneBuilder.objectRain(currentFrame, rng);
+      sceneBuilder.sceneDirty = false; 
 
       // swap buffers
       float t1 = static_cast<float>(glfwGetTime());

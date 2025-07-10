@@ -2,14 +2,8 @@
 
 void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
 {
-    static constexpr float epsilon = 0.00f;
-    glm::mat4 lift = glm::translate(glm::mat4(1.0f), glm::vec3(0, epsilon, 0));
-    glm::mat4 displacedModel = lift * model;
-
-    shader.use();
-    shader.setMat4("model", displacedModel);
+    shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
-    shader.setBool("debug.useUniformColor", true);
     if (raycastHit) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
     else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
     else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
@@ -22,12 +16,6 @@ void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, 
 void OOBBRenderer::drawNormals(Shader& shader, const glm::mat4& model)
 {
     shader.setMat4("model", model);
-
-    shader.setInt("debug.objectType", 0);
-    shader.setBool("debug.useUniformColor", false);
-
-    glLineWidth(4.0f);
-    glBindVertexArray(VAO_normals);
     glDrawArrays(GL_LINES, 0, 18);
 }
 

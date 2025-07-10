@@ -15,8 +15,9 @@
 
 class SceneBuilder {
 public:
+   bool sceneDirty = true; 
    void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
-   void objectRain(float& current_time, std::mt19937& rng);
+   void objectRain(float& current_time, std::mt19937& rng, int mode);
 
    void createScene(PhysicsEngine& physicsEngine);
    void mainScene();
@@ -45,7 +46,9 @@ public:
        float sLength,
        float sHeight,
        float sDistance,
-       int sWeight);
+       float sWeight,
+       bool asleep
+   );
 
    void createSpherePyramid(
        const std::string& textureName,
@@ -55,10 +58,12 @@ public:
        int pHeight,
        float sRadius,
        float sDistance,
-       int sWeight
+       float sWeight,
+       bool asleep
    );
 
    void generateFlatTerrain(
+       glm::vec3 offset,
        int   gridSizeX,
        int   gridSizeZ,
        float cellSize,
@@ -67,7 +72,15 @@ public:
 
    void smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes);
 
-   std::vector<Tri>& getTerrainTriangles();
+   struct TerrainData {
+       std::vector<Vertex> vertices;
+       std::vector<uint32_t> indices;
+       std::vector<Tri> triangles; 
+   };
+
+   TerrainData terrainData; 
+   TerrainData& getTerrainData();
+
    std::vector<GameObject>& getDynamicObjects();
    void toggleLightsState();
    void setLights();
@@ -93,7 +106,6 @@ private:
    int objectId;
    std::vector<GameObject> dynamicObjects;
    std::vector<GameObject> staticObjects;
-   std::vector<Tri> terrainTriangles;
 
    std::mt19937* rng;
    float lastTime = 0.0f;

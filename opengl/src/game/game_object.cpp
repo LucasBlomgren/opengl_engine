@@ -13,6 +13,19 @@ void GameObject::resetDirtyFlags() {
 
 }
 
+void GameObject::setRotatedFlag() {
+    if (colliderType != ColliderType::SPHERE) {
+        const float eps = 1e-5f;
+        glm::quat identity{ 1, 0, 0, 0 };
+        bool isIdentity =
+            glm::epsilonEqual(orientation.w, identity.w, eps) &&
+            glm::epsilonEqual(orientation.x, identity.x, eps) &&
+            glm::epsilonEqual(orientation.y, identity.y, eps) &&
+            glm::epsilonEqual(orientation.z, identity.z, eps);
+        isRotated = !isIdentity;
+    }
+}
+
 void GameObject::setPhysicsVariables() {
     // dynamic
     if (!isStatic) {
@@ -121,8 +134,8 @@ void GameObject::updateCollider() {
 
 void GameObject::updatePos(const float& deltaTime) {
     if (sleepCounter >= sleepCounterThreshold) {
-       setAsleep();
-       return;
+        setAsleep();
+        return;
     }
 
     if (selectedByEditor)
@@ -139,15 +152,12 @@ void GameObject::updatePos(const float& deltaTime) {
         angularVelocity.x = 0.0f;
         angularVelocity.y = 0.0f;
     }
-        
+
     lastPosition = position;
     position += linearVelocity * deltaTime;
     updateOrientation(orientation, angularVelocity, deltaTime);
 
-    if (orientation == glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
-        isRotated = false;
-    else
-        isRotated = true;
+    setRotatedFlag();
 
     // sleep counter
     if (std::abs(glm::length(linearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
@@ -210,13 +220,10 @@ void GameObject::setupMesh() {
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
     glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-    glEnableVertexAttribArray(1);
     // normal attribute
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+    glEnableVertexAttribArray(1);
     // texture coord attribute
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
-    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
+    glEnableVertexAttribArray(2);
 }

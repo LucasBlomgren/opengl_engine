@@ -32,10 +32,12 @@
     <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
     <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\sphere_outline_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\xyz_object.cpp" />
     <ClCompile Include="src\graphics\light.cpp" />
     <ClCompile Include="src\graphics\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer.cpp" />
+    <ClCompile Include="src\graphics\shadow_manager.cpp" />
     <ClCompile Include="src\graphics\texture_manager.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\physics\bvh.cpp" />
@@ -68,11 +70,13 @@
     <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\draw_line.h" />
     <ClInclude Include="src\graphics\graphics debug\oobb_renderer.h" />
+    <ClInclude Include="src\graphics\graphics debug\sphere_outline_renderer.h" />
     <ClInclude Include="src\graphics\graphics debug\xyz_object.h" />
     <ClInclude Include="src\graphics\light.h" />
     <ClInclude Include="src\graphics\light_manager.h" />
     <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="src\graphics\shader.h" />
+    <ClInclude Include="src\graphics\shadow_manager.h" />
     <ClInclude Include="src\graphics\texture_manager.h" />
     <ClInclude Include="src\physics\bvh.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />

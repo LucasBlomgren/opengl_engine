@@ -11,8 +11,6 @@ public:
     void setupNormals();
     void drawNormals(Shader& shader, const glm::mat4& model);
 
-
-private:
     unsigned int VAO_box, VBO_box;
     unsigned int VAO_normals, VBO_normals;
 };

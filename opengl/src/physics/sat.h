@@ -22,15 +22,15 @@ namespace SAT {
         int edgeIndexB;
 
         Tri* tri_ptr = nullptr;
-        glm::vec3 point; // cube vs sphere
+        glm::vec3 point; // sphereCube or sphereTri
     };
 
-    bool cuboidVsCuboid(Collider& A, Collider& B, Result& out);
-    bool sphereVsCuboid(Collider& A, Collider& B, Result& out);
-    bool sphereVsSphere(Collider& A, Collider& B, Result& out);
-    bool triVsCuboid(Collider& A, Tri& tri, Result& out);
-    bool triVsSphere(Collider& A, Collider& B, Result& out);
-    bool triVsTri(Collider& A, Collider& B, Result& out);
+    bool boxBox(Collider& A, Collider& B, Result& out);
+    bool boxSphere(Collider& A, Collider& B, Result& out);
+    bool boxTri(Collider& A, Tri& tri, Result& out);
+    bool sphereSphere(Collider& A, Collider& B, Result& out);
+    bool sphereTri(Collider& A, Tri& tri, Result& out);
+    bool triTri(Tri& A, Tri& B, Result& out);
 
     std::pair<float, float> projectVertices(const std::span<const glm::vec3> vertices, const glm::vec3& axis);
     bool intersectPolygons(

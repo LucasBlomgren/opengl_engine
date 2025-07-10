@@ -32,6 +32,8 @@
     <ClCompile Include="src\physics\colliders\oobb.cpp" />
     <ClCompile Include="src\physics\colliders\tri.cpp" />
     <ClCompile Include="src\game\scenes.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\sphere_outline_renderer.cpp" />
+    <ClCompile Include="src\graphics\shadow_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -95,6 +97,8 @@
     <ClInclude Include="src\physics\colliders\tri_mesh.h" />
     <ClInclude Include="src\physics\colliders\tri.h" />
     <ClInclude Include="src\game\scenes.h" />
+    <ClInclude Include="src\graphics\graphics debug\sphere_outline_renderer.h" />
+    <ClInclude Include="src\graphics\shadow_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -50,13 +50,10 @@ void AABBRenderer::CleanupShared() {
 void AABBRenderer::draw(const glm::vec3& color, Shader& shader) const
 {
     shader.setMat4("model", model);
-    shader.setBool("debug.useUniformColor", true);
+    shader.setInt("debug.objectType", 0);
     shader.setVec3("debug.uColor", color);
 
-    glLineWidth(2.0f);
-    glBindVertexArray(sVAO);
     glDrawArrays(GL_LINES, 0, 24);
-    glBindVertexArray(0);
 }
 
 void AABBRenderer::updateModel(const AABB& box, const bool asleep) {

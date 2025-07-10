@@ -4,8 +4,8 @@ std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
     return dynamicObjects;
 }
 
-std::vector<Tri>& SceneBuilder::getTerrainTriangles() {
-    return terrainTriangles;
+SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
+    return terrainData;
 }
 
 void SceneBuilder::setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng) {
@@ -38,7 +38,7 @@ void SceneBuilder::setLights() {
 
     if (lightsState == 0) {
         // sun light
-        lightManager->setDirectionalLight(glm::vec3(0.8f, -1.0f, 0.4f), glm::vec3(0.1f), glm::vec3(1.0), glm::vec3(0.5));
+        lightManager->setDirectionalLight(glm::vec3(-0.8f, -1.0f, 0.9f), glm::vec3(0.1f), glm::vec3(1.0), glm::vec3(0.5));
     }
     else if (lightsState == 1) {
         // red light
@@ -58,19 +58,21 @@ void SceneBuilder::setLights() {
 
 void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
 {
-    bool onlyFloor = 1;
-    bool onlyFalling = 0;
+    sceneDirty = true;
 
-    // reset scene        
     objectId = 0;
-
     dynamicObjects.clear();
     dynamicObjects.shrink_to_fit();
     dynamicObjects.reserve(10000);
     //staticObjects.clear();
     //staticObjects.reserve(10000);
-    terrainTriangles.clear();
-    terrainTriangles.reserve(20000);
+
+    terrainData.triangles.clear(); 
+    terrainData.vertices.clear(); 
+    terrainData.indices.clear(); 
+    terrainData.triangles.reserve(20000); 
+    terrainData.vertices.reserve(20000); 
+    terrainData.indices.reserve(20000); 
 
     physicsEngine.clearPhysicsData();
     setLights();
@@ -79,19 +81,10 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     haloB.clear();
     haloC.clear();
 
-    //testScene();
-    mainScene();
+    testScene();
+    //mainScene();
 
-    generateFlatTerrain(
-        /*gridX=*/104,
-        /*gridZ=*/104,
-        /*cellSize=*/1.f,
-        /*maxHeight=*/30.0f
-    );
-
-    std::cout << terrainTriangles.size() << " terrain triangles created." << std::endl;
-
-    physicsEngine.setupScene(&dynamicObjects, &terrainTriangles);
+    physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
 }
 
 GameObject& SceneBuilder::createObject(
@@ -132,6 +125,7 @@ GameObject& SceneBuilder::createObject(
 }
 
 void SceneBuilder::generateFlatTerrain(
+    glm::vec3 offset,
     int   gridSizeX,
     int   gridSizeZ,
     float cellSize,
@@ -178,22 +172,86 @@ void SceneBuilder::generateFlatTerrain(
 
     smoothHeightMap(heightMap, 0.7f, 100);
 
-    glm::vec3 offset{ -150.0f, 0.0f, 0.0f };
-    // 3) Bygg trianglar: två per cell
-    for (int x = 2; x < gridSizeX-2; ++x) {
-        for (int z = 2; z < gridSizeZ-2; ++z) {
-            // hörnen i cellen
-            glm::vec3 v00 = offset + glm::vec3{ x * cellSize, heightMap[x][z],     z * cellSize };
-            glm::vec3 v10 = offset + glm::vec3{ (x + 1) * cellSize, heightMap[x + 1][z],   z * cellSize }; 
-            glm::vec3 v01 = offset + glm::vec3{ x * cellSize, heightMap[x][z + 1],   (z + 1) * cellSize };
-            glm::vec3 v11 = offset + glm::vec3{ (x + 1) * cellSize, heightMap[x + 1][z + 1], (z + 1) * cellSize }; 
+    std::vector<Tri>& triangles = terrainData.triangles;
+    std::vector<Vertex>& vertices = terrainData.vertices; 
+    std::vector<uint32_t>& indices = terrainData.indices;
 
-            // dela cellen diagonalt: diagonal v00→v11
-            // triangel 1: v00, v10, v11
-            terrainTriangles.emplace_back(objectId++, v00, v11, v10);
-            // triangel 2: v00, v11, v01
-            terrainTriangles.emplace_back(objectId++, v00, v01, v11);
+    // points
+    std::vector<glm::vec3> points;
+    points.reserve((gridSizeX + 1) * (gridSizeZ + 1));
+    for (int z = 0; z <= gridSizeZ; ++z) {
+        for (int x = 0; x <= gridSizeX; ++x) {
+            points.emplace_back(offset + glm::vec3{ x * cellSize, heightMap[x][z],     z * cellSize });
         }
+    }
+
+    // indices
+    terrainData.indices.reserve(gridSizeX * gridSizeZ * 6);
+    for (int z = 4; z < gridSizeZ-4; ++z) {
+        for (int x = 4; x < gridSizeX-4; ++x) {
+            // triangel 1:
+            indices.emplace_back(x + z * (gridSizeX + 1));
+            indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
+            indices.emplace_back((x + 1) + z * (gridSizeX + 1));
+
+            // triangel 2:
+            indices.emplace_back((x + 1) + z * (gridSizeX + 1));
+            indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
+            indices.emplace_back((x + 1) + (z + 1) * (gridSizeX + 1));
+        }
+    }
+
+    // face normals
+    std::vector<glm::vec3> faceNormals;
+    faceNormals.reserve(indices.size() / 3);
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        glm::vec3 v0 = points[indices[i]];
+        glm::vec3 v1 = points[indices[i + 1]]; 
+        glm::vec3 v2 = points[indices[i + 2]]; 
+        glm::vec3 edgeA = v1 - v0; 
+        glm::vec3 edgeB = v2 - v1;
+        faceNormals.emplace_back(glm::normalize(glm::cross(edgeA, edgeB)));
+    }
+
+    // vertex normals
+    std::vector<glm::vec3> vertexNormals; 
+    vertexNormals.resize(points.size(), glm::vec3(0.0f));
+    for (size_t f = 0; f < faceNormals.size(); ++f) { 
+        uint32_t i0 = indices[3 * f + 0]; 
+        uint32_t i1 = indices[3 * f + 1]; 
+        uint32_t i2 = indices[3 * f + 2]; 
+        vertexNormals[i0] += faceNormals[f]; 
+        vertexNormals[i1] += faceNormals[f]; 
+        vertexNormals[i2] += faceNormals[f]; 
+    }
+
+    for (auto& n : vertexNormals) { 
+        n = glm::normalize(n); 
+    }
+
+    // Tri colliders
+    for (size_t i = 0; i < indices.size(); i += 3) { 
+        uint32_t i0 = indices[i + 0]; 
+        uint32_t i1 = indices[i + 1]; 
+        uint32_t i2 = indices[i + 2]; 
+
+        glm::vec3 v0 = points[i0]; 
+        glm::vec3 v1 = points[i1]; 
+        glm::vec3 v2 = points[i2]; 
+
+        triangles.emplace_back(objectId++, v0, v1, v2);  
+    }
+
+    // Vertices
+    for (size_t i = 0; i < points.size(); ++i) {
+        glm::vec3 pos = points[i];
+        glm::vec3 normal = vertexNormals[i];
+
+        int x = i % (gridSizeX + 1);
+        int z = i / (gridSizeX + 1);
+        glm::vec2 uv{ float(x) / gridSizeX, 1.0f - float(z) / gridSizeZ };
+
+        vertices.emplace_back(pos, normal, uv);
     }
 }
 
@@ -214,7 +272,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
     }
 }
 
-void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
+void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
     constexpr float interval = 1.0f / 1000.0f;
     if (current_time - lastTime < interval)
         return;
@@ -222,8 +280,8 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
     lastTime = current_time;
 
     // position
-    constexpr glm::vec3 spawnPoint = glm::vec3(1250, 650, 1250);
-    float varianceRange = 1000.0f;
+    constexpr glm::vec3 spawnPoint = glm::vec3(125, 155, 125);
+    float varianceRange = 100.0f;
     float xVariance = randomRange(-varianceRange, varianceRange);
     float yVariance = randomRange(-25, 25);
     float zVariance = randomRange(-varianceRange, varianceRange);
@@ -235,7 +293,24 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng) {
     glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
     glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
 
-    createObject("plain", ColliderType::CUBOID, spawnPos, glm::vec3(10.0f), 1, 0, orientation, 2.0f, 0, color);
+    // blocks
+    if (mode == 0) {
+        xVariance = randomRange(0.2, 4);
+        yVariance = randomRange(0.2, 4);
+        zVariance = randomRange(0.2, 4);
+        glm::vec3 size{ xVariance, yVariance, zVariance };
+        float mass = xVariance * yVariance * zVariance;
+
+        createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+    }
+    // spheres
+    else if (mode == 1) {
+        float variance = randomRange(0.2, 2); 
+        glm::vec3 size{ variance }; 
+        float mass = (variance * 3.0f) / 2.0f;
+
+        createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+    }
 }
 
 void SceneBuilder::createBlockPyramid(
@@ -248,7 +323,8 @@ void SceneBuilder::createBlockPyramid(
     float sLength,
     float sHeight,
     float sDistance,
-    int sWeight)
+    float sWeight,
+    bool asleep)
 {
     // random color
     bool randomColor = false;
@@ -267,7 +343,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
+                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -282,7 +358,8 @@ void SceneBuilder::createSpherePyramid(
     int pHeight,
     float sRadius,
     float sDistance,
-    int sWeight)
+    float sWeight,
+    bool asleep)
 {
     const float sqrt2 = sqrt(2.0f);
 
@@ -305,7 +382,7 @@ void SceneBuilder::createSpherePyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, 1, color);
+                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
             }
         }
         pWidthCounter -= 1;

@@ -3,24 +3,25 @@
 #include "scene_builder.h"
 
 void SceneBuilder::testScene() {
-    int floorWidth = 1;
-    int floorHeight = 1;
+    //int floorWidth = 1;
+    //int floorHeight = 1;
 
-    for (int i = 0; i < floorWidth; i++)
-        for (int j = 0; j < floorHeight; j++) {
-            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-            createObject("uvmap", ColliderType::CUBOID, glm::vec3(25 + i * 50, -0.5, 25 + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
-        }
+    //for (int i = 0; i < floorWidth; i++)
+    //    for (int j = 0; j < floorHeight; j++) {
+    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    //        createObject("uvmap", ColliderType::CUBOID, glm::vec3(25 + i * 50, -0.5, 25 + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+    //    }
 
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(30.0f, 80.0f, 125.0f), 13, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(0.0f, 80.0f, 145.0f), 15, 8, 0.5f, 0.0f, 0.5f, false);
 
-    //glm::quat newOrient = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    //float wWidth = 5.0f;
-    //float wHeight = 5.0f;
-    //float wLength = 5.0f;
-    //glm::vec3 color1 = glm::vec3(255, 0, 0);
-    //glm::vec3 color2 = glm::vec3(0, 255, 0);
-    //createObject("plain", ColliderType::MESH, glm::vec3(5,7,5), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color1);
-    //createObject("plain", ColliderType::MESH, glm::vec3(9,7,9), glm::vec3(wWidth, wHeight, wLength), 0, 0, newOrient, 0, 0, color2);
+    generateFlatTerrain(
+        /*offset*/glm::vec3(-150.0f, -20.0f, 0.0f),
+        /*gridX=*/104,
+        /*gridZ=*/104,
+        /*cellSize=*/3.f,
+        /*maxHeight=*/120.0f
+    );
 }
 
 void SceneBuilder::mainScene() {
@@ -206,7 +207,7 @@ void SceneBuilder::mainScene() {
     // --- falling pyramid ---
     // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
     //createBlockPyramid("plain", glm::vec3(-1,-1,-1), glm::vec3(140.0f, 85.0f, 175.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1);
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(140.0f, 85.0f, 175.0f), 10, 8, 0.5f, 0.0f, 1);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(140.0f, 85.0f, 175.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
 
     // ___________________________________________________________
     // ------------------------ sloped platforms -----------------
@@ -268,7 +269,7 @@ void SceneBuilder::mainScene() {
     // falling pyramid
     // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
     //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(95.0f, 145.0f, 80.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1);
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(95.0f, 145.0f, 80.0f), 10, 8, 0.5f, 0.0f, 1);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(95.0f, 145.0f, 80.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
 
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
@@ -319,7 +320,7 @@ void SceneBuilder::mainScene() {
     int wallWidth = 20;
     float brickWidth = 1.0f;
     float brickLength = 1.0f;
-    float brickHeight = 0.5f;
+    float brickHeight = 1.0f;
     float brickDistance = 0.2f;
 
     int brickWeight = 10;
@@ -380,13 +381,13 @@ void SceneBuilder::mainScene() {
     // _____________________________________________________________
     // ----------------------- BIG pyramid -------------------------
     // 
-    // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight
-    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 34.5f), 15, 12, 0.5f, 0.5f, 3, 0, 1);  
+    // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight, asleep
+    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 34.5f), 15, 12, 0.5f, 0.5f, 3, 0, 0.75f, true);  
 
+    // terrain mesh pyramid
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true); 
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-120.0f, 30.0f, 45.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
 
-
-
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1); 
-
-    createObject("plain", ColliderType::SPHERE, glm::vec3(10,10,10), glm::vec3(0.5f), 1, 0, glm::quat(1, 0, 0, 0), 0.5f, 0, glm::vec3(255,255,255));
+    // sphere
+    createObject("plain", ColliderType::SPHERE, glm::vec3(10,10,10), glm::vec3(0.5f), 0.5f, 0, glm::quat(1, 0, 0, 0), 0.5f, 0, glm::vec3(255,255,255));
 }

@@ -15,7 +15,8 @@ public:
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };
     glm::mat4 model{ 1.0f };
 
-private:
     static unsigned int sVAO, sVBO;
+
+private:
     static bool         sInitialized;
 };

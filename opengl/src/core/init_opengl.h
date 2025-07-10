@@ -17,7 +17,7 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
         return nullptr;
     }
     glfwMakeContextCurrent(window);
-    //glfwSwapInterval(1);
+    glfwSwapInterval(1);
 
     // Load GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {

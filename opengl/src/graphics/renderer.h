@@ -9,17 +9,19 @@
 
 #include "draw_contact_points.h"
 #include "xyz_object.h"
+#include "sphere_outline_renderer.h"
 
 #include "bvh.h"
+#include "scene_builder.h"
 
 class Renderer {
 public:
     void init(unsigned int width, unsigned int height, EngineState& state, LightManager& lightManager, Shader& shader, Shader& debugShader);
     void beginFrame() const;
     void setViewProjection(Camera& camera);
-    void drawGameObjects(std::vector<GameObject>& objects, unsigned int VAO_line);
+    void drawGameObjects(std::vector<GameObject>& objects, Camera& camera);
     void drawLights() const;
-    void drawDebug(PhysicsEngine& physicsEngine, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
+    void drawDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
 
     template<typename E>
     void drawBVH(BVHTree<E>& tree, unsigned int VAO_line);
@@ -27,7 +29,7 @@ public:
     void uploadLightsToShader();
     void uploadDirectionalLight();
 
-    void drawTerrain(std::vector<Tri>& triangles);
+    void drawTerrain(SceneBuilder::TerrainData& data, bool sceneDirty);
 
 private:
     float screenWidth;
@@ -39,6 +41,7 @@ private:
     Shader* debugShader = nullptr;
 
     AABBRenderer aabbRenderer;
+    SphereOutlineRenderer sphereOutlineRenderer;
 
-    float maxViewDistance = 10000000000.0f;
+    float maxViewDistance = 10000.0f;
 };

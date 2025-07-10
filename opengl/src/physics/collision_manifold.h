@@ -36,6 +36,8 @@ struct ContactPoint {
 
     float invMassT1, invMassT2;
     float invMassTwist;
+
+    bool wasUsedThisFrame = true;
 };
 
 struct Contact {
@@ -59,12 +61,12 @@ struct Contact {
 
 class CollisionManifold {
 public:
-    void cuboidVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void sphereVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void sphereVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void meshVsCuboid(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
-    void meshVsSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void meshVsMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    void boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    void boxMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
+    void sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    void sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
+    void meshMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
 
 private:
     std::vector<glm::vec3> selectedFace;
@@ -81,7 +83,6 @@ private:
     std::array<bool, 16> clippingStatus;
     std::vector<glm::vec3> clippedPoints;
     std::vector<glm::vec3> allClippedPoints;
-    std::vector<int> allClippedPointsTriIDs;
     void createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal);
     void getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane, glm::vec3& outPoint, bool& outBool);
     bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint);

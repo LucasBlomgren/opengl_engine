@@ -151,7 +151,7 @@ public:
     {
         // physics stuff
         isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
-        if (orientation != glm::quat(1.0f, 0.0f, 0.0f, 0.0f)) { isRotated = true; }
+        setRotatedFlag();
         invRadius = 1.0f / (0.5f * glm::length(scale));
 
         // dynamic
@@ -237,6 +237,7 @@ public:
     void resetDirtyFlags();
     void setModelMatrix();
     void setHelperMatrixes();
+    void setRotatedFlag();
     void calculateInverseInertiaForCube();
     void calculateInverseInertiaForCuboid();
     void calculateInverseInertiaForSolidSphere();

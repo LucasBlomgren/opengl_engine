@@ -5,7 +5,7 @@ void EngineState::setPaused(bool arg) { paused = arg; }
 void EngineState::togglePause() { paused = !paused; }
 void EngineState::toggleShowFPS() { showFPS = !showFPS; }
 void EngineState::toggleShowAABB() { showAABB = !showAABB; }
-void EngineState::toggleShowOOBB() { showOOBB = !showOOBB; }
+void EngineState::toggleShowColliders() { showColliders = !showColliders; }
 void EngineState::toggleShowContactPoints() { showContactPoints = !showContactPoints; }
 void EngineState::toggleShowNormals() { showNormals = !showNormals; }
 void EngineState::toggleShowCollisionNormal() { showCollisionNormal = !showCollisionNormal; }
@@ -17,7 +17,7 @@ bool EngineState::getAdvanceStep() const { return advanceStep; }
 bool EngineState::isPaused() const { return paused; }
 bool EngineState::getShowFPS() const { return showFPS; }
 bool EngineState::getShowAABB() const { return showAABB; }
-bool EngineState::getShowOOBB() const { return showOOBB; }
+bool EngineState::getShowColliders() const { return showColliders; }
 bool EngineState::getShowContactPoints() const { return showContactPoints; }
 bool EngineState::getShowNormals() const { return showNormals; }
 bool EngineState::getShowCollisionNormal() const { return showCollisionNormal; }

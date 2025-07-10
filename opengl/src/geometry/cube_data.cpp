@@ -1,48 +1,48 @@
 #include "cube_data.h"
 
 extern std::vector<Vertex> cubeVertices = {
-    // pos                          // color          // normal         // texCoord
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},  // FRONT
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},
+    // pos                          // normal         // texCoord
+    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},  // FRONT
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(0,0,-1), glm::vec2(0.0f, 0.0f)},
 
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},  // BACK
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},
+    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},  // BACK
+    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0,0,1), glm::vec2(0.0f, 0.0f)},
 
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},  // LEFT
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},  // LEFT
+    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(-1,0,0), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-1,0,0), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(-1,0,0), glm::vec2(0.0f, 0.0f)},
+    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-1,0,0), glm::vec2(1.0f, 0.0f)},
 
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},  // RIGHT
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},  // RIGHT
+    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,0,0), glm::vec2(0.0f, 0.0f)},
+    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,0,0), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,0,0), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,0,0), glm::vec2(1.0f, 0.0f)},
 
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},  // BOT
-    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},  // BOT
+    {glm::vec3(0.5f, -0.5f, -0.5f), glm::vec3(0,-1,0), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f, -0.5f,  0.5f), glm::vec3(0,-1,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0,-1,0), glm::vec2(0.0f, 0.0f)},
+    {glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0,-1,0), glm::vec2(0.0f, 1.0f)},
 
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)},  // TOP 
-    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
-    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(1.0f, 1.0f)},
-    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(1,1,1), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)}
+    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)},  // TOP 
+    {glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(0,1,0), glm::vec2(0.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f,  0.5f), glm::vec3(0,1,0), glm::vec2(1.0f, 0.0f)},
+    {glm::vec3(0.5f,  0.5f, -0.5f), glm::vec3(0,1,0), glm::vec2(1.0f, 1.0f)},
+    {glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0,1,0), glm::vec2(0.0f, 1.0f)}
 };
 
 extern std::vector<unsigned int> cubeIndices = {

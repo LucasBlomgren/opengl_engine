@@ -18,8 +18,14 @@ struct debugSettings {
 
 	vec3 contactPointOffset;
 
+	// line
 	vec3 lineStart;
 	vec3 lineEnd;
+
+	// sphere
+	vec3 uCenter;    
+	vec3 uU;         
+	vec3 uV;  
 };
 
 uniform debugSettings debug;
@@ -29,19 +35,26 @@ void main()
 
 	FragPos = vec3(model * vec4(aPos, 1.0));
 
-	// regular object
+	// default
 	if (debug.objectType == 0) {
 		gl_Position = projection * view * model * vec4(aPos, 1.0f);
 	}
 
-	// contact point
+	// sphere
 	if (debug.objectType == 1) {
+		vec3 worldPos = debug.uCenter + aPos.x * debug.uU + aPos.y * debug.uV;
+		gl_Position = projection * view * vec4(worldPos, 1.0);
+
+	}
+
+	// contact point
+	if (debug.objectType == 2) {
 		vec3 transformedPos = aPos + debug.contactPointOffset;
 		gl_Position = projection * view * vec4(transformedPos, 1.0f);
 	} 
 
 	// line 
-	else if (debug.objectType == 2) {
+	else if (debug.objectType == 3) {
 		if (gl_VertexID == 0) 
 			gl_Position = projection * view * vec4(debug.lineStart, 1.0);
 		else

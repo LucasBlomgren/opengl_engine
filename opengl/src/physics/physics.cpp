@@ -25,9 +25,9 @@ void PhysicsEngine::clearPhysicsData() {
 BVHTree<GameObject>& PhysicsEngine::getDynamicBvh() {
     return dynamicBvh;
 }
-BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
-    return staticBvh;
-}
+//BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
+//    return staticBvh;
+//}
 BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
     return terrainBvh;
 }
@@ -44,6 +44,13 @@ RaycastHit PhysicsEngine::performRaycast(Ray& r) {
 // ----- Time step -----
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     this->dt = deltaTime;
+
+    // Reset contact points for the current frame
+    for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
+        for (ContactPoint& cp : it->second.points) {
+            cp.wasUsedThisFrame = false;
+        }
+    }
 
     updatePositions();
 
@@ -273,21 +280,30 @@ void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<Dynamic
 void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) {
     for (TerrainHit& th : terrainHits) 
     {
+        if (th.obj->asleep) {
+            continue;
+        }
+
+        static std::vector<SAT::Result> allResults;
+        allResults.clear(); 
+        int reserveSize = 0;
+        if (th.refined.size() == 0) {
+            reserveSize = th.coarse.size() * 2; // worst case: all tris collide with collider 
+        }
+        else {
+            reserveSize = th.refined.size() * 2; 
+        }
+
+        // MESH vs tris
         if (th.obj->colliderType == ColliderType::MESH) {
             // gå igenom refined
         }
-        else if (th.obj->colliderType == ColliderType::CUBOID) {
-            if (th.obj->asleep) {
-                continue;
-            }
-
-            static std::vector<SAT::Result> allResults;
-            allResults.reserve(th.coarse.size() * 2); // worst case: all tris collide with collider
-            allResults.clear(); 
-
+        // BOX vs tris
+        else if (th.obj->colliderType == ColliderType::CUBOID) 
+        {
             for (Tri* tri : th.coarse) {
                 SAT::Result satResult;
-                if (!SAT::triVsCuboid(th.obj->collider, *tri, satResult)) {
+                if (!SAT::boxTri(th.obj->collider, *tri, satResult)) {
                     continue;
                 }
 
@@ -299,20 +315,41 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             SAT::findBestTriangles(allResults);
-
             updateHelpers(*th.obj); // update helper matrixes and aabb faces
-
             SAT::reverseNormal(th.obj->position, allResults[0].tri_ptr->centroid, allResults[0].normal);
 
             Contact contact(th.obj, nullptr);
             contact.normal = allResults[0].normal; // use deepest penetration (sorted list)
 
-            collisionManifold->meshVsCuboid(contact, contactCache, allResults);
+            collisionManifold->boxMesh(contact, contactCache, allResults);
 
             resolveCollision(contact); // resolve collision
         }
-        else if (th.obj->colliderType == ColliderType::SPHERE) {
+        // SPHERE vs tris
+        else if (th.obj->colliderType == ColliderType::SPHERE) 
+        {
+            for (Tri* tri : th.coarse) { 
+                SAT::Result satResult; 
+                if (!SAT::sphereTri(th.obj->collider, *tri, satResult)) { 
+                    continue; 
+                }
+                allResults.push_back(satResult); 
+            }
 
+            if (allResults.size() == 0) { 
+                continue; 
+            }
+
+            SAT::findBestTriangles(allResults);
+            updateHelpers(*th.obj);
+            SAT::reverseNormal(th.obj->position, allResults[0].tri_ptr->centroid, allResults[0].normal); 
+
+            Contact contact(th.obj, nullptr); 
+            contact.normal = allResults[0].normal; // use deepest penetration (sorted list) 
+
+            collisionManifold->sphereMesh(contact, contactCache, allResults); 
+
+            resolveCollision(contact); // resolve collision 
         }
     }
 
@@ -342,7 +379,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             if (objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::CUBOID)
             {
                 SAT::Result satResult;
-                if (!SAT::cuboidVsCuboid(objA->collider, objB->collider, satResult)) {
+                if (!SAT::boxBox(objA->collider, objB->collider, satResult)) {
                     continue;
                 }
 
@@ -356,7 +393,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 updateHelpers(*objB);
 
                 Contact contact(objA, objB);
-                collisionManifold->cuboidVsCuboid(contact, contactCache, satResult);
+                collisionManifold->boxBox(contact, contactCache, satResult);
 
                 resolveCollision(contact); // resolve collision 
             }
@@ -374,7 +411,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 updateHelpers(*objB); 
 
                 SAT::Result satResult;
-                if (!SAT::sphereVsCuboid(objA->collider, objB->collider, satResult)) {
+                if (!SAT::boxSphere(objA->collider, objB->collider, satResult)) {
                     continue;
                 }
 
@@ -382,7 +419,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 objB->totalCollisionCount++; 
 
                 Contact contact(objA, objB); 
-                collisionManifold->sphereVsCuboid(contact, contactCache, satResult); 
+                collisionManifold->boxSphere(contact, contactCache, satResult); 
 
                 resolveCollision(contact);
             }
@@ -390,7 +427,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             else if (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::SPHERE) 
             {
                 SAT::Result satResult;
-                if (!SAT::sphereVsSphere(objA->collider, objB->collider, satResult)) {
+                if (!SAT::sphereSphere(objA->collider, objB->collider, satResult)) { 
                     continue;
                 }
 
@@ -402,7 +439,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 objB->totalCollisionCount++; 
 
                 Contact contact(objA, objB); 
-                collisionManifold->sphereVsSphere(contact, contactCache, satResult);  
+                collisionManifold->sphereSphere(contact, contactCache, satResult);  
 
                 resolveCollision(contact); 
             }
