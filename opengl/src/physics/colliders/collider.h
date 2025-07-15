@@ -5,7 +5,7 @@
 #include "aabb.h"
 #include "oobb.h"
 #include "sphere.h"
-#include "tri_mesh.h"
+#include "mesh.h"
 
 class GameObject;
 class TriMesh;
@@ -16,7 +16,7 @@ enum class ColliderType {
     MESH,
 };
 
-using ColliderShape = std::variant<OOBB, Sphere, TriMesh>;
+using ColliderShape = std::variant<OOBB, Sphere, Mesh>;
 
 struct Collider {
     GameObject* owner;

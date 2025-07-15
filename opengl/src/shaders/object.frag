@@ -5,6 +5,7 @@ out vec4 FragColor;
 in vec3 ourColor;
 in vec3 ourNormal;
 in vec2 TexCoord;
+in vec4 FragPosLightSpace;
 
 in vec3 Normal;  
 in vec3 FragPos;  
@@ -41,8 +42,11 @@ uniform int numPointLights;
 uniform DirLight dirLight;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec4 FragPosLightSpace);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir);
+
+uniform sampler2DShadow shadowMap;
 
 void main() 
 {
@@ -51,7 +55,7 @@ void main()
 	 vec3 viewDir = normalize(viewPos - FragPos);
 	 
 	 // phase 1: directional lighting
-	 vec3 result = CalcDirLight(dirLight, norm, viewDir);
+	 vec3 result = CalcDirLight(dirLight, norm, viewDir, FragPosLightSpace);
 
 	 // phase 2: point lights
 	 for (int i = 0; i < numPointLights; ++i)
@@ -66,18 +70,20 @@ void main()
 }
 
 // calculates the color when using a directional light.
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec4 FragPosLightSpace)
 {
 	 vec3 lightDir = normalize(-light.direction);
 	 float diff = max(dot(normal, lightDir), 0.0);
 	 vec3 reflectDir = reflect(-lightDir, normal);
-	 float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0); // h�rdkodad shininess
+	 float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0); // hårdkodad shininess
 
 	 vec3 ambient  = light.ambient;
 	 vec3 diffuse  = light.diffuse * diff;
 	 vec3 specular = light.specular * spec;
 
-	 return ambient + diffuse + specular;
+	 float shadow = ShadowCalculation(FragPosLightSpace, normal, lightDir);     
+
+	 return ambient + shadow * (diffuse + specular);
 }
 
 // calculates the color when using a point light.
@@ -101,3 +107,25 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 
 	 return (ambient + diffuse + specular) * light.color;
 }
+
+float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+{
+    // perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // transform to [0,1] range
+    projCoords = projCoords * 0.5 + 0.5;
+    float currentDepth = projCoords.z;
+
+	//	// 3) Om utanför ljusets kägla: ingen skugga
+	//	if(projCoords.z > 1.0)
+	//	    return 0.0;
+	//
+	//	if(projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+	//		return 0.0;  // ingen skugga utanför
+	//	}
+	//
+    // 4) Texture lookup med inbyggd jämförelse
+    //    texture() returnerar 1.0 om projCoords.z <= djupet i shadowMap, annars 0.0 (PCF vid flervärde-implementation).
+    float shadow = texture(shadowMap, projCoords);
+    return shadow; // eller shadow beroende på hur du vill tolka: 1.0 = i skugga
+}  

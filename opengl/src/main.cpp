@@ -38,8 +38,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 1920;
-const unsigned int SHADOW_HEIGHT = 1080;
+const unsigned int SHADOW_WIDTH = 16384;
+const unsigned int SHADOW_HEIGHT = 16384;
 const bool debug = 0;
 
 // timing
@@ -88,29 +88,23 @@ int main()
    inputManager.init(window);
 
    // setup rendering
-   Shader shader("src/shaders/object.vert", "src/shaders/object.frag");
-   Shader debugShader("src/shaders/debug.vert", "src/shaders/debug.frag");
-   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shader, debugShader);
+   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager);
 
    // load textures
    textureManager.loadTexture("crate", "src/assets/crate.jpg");
    textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
-   textureManager.loadTexture("terrain1", "src/assets/terrain_8k.jpg");
+   textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
+   textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
    // setup scene 
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);
-   sceneBuilder.createScene(physicsEngine);
+   sceneBuilder.createScene(physicsEngine, 0);
 
    // setup physics
    physicsEngine.init(&engineState);
 
    // setup editor
    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &cubeIndices);
-
-   // setup help VAOs
-   unsigned int VAO_line = setupLine();
-   unsigned int VAO_xyz = setup_xyzObject();
-   unsigned int VAO_contactPoint = setupContactPoint();
 
    // main loop
    while (true) {
@@ -129,6 +123,9 @@ int main()
       // continous input 
       inputManager.processInput(window, deltaTime);
 
+      // editor functions
+      editor.update(deltaTime, renderer.debugShader);
+
       // physics step
       float stepClockStart = static_cast<float>(glfwGetTime());
       if (!engineState.isPaused() or engineState.getAdvanceStep()) {
@@ -139,6 +136,25 @@ int main()
 
          while (accumulator >= fixedTimeStep) {
             physicsEngine.step(fixedTimeStep, rng);
+
+            // rotate halos
+            for (SceneBuilder::Halo& halo : sceneBuilder.allHalos) {
+                glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed), halo.rotDir);
+                for (int i = 0; i < halo.indices.size(); i++) {
+                    // increase orientation in x-axis by a small amoount
+                    GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
+
+                    glm::vec3 relativePos = obj.position - halo.center;
+                    glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+
+                    obj.position = halo.center + rotatedRelPos;
+                    obj.orientation = perFrameRot * obj.orientation;
+                    obj.modelMatrixDirty = true;
+                    obj.setModelMatrix();
+                    obj.updateAABB();
+                    obj.updateCollider();
+                }
+            }
             accumulator -= fixedTimeStep;
          }
          bvhAccumulator += deltaTime;
@@ -146,57 +162,6 @@ int main()
             physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
             bvhAccumulator -= bvhInterval;
          }
-      }
-
-      // rotate halos
-      if (!engineState.isPaused() or engineState.getAdvanceStep()) { 
-          glm::quat perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 1.0f, 0.0f)); 
-          for (int i = 0; i < sceneBuilder.haloA.size(); i++) {
-              // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloA[i]];
-
-              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
-              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
-              obj.position = sceneBuilder.haloACenter + rotatedRelPos;
-
-              obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixDirty = true;
-              obj.setModelMatrix();
-              obj.updateAABB();
-              obj.updateCollider();
-          }
-
-          perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(1.0f, 0.0f, 0.0f));
-          for (int i = 0; i < sceneBuilder.haloB.size(); i++) {
-              // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloB[i]];
-
-              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
-              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
-              obj.position = sceneBuilder.haloBCenter + rotatedRelPos;
-
-              obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixDirty = true;
-              obj.setModelMatrix();
-              obj.updateAABB();
-              obj.updateCollider();
-          }
-
-          perFrameRot = glm::angleAxis(glm::radians(0.05f), glm::vec3(0.0f, 0.0f, 1.0f));
-          for (int i = 0; i < sceneBuilder.haloC.size(); i++) {
-              // increase orientation in x-axis by a small amoount
-              GameObject& obj = sceneBuilder.getDynamicObjects()[sceneBuilder.haloC[i]];
-
-              glm::vec3 relativePos = obj.position - sceneBuilder.haloACenter;
-              glm::vec3 rotatedRelPos = perFrameRot * relativePos;
-              obj.position = sceneBuilder.haloCCenter + rotatedRelPos;
-
-              obj.orientation = perFrameRot * obj.orientation;
-              obj.modelMatrixDirty = true;
-              obj.setModelMatrix();
-              obj.updateAABB();
-              obj.updateCollider();
-          }
       }
 
       if (engineState.getAdvanceStep()) {
@@ -208,9 +173,6 @@ int main()
       float stepClock = stepClockStop - stepClockStart;
       float stepClockMs = stepClock * 1000.0f;
 
-      // editor functions
-      editor.update(deltaTime, debugShader);
-
       if (!engineState.isPaused()) {
           if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, rng, 0);
           else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, rng, 1);
@@ -218,17 +180,7 @@ int main()
 
       // rendering
       float renderClockStart = static_cast<float>(glfwGetTime());
-      renderer.beginFrame();
-      renderer.setViewProjection(camera);
-      renderer.uploadDirectionalLight();
-      renderer.uploadLightsToShader();
-      renderer.drawLights();
-      renderer.drawGameObjects(sceneBuilder.getDynamicObjects(), camera);
-      renderer.drawTerrain(sceneBuilder.getTerrainData(), sceneBuilder.sceneDirty);
-      renderer.drawBVH(physicsEngine.getDynamicBvh(), VAO_line);  // draw dynamic BVH
-      //renderer.drawBVH(physicsEngine.getTerrainBvh(), VAO_line);  // draw terrain BVH
-
-      renderer.drawDebug(physicsEngine, camera, sceneBuilder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
+      renderer.update(camera, sceneBuilder, physicsEngine, editor);
 
       // calculate render time
       float renderClockEnd = static_cast<float>(glfwGetTime());

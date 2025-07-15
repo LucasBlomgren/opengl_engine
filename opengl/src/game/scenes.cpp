@@ -2,26 +2,42 @@
 
 #include "scene_builder.h"
 
-void SceneBuilder::testScene() {
-    //int floorWidth = 1;
-    //int floorHeight = 1;
+void SceneBuilder::testTerrainScene() {
 
-    //for (int i = 0; i < floorWidth; i++)
-    //    for (int j = 0; j < floorHeight; j++) {
-    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    //        createObject("uvmap", ColliderType::CUBOID, glm::vec3(25 + i * 50, -0.5, 25 + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
-    //    }
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 155.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 125.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
 
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(30.0f, 80.0f, 125.0f), 13, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(0.0f, 80.0f, 145.0f), 15, 8, 0.5f, 0.0f, 0.5f, false);
+    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 155.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
+    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 125.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
+
+    for (int x = 0; x < 3; x++)
+        for (int z = 0; z < 3; z++) {
+            glm::vec3 pos = glm::vec3(150 + x * 25, 100, 150 + z * 25);
+            createSpherePyramid("plain", glm::vec3(-1, -1, -1), pos, 10, 8, 0.5f, 0.01f, 0.5f, false);
+        }
 
     generateFlatTerrain(
-        /*offset*/glm::vec3(-150.0f, -20.0f, 0.0f),
-        /*gridX=*/104,
-        /*gridZ=*/104,
+        /*offset*/glm::vec3(0.0f, 0.0f, 0.0f),
+        /*gridX=*/124,
+        /*gridZ=*/124,
         /*cellSize=*/3.f,
         /*maxHeight=*/120.0f
     );
+}
+
+void SceneBuilder::testFloorScene() {
+    int floorWidth = 1;
+    int floorHeight = 1;
+
+    for (int i = 0; i < floorWidth; i++) {
+        for (int j = 0; j < floorHeight; j++) {
+            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+            createObject("uvmap", ColliderType::CUBOID, glm::vec3(25 + i * 50, -0.5, 25 + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+        }
+    }
+
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 8, 6, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, true);
 }
 
 void SceneBuilder::mainScene() {
@@ -37,161 +53,25 @@ void SceneBuilder::mainScene() {
 
         }
 
-    // ___________________________________________________________
-    // ------------------------ haloA -----------------------------
-    float baseRotAng = 90.0f;
-    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), glm::vec3(0, 0, 1));
-
-    float wWidth = 50.0f;
-    float wHeight = 5.0f;
-    float wLength = 90.0f;
-    float halfDepth = wLength * 0.5f;
-
-    glm::vec3 desiredCenter = glm::vec3(125, 0, 125);
-
-    glm::vec3 lastPos = glm::vec3(500, 500, 500);
-    float lastAngle = 45.0f;
-    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
-
-    for (int i = 0; i < 72; ++i) {
-        float newAngle = lastAngle - 5.0f;
-        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
-        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPos = baseRot * newPosLocal;
-        glm::quat newOrient = baseRot * newOrientLocal;
-
-        //glm::vec3 color = glm::vec3(randomRange(0, 1), randomRange(0, 255), randomRange(0, 255));
-        glm::vec3 color = glm::vec3(0, 255, 0);
-        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(wWidth, wHeight, wLength), 0, 1, newOrient, 0, 0, color);
-
-        lastAngle = newAngle;
-        lastOrient = newOrientLocal;
-        lastPos = newPosLocal;
-
-        haloA.push_back(dynamicObjects.back().id);
-    }
-
-    // calculate haloACenter
-    glm::vec3 sum = glm::vec3(0.0f);
-    for (int i = 0; i < haloA.size(); i++)
-        sum += dynamicObjects[haloA[i]].position;
-    haloACenter = sum / static_cast<float>(haloA.size());
-
-    for (int i = 0; i < haloA.size(); i++) {
-        GameObject& obj = dynamicObjects[haloA[i]];
-        glm::vec3 relativePos = desiredCenter - haloACenter;
-        obj.position += relativePos;
-    }
-    haloACenter = desiredCenter;
 
     // ___________________________________________________________
-    // ------------------------ haloB -----------------------------
-    baseRotAng = 90.0f;
-    baseRot = glm::angleAxis(glm::radians(baseRotAng), glm::vec3(0, 0, 1));
+    // ------------------------ Halos ----------------------------
+    createHalo(50.0f, 5.0f, 90.0f, glm::vec3(0, 1, 0), 0.05f, glm::vec3(125, 0, 125), 72, glm::vec3(0, 255, 0));
+    createHalo(50.0f, 5.0f, 100.0f, glm::vec3(1, 0, 0), 0.05f, glm::vec3(125, 0, 125), 72, glm::vec3(255, 0, 0));
+    createHalo(50.0f, 5.0f, 110.0f, glm::vec3(0, 0, 1), 0.05f, glm::vec3(125, 0, 125), 72, glm::vec3(0, 0, 255));
 
-    wWidth = 50.0f;
-    wHeight = 5.0f;
-    wLength = 100.0f;
-    halfDepth = wLength * 0.5f;
-
-    //desiredCenter = glm::vec3(125, 0, 125);
-
-    lastPos = glm::vec3(500, 500, 500);
-    lastAngle = 45.0f;
-    lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
-
-    for (int i = 0; i < 72; ++i) {
-        float newAngle = lastAngle - 5.0f;
-        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
-        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPos = baseRot * newPosLocal;
-        glm::quat newOrient = baseRot * newOrientLocal;
-
-        //glm::vec3 color = glm::vec3(randomRange(0, 1), randomRange(0, 255), randomRange(0, 255));
-        glm::vec3 color = glm::vec3(255, 0, 0);
-        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(wWidth, wHeight, wLength), 0, 1, newOrient, 0, 0, color);
-
-        lastAngle = newAngle;
-        lastOrient = newOrientLocal;
-        lastPos = newPosLocal;
-
-        haloB.push_back(dynamicObjects.back().id);
-    }
-
-    // calculate haloBCenter
-    sum = glm::vec3(0.0f);
-    for (int i = 0; i < haloB.size(); i++)
-        sum += dynamicObjects[haloB[i]].position;
-    haloBCenter = sum / static_cast<float>(haloB.size());
-
-    for (int i = 0; i < haloB.size(); i++) {
-        GameObject& obj = dynamicObjects[haloB[i]];
-        glm::vec3 relativePos = desiredCenter - haloBCenter;
-        obj.position += relativePos;
-    }
-    haloBCenter = desiredCenter;
-
-    // ___________________________________________________________
-    // ------------------------ haloC -----------------------------
-    baseRotAng = 90.0f;
-    baseRot = glm::angleAxis(glm::radians(baseRotAng), glm::vec3(0, 0, 1));
-
-    wWidth = 50.0f;
-    wHeight = 5.0f;
-    wLength = 110.0f;
-    halfDepth = wLength * 0.5f;
-
-    //desiredCenter = glm::vec3(125, 0, 125);
-
-    lastPos = glm::vec3(500, 500, 500);
-    lastAngle = 45.0f;
-    lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
-
-    for (int i = 0; i < 72; ++i) {
-        float newAngle = lastAngle - 5.0f;
-        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
-        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPos = baseRot * newPosLocal;
-        glm::quat newOrient = baseRot * newOrientLocal;
-
-        //glm::vec3 color = glm::vec3(randomRange(0, 1), randomRange(0, 255), randomRange(0, 255));
-        glm::vec3 color = glm::vec3(0, 0, 255);
-        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(wWidth, wHeight, wLength), 0, 1, newOrient, 0, 0, color);
-
-        lastAngle = newAngle;
-        lastOrient = newOrientLocal;
-        lastPos = newPosLocal;
-
-        haloC.push_back(dynamicObjects.back().id);
-    }
-
-    // calculate haloCCenter
-    sum = glm::vec3(0.0f);
-    for (int i = 0; i < haloC.size(); i++)
-        sum += dynamicObjects[haloC[i]].position;
-    haloCCenter = sum / static_cast<float>(haloC.size());
-
-    for (int i = 0; i < haloC.size(); i++) {
-        GameObject& obj = dynamicObjects[haloC[i]];
-        glm::vec3 relativePos = desiredCenter - haloCCenter;
-        obj.position += relativePos;
-    }
-    haloCCenter = desiredCenter;
 
     // ___________________________________________________________
     // ------------------------ bridge-----------------------------
-    wWidth = 5.0f;
-    wHeight = 0.5f;
-    wLength = 20.0f;
+    float wWidth = 5.0f;
+    float wHeight = 0.5f;
+    float wLength = 20.0f;
     float wDistance = 0.0f;
-    halfDepth = wWidth * 0.5f;
+    float halfDepth = wWidth * 0.5f;
 
-    lastPos = glm::vec3(35, 75, 180);
-    lastAngle = -90.0f;
-    lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0, 0, 1));
+    glm::vec3 lastPos = glm::vec3(35, 75, 180);
+    float lastAngle = -90.0f;
+    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0, 0, 1));
 
     for (int i = 0; i < 36; ++i) {
         glm::quat newOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0, 0, 1));
@@ -274,14 +154,14 @@ void SceneBuilder::mainScene() {
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
     glm::quat orientation1 = glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
-    createObject("uvmap", ColliderType::CUBOID, glm::vec3(80, 0, 120), glm::vec3(30, 0.5, 30), 0, 1, orientation1);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(80, 0, 120), glm::vec3(30, 0.5, 30), 0, 1, orientation1);
     GameObject& obj = dynamicObjects.back();
     obj.textureID = 999;
 
     // ___________________________________________________________
     // ------------------------ slanted platform -----------------
     glm::quat orientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 3, 10), glm::vec3(4, 0.2, 4), 0, 1, orientation);
+    createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 3, 10), glm::vec3(4, 0.2, 4), 0, 1, orientation); 
 
     // ___________________________________________________________
     // ------------------------ catapult -------------------------
@@ -316,7 +196,7 @@ void SceneBuilder::mainScene() {
 
     // ____________________________________________________________
     // ----------------------- brick wall -------------------------
-    int wallHeight = 15;
+    int wallHeight = 20;
     int wallWidth = 20;
     float brickWidth = 1.0f;
     float brickLength = 1.0f;
@@ -385,8 +265,8 @@ void SceneBuilder::mainScene() {
     createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 34.5f), 15, 12, 0.5f, 0.5f, 3, 0, 0.75f, true);  
 
     // terrain mesh pyramid
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true); 
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-120.0f, 30.0f, 45.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true); 
+    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-120.0f, 30.0f, 45.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
 
     // sphere
     createObject("plain", ColliderType::SPHERE, glm::vec3(10,10,10), glm::vec3(0.5f), 0.5f, 0, glm::quat(1, 0, 0, 0), 0.5f, 0, glm::vec3(255,255,255));

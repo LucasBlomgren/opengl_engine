@@ -19,9 +19,10 @@ public:
    void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
    void objectRain(float& current_time, std::mt19937& rng, int mode);
 
-   void createScene(PhysicsEngine& physicsEngine);
+   void createScene(PhysicsEngine& physicsEngine, int sceneID);
    void mainScene();
-   void testScene();
+   void testTerrainScene();
+   void testFloorScene();
 
    GameObject& createObject(
       const std::string& textureName,
@@ -62,6 +63,26 @@ public:
        bool asleep
    );
 
+   void createHalo(
+       float width,
+       float height,
+       float length,
+       glm::vec3 rotDir,
+       float rotSpeed,
+       glm::vec3 pos,
+       int segments,
+       glm::vec3 color 
+   );
+
+   // halos
+   struct Halo { 
+       glm::vec3 center; 
+       glm::vec3 rotDir;  
+       float rotSpeed; 
+       std::vector<int> indices; 
+   };
+   std::vector<Halo> allHalos; 
+
    void generateFlatTerrain(
        glm::vec3 offset,
        int   gridSizeX,
@@ -86,16 +107,6 @@ public:
    void setLights();
 
    float randomRange(float start, float end);
-
-   // halos
-   glm::vec3 haloACenter;
-   std::vector<int> haloA;
-
-   glm::vec3 haloBCenter;
-   std::vector<int> haloB;
-
-   glm::vec3 haloCCenter;
-   std::vector<int> haloC;
 
 private:
    TextureManager* textureManager = nullptr;

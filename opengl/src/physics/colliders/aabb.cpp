@@ -18,24 +18,6 @@ void AABB::update(glm::mat4& model, glm::vec3& pos, glm::vec3& scale, bool isRot
     halfExtents = (wMax - wMin) * 0.5f;
 }
 
-void AABB::updateFaces(glm::mat4& model) {
-    auto transformPoint = [&](const glm::vec3& p) {
-        glm::vec4 tp = model * glm::vec4(p, 1.0f);
-        return glm::vec3(tp);
-        };
-
-    for (int i = 0; i < 4; ++i) {
-        wFaces.minX[i] = transformPoint(lFaces.minX[i]);
-        wFaces.maxX[i] = transformPoint(lFaces.maxX[i]);
-        wFaces.minY[i] = transformPoint(lFaces.minY[i]);
-        wFaces.maxY[i] = transformPoint(lFaces.maxY[i]);
-        wFaces.minZ[i] = transformPoint(lFaces.minZ[i]);
-        wFaces.maxZ[i] = transformPoint(lFaces.maxZ[i]);
-    }
-
-    facesDirty = false;
-}
-
 bool AABB::intersects(const AABB& b) const {
     return (wMin.x <= b.wMax.x and wMax.x >= b.wMin.x)
         and (wMin.y <= b.wMax.y and wMax.y >= b.wMin.y)
@@ -231,36 +213,4 @@ void AABB::setLocalFaces() {
         glm::vec3(lMax.x, lMax.y, lMax.z),
         glm::vec3(lMin.x, lMax.y, lMax.z)
     };
-}
-
-void AABB::debugPrintFaceWindings() {
-    struct FaceInfo {
-        const char* name;
-        glm::vec3 theoreticalNormal;
-        const std::array<glm::vec3, 4>& verts;
-    };
-
-    std::array<FaceInfo, 6> faces = { {
-        { "minX", {-1,0,0}, wFaces.minX },
-        { "maxX", {+1,0,0}, wFaces.maxX },
-        { "minY", {0,-1,0}, wFaces.minY },
-        { "maxY", {0,+1,0}, wFaces.maxY },
-        { "minZ", {0,0,-1}, wFaces.minZ },
-        { "maxZ", {0,0,+1}, wFaces.maxZ }
-    } };
-
-    for (auto& fi : faces) {
-        const auto& F = fi.verts;
-        glm::vec3 calcN = glm::normalize(glm::cross(F[1] - F[0], F[2] - F[0]));
-        float dotProd = glm::dot(calcN, fi.theoreticalNormal);
-        std::cout
-            << fi.name
-            << " | calcN = ["
-            << calcN.x << "," << calcN.y << "," << calcN.z << "]"
-            << " | theorN = ["
-            << fi.theoreticalNormal.x << "," << fi.theoreticalNormal.y << "," << fi.theoreticalNormal.z << "]"
-            << " | dot = " << dotProd
-            << (dotProd > 0 ? "  <<< OK (CCW)" : "  <<< WRONG (CW)")
-            << "\n";
-    }
 }

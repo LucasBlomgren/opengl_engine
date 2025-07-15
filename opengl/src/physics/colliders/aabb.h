@@ -31,7 +31,6 @@ public:
 
     void Init(const std::vector<glm::vec3>& vertices);
     void update(glm::mat4& model, glm::vec3& pos, glm::vec3& scale, bool hasRotated);
-    void updateFaces(glm::mat4& model);
 
     bool intersects(const AABB& b) const;
     bool contains(const AABB& other) const;
@@ -47,6 +46,4 @@ private:
     void transform_withRotation(const glm::mat3& M, const glm::vec3& T);
     void computeFromVertices(const std::vector<glm::vec3>& vertices);
     void setLocalFaces();
-
-    void debugPrintFaceWindings();
 };

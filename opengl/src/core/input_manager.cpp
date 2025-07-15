@@ -85,6 +85,13 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->setPressedKey("H");        // Reset the scene
         if (key == GLFW_KEY_K)
             engineState->setPressedKey("K");        // Toggle debug mode
+
+        if (key == GLFW_KEY_F1)
+            engineState->setPressedKey("F1");
+        if (key == GLFW_KEY_F2)
+            engineState->setPressedKey("F2");
+        if (key == GLFW_KEY_F3)
+            engineState->setPressedKey("F3");
     }
 }
 

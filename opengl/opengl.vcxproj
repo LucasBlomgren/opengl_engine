@@ -29,7 +29,7 @@
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\geometry\cube_data.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
-    <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\render_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
     <ClCompile Include="src\graphics\graphics debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\sphere_outline_renderer.cpp" />
@@ -53,6 +53,8 @@
     <None Include="src\shaders\debug.frag">
       <FileType>Document</FileType>
     </None>
+    <None Include="src\shaders\shadow.frag" />
+    <None Include="src\shaders\shadow.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\camera.h" />
@@ -84,7 +86,7 @@
     <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\colliders\sphere.h" />
     <ClInclude Include="src\physics\colliders\tri.h" />
-    <ClInclude Include="src\physics\colliders\tri_mesh.h" />
+    <ClInclude Include="src\physics\colliders\mesh.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\raycast.h" />
@@ -202,6 +204,7 @@
       <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <Optimization>MaxSpeed</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -222,6 +225,7 @@
       <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <Optimization>MaxSpeed</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

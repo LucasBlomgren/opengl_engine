@@ -23,7 +23,7 @@ public:
 
     Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity);
 
-    void draw(Shader& shader) const;
+    void render(const Shader& shader) const;
     void setPosition(const glm::vec3& pos);
     const glm::vec3& getPosition() const;
 

@@ -19,7 +19,7 @@ void SphereOutlineRenderer::init() {
     glDisableVertexAttribArray(1);
 }
 
-void SphereOutlineRenderer::draw(Shader& shader, glm::vec3& cameraPos, glm::vec3& sphereCenter, float radius, const bool asleep, const bool raycastHit) {
+void SphereOutlineRenderer::render(Shader& shader, glm::vec3& cameraPos, glm::vec3& sphereCenter, float radius, const bool asleep, const bool raycastHit) {
     glm::vec3 viewDir = glm::normalize(cameraPos - sphereCenter);
 
     glm::vec3 up = glm::abs(glm::dot(viewDir, glm::vec3(0, 1, 0))) > 0.99f

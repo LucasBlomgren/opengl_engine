@@ -14,7 +14,7 @@
     <ClCompile Include="src\graphics\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer.cpp" />
     <ClCompile Include="src\graphics\texture_manager.cpp" />
-    <ClCompile Include="src\graphics\graphics debug\draw_contact_points.cpp" />
+    <ClCompile Include="src\graphics\graphics debug\render_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
     <ClCompile Include="src\graphics\graphics debug\xyz_object.cpp" />
     <ClCompile Include="src\game\game_object.cpp" />
@@ -94,7 +94,7 @@
     <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
     <ClInclude Include="src\physics\colliders\sphere.h" />
-    <ClInclude Include="src\physics\colliders\tri_mesh.h" />
+    <ClInclude Include="src\physics\colliders\mesh.h" />
     <ClInclude Include="src\physics\colliders\tri.h" />
     <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\graphics\graphics debug\sphere_outline_renderer.h" />
@@ -114,5 +114,11 @@
       <Filter>src\shaders</Filter>
     </None>
     <None Include="src\shaders\debug.frag" />
+    <None Include="src\shaders\shadow.frag">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\shadow.vert">
+      <Filter>src\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

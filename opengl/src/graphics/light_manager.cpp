@@ -23,6 +23,6 @@ void LightManager::setDirectionalLight(const glm::vec3& direction, const glm::ve
     directionalLight.specular = specular;
 }
 
-const DirectionalLight& LightManager::getDirectionalLight() const {
+DirectionalLight& LightManager::getDirectionalLight() {
     return directionalLight;
 }

@@ -13,7 +13,7 @@
 #include "colliders/aabb.h"
 #include "colliders/oobb.h"
 #include "colliders/sphere.h"
-#include "colliders/tri_mesh.h"
+#include "colliders/mesh.h"
 #include "oobb_renderer.h"
 #include "aabb_renderer.h"
 
@@ -56,11 +56,14 @@ public:
     std::vector<unsigned int> indices;
     unsigned int VAO;
 
+    bool isInsideShadowFrustum = true;
+
     glm::mat4 modelMatrix;
     bool modelMatrixDirty = true;
 
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
+    glm::vec3 translationVector;
     glm::mat3 invRotationMatrix;
     bool helperMatrixesDirty = true;
 
@@ -226,7 +229,7 @@ public:
                 worldTris.emplace_back(glm::vec3(v0), glm::vec3(v1), glm::vec3(v2));
             }
 
-            collider.shape.emplace<TriMesh>(worldTris);
+            collider.shape.emplace<Mesh>(worldTris);
         }
 
         inverseInertiaWorld = inverseInertia; 
@@ -242,7 +245,7 @@ public:
     void calculateInverseInertiaForCuboid();
     void calculateInverseInertiaForSolidSphere();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
-    void drawMesh(Shader& shader);
+    void renderMesh(Shader& shader);
     void updateAABB();
     void updateCollider();
     void updatePos(const float& deltaTime);

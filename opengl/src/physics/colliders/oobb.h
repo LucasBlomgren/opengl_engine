@@ -23,6 +23,7 @@ public:
     std::array<glm::vec3, 8> lVertices;
     std::array<glm::vec3, 8> wVertices;
     std::vector<glm::vec3> wFace;      // for SAT query
+    std::vector<glm::vec3> edges;
 
     std::array<std::array<int,4>,6> faceIndices = {{
         { 1, 2, 6, 5 },

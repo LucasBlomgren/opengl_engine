@@ -61,7 +61,10 @@ void GameObject::setModelMatrix() {
 
 void GameObject::setHelperMatrixes() {
     invModelMatrix = glm::inverse(modelMatrix);
+
     rotationMatrix = glm::mat3_cast(orientation);  // enbart ortonormal rotation
+    translationVector = glm::vec3(modelMatrix[3]); // translationen från modelMatrix
+
     invRotationMatrix = glm::transpose(rotationMatrix);
     inverseInertiaWorld = rotationMatrix * inverseInertia * invRotationMatrix;
 
@@ -184,8 +187,8 @@ void GameObject::setAwake() {
     sleepCounter = 0.0f;
 }
 
-void GameObject::drawMesh(Shader& shader) {
-    setModelMatrix();
+void GameObject::renderMesh(Shader& shader) {
+    //setModelMatrix();
     shader.setMat4("model", modelMatrix);
 
     if (textureID != 999) {

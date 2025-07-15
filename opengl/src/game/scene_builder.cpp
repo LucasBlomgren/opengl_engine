@@ -38,7 +38,7 @@ void SceneBuilder::setLights() {
 
     if (lightsState == 0) {
         // sun light
-        lightManager->setDirectionalLight(glm::vec3(-0.8f, -1.0f, 0.9f), glm::vec3(0.1f), glm::vec3(1.0), glm::vec3(0.5));
+        lightManager->setDirectionalLight(glm::vec3(-0.4f, -0.8f, 0.6f), glm::vec3(0.1f), glm::vec3(1.0), glm::vec3(0.5));
     }
     else if (lightsState == 1) {
         // red light
@@ -56,7 +56,7 @@ void SceneBuilder::setLights() {
     }
 }
 
-void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
+void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 {
     sceneDirty = true;
 
@@ -64,25 +64,28 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine)
     dynamicObjects.clear();
     dynamicObjects.shrink_to_fit();
     dynamicObjects.reserve(10000);
-    //staticObjects.clear();
-    //staticObjects.reserve(10000);
 
     terrainData.triangles.clear(); 
+    terrainData.triangles.reserve(20000);
     terrainData.vertices.clear(); 
-    terrainData.indices.clear(); 
-    terrainData.triangles.reserve(20000); 
-    terrainData.vertices.reserve(20000); 
+    terrainData.vertices.reserve(20000);
+    terrainData.indices.clear();
     terrainData.indices.reserve(20000); 
 
     physicsEngine.clearPhysicsData();
     setLights();
 
-    haloA.clear();
-    haloB.clear();
-    haloC.clear();
+    allHalos.clear();
 
-    testScene();
-    //mainScene();
+    if (sceneID == 0) {
+        mainScene(); 
+    }
+    else if (sceneID == 1) {
+        testTerrainScene(); 
+    }
+    else if (sceneID == 2) {
+        testFloorScene(); 
+    }
 
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
 }
@@ -170,7 +173,7 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
-    smoothHeightMap(heightMap, 0.7f, 100);
+    smoothHeightMap(heightMap, 0.25f, 200);
 
     std::vector<Tri>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices; 
@@ -388,3 +391,67 @@ void SceneBuilder::createSpherePyramid(
         pWidthCounter -= 1;
     }
 }
+
+void SceneBuilder::createHalo(
+    float width,
+    float height,
+    float length,
+    glm::vec3 rotDir,
+    float rotSpeed,
+    glm::vec3 pos,
+    int segments,
+    glm::vec3 color
+) 
+{
+    float baseRotAng = 90.0f;
+    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), glm::vec3(0, 0, 1));
+    float halfDepth = length * 0.5f;
+    glm::vec3 desiredCenter = glm::vec3(125, 0, 125);
+    glm::vec3 lastPos = glm::vec3(500, 500, 500);
+    float lastAngle = 45.0f;
+    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
+
+    float stepSize = 360.0f / segments;
+
+    Halo halo;
+    halo.rotDir = rotDir;
+    halo.rotSpeed = rotSpeed;
+
+    for (int i = 0; i < segments; ++i) {
+        float newAngle = lastAngle - 5.0f;
+        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
+        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
+        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
+        glm::vec3 newPos = baseRot * newPosLocal;
+        glm::quat newOrient = baseRot * newOrientLocal;
+
+        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 0, 0, color);
+        dynamicObjects.back().isInsideShadowFrustum = false;
+
+        lastAngle = newAngle;
+        lastOrient = newOrientLocal;
+        lastPos = newPosLocal;
+
+        halo.indices.push_back(dynamicObjects.back().id);
+        halo.center = newPos;
+    }
+
+    // calculate haloCenter
+    glm::vec3 sum = glm::vec3(0.0f);
+    for (int i = 0; i < halo.indices.size(); i++)
+        sum += dynamicObjects[halo.indices[i]].position;
+    halo.center = sum / static_cast<float>(halo.indices.size());
+
+    for (int i = 0; i < halo.indices.size(); i++) {
+        GameObject& obj = dynamicObjects[halo.indices[i]];
+        glm::vec3 relativePos = desiredCenter - halo.center;
+        obj.position += relativePos;
+    }
+    halo.center = desiredCenter;
+
+    allHalos.push_back(halo);
+}
+
+
+
+

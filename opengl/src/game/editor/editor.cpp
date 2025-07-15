@@ -19,11 +19,6 @@ void Editor::setPointers(
 void Editor::update(float& deltaTime, Shader& shader) {
     updateSelectedObject(deltaTime);
 
-    if (engineState->GetPressedKey() == "H") {
-        sceneBuilder->createScene(*physicsEngine);
-        physicsEngine->getDynamicBvh().build(sceneBuilder->getDynamicObjects());    
-        selectedObject = nullptr;
-    }
     if (engineState->GetPressedKey() == "6") {
         sceneBuilder->toggleLightsState();
     }
@@ -48,6 +43,19 @@ void Editor::update(float& deltaTime, Shader& shader) {
         GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
         newObject.linearVelocity = camera->front *  100.0f;
         newObject.asleep = false;
+    }
+
+    if (engineState->GetPressedKey() == "F1") {
+        sceneBuilder->createScene(*physicsEngine, 0);
+        selectedObject = nullptr;
+    }
+    if (engineState->GetPressedKey() == "F2") {
+        sceneBuilder->createScene(*physicsEngine, 1);
+        selectedObject = nullptr;
+    }
+    if (engineState->GetPressedKey() == "F3") {
+        sceneBuilder->createScene(*physicsEngine, 2);
+        selectedObject = nullptr;
     }
 
     engineState->clearPressedKey();

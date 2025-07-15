@@ -1,6 +1,6 @@
 #include "oobb_renderer.h"
 
-void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
+void OOBBRenderer::renderBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
 {
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
@@ -13,7 +13,7 @@ void OOBBRenderer::drawBox(Shader& shader, glm::mat4& model, const bool asleep, 
     glDrawArrays(GL_LINES, 0, 24);
 }
 
-void OOBBRenderer::drawNormals(Shader& shader, const glm::mat4& model)
+void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model)
 {
     shader.setMat4("model", model);
     glDrawArrays(GL_LINES, 0, 18);

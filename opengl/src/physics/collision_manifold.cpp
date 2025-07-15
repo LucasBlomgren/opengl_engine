@@ -219,26 +219,32 @@ void CollisionManifold::addFurthestPoint(std::vector<int>& indices) {
 }
 
 void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& normal) {
+    // Rotera kontaktnormalen in i lokalspace
     glm::vec3 rotated = obj.invRotationMatrix * normal;
     glm::vec3 absN = glm::abs(rotated);
 
-    this->selectedFace.clear();
-
-    if (absN.x >= absN.y and absN.x >= absN.z) {
-        for (const auto& face : (rotated.x > 0) ? obj.aabb.wFaces.maxX : obj.aabb.wFaces.minX) {
-            this->selectedFace.push_back(face);
-        }
+    // Välj rätt lokala face
+    const std::array<glm::vec3, 4>* localFace;
+    if (absN.x >= absN.y && absN.x >= absN.z) {
+        localFace = (rotated.x > 0) ? &obj.aabb.lFaces.maxX : &obj.aabb.lFaces.minX;
     }
-
-    else if (absN.y >= absN.x and absN.y >= absN.z) {
-        for (const auto& face : (rotated.y > 0) ? obj.aabb.wFaces.maxY : obj.aabb.wFaces.minY) {
-            this->selectedFace.push_back(face);
-        }
+    else if (absN.y >= absN.x && absN.y >= absN.z) {
+        localFace = (rotated.y > 0) ? &obj.aabb.lFaces.maxY : &obj.aabb.lFaces.minY;
     }
     else {
-        for (const auto& face : (rotated.z > 0) ? obj.aabb.wFaces.maxZ : obj.aabb.wFaces.minZ) {
-            this->selectedFace.push_back(face);
-        }
+        localFace = (rotated.z > 0) ? &obj.aabb.lFaces.maxZ : &obj.aabb.lFaces.minZ;
+    }
+
+    // Transformera precis de fyra lokala hörnen till world-space
+    // (R = obj.rotationMatrix, T = obj.translationVector)
+    glm::mat3 M3 = glm::mat3(obj.modelMatrix);         // innehåller både rot+skala
+    glm::vec3 T3 = glm::vec3(obj.modelMatrix[3]);
+
+    selectedFace.clear();
+    selectedFace.reserve(4);
+    for (const auto& p : *localFace) {
+        // 9 mul + 6 add i stället för mat4×vec4
+        selectedFace.push_back(M3 * p + T3);
     }
 }
 

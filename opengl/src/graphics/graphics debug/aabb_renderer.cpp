@@ -47,7 +47,7 @@ void AABBRenderer::CleanupShared() {
     sInitialized = false;
 }
 
-void AABBRenderer::draw(const glm::vec3& color, Shader& shader) const
+void AABBRenderer::render(const glm::vec3& color, Shader& shader) const
 {
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);

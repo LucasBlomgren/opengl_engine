@@ -34,7 +34,7 @@ unsigned int setup_xyzObject()
     return VAO_xyz;
 }
 
-void draw_xyzObject(const Shader& shader, const unsigned int& VAO_xyz)
+void render_xyzObject(const Shader& shader, const unsigned int& VAO_xyz)
 {
     glm::mat4 model = glm::mat4(1.0f);
     shader.setMat4("model", model);

@@ -48,7 +48,7 @@ void Light::setupMesh() {
     glEnableVertexAttribArray(0);
 }
 
-void Light::draw(Shader& shader) const
+void Light::render(const Shader& shader) const
 {
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = glm::scale(model, this->scale); 

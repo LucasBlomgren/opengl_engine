@@ -133,7 +133,6 @@ void PhysicsEngine::updatePositions() {
 
 void PhysicsEngine::updateHelpers(GameObject& obj) {
     if (obj.helperMatrixesDirty) obj.setHelperMatrixes();
-    if (obj.aabb.facesDirty) obj.aabb.updateFaces(obj.modelMatrix);
 }
 
 bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
@@ -210,7 +209,6 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
     hitsBufDynamic.clear();
     treeVsTreeQuery(dynamicBvh, dynamicBvh, hitsBufDynamic);                // query dynamic vs dynamic objects
 
-    dHits.clear();
     cap = static_cast<int>(hitsBufDynamic.size()); 
     dHits.resize(cap);         
     sp = 0; 
@@ -232,7 +230,7 @@ void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<Dynamic
         if (th.obj->colliderType != ColliderType::MESH)
             continue;
 
-        TriMesh* triMeshPtr = std::get_if<TriMesh>(&th.obj->collider.shape);
+        Mesh* triMeshPtr = std::get_if<Mesh>(&th.obj->collider.shape);
         int cap = static_cast<int>(th.coarse.size());
         th.refined.resize(cap);
 
@@ -255,8 +253,8 @@ void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<Dynamic
         if ((dh.A->colliderType != ColliderType::MESH) and (dh.B->colliderType != ColliderType::MESH))
             continue;
 
-        TriMesh* meshA = std::get_if<TriMesh>(&dh.A->collider.shape);
-        TriMesh* meshB = std::get_if<TriMesh>(&dh.B->collider.shape);
+        Mesh* meshA = std::get_if<Mesh>(&dh.A->collider.shape);
+        Mesh* meshB = std::get_if<Mesh>(&dh.B->collider.shape);
 
         if (meshA and meshB) {
             dh.doubleMeshTris.reserve(16);
@@ -315,7 +313,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             SAT::findBestTriangles(allResults);
-            updateHelpers(*th.obj); // update helper matrixes and aabb faces
+            if (th.obj->helperMatrixesDirty) th.obj->setHelperMatrixes();  // update helper matrixes and aabb faces
             SAT::reverseNormal(th.obj->position, allResults[0].tri_ptr->centroid, allResults[0].normal);
 
             Contact contact(th.obj, nullptr);
@@ -333,6 +331,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 if (!SAT::sphereTri(th.obj->collider, *tri, satResult)) { 
                     continue; 
                 }
+                SAT::reverseNormal(th.obj->position, tri->centroid, satResult.normal); // reverse normal to point outwards
                 allResults.push_back(satResult); 
             }
 
@@ -341,11 +340,16 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             SAT::findBestTriangles(allResults);
-            updateHelpers(*th.obj);
-            SAT::reverseNormal(th.obj->position, allResults[0].tri_ptr->centroid, allResults[0].normal); 
+            if (th.obj->helperMatrixesDirty) th.obj->setHelperMatrixes();
+
+            glm::vec3 avgNormal = glm::vec3{ 0.0f };
+            for (const SAT::Result& res : allResults) { 
+                avgNormal += res.normal; 
+            }
+            avgNormal = glm::normalize(avgNormal); // average normal 
 
             Contact contact(th.obj, nullptr); 
-            contact.normal = allResults[0].normal; // use deepest penetration (sorted list) 
+            contact.normal = avgNormal; 
 
             collisionManifold->sphereMesh(contact, contactCache, allResults); 
 
@@ -389,8 +393,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 objB->totalCollisionCount++;
 
                 // used only for worldInertia (so far)
-                updateHelpers(*objA);
-                updateHelpers(*objB);
+                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
+                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
 
                 Contact contact(objA, objB);
                 collisionManifold->boxBox(contact, contactCache, satResult);
@@ -407,8 +411,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 }
 
                 // used in SAT
-                updateHelpers(*objA);  
-                updateHelpers(*objB); 
+                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
+                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
 
                 SAT::Result satResult;
                 if (!SAT::boxSphere(objA->collider, objB->collider, satResult)) {
@@ -432,8 +436,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 }
 
                 // used only for worldInertia
-                updateHelpers(*objA); 
-                updateHelpers(*objB); 
+                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
+                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
 
                 objA->totalCollisionCount++; 
                 objB->totalCollisionCount++; 
@@ -449,16 +453,16 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
 void PhysicsEngine::resolveCollision(Contact& contact) {
     // Justera beroende på material
-    constexpr float staticFriction = 0.8f;
-    constexpr float dynamicFriction = 0.5f;
+    constexpr float staticFriction = 0.6f;
+    constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.2f;
 
     GameObject& objA = *contact.objA_ptr;
     GameObject& objB = *contact.objB_ptr;
 
     // ----- Baumgarte stabilization -----
-    float slop = 0.001f;
-    float baumgarteFactor = 0.2f;
+    float slop = 0.01f;
+    float baumgarteFactor = 0.3f;
     for (int j = 0; j < contact.points.size(); j++) {
         ContactPoint& cp = contact.points[j];
 
