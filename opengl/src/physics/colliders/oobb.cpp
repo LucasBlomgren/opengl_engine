@@ -15,9 +15,26 @@ void OOBB::update(const glm::mat4& M) {
     }
 }
 
-void OOBB::getFace(int idx) {
-    for (int i = 0; i < 4; ++i)
-        wFace[i] = wVertices[faceIndices[idx][i]];
+std::array<OOBB::Edge, 4> OOBB::createEdgesAlongAxis(int axisIdx) const {
+    int j = (axisIdx + 1) % 3;
+    int k = (axisIdx + 2) % 3;
+
+    glm::vec3 N1 = wAxes[j], N2 = wAxes[k];
+    float e1 = halfExtents[j], e2 = halfExtents[k];
+    float e3 = halfExtents[axisIdx];
+
+    std::array<Edge, 4> edges;
+    int idx = 0;
+    for (int s1 : { -1, +1 }) {
+        for (int s2 : { -1, +1 }) {
+            glm::vec3 corner = centroid + float(s1) * e1 * N1 + float(s2) * e2 * N2;
+            edges[idx++] = {
+              corner - e3 * wAxes[axisIdx],
+              corner + e3 * wAxes[axisIdx]
+            };
+        }
+    }
+    return edges;
 }
 
 void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
@@ -46,8 +63,6 @@ void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
      glm::vec3(0,  1,  0),
      glm::vec3(0,  0,  1),
     };
-
-    wFace.resize(4);
 
     // transform world corners
     for (int i = 0; i < 8; ++i) {

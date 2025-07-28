@@ -1,5 +1,7 @@
 #include "input_manager.h"
 
+#include <iostream>
+
 EngineState* InputManager::engineState = nullptr;
 Camera* InputManager::camera = nullptr;
 
@@ -56,24 +58,50 @@ void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yof
 void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     if (action == GLFW_PRESS) {
+        const char* name = glfwGetKeyName(key, scancode);
+        if (name) {
+            engineState->setPressedKey(name);
+        }
+        else {
+            std::string special;
+            switch (key) {
+                case GLFW_KEY_SPACE:        special = "SPACE";          break;
+                case GLFW_KEY_ENTER:        special = "ENTER";          break;
+                case GLFW_KEY_ESCAPE:       special = "ESCAPE";         break;
+                case GLFW_KEY_LEFT:         special = "LEFT";           break;
+                case GLFW_KEY_RIGHT:        special = "RIGHT";          break;
+                case GLFW_KEY_UP:           special = "UP";             break;
+                case GLFW_KEY_DOWN:         special = "DOWN";           break;
+                case GLFW_KEY_F1:           special = "F1";             break;
+                case GLFW_KEY_F2:           special = "F2";             break;
+                case GLFW_KEY_F3:           special = "F3";             break;
+                case GLFW_KEY_F4:           special = "F4";             break;
+                case GLFW_KEY_F5:           special = "F5";             break;
+                case GLFW_KEY_F6:           special = "F6";             break;
+                case GLFW_KEY_F7:           special = "F7";             break;
+                case GLFW_KEY_F8:           special = "F8";             break;
+                case GLFW_KEY_F9:           special = "F9";             break;
+                case GLFW_KEY_F10:          special = "F10";            break;
+                case GLFW_KEY_F11:          special = "F11";            break;
+                case GLFW_KEY_F12:          special = "F12";            break;
+                case GLFW_KEY_LEFT_SHIFT:   special = "LEFT_SHIFT";     break;
+                case GLFW_KEY_LEFT_CONTROL: special = "LEFT_CONTROL";   break;
+                case GLFW_KEY_LEFT_ALT:     special = "LEFT_ALT";       break;
+                default:                    special = "UNKNOWN";        break;
+            }
+            engineState->setPressedKey(special);
+        }
+
         if (key == GLFW_KEY_1) 
             engineState->toggleShowNormals();       // Toggle the visibility of normals in the scene
         if (key == GLFW_KEY_2)
             engineState->toggleShowAABB();          // Toggle the visibility of axis-aligned bounding boxes in the scene
         if (key == GLFW_KEY_3)
-            engineState->toggleShowColliders();          // Toggle the visibility of oriented bounding boxes in the scene
+            engineState->toggleShowColliders();     // Toggle the visibility of oriented bounding boxes in the scene
         if (key == GLFW_KEY_4)
             engineState->toggleShowContactPoints(); // Toggle the visibility of contact points in the scene
         if (key == GLFW_KEY_5)
             engineState->toggleShowBVH();           // Toggle the visibility of the BVH tree in the scene
-        if (key == GLFW_KEY_6)
-            engineState->setPressedKey("6");        // Toggle lights in the scene
-        if (key == GLFW_KEY_7)
-            engineState->setPressedKey("7");        // Toggle placement AABB in the scene
-        if (key == GLFW_KEY_8)
-            engineState->setPressedKey("8");        // Toggle object blocks rain in the scene
-        if (key == GLFW_KEY_9)
-            engineState->setPressedKey("9");        // Toggle object spheres rain in the scene
         if (key == GLFW_KEY_0)
             engineState->toggleShowFPS();           // Toggle std::cout of metrics in the console
 
@@ -81,17 +109,6 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->togglePause();             // Toggle pause/resume of the physics simulation
         if (key == GLFW_KEY_F)
             engineState->setAdvanceStep(true);      // Advance the physics simulation by one step
-        if (key == GLFW_KEY_H)
-            engineState->setPressedKey("H");        // Reset the scene
-        if (key == GLFW_KEY_K)
-            engineState->setPressedKey("K");        // Toggle debug mode
-
-        if (key == GLFW_KEY_F1)
-            engineState->setPressedKey("F1");
-        if (key == GLFW_KEY_F2)
-            engineState->setPressedKey("F2");
-        if (key == GLFW_KEY_F3)
-            engineState->setPressedKey("F3");
     }
 }
 

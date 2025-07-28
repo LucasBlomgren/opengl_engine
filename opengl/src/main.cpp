@@ -18,6 +18,7 @@
 #include "renderer.h"
 #include "shader.h"
 #include "texture_manager.h"
+#include "skybox_manager.h"
 
 #include "game_object.h"
 #include "light.h"
@@ -58,16 +59,16 @@ int main()
    // managers
    InputManager inputManager;
    TextureManager textureManager;
+   SkyboxManager skyboxManager; 
    SceneBuilder sceneBuilder;
    LightManager lightManager;
+   ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
    // view
    Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
 
    // editor
    Editor editor;
-
-   ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
    // setup rng
    std::mt19937 rng(std::random_device{}());
@@ -88,13 +89,36 @@ int main()
    inputManager.init(window);
 
    // setup rendering
-   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager);
+   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager, skyboxManager);
 
    // load textures
    textureManager.loadTexture("crate", "src/assets/crate.jpg");
    textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
    textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
    textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
+
+   std::vector<std::string> skyBoxFaces {
+        std::string("src/assets/skyboxes/learnopengl/right.jpg"),
+        std::string("src/assets/skyboxes/learnopengl/left.jpg"),
+        std::string("src/assets/skyboxes/learnopengl/top.jpg"),
+        std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
+        std::string("src/assets/skyboxes/learnopengl/front.jpg"),
+        std::string("src/assets/skyboxes/learnopengl/back.jpg")
+   };
+   textureManager.loadCubemap("skybox_default", skyBoxFaces);
+
+   skyBoxFaces = {
+        std::string("src/assets/skyboxes/milkyway/right.png"),
+        std::string("src/assets/skyboxes/milkyway/left.png"),
+        std::string("src/assets/skyboxes/milkyway/top.png"),
+        std::string("src/assets/skyboxes/milkyway/bottom.png"),
+        std::string("src/assets/skyboxes/milkyway/front.png"),
+        std::string("src/assets/skyboxes/milkyway/back.png")
+   };
+   textureManager.loadCubemap("skybox_night", skyBoxFaces);
+
+   // setup skybox
+   skyboxManager.init(); 
 
    // setup scene 
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);
@@ -104,7 +128,7 @@ int main()
    physicsEngine.init(&engineState);
 
    // setup editor
-   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &cubeVertices, &cubeIndices);
+   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager, &cubeVertices, &cubeIndices);
 
    // main loop
    while (true) {

@@ -73,5 +73,5 @@ private:
     // --- collision resolution ---
     void resolveCollision(Contact& contact);
     bool updateSleep(GameObject& A, GameObject& B);
-    void updateHelpers(GameObject& obj);
+    bool updateSleepTerrain(GameObject& obj);
 };

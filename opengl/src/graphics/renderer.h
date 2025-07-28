@@ -7,6 +7,7 @@
 #include "engine_state.h"
 #include "light_manager.h"
 #include "shadow_manager.h"
+#include "skybox_manager.h"
 
 #include "render_contact_points.h"
 #include "xyz_object.h"
@@ -23,7 +24,9 @@ public:
         unsigned int height, 
         EngineState& engineState, 
         LightManager& lightManager, 
-        ShadowManager& shadowManager);
+        ShadowManager& shadowManager, 
+        SkyboxManager& skyboxManager
+    );
 
     void update(
         Camera& camera,
@@ -66,6 +69,7 @@ public:
     Shader defaultShader;
     Shader debugShader;
     Shader shadowShader;
+    Shader skyboxShader;
 
 private:
     float screenWidth;
@@ -74,6 +78,7 @@ private:
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;
     ShadowManager* shadowManager = nullptr;
+    SkyboxManager* skyboxManager = nullptr;
 
     AABBRenderer aabbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;

@@ -4,8 +4,8 @@
 
 void SceneBuilder::testTerrainScene() {
 
-    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 155.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 125.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 155.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 125.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
 
     //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 155.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
     //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 125.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
@@ -16,10 +16,16 @@ void SceneBuilder::testTerrainScene() {
             createSpherePyramid("plain", glm::vec3(-1, -1, -1), pos, 10, 8, 0.5f, 0.01f, 0.5f, false);
         }
 
+    //for (int x = 0; x < 2; x++)
+    //for (int z = 0; z < 2; z++) {
+    //    glm::vec3 pos = glm::vec3(150 + x * 85, 100 + x*60 + z*30, 150 + z * 85);
+    //    createBlockPyramid("plain", glm::vec3(-1, -1, -1), pos, 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
+    //}
+
     generateFlatTerrain(
         /*offset*/glm::vec3(0.0f, 0.0f, 0.0f),
-        /*gridX=*/124,
-        /*gridZ=*/124,
+        /*gridX=*/144,
+        /*gridZ=*/144,
         /*cellSize=*/3.f,
         /*maxHeight=*/120.0f
     );
@@ -36,8 +42,32 @@ void SceneBuilder::testFloorScene() {
         }
     }
 
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 8, 6, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, true);
+    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 5, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 5, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 5, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 5, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+
+    createObject("plain", ColliderType::CUBOID, glm::vec3(22.5, 10.5, 22.5), glm::vec3(6,1,6), 10, 0, orientation);
+
+    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 16, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 16, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 16, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 16, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+
+    createObject("plain", ColliderType::CUBOID, glm::vec3(22.5, 21.5, 22.5), glm::vec3(6, 1, 6), 10, 0, orientation);
+
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 8, 6, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, true);
+
+    //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    //for (int i = 0; i < 100; i++) {
+    //    createObject("plain", ColliderType::SPHERE, glm::vec3(5, 5+i*2,5), glm::vec3(0.5), 0.5f, 0, orientation);
+    //}
+
+    //for (int i = 0; i < 8; i++) {
+    //    createObject("plain", ColliderType::CUBOID, glm::vec3(5, 0.5f+i*1.5f,5), glm::vec3(1), 1, 0, orientation, 999);
+    //}
 }
 
 void SceneBuilder::mainScene() {

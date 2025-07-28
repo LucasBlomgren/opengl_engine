@@ -5,6 +5,7 @@
 #include "physics.h"
 #include "game_object.h"
 #include "camera.h"
+#include "skybox_manager.h"
 #include "vertex.h"
 #include <vector>
 
@@ -23,6 +24,7 @@ public:
         SceneBuilder* sceneBuilder,
         PhysicsEngine* physicsEngine,
         Camera* camera,
+        SkyboxManager* skyboxManager,
         std::vector<Vertex>* cubeVertices,
         std::vector<unsigned int>* indices
     );
@@ -52,6 +54,7 @@ private:
     EngineState* engineState = nullptr;
     SceneBuilder* sceneBuilder = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
+    SkyboxManager* skyboxManager = nullptr;
     Camera* camera = nullptr;
 
     std::vector<Vertex>* cubeVertices = nullptr;

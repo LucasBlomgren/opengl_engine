@@ -143,11 +143,12 @@ bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
 }
 
 bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
-    OOBB& boxA = std::get<OOBB>(A.shape);
+    OOBB& box = std::get<OOBB>(A.shape);
     out.tri_ptr = &tri;
 
-    return intersectPolygons(boxA.wVertices, tri.vertices, boxA.wAxes, tri.axes, out);
+    return intersectPolygons(box.wVertices, tri.vertices, box.wAxes, tri.axes, out);
 }
+
 bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     Sphere& sphere = std::get<Sphere>(A.shape);
     glm::vec3 P = sphere.wCenter - tri.normal * glm::dot(sphere.wCenter - tri.vertices[0], tri.normal); 
@@ -155,7 +156,7 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     // test vs edge planes
     bool isInside = true;
     for (int i = 0; i < 3; i++) {
-        glm::vec3 planeNormal = (glm::normalize(glm::cross(tri.edges[i], tri.normal)));
+        glm::vec3 planeNormal = (glm::normalize(glm::cross(tri.edgeDirs[i], tri.normal)));
         glm::vec3 planePoint = tri.vertices[i];
 
         if (glm::dot(planeNormal, P - planePoint) > 0.0f) {
@@ -178,7 +179,7 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     float bestDist2 = std::numeric_limits<float>::infinity();
     glm::vec3 bestQ;
     for (int i = 0; i < 3; i++) {
-        glm::vec3& edge = tri.edges[i];
+        glm::vec3& edge = tri.edgeDirs[i];
 
         float t = glm::dot(sphere.wCenter - tri.vertices[i], edge) / glm::dot(edge, edge); 
         t = glm::clamp(t, 0.0f, 1.0f);
@@ -230,6 +231,10 @@ bool SAT::intersectPolygons(
     std::span<const glm::vec3> normalsB,
     Result& satResult)
 {
+    static std::vector<glm::vec3> triedAxes; 
+    triedAxes.clear(); 
+    triedAxes.reserve(normalsA.size() + normalsB.size()); 
+
     // testa normaler från A
     for (const glm::vec3& A : normalsA) {
         auto [minA, maxA] = projectVertices(vertsA, A);
@@ -264,15 +269,29 @@ bool SAT::intersectPolygons(
         }
     }
 
+    for (auto& n : normalsA) triedAxes.push_back(glm::normalize(n)); 
+    for (auto& n : normalsB) triedAxes.push_back(glm::normalize(n)); 
+
     // testa korsprodukter mellan normaler
-    for (const glm::vec3& A : normalsA) {
-        for (const glm::vec3& B : normalsB) {
+    for (int i = 0; i < normalsA.size(); i++) {
+        for (int j = 0; j < normalsB.size(); j++) {
+            const glm::vec3& A = normalsA[i]; 
+            const glm::vec3& B = normalsB[j]; 
+
             glm::vec3 axis = glm::cross(A, B);
 
             if (glm::length2(axis) < 1e-6f)
                 continue; // Skip degenerate axis
 
             axis = glm::normalize(axis);
+
+            bool dup = false; 
+            for (auto& t : triedAxes) { 
+                if (glm::abs(glm::dot(axis, t)) > 0.999f) { dup = true; break; }
+            }
+            if (dup) continue; 
+
+            triedAxes.push_back(axis); 
 
             auto [minA, maxA] = projectVertices(vertsA, axis);
             auto [minB, maxB] = projectVertices(vertsB, axis);
@@ -286,9 +305,18 @@ bool SAT::intersectPolygons(
                 satResult.depth = axisDepth;
                 satResult.normal = axis;
                 satResult.axisType = AxisType::EdgeEdge;
+                satResult.edgeIndexA = i; 
+                satResult.edgeIndexB = j; 
             }
         }
     }
+
+    //if (satResult.axisType != AxisType::EdgeEdge) {
+    //    std::cout << "SAT Result: Depth = " << satResult.depth
+    //        << ", Normal = " << glm::to_string(satResult.normal)
+    //        << ", Axis Type = " << static_cast<int>(satResult.axisType)
+    //        << std::endl;
+    //}
 
     return true;
 }

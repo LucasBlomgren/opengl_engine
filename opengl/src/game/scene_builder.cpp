@@ -31,6 +31,14 @@ void SceneBuilder::toggleLightsState() {
 
     setLights();
 }
+ 
+void SceneBuilder::toggleDayNight() { 
+    dayNightCycle++;
+    if (dayNightCycle > 1)
+        dayNightCycle = 0;
+
+    setLights();
+}
 
 void SceneBuilder::setLights() {
     lightManager->clearLights();
@@ -38,7 +46,12 @@ void SceneBuilder::setLights() {
 
     if (lightsState == 0) {
         // sun light
-        lightManager->setDirectionalLight(glm::vec3(-0.4f, -0.8f, 0.6f), glm::vec3(0.1f), glm::vec3(1.0), glm::vec3(0.5));
+        if (dayNightCycle == 0) {
+            lightManager->setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7), glm::vec3(0.5)); 
+        }
+        else {
+            lightManager->setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0), glm::vec3(0.0));
+        }
     }
     else if (lightsState == 1) {
         // red light
@@ -173,7 +186,7 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
-    smoothHeightMap(heightMap, 0.25f, 200);
+    smoothHeightMap(heightMap, 1.0f, 50);
 
     std::vector<Tri>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices; 

@@ -22,8 +22,6 @@ public:
     glm::vec3 halfExtents;
     std::array<glm::vec3, 8> lVertices;
     std::array<glm::vec3, 8> wVertices;
-    std::vector<glm::vec3> wFace;      // for SAT query
-    std::vector<glm::vec3> edges;
 
     std::array<std::array<int,4>,6> faceIndices = {{
         { 1, 2, 6, 5 },
@@ -39,8 +37,10 @@ public:
       glm::vec3( 0,  1,  0),  
       glm::vec3( 0,  0,  1), 
     };
-
     std::array<glm::vec3, 3> wAxes;
+
+    struct Edge { glm::vec3 A, B; };
+    std::array<Edge, 4> createEdgesAlongAxis(int axisIdx) const;
 
     void update(const glm::mat4& M);
     void getFace(int index);

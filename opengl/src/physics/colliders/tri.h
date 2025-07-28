@@ -7,7 +7,8 @@ class Tri {
 public:
     int id;
     std::vector<glm::vec3> vertices;
-    std::vector<glm::vec3> edges;
+    std::vector<glm::vec3> edgeDirs;
+    std::vector<glm::vec3> edgePoints;
     std::vector<glm::vec3> axes; // For SAT
     glm::vec3 normal;
     glm::vec3 centroid;
@@ -23,7 +24,13 @@ public:
         glm::vec3 edgeA = v1 - v0;
         glm::vec3 edgeB = v2 - v1;
         glm::vec3 edgeC = v0 - v2; 
-        edges = { edgeA, edgeB, edgeC };
+        edgeDirs = { edgeA, edgeB, edgeC };
+
+        edgePoints = { 
+            v0, v1, 
+            v1, v2, 
+            v2, v0 
+        }; 
 
         normal = glm::normalize(glm::cross(edgeA, edgeB)); 
         axes = { normal, edgeA, edgeB, edgeC };

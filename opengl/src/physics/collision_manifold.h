@@ -38,6 +38,7 @@ struct ContactPoint {
     float invMassTwist;
 
     bool wasUsedThisFrame = true;
+    bool wasWarmStarted = false;
 };
 
 struct Contact {
@@ -88,9 +89,11 @@ private:
     bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint);
     void clipPoints(std::vector<glm::vec3>& referenceFace, std::vector<glm::vec3>& incidentFace, glm::vec3& referenceFaceNormal);
 
+    std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);
+
     void createLocalCoordinates(Contact& contact);
     void contactPointReduction(Contact& contact);
-    void computePenetrationDepth(Contact& contact);
+    void computePenetrationDepth(std::vector<glm::vec3>& points, std::vector<glm::vec3>& refFace, glm::vec3& refFaceNormal, std::vector<float>& out);
     void PreComputePointData(ContactPoint& cp, Contact& contact);
     size_t generateKey(int idA, int idB);
     void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);

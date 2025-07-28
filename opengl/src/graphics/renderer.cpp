@@ -3,13 +3,21 @@
 template void Renderer::renderBVH(BVHTree<GameObject>&); 
 template void Renderer::renderBVH(BVHTree<Tri>&); 
 
-void Renderer::init(unsigned int width, unsigned int height, EngineState& engineState, LightManager& lightManager, ShadowManager& shadowManager) {
+void Renderer::init(
+    unsigned int width, 
+    unsigned int height, 
+    EngineState& engineState, 
+    LightManager& lightManager, 
+    ShadowManager& shadowManager, 
+    SkyboxManager& skyboxManager
+) {
     screenWidth = (float)width;
     screenHeight = (float)height;
 
     this->engineState = &engineState;
     this->lightManager = &lightManager;
     this->shadowManager = &shadowManager;
+    this->skyboxManager = &skyboxManager;
 
     aabbRenderer.InitShared();
     sphereOutlineRenderer.init();
@@ -17,6 +25,8 @@ void Renderer::init(unsigned int width, unsigned int height, EngineState& engine
     defaultShader = Shader("src/shaders/object.vert", "src/shaders/object.frag");
     debugShader = Shader("src/shaders/debug.vert", "src/shaders/debug.frag");
     shadowShader = Shader("src/shaders/shadow.vert", "src/shaders/shadow.frag");
+    skyboxShader = Shader("src/shaders/skybox.vert", "src/shaders/skybox.frag"); 
+
     defaultShader.use();
 
     this->VAO_line = setupLine();
@@ -43,6 +53,10 @@ void Renderer::setViewProjection(Camera& camera) {
     debugShader.setMat4("projection", projection);
     debugShader.setMat4("view", view);
     debugShader.setVec3("viewPos", camera.position);
+
+    skyboxShader.use();
+    skyboxShader.setMat4("projection", projection);
+    skyboxShader.setMat4("view", glm::mat4(glm::mat3(view))); // remove translation from the view matrix
 }
 
 void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
@@ -100,11 +114,16 @@ void Renderer::update(
 
     renderRayCastHit(camera, builder);
 
+    glDepthFunc(GL_LEQUAL);
+    skyboxManager->render(skyboxShader); 
+    glDepthFunc(GL_LESS); 
+
     // debug
     renderBVH(physics.getDynamicBvh());
-    //renderBVH(physicsEngine.getTerrainBvh(), VAO_line);
+    //renderBVH(physics.getTerrainBvh());
     renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
-    renderFrustum(lightSpaceMatrix, debugShader);
+    //renderFrustum(lightSpaceMatrix, debugShader);
+
 }
 
 void Renderer::renderScene(
@@ -192,13 +211,14 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     // --- Fyllning ---
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
 
+    //// --- Wireframe ---
+    // 
     //debugShader.use();
     //debugShader.setMat4("model", model);
     //debugShader.setInt("debug.objectType", 0);
     //debugShader.setBool("debug.useUniformColor", true); 
     //debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
-
-    //// --- Wireframe ---
+    // 
     //glEnable(GL_POLYGON_OFFSET_LINE); 
     //// Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
     //glPolygonOffset(-1.0f, -1.0f); 
@@ -397,11 +417,11 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
     if (engineState->getShowContactPoints()) {
         debugShader.setInt("debug.objectType", 2);
-        debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154));
         debugShader.setBool("debug.useUniformColor", true);
+        debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154));
 
         // skip depth test
-        glDisable(GL_DEPTH_TEST);
+        //glDisable(GL_DEPTH_TEST);
         const auto& contactCache = physicsEngine.GetContactCache();
         for (const auto& pair : contactCache) {
             const Contact& contact = pair.second;
@@ -410,10 +430,18 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
                 if (!contact.points[i].wasUsedThisFrame) {
                     continue;
                 }
+
+                //if (contact.points[i].wasWarmStarted) {
+                //    debugShader.setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
+                //}
+                //else {
+                //    debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
+                //}
+
                 renderContactPoint(debugShader, VAO_contactPoint, contact.points[i].globalCoord);
             }
         }
-        glEnable(GL_DEPTH_TEST); // återställ depth test
+        //glEnable(GL_DEPTH_TEST); // återställ depth test
     }
 
     render_xyzObject(debugShader, VAO_xyz);

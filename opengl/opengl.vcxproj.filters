@@ -34,6 +34,8 @@
     <ClCompile Include="src\game\scenes.cpp" />
     <ClCompile Include="src\graphics\graphics debug\sphere_outline_renderer.cpp" />
     <ClCompile Include="src\graphics\shadow_manager.cpp" />
+    <ClCompile Include="src\graphics\skybox_manager.cpp" />
+    <ClCompile Include="src\geometry\sky_box_data.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -99,6 +101,8 @@
     <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\graphics\graphics debug\sphere_outline_renderer.h" />
     <ClInclude Include="src\graphics\shadow_manager.h" />
+    <ClInclude Include="src\graphics\skybox_manager.h" />
+    <ClInclude Include="src\geometry\sky_box_data.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />
@@ -118,6 +122,12 @@
       <Filter>src\shaders</Filter>
     </None>
     <None Include="src\shaders\shadow.vert">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\skybox.frag">
+      <Filter>src\shaders</Filter>
+    </None>
+    <None Include="src\shaders\skybox.vert">
       <Filter>src\shaders</Filter>
     </None>
   </ItemGroup>

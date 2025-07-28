@@ -28,6 +28,7 @@
     <ClCompile Include="src\game\scenes.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\geometry\cube_data.cpp" />
+    <ClCompile Include="src\geometry\sky_box_data.cpp" />
     <ClCompile Include="src\graphics\graphics debug\aabb_renderer.cpp" />
     <ClCompile Include="src\graphics\graphics debug\render_contact_points.cpp" />
     <ClCompile Include="src\graphics\graphics debug\draw_line.cpp" />
@@ -38,6 +39,7 @@
     <ClCompile Include="src\graphics\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer.cpp" />
     <ClCompile Include="src\graphics\shadow_manager.cpp" />
+    <ClCompile Include="src\graphics\skybox_manager.cpp" />
     <ClCompile Include="src\graphics\texture_manager.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\physics\bvh.cpp" />
@@ -55,6 +57,8 @@
     </None>
     <None Include="src\shaders\shadow.frag" />
     <None Include="src\shaders\shadow.vert" />
+    <None Include="src\shaders\skybox.frag" />
+    <None Include="src\shaders\skybox.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\camera.h" />
@@ -67,6 +71,7 @@
     <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\game\scene_builder.h" />
     <ClInclude Include="src\geometry\cube_data.h" />
+    <ClInclude Include="src\geometry\sky_box_data.h" />
     <ClInclude Include="src\geometry\sphere_data.h" />
     <ClInclude Include="src\geometry\vertex.h" />
     <ClInclude Include="src\graphics\graphics debug\aabb_renderer.h" />
@@ -79,6 +84,7 @@
     <ClInclude Include="src\graphics\renderer.h" />
     <ClInclude Include="src\graphics\shader.h" />
     <ClInclude Include="src\graphics\shadow_manager.h" />
+    <ClInclude Include="src\graphics\skybox_manager.h" />
     <ClInclude Include="src\graphics\texture_manager.h" />
     <ClInclude Include="src\physics\bvh.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
@@ -131,6 +137,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -138,6 +145,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">

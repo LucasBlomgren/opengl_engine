@@ -6,7 +6,7 @@ AABB GameObject::getAABB() const {
 
 void GameObject::resetDirtyFlags() {
     modelMatrixDirty = true;
-    helperMatrixesDirty = true;
+    helperMatricesDirty = true;
     aabbDirty = true;
 
     aabb.facesDirty = true;
@@ -59,7 +59,7 @@ void GameObject::setModelMatrix() {
     modelMatrixDirty = false; 
 }
 
-void GameObject::setHelperMatrixes() {
+void GameObject::setHelperMatrices() {
     invModelMatrix = glm::inverse(modelMatrix);
 
     rotationMatrix = glm::mat3_cast(orientation);  // enbart ortonormal rotation
@@ -68,7 +68,7 @@ void GameObject::setHelperMatrixes() {
     invRotationMatrix = glm::transpose(rotationMatrix);
     inverseInertiaWorld = rotationMatrix * inverseInertia * invRotationMatrix;
 
-    helperMatrixesDirty = false;
+    helperMatricesDirty = false;
 }
 
 void GameObject::calculateInverseInertiaForCube() {

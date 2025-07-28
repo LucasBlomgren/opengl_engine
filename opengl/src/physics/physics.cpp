@@ -49,6 +49,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
         for (ContactPoint& cp : it->second.points) {
             cp.wasUsedThisFrame = false;
+            cp.wasWarmStarted = false;
         }
     }
 
@@ -129,10 +130,6 @@ void PhysicsEngine::updatePositions() {
             obj.angularVelocityLen = glm::dot(obj.angularVelocity, obj.angularVelocity);
         }
     }
-}
-
-void PhysicsEngine::updateHelpers(GameObject& obj) {
-    if (obj.helperMatrixesDirty) obj.setHelperMatrixes();
 }
 
 bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
@@ -291,6 +288,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
         else {
             reserveSize = th.refined.size() * 2; 
         }
+        allResults.reserve(reserveSize); // reserve space for results
 
         // MESH vs tris
         if (th.obj->colliderType == ColliderType::MESH) {
@@ -305,6 +303,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                     continue;
                 }
 
+                SAT::reverseNormal(th.obj->position, satResult.tri_ptr->centroid, satResult.normal);
                 allResults.push_back(satResult);
             }
 
@@ -312,15 +311,20 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 continue;
             }
 
-            SAT::findBestTriangles(allResults);
-            if (th.obj->helperMatrixesDirty) th.obj->setHelperMatrixes();  // update helper matrixes and aabb faces
-            SAT::reverseNormal(th.obj->position, allResults[0].tri_ptr->centroid, allResults[0].normal);
+            if (th.obj->helperMatricesDirty) th.obj->setHelperMatrices();  // update helper matrixes and aabb faces
 
             Contact contact(th.obj, nullptr);
-            contact.normal = allResults[0].normal; // use deepest penetration (sorted list)
+
+            glm::vec3 avgNormal{ 0.0f }; 
+            for (const SAT::Result& res : allResults) { 
+                avgNormal += res.normal; 
+            }
+            avgNormal = glm::normalize(avgNormal); // average normal  
+            contact.normal = avgNormal;
+
+            SAT::findBestTriangles(allResults);
 
             collisionManifold->boxMesh(contact, contactCache, allResults);
-
             resolveCollision(contact); // resolve collision
         }
         // SPHERE vs tris
@@ -339,10 +343,9 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 continue; 
             }
 
-            SAT::findBestTriangles(allResults);
-            if (th.obj->helperMatrixesDirty) th.obj->setHelperMatrixes();
+            if (th.obj->helperMatricesDirty) th.obj->setHelperMatrices();
 
-            glm::vec3 avgNormal = glm::vec3{ 0.0f };
+            glm::vec3 avgNormal{ 0.0f };
             for (const SAT::Result& res : allResults) { 
                 avgNormal += res.normal; 
             }
@@ -350,6 +353,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
             Contact contact(th.obj, nullptr); 
             contact.normal = avgNormal; 
+
+            SAT::findBestTriangles(allResults);
 
             collisionManifold->sphereMesh(contact, contactCache, allResults); 
 
@@ -393,8 +398,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 objB->totalCollisionCount++;
 
                 // used only for worldInertia (so far)
-                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
-                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
+                if (objA->helperMatricesDirty) objA->setHelperMatrices();
+                if (objB->helperMatricesDirty) objB->setHelperMatrices();
 
                 Contact contact(objA, objB);
                 collisionManifold->boxBox(contact, contactCache, satResult);
@@ -402,8 +407,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 resolveCollision(contact); // resolve collision 
             }
             // CUBE vs SPHERE
-            else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or
-                     (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) 
+            else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) 
             {
                 // swap if A is not cuboid
                 if (objA->colliderType != ColliderType::CUBOID) {
@@ -411,8 +415,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 }
 
                 // used in SAT
-                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
-                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
+                if (objA->helperMatricesDirty) objA->setHelperMatrices();
+                if (objB->helperMatricesDirty) objB->setHelperMatrices();
 
                 SAT::Result satResult;
                 if (!SAT::boxSphere(objA->collider, objB->collider, satResult)) {
@@ -436,8 +440,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 }
 
                 // used only for worldInertia
-                if (objA->helperMatrixesDirty) objA->setHelperMatrixes();
-                if (objB->helperMatrixesDirty) objB->setHelperMatrixes();
+                if (objA->helperMatricesDirty) objA->setHelperMatrices();
+                if (objB->helperMatricesDirty) objB->setHelperMatrices();
 
                 objA->totalCollisionCount++; 
                 objB->totalCollisionCount++; 
@@ -461,7 +465,7 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
     GameObject& objB = *contact.objB_ptr;
 
     // ----- Baumgarte stabilization -----
-    float slop = 0.01f;
+    float slop = 0.0005f;
     float baumgarteFactor = 0.3f;
     for (int j = 0; j < contact.points.size(); j++) {
         ContactPoint& cp = contact.points[j];
@@ -474,6 +478,8 @@ void PhysicsEngine::resolveCollision(Contact& contact) {
         else
             cp.biasVelocity = 0.0f;
     }
+
+    //std::cout << contact.points.size() << " contact points, normal: " << glm::to_string(contact.normal) << std::endl;
 
     // ------ PGS solver ------
     int maxIterations = 8;

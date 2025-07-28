@@ -5,6 +5,7 @@ void Editor::setPointers(
     SceneBuilder* sceneBuilder,
     PhysicsEngine* physicsEngine,
     Camera* camera,
+    SkyboxManager* skyboxManager,
     std::vector<Vertex>* cubeVertices,
     std::vector<unsigned int>* indices) 
 {
@@ -12,6 +13,8 @@ void Editor::setPointers(
         this->sceneBuilder = sceneBuilder;
         this->physicsEngine = physicsEngine;
         this->camera = camera;
+        this->skyboxManager = skyboxManager;
+
         this->cubeVertices = cubeVertices;
         this->indices = indices;
 }
@@ -56,6 +59,11 @@ void Editor::update(float& deltaTime, Shader& shader) {
     if (engineState->GetPressedKey() == "F3") {
         sceneBuilder->createScene(*physicsEngine, 2);
         selectedObject = nullptr;
+    }
+
+    if (engineState->GetPressedKey() == "F5") {
+        skyboxManager->toggleTexture();
+        sceneBuilder->toggleDayNight();
     }
 
     engineState->clearPressedKey();

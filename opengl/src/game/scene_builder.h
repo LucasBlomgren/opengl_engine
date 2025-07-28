@@ -105,6 +105,7 @@ public:
    std::vector<GameObject>& getDynamicObjects();
    void toggleLightsState();
    void setLights();
+   void toggleDayNight();
 
    float randomRange(float start, float end);
 
@@ -112,11 +113,12 @@ private:
    TextureManager* textureManager = nullptr;
    LightManager* lightManager = nullptr;
 
-   int lightsState = 0;
-
    int objectId;
    std::vector<GameObject> dynamicObjects;
    std::vector<GameObject> staticObjects;
+
+   int lightsState = 0;
+   int dayNightCycle = 0;
 
    std::mt19937* rng;
    float lastTime = 0.0f;

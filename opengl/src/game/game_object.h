@@ -65,7 +65,7 @@ public:
     glm::mat3 rotationMatrix;
     glm::vec3 translationVector;
     glm::mat3 invRotationMatrix;
-    bool helperMatrixesDirty = true;
+    bool helperMatricesDirty = true;
 
     int textureID;
     glm::vec3 color;
@@ -239,7 +239,7 @@ public:
 
     void resetDirtyFlags();
     void setModelMatrix();
-    void setHelperMatrixes();
+    void setHelperMatrices();
     void setRotatedFlag();
     void calculateInverseInertiaForCube();
     void calculateInverseInertiaForCuboid();
