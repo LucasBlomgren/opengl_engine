@@ -1,13 +1,8 @@
 #pragma once
 
-#include "engine_state.h"
-
-#include <glm/glm.hpp>
-#include <unordered_map>
 #include <random>
 
-#include "aabb.h"
-#include "sat.h"
+#include "engine_state.h"
 #include "collision_manifold.h"
 #include "raycast.h"
 #include "game_object.h"
@@ -15,40 +10,54 @@
 
 class PhysicsEngine {
 public:
-    // --- main functions ---
+    //------------------------
+    //     Main functions
+    //------------------------
     void init(EngineState* engineState);
     void setupScene(std::vector<GameObject>* gameObjectList, std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
     void step(float deltaTime, std::mt19937 rng);
     RaycastHit performRaycast(Ray& ray);
 
-    // --- getters ---
+    //------------------------
+    //        Getters
+    //------------------------
     BVHTree<GameObject>& getDynamicBvh();
-    //BVHTree<GameObject>& getStaticBvh();
     BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
+    //------------------------
+    //          Misc
+    //------------------------
+    CollisionManifold* collisionManifold; // public for testing warmstarting
 
 private:
     float dt;
     EngineState* engineState = nullptr;
 
-    // --- objects ---
+    //------------------------
+    //     Game objects
+    //------------------------
     std::vector<GameObject>* dynamicObjects;
-    //std::vector<GameObject> staticObjects;
     std::vector<Tri>* terrainTriangles;
 
-    // --- bvh trees ---
+    //------------------------
+    //      BVH Trees
+    //------------------------
     BVHTree<GameObject> dynamicBvh;
     //BVHTree<GameObject> staticBvh;
-    BVHTree<Tri> terrainBvh; 
+    BVHTree<Tri> terrainBvh;
 
-    // --- update functions ---
+    //------------------------
+    //    Update functions
+    //------------------------
     void updatePositions();
     void updateSleepThresholds(GameObject& obj);
     void updateContactCache();
 
-    // --- collision detection ---
+    //------------------------
+    //  Collision detection 
+    //------------------------
     struct TerrainHit {
         GameObject* obj;
         std::vector<Tri*> coarse;                                // original bvh query
@@ -62,16 +71,22 @@ private:
         std::vector<std::pair<Tri*, Tri*>> doubleMeshTris;  // two meshes
     };
 
-    CollisionManifold* collisionManifold;
-    std::unordered_map<size_t, Contact> contactCache;
-
     void detectAndSolveCollisions();
     void broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
-    void midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits); 
+    void midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
     void narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
+    void collectActiveContacts();
 
-    // --- collision resolution ---
-    void resolveCollision(Contact& contact);
+    //------------------------
+    //   Collision Manifold
+    //------------------------
+    //CollisionManifold* collisionManifold;
+    std::unordered_map<size_t, Contact> contactCache;
+    std::vector<Contact*> contactsToSolve;
+
+    //------------------------
+    //  Collision Resolution
+    //------------------------
+    void resolveCollisions();
     bool updateSleep(GameObject& A, GameObject& B);
-    bool updateSleepTerrain(GameObject& obj);
 };

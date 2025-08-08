@@ -1,4 +1,6 @@
-﻿#include "renderer.h"
+﻿#include "pch.h"
+#include "renderer.h"
+#include "draw_line.h"
 
 template void Renderer::renderBVH(BVHTree<GameObject>&); 
 template void Renderer::renderBVH(BVHTree<Tri>&); 
@@ -209,24 +211,26 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     glBindVertexArray(VAO);
 
     // --- Fyllning ---
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+    //glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
 
     //// --- Wireframe ---
     // 
-    //debugShader.use();
-    //debugShader.setMat4("model", model);
-    //debugShader.setInt("debug.objectType", 0);
-    //debugShader.setBool("debug.useUniformColor", true); 
-    //debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
-    // 
-    //glEnable(GL_POLYGON_OFFSET_LINE); 
-    //// Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
-    //glPolygonOffset(-1.0f, -1.0f); 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
-    //glLineWidth(3.f); 
-    //glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr); 
-    //glDisable(GL_POLYGON_OFFSET_LINE); 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    debugShader.use();
+    debugShader.setMat4("model", model);
+    debugShader.setInt("debug.objectType", 0);
+    debugShader.setBool("debug.useUniformColor", true); 
+    debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
+     
+    glDisable(GL_CULL_FACE); // ta bort cull face
+    glEnable(GL_POLYGON_OFFSET_LINE); 
+    // Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
+    glPolygonOffset(-1.0f, -1.0f); 
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
+    glLineWidth(3.f); 
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr); 
+    glDisable(GL_POLYGON_OFFSET_LINE); 
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_CULL_FACE); // återställ cull face
 }
 
 glm::mat4 Renderer::computeLightSpaceMatrix() {
@@ -421,7 +425,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154));
 
         // skip depth test
-        //glDisable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
         const auto& contactCache = physicsEngine.GetContactCache();
         for (const auto& pair : contactCache) {
             const Contact& contact = pair.second;
@@ -431,17 +435,17 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
                     continue;
                 }
 
-                //if (contact.points[i].wasWarmStarted) {
-                //    debugShader.setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
-                //}
-                //else {
-                //    debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
-                //}
+                if (contact.points[i].wasWarmStarted) {
+                    debugShader.setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
+                }
+                else {
+                    debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
+                }
 
                 renderContactPoint(debugShader, VAO_contactPoint, contact.points[i].globalCoord);
             }
         }
-        //glEnable(GL_DEPTH_TEST); // återställ depth test
+        glEnable(GL_DEPTH_TEST); // återställ depth test
     }
 
     render_xyzObject(debugShader, VAO_xyz);

@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "aabb.h"
 
 void AABB::Init(const std::vector<glm::vec3>& vertices) {

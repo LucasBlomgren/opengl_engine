@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "skybox_manager.h"
 #include "geometry/sky_box_data.h"
 #include "graphics/texture_manager.h"

@@ -1,8 +1,5 @@
 #pragma once
-#include <vector>   
-#include <unordered_set>
-#include "aabb.h"
-#include <glm/glm.hpp>
+  
 #include "bvh.h"
 #include "game_object.h"
 

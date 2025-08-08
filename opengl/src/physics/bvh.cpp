@@ -1,10 +1,7 @@
-﻿#include "bvh.h"
+﻿#include "pch.h"
+#include "bvh.h"
 #include "game_object.h"
-
-#include <glm/gtx/string_cast.hpp>
-
-template class BVHTree<GameObject>;
-template class BVHTree<Tri>;
+#include "tri.h"
 
 template<typename E>
 void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
@@ -239,3 +236,6 @@ void BVHTree<E>::build(std::vector<E>& elements) {
     int depth = 0;
     split(*root, depth);
 }
+
+template class BVHTree<GameObject>;
+template class BVHTree<Tri>;

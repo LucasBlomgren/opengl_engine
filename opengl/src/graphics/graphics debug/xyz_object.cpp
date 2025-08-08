@@ -1,6 +1,7 @@
+#include "pch.h"
 #include "xyz_object.h"
 
-unsigned int setup_xyzObject()
+unsigned int setup_xyzObject() 
 {
     std::vector<float> xyzEdges =
     {

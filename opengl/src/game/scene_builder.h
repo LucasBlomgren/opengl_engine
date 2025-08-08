@@ -1,17 +1,10 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "physics.h"
 #include "game_object.h"
-#include "geometry/vertex.h"
 #include "texture_manager.h"
 #include "light_manager.h"
 #include "collider.h"
-#include "geometry/sphere_data.h"
-#include "geometry/cube_data.h"
 
 class SceneBuilder {
 public:
@@ -23,6 +16,7 @@ public:
    void mainScene();
    void testTerrainScene();
    void testFloorScene();
+   void tumblerScene();
 
    GameObject& createObject(
       const std::string& textureName,
@@ -101,6 +95,7 @@ public:
 
    TerrainData terrainData; 
    TerrainData& getTerrainData();
+   void createTumbler();
 
    std::vector<GameObject>& getDynamicObjects();
    void toggleLightsState();

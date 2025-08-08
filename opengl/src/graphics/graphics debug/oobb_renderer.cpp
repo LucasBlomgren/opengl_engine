@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "oobb_renderer.h"
 
 void OOBBRenderer::renderBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
@@ -54,7 +55,7 @@ void OOBBRenderer::setupWireframeBox()
 
 void OOBBRenderer::setupNormals()
 {
-    float L = 1.0f;
+    float L = 1.5f;
 
     float normals[36] = {
         // pos                // color

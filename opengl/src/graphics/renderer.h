@@ -71,6 +71,8 @@ public:
     Shader shadowShader;
     Shader skyboxShader;
 
+    float terrainRotationAngle = 0.0f;
+
 private:
     float screenWidth;
     float screenHeight;

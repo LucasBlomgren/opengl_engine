@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "engine_state.h"
 #include "scene_builder.h"
 #include "physics.h"
@@ -7,7 +9,6 @@
 #include "camera.h"
 #include "skybox_manager.h"
 #include "vertex.h"
-#include <vector>
 
 #define objPlaceSize 1.0f, 1.0f, 1.0f
 

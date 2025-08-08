@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "light_manager.h"
 
 void LightManager::addLight(const Light& light) {

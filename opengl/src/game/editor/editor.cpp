@@ -1,4 +1,5 @@
-﻿#include "editor.h"
+﻿#include "pch.h"
+#include "editor.h"
 
 void Editor::setPointers(
     EngineState* engineState,
@@ -44,7 +45,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
         GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-        newObject.linearVelocity = camera->front *  100.0f;
+        newObject.linearVelocity = camera->front * 100.0f;
         newObject.asleep = false;
     }
 
@@ -60,10 +61,18 @@ void Editor::update(float& deltaTime, Shader& shader) {
         sceneBuilder->createScene(*physicsEngine, 2);
         selectedObject = nullptr;
     }
+    if (engineState->GetPressedKey() == "F4") {
+        sceneBuilder->createScene(*physicsEngine, 3);
+        selectedObject = nullptr;
+    }
 
     if (engineState->GetPressedKey() == "F5") {
         skyboxManager->toggleTexture();
         sceneBuilder->toggleDayNight();
+    }
+
+    if (engineState->GetPressedKey() == "h") {
+        physicsEngine->collisionManifold->debugWarmstarting = true;
     }
 
     engineState->clearPressedKey();

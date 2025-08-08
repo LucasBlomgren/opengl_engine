@@ -1,12 +1,10 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include <array>
 #include <vector>
 
 #include "shader.h"
 #include "vertex.h"
-#include "draw_line.h"
 
 class OOBB {
 public:

@@ -1,20 +1,19 @@
-#pragma once
-
+#include "pch.h"
 #include "scene_builder.h"
 
 void SceneBuilder::testTerrainScene() {
 
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 155.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(180.0f, 120.0f, 125.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(210.0f, 120.0f, 225.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(250.0f, 120.0f, 155.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
 
-    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 155.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
-    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, 120.0f, 125.0f), 10, 8, 0.5f, 0.0f, 0.5f, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 205.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 105.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
 
-    for (int x = 0; x < 3; x++)
-        for (int z = 0; z < 3; z++) {
-            glm::vec3 pos = glm::vec3(150 + x * 25, 100, 150 + z * 25);
-            createSpherePyramid("plain", glm::vec3(-1, -1, -1), pos, 10, 8, 0.5f, 0.01f, 0.5f, false);
-        }
+    //for (int x = 0; x < 2; x++)
+    //    for (int z = 0; z < 2; z++) {
+    //        glm::vec3 pos = glm::vec3(150 + x * 25, 100, 150 + z * 25);
+    //        createSpherePyramid("plain", glm::vec3(-1, -1, -1), pos, 10, 8, 0.5f, 0.01f, 0.5f, false);
+    //    }
 
     //for (int x = 0; x < 2; x++)
     //for (int z = 0; z < 2; z++) {
@@ -42,32 +41,48 @@ void SceneBuilder::testFloorScene() {
         }
     }
 
-    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 5, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 5, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 5, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 5, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+    // staplar
+    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f)); 
 
-    createObject("plain", ColliderType::CUBOID, glm::vec3(22.5, 10.5, 22.5), glm::vec3(6,1,6), 10, 0, orientation);
+    std::vector<glm::vec3> randomColors = {
+        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+    };
 
-    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 16, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 16, 20), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(20, 16, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
-    createObject("plain", ColliderType::CUBOID, glm::vec3(25, 16, 25), glm::vec3(1, 10, 1), 10, 0, orientation);
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 2; j++) {
+            for (int k = 0; k < 2; k++)
+            {
+                glm::vec3 pos = glm::vec3(20 + j * 5, 5 + i * 11, 20 + k * 5);
+                createObject("plain", ColliderType::CUBOID, pos, glm::vec3(1, 10, 1), 10, 0, orientation, 1, false, randomColors[0]);
+            }
+        }
 
-    createObject("plain", ColliderType::CUBOID, glm::vec3(22.5, 21.5, 22.5), glm::vec3(6, 1, 6), 10, 0, orientation);
+        glm::vec3 pos = glm::vec3(22.5, 10.5 + i * 11, 22.5); 
+        createObject("plain", ColliderType::CUBOID, pos, glm::vec3(6, 1, 6), 10, 0, orientation, 1, false, randomColors[1]); 
+    }
 
-    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 8, 6, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, true);
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
+    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, false);
 
-    //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-    //for (int i = 0; i < 100; i++) {
+    //for (int i = 0; i < 10; i++) {
     //    createObject("plain", ColliderType::SPHERE, glm::vec3(5, 5+i*2,5), glm::vec3(0.5), 0.5f, 0, orientation);
     //}
 
-    //for (int i = 0; i < 8; i++) {
-    //    createObject("plain", ColliderType::CUBOID, glm::vec3(5, 0.5f+i*1.5f,5), glm::vec3(1), 1, 0, orientation, 999);
+    //// box stack
+    //for (int i = 0; i < 10; i++) {
+    //    createObject("plain", ColliderType::CUBOID, glm::vec3(5.5, 0.5f+i,5.5), glm::vec3(1), 1, 0, orientation, 1);
     //}
+}
+
+void SceneBuilder::tumblerScene() {
+    createTumbler();
+
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-15.0f, 25.0f, 15.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-15.0f, 25.0f, 15.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(15.0f, 25.0f, -15.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(15.0f, 25.0f, -15.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
 }
 
 void SceneBuilder::mainScene() {
@@ -209,7 +224,7 @@ void SceneBuilder::mainScene() {
     // projectile2
     //createObject("crate", glm::vec3(27.75, 3.45, 20), glm::vec3(0.5), 5, 0, {}, 999);
     // counterweight
-    createObject("crate", ColliderType::CUBOID, glm::vec3(28.25, 20, 20), glm::vec3(5.2), 10000, 0, {}, 999);
+    createObject("crate", ColliderType::CUBOID, glm::vec3(28.25, 20, 20), glm::vec3(5.2), 1000, 0, {}, 999);
 
     // ____________________________________________________________
     // ----------------------- box stacks -------------------------

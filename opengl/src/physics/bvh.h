@@ -1,11 +1,12 @@
 ﻿#pragma once
-#include <glm/glm.hpp>
-#include <unordered_set>
-#include <algorithm>
+
 #include <vector>
 
-#include "aabb.h"
 #include "aabb_renderer.h"
+
+class AABB; 
+class GameObject; 
+class Tri; 
 
 // kan ta in två olika element (Collider eller Tri)
 template<typename E>
@@ -136,3 +137,6 @@ void treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::vector<std
         }
     }
 }
+
+extern template class BVHTree<GameObject>; 
+extern template class BVHTree<Tri>; 

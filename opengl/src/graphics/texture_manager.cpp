@@ -1,10 +1,11 @@
+#include "pch.h"
 #include "texture_manager.h"
 
 std::unordered_map<std::string, unsigned int> TextureManager::textures;
 std::unordered_map<std::string, unsigned int> TextureManager::cubemaps;
 
 // ----------------------------
-// ----- regular textures -----
+//      regular textures 
 // ----------------------------
 unsigned int TextureManager::loadTexture(const std::string& name, const std::string& path) {
     // Check if already loaded
@@ -44,7 +45,7 @@ unsigned int TextureManager::getTexture(const std::string& name) {
 }
 
 // ----------------------------
-// ----- cubemap textures -----
+//      cubemap textures 
 // ----------------------------
 unsigned int TextureManager::loadCubemap(const std::string& name, const std::vector<std::string>& faces) {
     // Check if already loaded

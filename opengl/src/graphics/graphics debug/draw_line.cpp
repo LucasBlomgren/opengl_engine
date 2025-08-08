@@ -1,7 +1,5 @@
+#include "pch.h"
 #include "draw_line.h"
-
-#include <vector>
-#include "shader.h"
 
 unsigned int setupLine() {
     // Din kod för att skapa och konfigurera VAO

@@ -1,25 +1,21 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include <span>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/io.hpp>
-
 #include "game_object.h"
 
 namespace SAT { 
     enum class AxisType { FaceA, FaceB, EdgeEdge };
 
     struct Result {
-        float depth = std::numeric_limits<float>::max();
+        float depth = std::numeric_limits<float>::infinity();
         glm::vec3 normal;
         AxisType axisType;
         int faceIndex;
         int edgeIndexA;
         int edgeIndexB;
+
+        float separationA = -std::numeric_limits<float>::infinity();
+        float separationB = -std::numeric_limits<float>::infinity();
 
         Tri* tri_ptr = nullptr;
         glm::vec3 point; // sphereCube or sphereTri

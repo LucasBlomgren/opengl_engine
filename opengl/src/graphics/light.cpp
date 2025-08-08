@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "light.h"
 
 static std::vector<float> vertices = {

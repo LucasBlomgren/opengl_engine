@@ -1,7 +1,6 @@
-﻿#include "raycast.h"
-#include <glm/glm.hpp>
-#include <glm/gtx/string_cast.hpp>
-#include <iostream>
+﻿#include "pch.h"
+#include "raycast.h"
+#include "aabb.h"
 
 RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>& dynamicBvh)
 {

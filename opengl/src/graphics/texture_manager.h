@@ -1,12 +1,6 @@
 #pragma once
 
-#include <iostream>
 #include <string>
-#include <unordered_map>
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <stb/stb_image.h>
 
 class TextureManager {
 public:

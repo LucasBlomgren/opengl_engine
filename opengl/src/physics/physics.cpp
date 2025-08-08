@@ -1,13 +1,19 @@
-﻿#include "physics.h"
-#include <glm/gtx/string_cast.hpp>
+﻿#include "pch.h"
+#include "physics.h"
+#include "aabb.h"
+#include "sat.h"
 
-// ----- init -----
+//-----------------------------
+//            Init
+//-----------------------------
 void PhysicsEngine::init(EngineState* engineState) {
     this->engineState = engineState;
     this->collisionManifold = new CollisionManifold();
 }
 
-// ----- setup scene -----
+//-----------------------------
+//         Setup scene
+//-----------------------------
 void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
     dynamicBvh.build(*gameObjects); 
@@ -16,18 +22,19 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     terrainBvh.build(*terrainTris); 
 }
 
-// ----- clear -----
+//-----------------------------
+//         Clear scene
+//-----------------------------
 void PhysicsEngine::clearPhysicsData() {
     contactCache.clear();
 }
 
-// ----- Getters -----
+//-----------------------------
+//          Getters
+//-----------------------------
 BVHTree<GameObject>& PhysicsEngine::getDynamicBvh() {
     return dynamicBvh;
 }
-//BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
-//    return staticBvh;
-//}
 BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
     return terrainBvh;
 }
@@ -35,13 +42,17 @@ const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() cons
     return contactCache;
 }
 
-// ----- raycast -----
+//-----------------------------
+//           Raycast
+//-----------------------------
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
     RaycastHit hitData = raycast(r, this->dynamicObjects, this->dynamicBvh);
     return hitData;
 }
 
-// ----- Time step -----
+//-----------------------------
+//         Time step
+//-----------------------------
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     this->dt = deltaTime;
 
@@ -63,7 +74,23 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     updateContactCache();
 }
 
-// ----- Update methods -----
+//-----------------------------
+//       Update methods
+//-----------------------------
+void PhysicsEngine::updatePositions() {
+    for (GameObject& obj : *dynamicObjects) {
+        if (!obj.isStatic and !obj.asleep) {
+            obj.resetDirtyFlags();
+            obj.updatePos(this->dt);
+            obj.updateAABB();
+            obj.updateCollider();
+
+            obj.linearVelocityLen = glm::dot(obj.linearVelocity, obj.linearVelocity);
+            obj.angularVelocityLen = glm::dot(obj.angularVelocity, obj.angularVelocity);
+        }
+    }
+}
+
 void PhysicsEngine::updateContactCache() {
     constexpr int maxFramesWithoutCollision = 10;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
@@ -118,20 +145,6 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
     obj.angularVelocityThreshold = (avg * angularFactor) * 1.5f * obj.invRadius;
 }
 
-void PhysicsEngine::updatePositions() {
-    for (GameObject& obj : *dynamicObjects) {
-        if (!obj.isStatic and !obj.asleep) {
-            obj.resetDirtyFlags(); 
-            obj.updatePos(this->dt);
-            obj.updateAABB();
-            obj.updateCollider();
-
-            obj.linearVelocityLen = glm::dot(obj.linearVelocity, obj.linearVelocity);
-            obj.angularVelocityLen = glm::dot(obj.angularVelocity, obj.angularVelocity);
-        }
-    }
-}
-
 bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
     constexpr float velocityThreshold = 1.0f;
     constexpr float angularVelocityThreshold = 1.4f;
@@ -160,6 +173,9 @@ bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
     return false;
 }
 
+//---------------------------------------------
+//      Collision detection & resolution
+//---------------------------------------------
 void PhysicsEngine::detectAndSolveCollisions() {
     static std::vector<TerrainHit> tHits; 
     static std::vector<DynamicHit> dHits; 
@@ -170,8 +186,15 @@ void PhysicsEngine::detectAndSolveCollisions() {
     broadPhase(tHits, dHits);       // hashmap kanske långsam? 
     midPhase(tHits, dHits);         // reserve behöver definieras (inte 16).
     narrowPhase(tHits, dHits);      // SAT + collisionManifold
+    collectActiveContacts();        // collect contacts to solve
+    resolveCollisions();            // PGS + Baumgarte stabilization
+
+    collisionManifold->debugWarmstarting = false; // reset debug flag
 }
 
+//---------------------------------------------
+//                Broadphase
+//---------------------------------------------
 void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
     // ----- dynamic vs terrain -----
     static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
@@ -221,6 +244,9 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
     dHits.resize(sp);
 }
 
+//---------------------------------------------
+//                 Midphase
+//---------------------------------------------
 void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
     // gameobject.collider == TriMesh: run BVH queries
     for (TerrainHit& th : tHits) {
@@ -271,8 +297,11 @@ void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<Dynamic
         }
     }
 }
-
-void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) {
+//---------------------------------------------
+//               Narrow phase
+//---------------------------------------------
+void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) 
+{
     for (TerrainHit& th : terrainHits) 
     {
         if (th.obj->asleep) {
@@ -325,7 +354,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             SAT::findBestTriangles(allResults);
 
             collisionManifold->boxMesh(contact, contactCache, allResults);
-            resolveCollision(contact); // resolve collision
         }
         // SPHERE vs tris
         else if (th.obj->colliderType == ColliderType::SPHERE) 
@@ -357,8 +385,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             SAT::findBestTriangles(allResults);
 
             collisionManifold->sphereMesh(contact, contactCache, allResults); 
-
-            resolveCollision(contact); // resolve collision 
         }
     }
 
@@ -392,8 +418,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                     continue;
                 }
 
-                SAT::reverseNormal(objA->position, objB->position, satResult.normal);
-
                 objA->totalCollisionCount++;
                 objB->totalCollisionCount++;
 
@@ -403,8 +427,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
                 Contact contact(objA, objB);
                 collisionManifold->boxBox(contact, contactCache, satResult);
-
-                resolveCollision(contact); // resolve collision 
             }
             // CUBE vs SPHERE
             else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) 
@@ -428,8 +450,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
                 Contact contact(objA, objB); 
                 collisionManifold->boxSphere(contact, contactCache, satResult); 
-
-                resolveCollision(contact);
             }
             // SPHERE vs SPHERE
             else if (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::SPHERE) 
@@ -448,227 +468,267 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
                 Contact contact(objA, objB); 
                 collisionManifold->sphereSphere(contact, contactCache, satResult);  
-
-                resolveCollision(contact); 
             }
         }
     }
 }
 
-void PhysicsEngine::resolveCollision(Contact& contact) {
+void PhysicsEngine::collectActiveContacts() {
+    contactsToSolve.clear();
+    contactsToSolve.reserve(contactCache.size());
+
+    for (auto& [key, contact] : contactCache) {
+        if (contact.wasUsedThisFrame and (!contact.objA_ptr->asleep or (contact.objB_ptr && !contact.objB_ptr->asleep))) {
+            contactsToSolve.push_back(&contact);
+        }
+    }
+}
+
+//---------------------------------------------
+//            Resolve collisions
+//---------------------------------------------
+void PhysicsEngine::resolveCollisions() {
     // Justera beroende på material
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.2f;
 
-    GameObject& objA = *contact.objA_ptr;
-    GameObject& objB = *contact.objB_ptr;
+    for (Contact* contact : contactsToSolve) { 
+        GameObject& objA = *contact->objA_ptr; 
+        GameObject& objB = *contact->objB_ptr; 
 
-    // ----- Baumgarte stabilization -----
-    float slop = 0.0005f;
-    float baumgarteFactor = 0.3f;
-    for (int j = 0; j < contact.points.size(); j++) {
-        ContactPoint& cp = contact.points[j];
+        // ----- Baumgarte stabilization -----
+        float slop = 0.0005f; 
+        float baumgarteFactor = 0.2f; 
+        for (int j = 0; j < contact->points.size(); j++) { 
+            ContactPoint& cp = contact->points[j]; 
 
-        float penetration = cp.depth;
-        float allowed = penetration - slop;
+            float penetration = cp.depth; 
+            float allowed = penetration - slop; 
 
-        if (allowed > 0.0f)
-            cp.biasVelocity = glm::min(-(baumgarteFactor * allowed) / this->dt, 0.0f);
-        else
-            cp.biasVelocity = 0.0f;
-    }
+            if (allowed > 0.0f) 
+                cp.biasVelocity = glm::min(-(baumgarteFactor * allowed) / this->dt, 0.0f); 
+            else
+                cp.biasVelocity = 0.0f; 
+        }
 
-    //std::cout << contact.points.size() << " contact points, normal: " << glm::to_string(contact.normal) << std::endl;
+        for (ContactPoint& cp : contact->points) { 
+            // total impuls från föregående steg 
+            glm::vec3 Pn = cp.accumulatedImpulse * contact->normal; 
+            glm::vec3 Pt = cp.accumulatedFrictionImpulse1 * contact->t1 
+                + cp.accumulatedFrictionImpulse2 * contact->t2; 
 
-    // ------ PGS solver ------
-    int maxIterations = 8;
-    for (int i = 0; i < maxIterations; i++) {
-        bool converged = true;
+            // linjär + tangentiell
+            glm::vec3 J = Pn + Pt; 
 
-        for (int j = 0; j < contact.points.size(); j++) {
-            ContactPoint& cp = contact.points[j];
-
-            glm::vec3 relVelA{ 0.0f };
-            glm::vec3 relVelB{ 0.0f };
-            glm::vec3 angVelA{ 0.0f };
-            glm::vec3 angVelB{ 0.0f };
-            if (&objA != nullptr) {
-                relVelA = objA.linearVelocity;
-                angVelA = objA.angularVelocity;
+            if (contact->objA_ptr) { 
+                objA.applyForceLinear(-J * objA.invMass); 
+                objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, J)); 
+                // twist
+                objA.applyForceAngular(-objA.inverseInertiaWorld * (cp.accumulatedTwistImpulse * contact->normal)); 
             }
-            if (&objB != nullptr) {
-                relVelB = objB.linearVelocity;
-                angVelB = objB.angularVelocity;
-            }
-
-            glm::vec3 relativeVelocity =
-                (relVelB + glm::cross(angVelB, cp.rB)) -
-                (relVelA + glm::cross(angVelA, cp.rA)); 
-
-            float normalVelocity = glm::dot(relativeVelocity, contact.normal);
-
-            // Baumgarte-bias inbyggd i impuls­beräkningen:
-            float v_target = cp.targetBounceVelocity;
-            float v_bias = cp.biasVelocity;
-            // villkor: normalVelocity + v_bias = önskad hastighet vid kontakten
-            float J = -(normalVelocity - v_target + v_bias) * cp.m_eff;
-
-            // Clamp
-            float temp = cp.accumulatedImpulse;
-            cp.accumulatedImpulse = glm::max(temp + J, 0.0f);
-            float deltaImpulse = cp.accumulatedImpulse - temp;
-
-            // Add normal to impulse
-            glm::vec3 deltaNormalImpulse = deltaImpulse * contact.normal;
-
-            // Apply impulses
-            float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
-            if (deltaNormalImpulseLen > 1e-6f) {
-
-                if (&objA != nullptr) {
-                    objA.applyForceLinear(-deltaNormalImpulse * objA.invMass);
-                    objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
-                }
-                if (&objB != nullptr) {
-                    objB.applyForceLinear(deltaNormalImpulse * objB.invMass);
-                    objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
-                }
-                // impulse was changed
-                converged = false;
-            }
-
-            //--------------- Pre-calculate for friction ----------------
-            relVelA = glm::vec3{ 0.0f };
-            relVelB = glm::vec3{ 0.0f };
-            angVelA = glm::vec3{ 0.0f };
-            angVelB = glm::vec3{ 0.0f };
-            if (&objA != nullptr) {
-                relVelA = objA.linearVelocity;
-                angVelA = objA.angularVelocity;
-            }
-            if (&objB != nullptr) {
-                relVelB = objB.linearVelocity;
-                angVelB = objB.angularVelocity;
-            }
-
-            relativeVelocity =
-                (relVelB + glm::cross(angVelB, cp.rB)) -
-                (relVelA + glm::cross(angVelA, cp.rA));
-
-            // Project tangential velocity to the tangent plane
-            float v_t1 = glm::dot(relativeVelocity, cp.t1);
-            float v_t2 = glm::dot(relativeVelocity, cp.t2);
-
-            // Beräkna preliminära impulser i varje riktning:
-            float J1 = -v_t1 * cp.invMassT1;
-            float J2 = -v_t2 * cp.invMassT2;
-
-            // ---------- Static friction ----------
-            glm::vec3 desiredFrictionImpulse = (J1 * cp.t1) + (J2 * cp.t2);
-            float JtLen2 = glm::dot(desiredFrictionImpulse, desiredFrictionImpulse);
-            float Jn = std::abs(cp.accumulatedImpulse);
-            // Beräkna maximal statisk friktionsimpuls (mu_static * |accumulatedImpulse|)
-            float Jmax = staticFriction * Jn;
-            float Jmax2 = Jmax * Jmax; // max2 = mu_static^2 * |accumulatedImpulse|^2
-
-            if (JtLen2 <= Jmax2) {
-                cp.accumulatedFrictionImpulse1 += J1;
-                cp.accumulatedFrictionImpulse2 += J2;
-
-                // Applicera den statiska friktionsimpulsen:
-                if (&objA != nullptr) {
-                    objA.applyForceLinear(-desiredFrictionImpulse * objA.invMass);
-                    objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, desiredFrictionImpulse));
-                }
-                if (&objB != nullptr) {
-                    objB.applyForceLinear(desiredFrictionImpulse * objB.invMass); 
-                    objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, desiredFrictionImpulse)); 
-                }
-                if (JtLen2 > 1e-6f)
-                    converged = false;
-            }
-
-            // ---------- Dynamic friction ----------
-            else {
-                // Uppdatera de ackumulerade friktionsimpulserna (använd samma klampningsmetod som du gör idag)
-                float newFrictionImpulse1 = cp.accumulatedFrictionImpulse1 + J1;
-                float newFrictionImpulse2 = cp.accumulatedFrictionImpulse2 + J2;
-
-                // Klampar impulsen så att total friktion inte överskrider mu_d * |accumulatedImpulse|
-                float maxFriction = dynamicFriction * std::abs(cp.accumulatedImpulse);
-                float lengthSq = newFrictionImpulse1 * newFrictionImpulse1 + newFrictionImpulse2 * newFrictionImpulse2;
-                float maxFrictionSq = maxFriction * maxFriction;
-                if (lengthSq > maxFrictionSq) {
-                    float scale = maxFriction / std::sqrt(lengthSq);
-                    newFrictionImpulse1 *= scale;
-                    newFrictionImpulse2 *= scale;
-                }
-
-                float deltaFrictionImpulse1 = newFrictionImpulse1 - cp.accumulatedFrictionImpulse1;
-                float deltaFrictionImpulse2 = newFrictionImpulse2 - cp.accumulatedFrictionImpulse2;
-                cp.accumulatedFrictionImpulse1 = newFrictionImpulse1;
-                cp.accumulatedFrictionImpulse2 = newFrictionImpulse2;
-
-                // Bygg friktionsimpulsen i tangentplanet:
-                glm::vec3 frictionImpulse = (deltaFrictionImpulse1 * cp.t1) + (deltaFrictionImpulse2 * cp.t2);
-
-                // Applicera impulsen:
-                float frictionImpulseLen = glm::dot(frictionImpulse, frictionImpulse);
-                if (frictionImpulseLen > 1e-6f) {
-
-                    if (&objA != nullptr) { 
-                        objA.applyForceLinear(-frictionImpulse * objA.invMass); 
-                        objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, frictionImpulse)); 
-                    }
-                    if (&objB != nullptr) { 
-                        objB.applyForceLinear(frictionImpulse * objB.invMass); 
-                        objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, frictionImpulse)); 
-                    } 
-                    converged = false;
-                }
-            }
-            // ---------- Twist friction ----------
-            // Beräkna den relativa rotationshastigheten kring kontaktnormalen
-            angVelA = glm::vec3{ 0.0f };
-            angVelB = glm::vec3{ 0.0f };
-            if (&objA != nullptr) {
-                angVelA = objA.angularVelocity;
-            }
-            if (&objB != nullptr) {
-                angVelB = objB.angularVelocity;
-            }
-            float relativeAngularSpeed = glm::dot((angVelB - angVelA), contact.normal);
-
-            // Beräkna preliminär twist impulse (i rotationsdomänen)
-            float twistImpulse = -relativeAngularSpeed * cp.invMassTwist;
-            float maxTwistImpulse = twistFriction * std::abs(cp.accumulatedImpulse);
-
-            // Ackumulera twistimpulsen
-            float oldTwistImpulse = cp.accumulatedTwistImpulse;
-            float newTwistImpulse = glm::clamp(oldTwistImpulse + twistImpulse, -maxTwistImpulse, maxTwistImpulse);
-            float deltaTwistImpulse = newTwistImpulse - oldTwistImpulse;
-            cp.accumulatedTwistImpulse = newTwistImpulse;
-
-            // Den twistimpuls vi applicerar är ett moment (angular impulse) kring kontaktnormalen
-            glm::vec3 twistImpulseVec = deltaTwistImpulse * contact.normal;
-
-            // Applicera twistimpulsen på kropparnas angulära hastigheter
-            float twistImpulseVecLen = glm::dot(twistImpulseVec, twistImpulseVec);
-            if (twistImpulseVecLen > 1e-6f) {
-
-                if (&objA != nullptr) {
-                    objA.applyForceAngular(-objA.inverseInertiaWorld * twistImpulseVec);
-                }
-                if (&objB != nullptr) { 
-                    objB.applyForceAngular(objB.inverseInertiaWorld* twistImpulseVec); 
-                }
-
-                converged = false;
+            if (contact->objB_ptr) { 
+                objB.applyForceLinear(J * objB.invMass); 
+                objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, J)); 
+                objB.applyForceAngular(objB.inverseInertiaWorld * (cp.accumulatedTwistImpulse * contact->normal)); 
             }
         }
-        // Om vi inte har någon impuls att applicera, är vi klara
-        if (converged)
+    } 
+
+    // ------ PGS solver ------
+    int maxIterations = 8; 
+
+    for (int i = 0; i < maxIterations; i++) {
+        float maxDelta = 0.0f;
+
+        for (Contact* contact : contactsToSolve) {
+
+            GameObject& objA = *contact->objA_ptr;
+            GameObject& objB = *contact->objB_ptr;
+
+            for (int j = 0; j < contact->points.size(); j++) {
+                ContactPoint& cp = contact->points[j];
+
+                glm::vec3 relVelA{ 0.0f };
+                glm::vec3 relVelB{ 0.0f };
+                glm::vec3 angVelA{ 0.0f };
+                glm::vec3 angVelB{ 0.0f };
+                if (contact->objA_ptr) {
+                    relVelA = objA.linearVelocity;
+                    angVelA = objA.angularVelocity;
+                }
+                if (contact->objB_ptr) {
+                    relVelB = objB.linearVelocity;
+                    angVelB = objB.angularVelocity;
+                }
+
+                glm::vec3 relativeVelocity =
+                    (relVelB + glm::cross(angVelB, cp.rB)) -
+                    (relVelA + glm::cross(angVelA, cp.rA));
+
+                float normalVelocity = glm::dot(relativeVelocity, contact->normal);
+
+                // Baumgarte-bias inbyggd i impuls­beräkningen:
+                float v_target = cp.targetBounceVelocity;
+                float v_bias = cp.biasVelocity;
+                // villkor: normalVelocity + v_bias = önskad hastighet vid kontakten
+                float J = -(normalVelocity - v_target + v_bias) * cp.m_eff;
+
+                // Clamp
+                float temp = cp.accumulatedImpulse;
+                cp.accumulatedImpulse = glm::max(temp + J, 0.0f);
+                float deltaImpulse = cp.accumulatedImpulse - temp;
+
+                // Add normal to impulse
+                glm::vec3 deltaNormalImpulse = deltaImpulse * contact->normal;
+
+                // Apply impulses
+                float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
+                if (deltaNormalImpulseLen > 1e-6f) {
+
+                    if (contact->objA_ptr) {
+                        objA.applyForceLinear(-deltaNormalImpulse * objA.invMass);
+                        objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
+                    }
+                    if (contact->objB_ptr) {
+                        objB.applyForceLinear(deltaNormalImpulse * objB.invMass);
+                        objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
+                    }
+                }
+                maxDelta = std::max(maxDelta, std::abs(deltaImpulse)); 
+
+                //--------------- Pre-calculate for friction ----------------
+                relVelA = glm::vec3{ 0.0f };
+                relVelB = glm::vec3{ 0.0f };
+                angVelA = glm::vec3{ 0.0f };
+                angVelB = glm::vec3{ 0.0f };
+                if (contact->objA_ptr) {
+                    relVelA = objA.linearVelocity;
+                    angVelA = objA.angularVelocity;
+                }
+                if (contact->objB_ptr) {
+                    relVelB = objB.linearVelocity;
+                    angVelB = objB.angularVelocity;
+                }
+
+                relativeVelocity =
+                    (relVelB + glm::cross(angVelB, cp.rB)) -
+                    (relVelA + glm::cross(angVelA, cp.rA));
+
+                // Project tangential velocity to the tangent plane
+                float v_t1 = glm::dot(relativeVelocity, contact->t1);
+                float v_t2 = glm::dot(relativeVelocity, contact->t2);
+
+                // Beräkna delta i tangentplanet
+                float dF1 = -v_t1 * cp.invMassT1;
+                float dF2 = -v_t2 * cp.invMassT2;
+
+                // Kandidat: ny TOTAL friktionsimpuls (ackumulerad + delta)
+                float newF1 = cp.accumulatedFrictionImpulse1 + dF1;
+                float newF2 = cp.accumulatedFrictionImpulse2 + dF2;
+
+                float Jn = std::abs(cp.accumulatedImpulse);
+                float maxStatic = staticFriction * Jn;
+                float maxStatic2 = maxStatic * maxStatic;
+
+                float newLen2 = newF1 * newF1 + newF2 * newF2;
+                float dT = 0.0f;
+
+                if (newLen2 <= maxStatic2) {
+                    // Statisk friktion: acceptera hela delta
+                    cp.accumulatedFrictionImpulse1 = newF1;
+                    cp.accumulatedFrictionImpulse2 = newF2;
+                    glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
+                    dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
+
+                    // Applicera den statiska friktionsimpulsen:
+                    if (contact->objA_ptr) {
+                        objA.applyForceLinear(-dFt * objA.invMass);
+                        objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, dFt));
+                    }
+                    if (contact->objB_ptr) {
+                        objB.applyForceLinear(dFt * objB.invMass);
+                        objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, dFt));
+                    }
+                }
+
+                // ---------- Dynamic friction ----------
+                else {
+                    // Dynamisk friktion: projektera TOTAL impuls till cirkeln μ_d * Jn
+                    float maxDyn = dynamicFriction * Jn;
+
+                    float len = std::sqrt(newLen2);
+                    if (len > 1e-8f) {
+                        float s = maxDyn / len;
+                        float clampedF1 = newF1 * s;
+                        float clampedF2 = newF2 * s;
+
+                        float d1 = clampedF1 - cp.accumulatedFrictionImpulse1;
+                        float d2 = clampedF2 - cp.accumulatedFrictionImpulse2;
+
+                        dT = std::sqrt(d1 * d1 + d2 * d2);
+
+                        cp.accumulatedFrictionImpulse1 = clampedF1;
+                        cp.accumulatedFrictionImpulse2 = clampedF2;
+
+                        glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
+                        if (contact->objA_ptr) {
+                            objA.applyForceLinear(-dFt * objA.invMass);
+                            objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, dFt));
+                        }
+                        if (contact->objB_ptr) {
+                            objB.applyForceLinear(dFt * objB.invMass);
+                            objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, dFt));
+                        }
+                    }
+                }
+                maxDelta = std::max(maxDelta, std::abs(dT));
+
+                // ---------- Twist friction ----------
+                // Beräkna den relativa rotationshastigheten kring kontaktnormalen
+                angVelA = glm::vec3{ 0.0f };
+                angVelB = glm::vec3{ 0.0f };
+                if (contact->objA_ptr) {
+                    angVelA = objA.angularVelocity;
+                }
+                if (contact->objB_ptr) {
+                    angVelB = objB.angularVelocity;
+                }
+                float relativeAngularSpeed = glm::dot((angVelB - angVelA), contact->normal);
+
+                // Beräkna preliminär twist impulse (i rotationsdomänen)
+                float twistImpulse = -relativeAngularSpeed * cp.invMassTwist;
+                float maxTwistImpulse = twistFriction * std::abs(cp.accumulatedImpulse);
+
+                // Ackumulera twistimpulsen
+                float oldTwistImpulse = cp.accumulatedTwistImpulse;
+                float newTwistImpulse = glm::clamp(oldTwistImpulse + twistImpulse, -maxTwistImpulse, maxTwistImpulse);
+                float deltaTwistImpulse = newTwistImpulse - oldTwistImpulse;
+                cp.accumulatedTwistImpulse = newTwistImpulse;
+
+                // Den twistimpuls vi applicerar är ett moment (angular impulse) kring kontaktnormalen
+                glm::vec3 twistImpulseVec = deltaTwistImpulse * contact->normal;
+
+                // Applicera twistimpulsen på kropparnas angulära hastigheter
+                float twistImpulseVecLen = glm::dot(twistImpulseVec, twistImpulseVec);
+                if (twistImpulseVecLen > 1e-6f) {
+
+                    if (contact->objA_ptr) {
+                        objA.applyForceAngular(-objA.inverseInertiaWorld * twistImpulseVec);
+                    }
+                    if (contact->objB_ptr) {
+                        objB.applyForceAngular(objB.inverseInertiaWorld * twistImpulseVec);
+                    }
+                }
+                maxDelta = std::max(maxDelta, std::abs(deltaTwistImpulse));
+            }
+        }
+
+        if (maxDelta < 1e-4f) {
+
+            //std::cout << i << " iterations, maxDelta: " << maxDelta << std::endl;
             break;
+        }
     }
+
 }

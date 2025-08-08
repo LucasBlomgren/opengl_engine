@@ -1,8 +1,6 @@
 #pragma once
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
 
 GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     glfwInit();
@@ -10,12 +8,19 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primary);
+
     GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();
         return nullptr;
     }
+
+    glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE); // Ta bort titlebar 
+    glfwSetWindowPos(window, 0, 0); // Placera längst upp till vänster 
+
     glfwMakeContextCurrent(window);
     //glfwSwapInterval(1);
 

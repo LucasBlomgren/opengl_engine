@@ -1,4 +1,5 @@
-﻿#include "game_object.h"
+﻿#include "pch.h"
+#include "game_object.h"
 
 AABB GameObject::getAABB() const {
     return aabb;
@@ -188,7 +189,6 @@ void GameObject::setAwake() {
 }
 
 void GameObject::renderMesh(Shader& shader) {
-    //setModelMatrix();
     shader.setMat4("model", modelMatrix);
 
     if (textureID != 999) {
@@ -202,7 +202,7 @@ void GameObject::renderMesh(Shader& shader) {
     }
     glBindTexture(GL_TEXTURE_2D, textureID);
     glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, vertices.size(), GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
 void GameObject::setupMesh() {

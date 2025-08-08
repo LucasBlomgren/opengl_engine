@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "oobb.h"
 
 void OOBB::update(const glm::mat4& M) {

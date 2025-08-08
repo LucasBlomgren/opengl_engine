@@ -1,13 +1,5 @@
-﻿#define GLM_FORCE_SIMD_AVX2 
-#define GLM_ENABLE_EXPERIMENTAL
-
-#include <windows.h>
-
-#include <iostream>
-#include <vector>
-#include <random>
-#include <chrono>
-#include <iomanip>
+﻿
+#include "pch.h"
 
 #include "init_opengl.h"
 #include "engine_state.h"
@@ -25,6 +17,7 @@
 #include "light_manager.h"
 #include "shadow_manager.h"
 #include "editor/editor.h"
+#include "geometry/geometry_loader.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -119,6 +112,11 @@ int main()
 
    // setup skybox
    skyboxManager.init(); 
+
+   // load geometry data
+   loadCubeData();
+   loadSphereData();
+   loadIcoSphereData();
 
    // setup scene 
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);

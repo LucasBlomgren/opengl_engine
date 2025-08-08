@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "aabb_renderer.h"
 
 unsigned int AABBRenderer::sVAO = 0;

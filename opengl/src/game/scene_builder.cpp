@@ -1,4 +1,8 @@
-﻿#include "scene_builder.h"
+﻿#include "pch.h"
+#include "scene_builder.h"
+
+#include "geometry/vertex.h"
+#include "geometry/geometry_loader.h"
 
 std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
     return dynamicObjects;
@@ -99,6 +103,10 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
     else if (sceneID == 2) {
         testFloorScene(); 
     }
+    else if (sceneID == 3) {
+        tumblerScene(); 
+    }
+
 
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
 }
@@ -186,7 +194,7 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
-    smoothHeightMap(heightMap, 1.0f, 50);
+    smoothHeightMap(heightMap, 1.0f, 70);
 
     std::vector<Tri>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices; 
@@ -359,7 +367,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
+                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -465,6 +473,42 @@ void SceneBuilder::createHalo(
     allHalos.push_back(halo);
 }
 
+void SceneBuilder::createTumbler() {
+    std::vector<Tri>& triangles = terrainData.triangles;
+    std::vector<Vertex> vertices = icoSphereVertices;
+    std::vector<uint32_t> indices = icoSphereIndices;
 
+    // reverse all normals to point inwards
+    for (auto& vertex : vertices) {  
+        vertex.normal = -vertex.normal;  
+    } 
 
+    float scale = 50.0f;
+    for (auto& v : vertices) {
+        v.position *= scale;        
+    } 
+
+    // Tri colliders
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        uint32_t i0 = indices[i + 0];
+        uint32_t i1 = indices[i + 1];
+        uint32_t i2 = indices[i + 2];
+
+        glm::vec3 v0 = vertices[i0].position;
+        glm::vec3 v1 = vertices[i1].position;
+        glm::vec3 v2 = vertices[i2].position;
+
+        triangles.emplace_back(objectId++, v0, v1, v2);
+    }
+
+    terrainData.vertices.reserve(vertices.size()); 
+    for (const auto& vertex : vertices) { 
+        terrainData.vertices.emplace_back(vertex.position, vertex.normal, vertex.texCoords); 
+    }
+
+    terrainData.indices.reserve(indices.size()); 
+    for (const auto& index : indices) { 
+        terrainData.indices.push_back(index); 
+    }
+}
 

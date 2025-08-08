@@ -1,17 +1,7 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/io.hpp>
-
-#include <optional>
-#include <cmath>
 #include <unordered_map>
-#include <span>
 
-#include "draw_line.h"
 #include "game_object.h"
 #include "sat.h"
 
@@ -29,7 +19,6 @@ struct ContactPoint {
     float accumulatedTwistImpulse = 0.0f;
     float m_eff;
     glm::vec3 rA, rB;
-    glm::vec3 t1, t2;
     float depth;
     float targetBounceVelocity;
     float biasVelocity;
@@ -45,6 +34,7 @@ struct Contact {
     size_t hashKey;
     std::vector<ContactPoint> points;
     glm::vec3 normal;
+    glm::vec3 t1, t2;
 
     GameObject* objA_ptr;
     GameObject* objB_ptr;
@@ -52,6 +42,7 @@ struct Contact {
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;
 
+    bool objBisReference = true; 
     std::vector<glm::vec3> referenceFace;
     std::vector<glm::vec3> incidentFace;
     glm::vec3 referenceFaceNormal;
@@ -68,6 +59,8 @@ public:
     void sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
     void meshMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+
+    bool debugWarmstarting = false;
 
 private:
     std::vector<glm::vec3> selectedFace;
@@ -86,7 +79,7 @@ private:
     std::vector<glm::vec3> allClippedPoints;
     void createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal);
     void getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane, glm::vec3& outPoint, bool& outBool);
-    bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3 planePoint);
+    bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3& planePoint, const float tolerance);
     void clipPoints(std::vector<glm::vec3>& referenceFace, std::vector<glm::vec3>& incidentFace, glm::vec3& referenceFaceNormal);
 
     std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);

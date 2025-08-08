@@ -1,6 +1,5 @@
+#include "pch.h"
 #include "input_manager.h"
-
-#include <iostream>
 
 EngineState* InputManager::engineState = nullptr;
 Camera* InputManager::camera = nullptr;

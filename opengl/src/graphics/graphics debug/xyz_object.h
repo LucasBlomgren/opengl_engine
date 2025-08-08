@@ -1,6 +1,5 @@
 #pragma once
-#include <iostream>
-#include <vector>
+
 #include "shader.h"
 
 unsigned int setup_xyzObject();

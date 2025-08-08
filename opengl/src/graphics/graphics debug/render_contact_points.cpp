@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "render_contact_points.h"
 
 unsigned int setupContactPoint() {

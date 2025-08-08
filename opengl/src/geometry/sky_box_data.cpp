@@ -1,4 +1,5 @@
-#include <vector>
+#include "pch.h"
+#include "sky_box_data.h"
 
 std::vector<float> skyboxVertices = {
     // positions          

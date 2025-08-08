@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "sphere_outline_renderer.h"
 
 void SphereOutlineRenderer::init() {

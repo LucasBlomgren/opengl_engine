@@ -1,9 +1,8 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
 #include "shader.h"
 
-class OOBBRenderer {
+class OOBBRenderer { 
 public:
     void setupWireframeBox();
     void renderBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit);

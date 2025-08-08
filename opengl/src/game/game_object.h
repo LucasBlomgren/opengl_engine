@@ -2,12 +2,6 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include <glad/glad.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/component_wise.hpp>
-
 #include "shader.h"
 #include "colliders/collider.h"
 #include "colliders/aabb.h"
@@ -16,6 +10,9 @@
 #include "colliders/mesh.h"
 #include "oobb_renderer.h"
 #include "aabb_renderer.h"
+
+#include <glm/gtc/quaternion.hpp>    // defines glm::quat
+#include <glm/gtx/quaternion.hpp>    // extra helpers om du behöver
 
 inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;

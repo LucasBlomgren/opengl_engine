@@ -1,5 +1,5 @@
-﻿#include "SAT.h"
-#include <glm/gtx/string_cast.hpp>
+﻿#include "pch.h"
+#include "SAT.h"
 
 void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) { 
     glm::vec3 direction = posA - posB; 
@@ -243,13 +243,19 @@ bool SAT::intersectPolygons(
         if (minA >= maxB or minB >= maxA)
             return false;
 
-        float axisDepth = std::min(maxB - minA, maxA - minB);
+        float overlapPlus = maxB - minA; 
+        float overlapMinus = maxA - minB; 
+        float axisDepth = std::min(overlapPlus, overlapMinus); 
 
         if (axisDepth < satResult.depth) {
             satResult.depth = axisDepth;
             satResult.normal = A;
             satResult.axisType = AxisType::FaceA;
         }
+
+        float sepA_plus = minB - maxA;
+        float sepA_minus = minA - maxB;
+        satResult.separationA = std::max(satResult.separationA, std::max(sepA_plus, sepA_minus)); 
     }
 
     // testa normaler från B
@@ -260,13 +266,19 @@ bool SAT::intersectPolygons(
         if (minA >= maxB or minB >= maxA)
             return false;
 
-        float axisDepth = std::min(maxB - minA, maxA - minB);
+        float overlapPlus = maxB - minA; 
+        float overlapMinus = maxA - minB; 
+        float axisDepth = std::min(overlapPlus, overlapMinus); 
 
         if (axisDepth < satResult.depth) {
             satResult.depth = axisDepth;
             satResult.normal = B;
             satResult.axisType = AxisType::FaceB;
         }
+
+        float sepB_plus = minA - maxB; 
+        float sepB_minus = minB - maxA;
+        satResult.separationB = std::max(satResult.separationB, std::max(sepB_plus, sepB_minus)); 
     }
 
     for (auto& n : normalsA) triedAxes.push_back(glm::normalize(n)); 
@@ -311,12 +323,12 @@ bool SAT::intersectPolygons(
         }
     }
 
-    //if (satResult.axisType != AxisType::EdgeEdge) {
-    //    std::cout << "SAT Result: Depth = " << satResult.depth
-    //        << ", Normal = " << glm::to_string(satResult.normal)
-    //        << ", Axis Type = " << static_cast<int>(satResult.axisType)
-    //        << std::endl;
-    //}
+    //std::cout << "SAT: Found intersection with depth: " << satResult.depth
+    //    << ", normal: " << glm::to_string(satResult.normal)
+    //    << ", axis type: " << static_cast<int>(satResult.axisType)
+    //    << ", separation A: " << satResult.separationA
+    //    << ", separation B: " << satResult.separationB
+    //    << std::endl;
 
     return true;
 }
