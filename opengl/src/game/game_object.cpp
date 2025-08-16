@@ -148,8 +148,8 @@ void GameObject::updatePos(const float& deltaTime) {
     if (hasGravity)
         linearVelocity += g * deltaTime;
 
-    linearVelocity *= std::pow(0.96f, deltaTime);
-    angularVelocity *= std::pow(0.94f, deltaTime);
+    linearVelocity *= std::pow(0.97f, deltaTime);
+    angularVelocity *= std::pow(0.98f, deltaTime);
 
     if (!canMoveLinearly) {
         linearVelocity = glm::vec3(0.0f);
@@ -206,18 +206,16 @@ void GameObject::renderMesh(Shader& shader) {
 }
 
 void GameObject::setupMesh() {
-    unsigned int VBO;
-    glGenVertexArrays(1, &VAO);
+    glGenVertexArrays(1, &VAO); glcount::incVAO();
     glGenBuffers(1, &VBO);
 
     glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); glcount::incVBO();
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 
-    unsigned int EBO;
     glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); glcount::incEBO();
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
     // position attribute

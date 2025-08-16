@@ -74,8 +74,6 @@ int main()
    const float fixedTimeStep = 1.0f / 120.0f;
    float accumulator = 0.0f;
    float lastFrame = static_cast<float>(glfwGetTime());
-   float bvhInterval = fixedTimeStep;  // sekunder mellan BVH‑uppdateringar
-   float bvhAccumulator = 0.0f;
 
    // setup input
    inputManager.setPointers(&engineState, &camera);
@@ -116,7 +114,7 @@ int main()
    // load geometry data
    loadCubeData();
    loadSphereData();
-   loadIcoSphereData();
+   //loadIcoSphereData();
 
    // setup scene 
    sceneBuilder.setPointers(&textureManager, &lightManager, rng);
@@ -133,8 +131,9 @@ int main()
       float cpuClockStart = static_cast<float>(glfwGetTime());
 
       glfwPollEvents();
-      if (glfwWindowShouldClose(window)) 
+      if (glfwWindowShouldClose(window)) {
           break;
+      }
 
       // update time
       auto current_time = std::chrono::high_resolution_clock::now();
@@ -150,39 +149,64 @@ int main()
 
       // physics step
       float stepClockStart = static_cast<float>(glfwGetTime());
-      if (!engineState.isPaused() or engineState.getAdvanceStep()) {
-         accumulator += deltaTime;
+      if (!engineState.isPaused() or engineState.getAdvanceStep()) 
+      {
+          const int   kMaxStepsPerFrame = 8;
+          const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
+          accumulator = std::min(accumulator + deltaTime, kMaxAccum);
 
          if (engineState.getAdvanceStep())
             accumulator = fixedTimeStep;
 
-         while (accumulator >= fixedTimeStep) {
+         int steps = 0;
+         while (accumulator >= fixedTimeStep && steps < kMaxStepsPerFrame) 
+         {
+            physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
+            for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
+             {
+                 // per-frame rotation (du har redan denna)
+                 glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
+
+                 for (int i = 0; i < halo.indices.size(); i++) {
+                     GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
+
+                     // --- 1) Spara föregående pose ---
+                     glm::vec3 prevPos = obj.position;
+                     glm::quat prevOri = obj.orientation;
+
+                     // --- 2) Sätt ny pose kinematiskt (din kod) ---
+                     glm::vec3 relativePos = obj.position - halo.center;
+                     glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+
+                     obj.position = halo.center + rotatedRelPos;
+                     obj.orientation = perFrameRot * obj.orientation;
+
+                     // --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
+                     // Linjär hastighet: differens
+                     obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
+
+                     // Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
+                     glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
+                     dq = glm::normalize(dq);
+                     float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
+                     float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
+                     float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
+                     glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
+                         : glm::vec3(0, 0, 1);           // fallback
+                     obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
+
+                     // --- 4) Uppdatera render/collider ---
+                     obj.modelMatrixDirty = true;
+                     obj.setModelMatrix();
+                     obj.setHelperMatrices();
+                     obj.updateAABB();
+                     obj.updateCollider();
+                 }
+             }
             physicsEngine.step(fixedTimeStep, rng);
 
-            // rotate halos
-            for (SceneBuilder::Halo& halo : sceneBuilder.allHalos) {
-                glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed), halo.rotDir);
-                for (int i = 0; i < halo.indices.size(); i++) {
-                    // increase orientation in x-axis by a small amoount
-                    GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
-
-                    glm::vec3 relativePos = obj.position - halo.center;
-                    glm::vec3 rotatedRelPos = perFrameRot * relativePos;
-
-                    obj.position = halo.center + rotatedRelPos;
-                    obj.orientation = perFrameRot * obj.orientation;
-                    obj.modelMatrixDirty = true;
-                    obj.setModelMatrix();
-                    obj.updateAABB();
-                    obj.updateCollider();
-                }
-            }
+            steps++;
             accumulator -= fixedTimeStep;
-         }
-         bvhAccumulator += deltaTime;
-         if (bvhAccumulator >= bvhInterval) {
-            physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
-            bvhAccumulator -= bvhInterval;
          }
       }
 
@@ -232,44 +256,52 @@ int main()
             const int VALUE_W = 0;
 
             std::cout
-               // FPS
-               << std::setw(LABEL_W) << std::left
-               << "FPS:"
-               // värdefält, vänster-justerat
-               << std::setw(VALUE_W) << std::left
-               << frames << "\n"
+                // FPS
+                << std::setw(LABEL_W) << std::left
+                << "FPS:"
+                // värdefält, vänster-justerat
+                << std::setw(VALUE_W) << std::left
+                << frames << "\n"
 
-               // CPU Time
-               << std::setw(LABEL_W) << std::left
-               << "CPU:"
-               // värdefält, vänster-justerat
-               << std::setw(VALUE_W) << std::left
-               << std::fixed << std::setprecision(1) << cpuClockMs << " ms\n"
+                // CPU Time
+                << std::setw(LABEL_W) << std::left
+                << "CPU:"
+                // värdefält, vänster-justerat
+                << std::setw(VALUE_W) << std::left
+                << std::fixed << std::setprecision(1) << cpuClockMs << " ms\n"
 
-               // Physics Time
-               << std::setw(LABEL_W) << std::left
-               << "Physics:"
-               << std::setw(VALUE_W) << std::left
-               << std::setprecision(1) << stepClockMs << " ms\n"
+                // Physics Time
+                << std::setw(LABEL_W) << std::left
+                << "Physics:"
+                << std::setw(VALUE_W) << std::left
+                << std::setprecision(1) << stepClockMs << " ms\n"
 
-               // Render Time
-               << std::setw(LABEL_W) << std::left
-               << "Render:"
-               << std::setw(VALUE_W) << std::left
-               << std::setprecision(1) << renderClockMs << " ms\n"
+                // Render Time
+                << std::setw(LABEL_W) << std::left
+                << "Render:"
+                << std::setw(VALUE_W) << std::left
+                << std::setprecision(1) << renderClockMs << " ms\n"
 
-               // BVH rebuilds
-               << std::setw(LABEL_W) << std::left
-               << "BVH:"
-               << std::setw(VALUE_W) << std::left
-               << physicsEngine.getDynamicBvh().numRebuilds << "\n"
+                // BVH rebuilds
+                << std::setw(LABEL_W) << std::left
+                << "BVH:"
+                << std::setw(VALUE_W) << std::left
+                << physicsEngine.getDynamicBvh().numRebuilds << "\n"
 
-               // Objects
-               << std::setw(LABEL_W) << std::left
-               << "Objects:"
-               << std::setw(VALUE_W) << std::left
-               << sceneBuilder.getDynamicObjects().size() 
-               << std::defaultfloat << "\n";
+                // Objects
+                << std::setw(LABEL_W) << std::left
+                << "Objects:"
+                << std::setw(VALUE_W) << std::left
+                << sceneBuilder.getDynamicObjects().size()
+                << std::defaultfloat << "\n";
+
+                // opengl
+                //<< std::setw(LABEL_W) << std::left
+                //<< "Opengl:"
+                //<< std::setw(VALUE_W) << std::left;
+                //glcount::print();
+                //std::cout << std::defaultfloat << "\n";
+           
 
             if (deltaTime > 0.016f) {
                std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << "\n";

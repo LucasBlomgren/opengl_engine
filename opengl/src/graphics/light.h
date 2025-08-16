@@ -1,5 +1,7 @@
 #pragma once
 
+#include "pch.h"
+
 #include "shader.h"
 
 class Light {
@@ -24,7 +26,7 @@ public:
     const glm::vec3& getPosition() const;
 
 private:
-    unsigned int VAO, VBO, EBO;
+    GLuint VAO, VBO, EBO;
 
     void setupMesh();
 };

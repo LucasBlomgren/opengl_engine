@@ -34,9 +34,9 @@ const glm::vec3& Light::getPosition() const {
 }
 
 void Light::setupMesh() {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
+    glGenVertexArrays(1, &VAO); glcount::incVAO();
+    glGenBuffers(1, &VBO); glcount::incVBO();
+    glGenBuffers(1, &EBO); glcount::incEBO();
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);

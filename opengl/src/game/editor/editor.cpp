@@ -71,6 +71,14 @@ void Editor::update(float& deltaTime, Shader& shader) {
         sceneBuilder->toggleDayNight();
     }
 
+    if (engineState->GetPressedKey() == "F9") {
+        physicsEngine->sleepAllObjects();
+    }
+    if (engineState->GetPressedKey() == "F10") {
+        physicsEngine->awakenAllObjects();
+    }
+
+
     if (engineState->GetPressedKey() == "h") {
         physicsEngine->collisionManifold->debugWarmstarting = true;
     }

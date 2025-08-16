@@ -18,6 +18,7 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     this->dynamicObjects = gameObjects;
     dynamicBvh.build(*gameObjects); 
 
+    std::cout << terrainTris->size() << "\n";
     this->terrainTriangles = terrainTris;
     terrainBvh.build(*terrainTris); 
 }
@@ -27,6 +28,7 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
 //-----------------------------
 void PhysicsEngine::clearPhysicsData() {
     contactCache.clear();
+    contactsToSolve.clear();
 }
 
 //-----------------------------
@@ -48,6 +50,28 @@ const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() cons
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
     RaycastHit hitData = raycast(r, this->dynamicObjects, this->dynamicBvh);
     return hitData;
+}
+
+//-----------------------------
+//         Sleep All
+//-----------------------------
+void PhysicsEngine::sleepAllObjects() {
+    for (GameObject& obj : *dynamicObjects) {
+        if (!obj.isStatic) {
+            obj.setAsleep();
+        }
+    }
+}
+
+//-----------------------------
+//         Wake All
+//-----------------------------
+void PhysicsEngine::awakenAllObjects() {
+    for (GameObject& obj : *dynamicObjects) {
+        if (!obj.isStatic) {
+            obj.setAwake();
+        }
+    }
 }
 
 //-----------------------------
@@ -91,6 +115,9 @@ void PhysicsEngine::updatePositions() {
     }
 }
 
+//-----------------------------
+//       Contact Cache
+//-----------------------------
 void PhysicsEngine::updateContactCache() {
     constexpr int maxFramesWithoutCollision = 10;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
@@ -112,6 +139,9 @@ void PhysicsEngine::updateContactCache() {
     }
 }
 
+//-----------------------------
+//       Sleep Thresholds
+//-----------------------------
 void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
     if (obj.isStatic or obj.asleep) 
         return;
@@ -145,6 +175,9 @@ void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
     obj.angularVelocityThreshold = (avg * angularFactor) * 1.5f * obj.invRadius;
 }
 
+//-----------------------------
+//        Sleep Update
+//-----------------------------
 bool PhysicsEngine::updateSleep(GameObject& A, GameObject& B) {
     constexpr float velocityThreshold = 1.0f;
     constexpr float angularVelocityThreshold = 1.4f;
@@ -535,6 +568,7 @@ void PhysicsEngine::resolveCollisions() {
         }
     } 
 
+
     // ------ PGS solver ------
     int maxIterations = 8; 
 
@@ -725,8 +759,6 @@ void PhysicsEngine::resolveCollisions() {
         }
 
         if (maxDelta < 1e-4f) {
-
-            //std::cout << i << " iterations, maxDelta: " << maxDelta << std::endl;
             break;
         }
     }

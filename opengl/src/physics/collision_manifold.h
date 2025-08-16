@@ -60,6 +60,8 @@ public:
     void sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
     void meshMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
 
+    size_t generateKey(int idA, int idB);
+
     bool debugWarmstarting = false;
 
 private:
@@ -88,6 +90,5 @@ private:
     void contactPointReduction(Contact& contact);
     void computePenetrationDepth(std::vector<glm::vec3>& points, std::vector<glm::vec3>& refFace, glm::vec3& refFaceNormal, std::vector<float>& out);
     void PreComputePointData(ContactPoint& cp, Contact& contact);
-    size_t generateKey(int idA, int idB);
     void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
 };

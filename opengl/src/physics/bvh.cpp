@@ -3,6 +3,12 @@
 #include "game_object.h"
 #include "tri.h"
 
+template class BVHTree<GameObject>;
+template class BVHTree<Tri>;
+
+//------------------------------
+//        Single Query
+//------------------------------
 template<typename E>
 void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
 
@@ -19,7 +25,7 @@ void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
     constexpr int MaxDepth = 64;
     Node* stack[MaxDepth];
     int   sp = 0;
-    stack[sp++] = root;
+    stack[sp++] = &nodes[rootIdx];
 
     // 3) Traverse without any heap-allocations
     while (sp) {
@@ -28,8 +34,16 @@ void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
         if (!n->isLeaf) {
             if (!qBox.intersects(n->fatBox))
                 continue;
-            if (n->childA) stack[sp++] = n->childA;
-            if (n->childB) stack[sp++] = n->childB;
+
+
+            if (n->childAIdx != -1) {
+                Node* node = &nodes[n->childAIdx];
+                stack[sp++] = node;
+            }
+            if (n->childBIdx != -1) { 
+                Node* node = &nodes[n->childBIdx];
+                stack[sp++] = node;
+            }
         }
         else {
             if (qBox.intersects(n->tightBox)) {
@@ -40,6 +54,9 @@ void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
     }
 }
 
+//------------------------------
+//          Update 
+//------------------------------
 template<typename E>
 void BVHTree<E>::update(std::vector<E>& elements) {
     if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
@@ -55,12 +72,18 @@ void BVHTree<E>::update(std::vector<E>& elements) {
     for (auto& n : nodes) n.dirty = false;
 
     updateLeaves();
-    if (root) refitNode(root);
+    if (rootIdx != -1) refitNode(rootIdx);
 }
 
+//------------------------------
+//       Update Leaves
+//------------------------------
 template<typename E>
 void BVHTree<E>::updateLeaves() {
-    for (auto& n : nodes) {
+    for (int i = 0; i < (int)nodes.size(); ++i) 
+    {
+        Node& n = nodes[i];
+
         if (!n.isLeaf) 
             continue;
 
@@ -73,115 +96,97 @@ void BVHTree<E>::updateLeaves() {
         n.fatBox.grow(fatBoxMargin);
         this->numRefits++;
 
+        // aabbrenderer
         n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
         n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;
 
         // Markera just det lövet **och alla dess föräldrar**
-        for (Node* p = &n; p; p = p->parent)
-            p->dirty = true;
+        for (int p = i; p != -1; p = nodes[p].parentIdx)
+            nodes[p].dirty = true;
     }
 }
 
+//------------------------------
+//          Refit Node
+//------------------------------
 template<typename E>
-void BVHTree<E>::refitNode(Node* node) {
-    if (!node or !node->dirty)
+void BVHTree<E>::refitNode(int nodeIdx) {
+    Node& node = nodes[nodeIdx];
+
+    if (!node.dirty)
         return;
 
-    if (node->isLeaf) {
+    if (node.isLeaf) {
         // blad: fatBox är redan expanderad vid containment‐kontrollen
         return;
     }
 
+    Node* childA = &nodes[node.childAIdx];
+    Node* childB = &nodes[node.childBIdx];
+
     // först barnen
-    refitNode(node->childA);
-    refitNode(node->childB);
+    refitNode(node.childAIdx);
+    refitNode(node.childBIdx);
 
     // när barnen är klara, unionera dem
-    if (node->childA && node->childB) {
-        node->fatBox.wMin = glm::min(node->childA->fatBox.wMin, node->childB->fatBox.wMin);
-        node->fatBox.wMax = glm::max(node->childA->fatBox.wMax, node->childB->fatBox.wMax);
+    if (childA and childB) {
+        node.fatBox.wMin = glm::min(childA->fatBox.wMin, childB->fatBox.wMin);
+        node.fatBox.wMax = glm::max(childA->fatBox.wMax, childB->fatBox.wMax);
     }
 
-    node->fatBox.centroid = (node->fatBox.wMin + node->fatBox.wMax) * 0.5f;
-    node->fatBox.halfExtents = (node->fatBox.wMax - node->fatBox.wMin) * 0.5f;
+    // aabbrenderer
+    node.fatBox.centroid = (node.fatBox.wMin + node.fatBox.wMax) * 0.5f;
+    node.fatBox.halfExtents = (node.fatBox.wMax - node.fatBox.wMin) * 0.5f;
 
-    node->dirty = false;
+    node.dirty = false;
 }
 
+//----------------------------------
+//     Build & helper functions
+//----------------------------------
 template<typename E>
-void BVHTree<E>::makeLeaf(Node& parent) {
-    parent.isLeaf = true;
-    parent.element = prims[parent.start].element;
-    parent.tightBox = parent.element->getAABB();
-    parent.fatBox = parent.tightBox;
-    parent.fatBox.grow(fatBoxMargin);
+void BVHTree<E>::build(std::vector<E>& elements) {
+    rootIdx = 0;
+    nodes.clear();
 
-    // setup aabbRenderer wireframe
-    parent.fatBox.centroid = (parent.fatBox.wMin + parent.fatBox.wMax) * 0.5f;
-    parent.fatBox.halfExtents = (parent.fatBox.wMax - parent.fatBox.wMin) * 0.5f;
-}
+    // Fyll primitives
+    createPrimitives(elements);
 
-template<typename E>
-void BVHTree<E>::initChild(Node& parent, Node* n, bool isLeft, int start, int end, int count) {
-    n->parent = &parent;
-    if (isLeft) parent.childA = n;
-    else        parent.childB = n;
-
-    // initiera child-intervall
-    n->start = start;
-    n->count = count;
-
-    // beräkna båda childs fatBox
-    n->fatBox.wMin = prims[start].min;
-    n->fatBox.wMax = prims[start].max;
-    for (int i = start + 1; i < end; ++i) {
-        n->fatBox.growToInclude(prims[i].min);
-        n->fatBox.growToInclude(prims[i].max);
-    }
-    n->fatBox.grow(fatBoxMargin);
-
-    // setup aabbRenderer wireframe
-    n->fatBox.centroid = (n->fatBox.wMin + n->fatBox.wMax) * 0.5f;
-    n->fatBox.halfExtents = (n->fatBox.wMax - n->fatBox.wMin) * 0.5f;
-}
-
-template<typename E>
-void BVHTree<E>::split(Node& parent, int depth) {
-    int start = parent.start;
-    int count = parent.count;
-
-    // create leaf node
-    if (count <= leafThreshold) {
-        makeLeaf(parent);
+    if (prims.empty())
         return;
+
+    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
+
+    // Förallokera nod-poolen
+    nodes.reserve(prims.size() * 2);
+
+    // Skapa root-nod
+    nodes.emplace_back();
+
+    Node& root = nodes[rootIdx];
+    root.start = 0;
+    root.count = prims.size();
+
+    // Beräkna root->aabb som union av alla primitiva
+    root.fatBox.wMin = prims[0].min;
+    root.fatBox.wMax = prims[0].max;
+    for (int i = 1; i < prims.size(); i++) {
+        root.fatBox.growToInclude(prims[i].min);
+        root.fatBox.growToInclude(prims[i].max);
     }
 
-    // välj enligt största extent + median
-    int axis;
-    glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
-    axis = (extent.x > extent.y
-        ? (extent.x > extent.z ? 0 : 2)
-        : (extent.y > extent.z ? 1 : 2));
-   
-    // median‐partition av primitives
-    int mid = start + count / 2;
-    std::nth_element(
-        prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
-        [&](auto const& a, auto const& b) {
-            return a.centroid[axis] < b.centroid[axis];
-        });
+    // setup fatBoxRenderer
+    root.fatBox.centroid = (root.fatBox.wMin + root.fatBox.wMax) * 0.5f;
+    root.fatBox.halfExtents = (root.fatBox.wMax - root.fatBox.wMin) * 0.5f;
 
-    // skapa child-nodes och initiera dem
-    Node* A = &nodes.emplace_back();
-    Node* B = &nodes.emplace_back();
-    initChild(parent, A, true, start, mid, mid - start);
-    initChild(parent, B, false, mid, start + count, start + count - mid);
-
-    // rekursivt splitta vidare
-    split(*A, depth + 1);
-    split(*B, depth + 1);
+    // Splittra in i children
+    int depth = 0;
+    split(rootIdx, depth);
 }
 
+//------------------------------
+//      Create Primitives
+//------------------------------
 template<typename E>
 void BVHTree<E>::createPrimitives(std::vector<E>& elements) {
     prims.clear();
@@ -198,44 +203,94 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements) {
     }
 }
 
+//------------------------------
+//            Split
+//------------------------------
 template<typename E>
-void BVHTree<E>::build(std::vector<E>& elements) {
-    root = nullptr;
-    nodes.clear();
+void BVHTree<E>::split(int parentIdx, int depth) {
+    Node& parent = nodes[parentIdx];
+    int start = parent.start;
+    int count = parent.count;
 
-    // Fyll primitives
-    createPrimitives(elements);
-
-    if (prims.empty())
+    // create leaf node
+    if (count <= leafThreshold) {
+        makeLeaf(parentIdx);
         return;
-
-    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
-
-    // Förallokera nod-poolen
-    nodes.reserve(prims.size() * 2);
-
-    // Skapa root-nod
-    root = &nodes.emplace_back();
-    root->start = 0;
-    root->count = prims.size();
-
-    // Beräkna root->aabb som union av alla primitiva
-    root->fatBox.wMin = prims[0].min;
-    root->fatBox.wMax = prims[0].max;
-    for (int i = 1; i < prims.size(); i++) {
-        root->fatBox.growToInclude(prims[i].min);
-        root->fatBox.growToInclude(prims[i].max);
     }
-    root->fatBox.grow(fatBoxMargin);
 
-    // setup fatBoxRenderer
-    root->fatBox.centroid = (root->fatBox.wMin + root->fatBox.wMax) * 0.5f;
-    root->fatBox.halfExtents = (root->fatBox.wMax - root->fatBox.wMin) * 0.5f;
+    // välj enligt största extent + median
+    int axis;
+    glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
+    axis = (extent.x > extent.y
+        ? (extent.x > extent.z ? 0 : 2)
+        : (extent.y > extent.z ? 1 : 2));
 
-    // Splittra in i children
-    int depth = 0;
-    split(*root, depth);
+    // median‐partition av primitives
+    int mid = start + count / 2;
+    std::nth_element(
+        prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
+        [&](auto const& a, auto const& b) {
+            return a.centroid[axis] < b.centroid[axis];
+        });
+
+    // skapa child-nodes och initiera dem
+    Node* A = &nodes.emplace_back();
+    int idxA = nodes.size() - 1;
+
+    Node* B = &nodes.emplace_back();
+    int idxB = nodes.size() - 1;
+
+    initChild(parentIdx, idxA, true, start, mid, mid - start);
+    initChild(parentIdx, idxB, false, mid, start + count, start + count - mid);
+
+    // rekursivt splitta vidare
+    split(idxA, depth + 1);
+    split(idxB, depth + 1);
 }
 
-template class BVHTree<GameObject>;
-template class BVHTree<Tri>;
+//------------------------------
+//          Init Child
+//------------------------------
+template<typename E>
+void BVHTree<E>::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end, int count) {
+
+    Node& parent = nodes[parentIdx];
+    Node& child = nodes[childIdx];
+
+    child.parentIdx = parentIdx;
+    child.start = start;
+    child.count = count;
+
+    if (isLeft) parent.childAIdx = childIdx;
+    else        parent.childBIdx = childIdx;
+
+    // beräkna båda childs fatBox
+    child.fatBox.wMin = prims[start].min;
+    child.fatBox.wMax = prims[start].max;
+    for (int i = start + 1; i < end; ++i) {
+        child.fatBox.growToInclude(prims[i].min);
+        child.fatBox.growToInclude(prims[i].max);
+    }
+
+    // setup aabbRenderer wireframe
+    child.fatBox.centroid = (child.fatBox.wMin + child.fatBox.wMax) * 0.5f;
+    child.fatBox.halfExtents = (child.fatBox.wMax - child.fatBox.wMin) * 0.5f;
+}
+
+//------------------------------
+//          Make Leaf
+//------------------------------
+template<typename E>
+void BVHTree<E>::makeLeaf(int nodeIdx) {
+    Node& leaf = nodes[nodeIdx];
+
+    leaf.isLeaf = true;
+    leaf.element = prims[leaf.start].element;
+    leaf.tightBox = leaf.element->getAABB(); 
+    leaf.fatBox = leaf.tightBox;
+    leaf.fatBox.grow(fatBoxMargin);
+
+    // setup aabbRenderer wireframe
+    leaf.fatBox.centroid = (leaf.fatBox.wMin + leaf.fatBox.wMax) * 0.5f;
+    leaf.fatBox.halfExtents = (leaf.fatBox.wMax - leaf.fatBox.wMin) * 0.5f;
+}

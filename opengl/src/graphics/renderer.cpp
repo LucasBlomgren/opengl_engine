@@ -5,6 +5,9 @@
 template void Renderer::renderBVH(BVHTree<GameObject>&); 
 template void Renderer::renderBVH(BVHTree<Tri>&); 
 
+//-----------------------------
+//           Init
+//-----------------------------
 void Renderer::init(
     unsigned int width, 
     unsigned int height, 
@@ -40,6 +43,9 @@ void Renderer::setViewPort(unsigned int w, unsigned int h) {
     glViewport(0, 0, w, h);
 }
 
+//-----------------------------
+//       View Projection
+//-----------------------------
 void Renderer::setViewProjection(Camera& camera) {
     // projection matrix 
     glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
@@ -61,6 +67,9 @@ void Renderer::setViewProjection(Camera& camera) {
     skyboxShader.setMat4("view", glm::mat4(glm::mat3(view))); // remove translation from the view matrix
 }
 
+//-----------------------------
+//      Set Shadow Render
+//-----------------------------
 void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
     setViewPort(shadowManager->width, shadowManager->height);
     shadowManager->bind();
@@ -71,11 +80,17 @@ void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
     shadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
 }
 
+//-----------------------------
+//    Cleanup Shadow Render
+//-----------------------------
 void Renderer::cleanupShadowRender() {
     glCullFace(GL_BACK);
     shadowManager->unbind();
 }
 
+//-----------------------------
+//      Set Default Render
+//-----------------------------
 void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
     setViewPort(screenWidth, screenHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -90,6 +105,9 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
     glActiveTexture(GL_TEXTURE0);
 }
 
+//-----------------------------
+//        Main Update
+//-----------------------------
 void Renderer::update(
     Camera& camera,
     SceneBuilder& builder,
@@ -128,6 +146,9 @@ void Renderer::update(
 
 }
 
+//-----------------------------
+//       Render scene
+//-----------------------------
 void Renderer::renderScene(
     Shader& shader,
     Camera& camera,
@@ -139,12 +160,18 @@ void Renderer::renderScene(
     renderTerrain(shader, builder.getTerrainData(), builder.sceneDirty);
 }
 
+//-----------------------------
+//     Render game objects
+//-----------------------------
 void Renderer::renderGameObjects(Shader& shader, std::vector<GameObject>& objects, Camera& camera) {
     for (GameObject& obj : objects) {
         obj.renderMesh(shader);
     }
 }
 
+//-----------------------------
+//       Render terrain
+//-----------------------------
 void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty) {
     if (data.triangles.size() == 0) {
         return;
@@ -211,28 +238,31 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     glBindVertexArray(VAO);
 
     // --- Fyllning ---
-    //glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
 
     //// --- Wireframe ---
     // 
-    debugShader.use();
-    debugShader.setMat4("model", model);
-    debugShader.setInt("debug.objectType", 0);
-    debugShader.setBool("debug.useUniformColor", true); 
-    debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
-     
-    glDisable(GL_CULL_FACE); // ta bort cull face
-    glEnable(GL_POLYGON_OFFSET_LINE); 
-    // Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
-    glPolygonOffset(-1.0f, -1.0f); 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
-    glLineWidth(3.f); 
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr); 
-    glDisable(GL_POLYGON_OFFSET_LINE); 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glEnable(GL_CULL_FACE); // återställ cull face
+    //debugShader.use();
+    //debugShader.setMat4("model", model);
+    //debugShader.setInt("debug.objectType", 0);
+    //debugShader.setBool("debug.useUniformColor", true); 
+    //debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
+    // 
+    //glDisable(GL_CULL_FACE); // ta bort cull face
+    //glEnable(GL_POLYGON_OFFSET_LINE); 
+    //// Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
+    //glPolygonOffset(-1.0f, -1.0f); 
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
+    //glLineWidth(3.f); 
+    //glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr); 
+    //glDisable(GL_POLYGON_OFFSET_LINE); 
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    //glEnable(GL_CULL_FACE); // återställ cull face
 }
 
+//-----------------------------------
+//    Compute Light Space Matrix
+//-----------------------------------
 glm::mat4 Renderer::computeLightSpaceMatrix() {
     const DirectionalLight& light = lightManager->getDirectionalLight();
 
@@ -257,6 +287,9 @@ glm::mat4 Renderer::computeLightSpaceMatrix() {
     return lightProjection * lightView;
 }
 
+//-----------------------------------
+//    Compute Scene Bounds
+//-----------------------------------
 void Renderer::computeSceneBounds(SceneBuilder& builder) {
     sceneCorners.clear();
 
@@ -315,7 +348,9 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
     sceneCorners.emplace_back(sceneMax.x, sceneMax.y, sceneMax.z); 
 }
 
-// ----- Lights -----
+//------------------------------
+//     Upload Point Lights
+//------------------------------
 void Renderer::uploadLightsToShader() {
 
     defaultShader.use();
@@ -340,6 +375,9 @@ void Renderer::uploadLightsToShader() {
     defaultShader.setInt("numPointLights", static_cast<int>(lights.size()));
 }
 
+//---------------------------------
+//     Upload Directional Light
+//---------------------------------
 void Renderer::uploadDirectionalLight() {
     const DirectionalLight& light = lightManager->getDirectionalLight();
 
@@ -357,7 +395,9 @@ void Renderer::renderLights() const {
     }
 }
 
-// ---- Raycast hit ----
+//----------------------------
+//     Render Raycast Hit
+//----------------------------
 void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
     for (GameObject& obj : builder.getDynamicObjects()) {
         if (obj.isRaycastHit) {
@@ -378,7 +418,9 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
     }
 }
 
-// ----- Debug -----
+//----------------------------
+//     Render debug info
+//----------------------------
 void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
     debugShader.use();
     debugShader.setBool("debug.useUniformColor", true); 
@@ -451,6 +493,9 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
     render_xyzObject(debugShader, VAO_xyz);
 }
 
+//-------------------------
+//       Render BVH
+//-------------------------
 template<typename E>
 void Renderer::renderBVH(BVHTree<E>& tree) {
     if (!engineState->getShowBVH()) {
@@ -483,6 +528,9 @@ void Renderer::renderBVH(BVHTree<E>& tree) {
     }
 }
 
+//------------------------------
+//     Render Shadow Frustum
+//------------------------------
 void Renderer::renderFrustum(const glm::mat4& viewProj, Shader& debugShader)
 {
     // 1) Invertera viewProj för att gå från clip → world

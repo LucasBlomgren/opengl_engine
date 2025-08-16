@@ -275,7 +275,7 @@ void CollisionManifold::createClippingPlanes(const std::vector<glm::vec3>& face,
     // create clipping planes
     for (int i = 0; i < face.size(); i++) {
         glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
-        glm::vec3 planeNormal = (glm::normalize(glm::cross(faceNormal, edge)));
+        glm::vec3 planeNormal = glm::cross(faceNormal, edge);
 
         this->clippingPlanes[i] = Plane(planeNormal, face[i]);
     }

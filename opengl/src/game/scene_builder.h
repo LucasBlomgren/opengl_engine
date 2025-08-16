@@ -1,10 +1,11 @@
 #pragma once
 
-#include "physics.h"
 #include "game_object.h"
-#include "texture_manager.h"
-#include "light_manager.h"
 #include "collider.h"
+
+class TextureManager;
+class LightManager;
+class PhysicsEngine;
 
 class SceneBuilder {
 public:
@@ -14,7 +15,7 @@ public:
 
    void createScene(PhysicsEngine& physicsEngine, int sceneID);
    void mainScene();
-   void testTerrainScene();
+   void terrainScene();
    void testFloorScene();
    void tumblerScene();
 
@@ -61,11 +62,13 @@ public:
        float width,
        float height,
        float length,
+       glm::vec3 baseRot,
        glm::vec3 rotDir,
        float rotSpeed,
        glm::vec3 pos,
        int segments,
-       glm::vec3 color 
+       glm::vec3 color,
+       bool createsShadows
    );
 
    // halos
@@ -95,7 +98,6 @@ public:
 
    TerrainData terrainData; 
    TerrainData& getTerrainData();
-   void createTumbler();
 
    std::vector<GameObject>& getDynamicObjects();
    void toggleLightsState();

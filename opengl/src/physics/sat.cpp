@@ -24,7 +24,7 @@ void SAT::findBestTriangles(std::vector<SAT::Result>& results) {
 
     int loopRange = std::min(3, static_cast<int>(results.size()));
     for (int i = 0; i < loopRange; i++) {
-        addFurthestTriangle(results, indices); 
+        addFurthestTriangle(results, indices);
     }
 
     static std::vector<SAT::Result> temp;
@@ -322,13 +322,6 @@ bool SAT::intersectPolygons(
             }
         }
     }
-
-    //std::cout << "SAT: Found intersection with depth: " << satResult.depth
-    //    << ", normal: " << glm::to_string(satResult.normal)
-    //    << ", axis type: " << static_cast<int>(satResult.axisType)
-    //    << ", separation A: " << satResult.separationA
-    //    << ", separation B: " << satResult.separationB
-    //    << std::endl;
 
     return true;
 }

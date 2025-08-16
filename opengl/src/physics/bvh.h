@@ -17,7 +17,7 @@ class BVHTree {
     int   numIterationsSinceRebuild  = 0;
     int   rebuildThreshold           = 0;        // räknas om i build()
     int   minRebuildThreshold        = 5;        // min refits innan rebuild
-    float rebuildRatio               = 0.20f;    // % av lövkorrektioner innan rebuild
+    float rebuildRatio               = 0.40f;    // % av lövkorrektioner innan rebuild
     glm::vec3 fatBoxMargin { 0.2f };
 
     struct BVHPrimitive {
@@ -32,9 +32,11 @@ public:
         bool isLeaf = false;
         AABB  tightBox;               // endast för lövnoder
         AABB  fatBox;                 // för alla noder
-        Node* parent = nullptr;       // för att kunna gå uppåt i trädet
-        Node* childA = nullptr;
-        Node* childB = nullptr;
+
+        int parentIdx = -1;   // node index
+        int childAIdx = -1;
+        int childBIdx = -1;
+        
         int   start;
         int   count;
         bool  dirty;
@@ -47,7 +49,7 @@ public:
         Node* B;
     };
 
-    Node* root = nullptr;
+    int rootIdx = -1;
     std::vector<Node> nodes;
 
     void build(std::vector<E>& elements);
@@ -63,80 +65,92 @@ public:
 
 private:
     std::vector<BVHPrimitive> prims;
-    void initChild(Node& parent, Node* node, bool isLeft, int start, int end, int count);
+    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
     void createPrimitives(std::vector<E>& elements);
-    void makeLeaf(Node& parent);
-    void split(Node& parent, int depth);
+    void makeLeaf(int leafIdx);
+    void split(int parentIdx, int depth);
     void updateLeaves();
-    void refitNode(Node* node);
+    void refitNode(int nodeIdx);
 
     // single query
     std::vector<Node*> queryStack;
 };
 
 template<typename Ea, typename Eb>
-void treeVsTreeQuery(const BVHTree<Ea>& a, const BVHTree<Eb>& b, std::vector<std::pair<Ea*, Eb*>>& out)
+void treeVsTreeQuery(const BVHTree<Ea>& a,
+    const BVHTree<Eb>& b,
+    std::vector<std::pair<Ea*, Eb*>>& out) noexcept
 {
-    constexpr bool sameType = std::is_same_v<Ea, Eb>;
-    constexpr int  MaxStack = BVHTree<Ea>::MaxStackSize;
-    constexpr int  MaxBuf = BVHTree<Ea>::MaxCollisionBuf;
-
-    if (a.nodes.size() == 0 or b.nodes.size() == 0) {
-        return;
-    }
-
-    // --- FIXED‐SIZE traversal‐stack på stacken (ingen heap‐allokering) ---
-    std::pair<typename BVHTree<Ea>::Node*, typename BVHTree<Eb>::Node*> stack[MaxStack];
-    int sp = 0;
-    stack[sp++] = { a.root, b.root };
+    if (a.nodes.empty() || b.nodes.empty() || a.rootIdx == -1 || b.rootIdx == -1) return;
 
     out.clear();
+    // Rimlig gissning: lika många löv ungefär som noder/2
+    out.reserve((std::min)(a.nodes.size(), b.nodes.size()));
 
-    // Endast relevant när Ea==Eb
-    bool sameTree = false;
-    if constexpr (sameType) {
-        sameTree = std::addressof(a) == std::addressof(b);
-    }
+    // Samma typ? (för att undvika dubletter när man jämför samma träd)
+    constexpr bool sameType = std::is_same_v<Ea, Eb>;
+    const bool sameTree = sameType && (static_cast<const void*>(&a) == static_cast<const void*>(&b));
+    const bool needOrderCheck = sameType && sameTree;
 
-    while (sp > 0) {
-        auto [nA, nB] = stack[--sp];
+    struct Entry { int ai; int bi; };
+    constexpr int MaxStack =
+        (BVHTree<Ea>::MaxStackSize > BVHTree<Eb>::MaxStackSize)
+        ? BVHTree<Ea>::MaxStackSize : BVHTree<Eb>::MaxStackSize;
 
-        // Prune
-        if (!nA->fatBox.intersects(nB->fatBox))
-            continue;
+    Entry stack[MaxStack];
+    int sp = 0;
+    stack[sp++] = { a.rootIdx, b.rootIdx };
 
-        // Leaf–leaf
-        if (nA->isLeaf && nB->isLeaf) {
-            if (!nA->tightBox.intersects(nB->tightBox))
-                continue;
+    auto sah2 = [](const AABB& box) {
+        // billig SAH-proxy: 2*(xy + yz + zx), konstantfaktorn spelar ingen roll
+        const glm::vec3 e = box.wMax - box.wMin;
+        const float xy = e.x * e.y, yz = e.y * e.z, zx = e.z * e.x;
+        return xy + yz + zx;
+        };
 
-            if constexpr (sameType) {
-                if (!sameTree || nA->element < nB->element)
-                    out.emplace_back(nA->element, nB->element);
-            }
-            else {
-                out.emplace_back(nA->element, nB->element);
+    while (sp) {
+        const auto [ai, bi] = stack[--sp];
+        const auto& nA = a.nodes[ai];
+        const auto& nB = b.nodes[bi];
+
+        // prune på fat
+        if (!nA.fatBox.intersects(nB.fatBox)) continue;
+
+        // leaf–leaf
+        if (nA.isLeaf & nB.isLeaf) { // bitvis & undviker kortslutningsbranch
+            if (nA.tightBox.intersects(nB.tightBox)) {
+                if constexpr (sameType) {
+                    if (!needOrderCheck || ai < bi) {
+                        out.emplace_back(nA.element, nB.element);
+                    }
+                }
+                else {
+                    out.emplace_back(nA.element, nB.element);
+                }
             }
             continue;
         }
 
-        // Expand children, precis som förut
-        if (nA->isLeaf) {
-            if (nB->childA) stack[sp++] = { nA, nB->childA };
-            if (nB->childB) stack[sp++] = { nA, nB->childB };
-        }
-        else if (nB->isLeaf) {
-            if (nA->childA) stack[sp++] = { nA->childA, nB };
-            if (nA->childB) stack[sp++] = { nA->childB, nB };
+        // expandera den sida som är "större" (billig SAH-proxy) – push:a bara 2 par
+        const bool expandA = !nA.isLeaf && (nB.isLeaf || sah2(nA.fatBox) >= sah2(nB.fatBox));
+        if (expandA) {
+            const int a0 = nA.childAIdx, a1 = nA.childBIdx;
+            // förpush-prune på barnens fatBox
+            if (a0 != -1 && a.nodes[a0].fatBox.intersects(nB.fatBox)) {
+                if (sp < MaxStack) stack[sp++] = { a0, bi };
+            }
+            if (a1 != -1 && a.nodes[a1].fatBox.intersects(nB.fatBox)) {
+                if (sp < MaxStack) stack[sp++] = { a1, bi };
+            }
         }
         else {
-            if (nA->childA && nB->childA) stack[sp++] = { nA->childA, nB->childA };
-            if (nA->childA && nB->childB) stack[sp++] = { nA->childA, nB->childB };
-            if (nA->childB && nB->childA) stack[sp++] = { nA->childB, nB->childA };
-            if (nA->childB && nB->childB) stack[sp++] = { nA->childB, nB->childB };
+            const int b0 = nB.childAIdx, b1 = nB.childBIdx;
+            if (b0 != -1 && b.nodes[b0].fatBox.intersects(nA.fatBox)) {
+                if (sp < MaxStack) stack[sp++] = { ai, b0 };
+            }
+            if (b1 != -1 && b.nodes[b1].fatBox.intersects(nA.fatBox)) {
+                if (sp < MaxStack) stack[sp++] = { ai, b1 };
+            }
         }
     }
 }
-
-extern template class BVHTree<GameObject>; 
-extern template class BVHTree<Tri>; 

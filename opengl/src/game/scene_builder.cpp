@@ -4,6 +4,10 @@
 #include "geometry/vertex.h"
 #include "geometry/geometry_loader.h"
 
+#include "texture_manager.h"
+#include "light_manager.h"
+#include "physics.h"
+
 std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
     return dynamicObjects;
 }
@@ -44,6 +48,9 @@ void SceneBuilder::toggleDayNight() {
     setLights();
 }
 
+//----------------------------------
+//         Set Lights
+//----------------------------------
 void SceneBuilder::setLights() {
     lightManager->clearLights();
     lightManager->clearDirectionalLight();
@@ -59,13 +66,13 @@ void SceneBuilder::setLights() {
     }
     else if (lightsState == 1) {
         // red light
-        Light light(glm::vec3(35, 16, 32), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 6.0f);
+        Light light(glm::vec3(125, 15, 300), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 35.0f);
         lightManager->addLight(light);
         // green
-        Light light2(glm::vec3(15, 22, 20), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 7.5f);
+        Light light2(glm::vec3(125, 15, 150), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 35.0f);
         lightManager->addLight(light2);
         // blue light
-        Light light3(glm::vec3(105, 22, 100), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 10.0f);
+        Light light3(glm::vec3(125, 15, 0), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 35.0f);
         lightManager->addLight(light3);
     }
     else if (lightsState == 2) {
@@ -73,14 +80,17 @@ void SceneBuilder::setLights() {
     }
 }
 
+//----------------------------------
+//         Scene Creation
+//----------------------------------
 void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 {
     sceneDirty = true;
+    physicsEngine.clearPhysicsData();
 
     objectId = 0;
     dynamicObjects.clear();
-    dynamicObjects.shrink_to_fit();
-    dynamicObjects.reserve(10000);
+    dynamicObjects.reserve(20000);
 
     terrainData.triangles.clear(); 
     terrainData.triangles.reserve(20000);
@@ -89,7 +99,6 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
     terrainData.indices.clear();
     terrainData.indices.reserve(20000); 
 
-    physicsEngine.clearPhysicsData();
     setLights();
 
     allHalos.clear();
@@ -98,7 +107,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
         mainScene(); 
     }
     else if (sceneID == 1) {
-        testTerrainScene(); 
+        terrainScene(); 
     }
     else if (sceneID == 2) {
         testFloorScene(); 
@@ -107,10 +116,12 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
         tumblerScene(); 
     }
 
-
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
 }
 
+//----------------------------------
+//          Game Object
+//----------------------------------
 GameObject& SceneBuilder::createObject(
     const std::string& textureName,
     const ColliderType colliderType,
@@ -148,6 +159,9 @@ GameObject& SceneBuilder::createObject(
     return dynamicObjects.back();
 }
 
+//----------------------------------
+//           Heightmap
+//----------------------------------
 void SceneBuilder::generateFlatTerrain(
     glm::vec3 offset,
     int   gridSizeX,
@@ -296,6 +310,9 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
     }
 }
 
+//----------------------------------
+//         Object rain
+//----------------------------------
 void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
     constexpr float interval = 1.0f / 1000.0f;
     if (current_time - lastTime < interval)
@@ -303,40 +320,46 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
 
     lastTime = current_time;
 
-    // position
-    constexpr glm::vec3 spawnPoint = glm::vec3(125, 155, 125);
-    float varianceRange = 100.0f;
-    float xVariance = randomRange(-varianceRange, varianceRange);
-    float yVariance = randomRange(-25, 25);
-    float zVariance = randomRange(-varianceRange, varianceRange);
-    glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-    glm::vec3 spawnPos = spawnPoint + glm::vec3(xVariance, yVariance, zVariance);
+    for (int i = 0; i < 10; i++) 
+    {
+        // position
+        constexpr glm::vec3 spawnPoint = glm::vec3(125, 125, 125);
+        float varianceRange = 200.0f;
+        float xVariance = randomRange(-varianceRange, varianceRange);
+        float yVariance = randomRange(-25, 25);
+        float zVariance = randomRange(-varianceRange, varianceRange);
+        glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+        glm::vec3 spawnPos = spawnPoint + glm::vec3(xVariance, yVariance, zVariance);
 
-    // orientation
-    float randomAng = randomRange(0, 360);
-    glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
-    glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
+        // orientation
+        float randomAng = randomRange(0, 360);
+        glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
+        glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
 
-    // blocks
-    if (mode == 0) {
-        xVariance = randomRange(0.2, 4);
-        yVariance = randomRange(0.2, 4);
-        zVariance = randomRange(0.2, 4);
-        glm::vec3 size{ xVariance, yVariance, zVariance };
-        float mass = xVariance * yVariance * zVariance;
+        // blocks
+        if (mode == 0) {
+            xVariance = randomRange(0.2, 4);
+            yVariance = randomRange(0.2, 4);
+            zVariance = randomRange(0.2, 4);
+            glm::vec3 size{ xVariance, yVariance, zVariance };
+            float mass = xVariance * yVariance * zVariance;
 
-        createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
-    }
-    // spheres
-    else if (mode == 1) {
-        float variance = randomRange(0.2, 2); 
-        glm::vec3 size{ variance }; 
-        float mass = (variance * 3.0f) / 2.0f;
+            createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+        }
+        // spheres
+        else if (mode == 1) {
+            float variance = randomRange(0.2, 2);
+            glm::vec3 size{ variance };
+            float mass = (variance * 3.0f) / 2.0f;
 
-        createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+        }
     }
 }
 
+//----------------------------------
+//         Block Pyramid
+//----------------------------------
 void SceneBuilder::createBlockPyramid(
     const std::string& textureName,
     glm::vec3 color,
@@ -367,13 +390,16 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1, asleep, color);
+                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
             }
         }
         pWidthCounter -= 1;
     }
 }
 
+//----------------------------------
+//         Sphere Pyramid
+//----------------------------------
 void SceneBuilder::createSpherePyramid(
     const std::string& textureName,
     glm::vec3 color,
@@ -413,19 +439,24 @@ void SceneBuilder::createSpherePyramid(
     }
 }
 
+//----------------------------------
+//              Halo
+//----------------------------------
 void SceneBuilder::createHalo(
     float width,
     float height,
     float length,
+    glm::vec3 baseRotation,
     glm::vec3 rotDir,
     float rotSpeed,
     glm::vec3 pos,
     int segments,
-    glm::vec3 color
+    glm::vec3 color,
+    bool createsShadows
 ) 
 {
     float baseRotAng = 90.0f;
-    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), glm::vec3(0, 0, 1));
+    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);
     float halfDepth = length * 0.5f;
     glm::vec3 desiredCenter = glm::vec3(125, 0, 125);
     glm::vec3 lastPos = glm::vec3(500, 500, 500);
@@ -446,8 +477,9 @@ void SceneBuilder::createHalo(
         glm::vec3 newPos = baseRot * newPosLocal;
         glm::quat newOrient = baseRot * newOrientLocal;
 
-        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 0, 0, color);
-        dynamicObjects.back().isInsideShadowFrustum = false;
+        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color);
+        GameObject& obj = dynamicObjects.back();
+        obj.isInsideShadowFrustum = createsShadows;
 
         lastAngle = newAngle;
         lastOrient = newOrientLocal;
@@ -472,43 +504,3 @@ void SceneBuilder::createHalo(
 
     allHalos.push_back(halo);
 }
-
-void SceneBuilder::createTumbler() {
-    std::vector<Tri>& triangles = terrainData.triangles;
-    std::vector<Vertex> vertices = icoSphereVertices;
-    std::vector<uint32_t> indices = icoSphereIndices;
-
-    // reverse all normals to point inwards
-    for (auto& vertex : vertices) {  
-        vertex.normal = -vertex.normal;  
-    } 
-
-    float scale = 50.0f;
-    for (auto& v : vertices) {
-        v.position *= scale;        
-    } 
-
-    // Tri colliders
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        uint32_t i0 = indices[i + 0];
-        uint32_t i1 = indices[i + 1];
-        uint32_t i2 = indices[i + 2];
-
-        glm::vec3 v0 = vertices[i0].position;
-        glm::vec3 v1 = vertices[i1].position;
-        glm::vec3 v2 = vertices[i2].position;
-
-        triangles.emplace_back(objectId++, v0, v1, v2);
-    }
-
-    terrainData.vertices.reserve(vertices.size()); 
-    for (const auto& vertex : vertices) { 
-        terrainData.vertices.emplace_back(vertex.position, vertex.normal, vertex.texCoords); 
-    }
-
-    terrainData.indices.reserve(indices.size()); 
-    for (const auto& index : indices) { 
-        terrainData.indices.push_back(index); 
-    }
-}
-

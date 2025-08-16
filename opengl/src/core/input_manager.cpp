@@ -142,6 +142,8 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
         camera->ProcessKeyboard(DOWN, deltaTime);
 
+    //
+
     // Hold shift to move faster
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) 
         camera->movementSpeed = camera->fastSpeed;

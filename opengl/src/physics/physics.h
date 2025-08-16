@@ -17,6 +17,8 @@ public:
     void setupScene(std::vector<GameObject>* gameObjectList, std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
     void step(float deltaTime, std::mt19937 rng);
+    void sleepAllObjects();
+    void awakenAllObjects();
     RaycastHit performRaycast(Ray& ray);
 
     //------------------------

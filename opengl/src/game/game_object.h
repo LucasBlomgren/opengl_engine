@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "pch.h"
+
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include "shader.h"
@@ -51,7 +53,9 @@ public:
     std::vector<Vertex> vertices;
     std::vector<glm::vec3> verticesPositions;
     std::vector<unsigned int> indices;
-    unsigned int VAO;
+    GLuint VAO;
+    GLuint VBO;
+    GLuint EBO;
 
     bool isInsideShadowFrustum = true;
 
@@ -76,8 +80,8 @@ public:
     glm::vec3 angularVelocity{ 0.0f };
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
-    float linearVelocityLen;
-    float angularVelocityLen;
+    float linearVelocityLen = 0.0f;
+    float angularVelocityLen = 0.0f;
 
     float mass;
     float invMass;
@@ -230,6 +234,12 @@ public:
         }
 
         inverseInertiaWorld = inverseInertia; 
+    }
+
+    ~GameObject() {
+        if (VAO) glDeleteVertexArrays(1, &VAO); glcount::decVAO();
+        if (VBO) glDeleteBuffers(1, &VBO); glcount::decVBO();
+        if (EBO) glDeleteBuffers(1, &EBO); glcount::decEBO();
     }
 
     void setPhysicsVariables();

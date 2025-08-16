@@ -36,8 +36,6 @@
     <ClCompile Include="src\graphics\skybox_manager.cpp" />
     <ClCompile Include="src\geometry\sky_box_data.cpp" />
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\physics\bvh_game_object.cpp" />
-    <ClCompile Include="src\physics\bvh_tri.cpp" />
     <ClCompile Include="src\core\mesh_loader.cpp" />
     <ClCompile Include="src\geometry\geometry_loader.cpp" />
   </ItemGroup>
