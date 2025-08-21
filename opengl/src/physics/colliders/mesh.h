@@ -6,11 +6,12 @@
 class Mesh {
 public:
     std::vector<Tri> tris;
+    std::vector<int> indexes; // optional, for indexed meshes
     BVHTree<Tri> bvh;
 
     Mesh(const std::vector<Tri>& t)
         : tris(t)
     {
-        bvh.build(tris);
+        bvh.build(tris, indexes);
     }
 };

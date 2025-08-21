@@ -6,12 +6,14 @@
 class Tri {
 public:
     int id;
+    int bvhLeafIdx;
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> edgeDirs;
     std::vector<glm::vec3> edgePoints;
     std::vector<glm::vec3> axes; // For SAT
     glm::vec3 normal;
     glm::vec3 centroid;
+
 
     // constructor
     Tri(const int id_, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)

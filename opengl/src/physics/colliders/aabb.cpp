@@ -31,8 +31,8 @@ bool AABB::contains(const AABB& other) const {
         (wMin.x <= other.wMin.x) and (wMin.y <= other.wMin.y) and (wMin.z <= other.wMin.z) and
         (wMax.x >= other.wMax.x) and (wMax.y >= other.wMax.y) and (wMax.z >= other.wMax.z);
 }
-float AABB::surfaceArea() const {
-    return 2.0f * (halfExtents.x * halfExtents.y + halfExtents.y * halfExtents.z + halfExtents.z * halfExtents.x);
+void AABB::setSurfaceArea() {
+    surfaceArea = 2.0f * (halfExtents.x * halfExtents.y + halfExtents.y * halfExtents.z + halfExtents.z * halfExtents.x);
 }
 void AABB::growToInclude(const glm::vec3& p) {
     wMin = glm::min(wMin, p);
@@ -41,6 +41,13 @@ void AABB::growToInclude(const glm::vec3& p) {
 void AABB::grow(glm::vec3 m) {
     wMin -= m;
     wMax += m;
+}
+float AABB::mergeAABBsAndReturnSurfaceArea(const AABB& A, const AABB& B) {
+    glm::vec3 wMin = glm::min(A.wMin, B.wMin);
+    glm::vec3 wMax = glm::max(A.wMax, B.wMax);
+    glm::vec3 halfExtents = (wMax - wMin) * 0.5f;
+
+    return (2.0f * (halfExtents.x * halfExtents.y + halfExtents.y * halfExtents.z + halfExtents.z * halfExtents.x));
 }
 
 // ----- editor funktioner -----

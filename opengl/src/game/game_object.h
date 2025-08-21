@@ -114,6 +114,11 @@ public:
     ColliderType colliderType;
     OOBBRenderer oobbRenderer;
 
+    int bvhLeafIdx       = -1;
+    int dynamicObjectIdx = -1;
+    int awakeListIdx     = -1;
+    int asleepListIdx    = -1;
+
     // editor variables
     bool selectedByEditor = false;
     bool isRaycastHit = false;

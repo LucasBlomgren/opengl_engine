@@ -16,7 +16,8 @@ SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
 }
 
-void SceneBuilder::setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng) {
+void SceneBuilder::setPointers(PhysicsEngine* pm, TextureManager* tm, LightManager* lm, std::mt19937& rng) {
+    this->physicsEngine = pm;
     this->textureManager = tm;
     this->lightManager = lm;
     this->rng = &rng;
@@ -103,13 +104,13 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 
     allHalos.clear();
 
-    if (sceneID == 0) {
+    if (sceneID == 2) {
         mainScene(); 
     }
     else if (sceneID == 1) {
         terrainScene(); 
     }
-    else if (sceneID == 2) {
+    else if (sceneID == 0) {
         testFloorScene(); 
     }
     else if (sceneID == 3) {
@@ -154,6 +155,8 @@ GameObject& SceneBuilder::createObject(
     }
 
     dynamicObjects.emplace_back(objectId, vertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
+    physicsEngine->queueAdd(&dynamicObjects.back());
+    dynamicObjects.back().dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1; 
 
     objectId++;
     return dynamicObjects.back();

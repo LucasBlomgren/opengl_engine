@@ -22,7 +22,7 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     glfwSetWindowPos(window, 0, 0); // Placera längst upp till vänster 
 
     glfwMakeContextCurrent(window);
-    //glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     // Load GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -37,6 +37,11 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     glCullFace(GL_BACK);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    auto* m = glfwGetPrimaryMonitor();
+    auto* vm = glfwGetVideoMode(m);
+    std::cout << "Desktop mode: " << vm->width << "x" << vm->height
+        << " @" << vm->refreshRate << " Hz\n";
 
     return window;
 }

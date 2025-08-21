@@ -17,14 +17,20 @@ public:
     void setupScene(std::vector<GameObject>* gameObjectList, std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
     void step(float deltaTime, std::mt19937 rng);
+
     void sleepAllObjects();
     void awakenAllObjects();
+
+    void queueAdd(GameObject* obj);
+    void queueRemove(GameObject* obj);
+
     RaycastHit performRaycast(Ray& ray);
 
     //------------------------
     //        Getters
     //------------------------
-    BVHTree<GameObject>& getDynamicBvh();
+    BVHTree<GameObject>& getDynamicAwakeBvh();
+    BVHTree<GameObject>& getDynamicAsleepBvh();
     BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
@@ -38,16 +44,30 @@ private:
     EngineState* engineState = nullptr;
 
     //------------------------
+    //   Add/Remove commands
+    //------------------------
+    struct PhysCmd { 
+        enum Type { Add, Remove } 
+        type; GameObject* obj; 
+    };
+    std::vector<PhysCmd> pending;
+    void insertPendingObjects();
+
+    //------------------------
     //     Game objects
     //------------------------
     std::vector<GameObject>* dynamicObjects;
     std::vector<Tri>* terrainTriangles;
 
+    std::vector<int> awake_DynamicObjects;   // indices in dynamicObjects
+    std::vector<int> asleep_DynamicObjects;
+
     //------------------------
     //      BVH Trees
     //------------------------
-    BVHTree<GameObject> dynamicBvh;
-    //BVHTree<GameObject> staticBvh;
+    BVHTree<GameObject> dynamicAwakeBvh;
+    BVHTree<GameObject> dynamicAsleepBvh;
+    BVHTree<GameObject> staticBvh;
     BVHTree<Tri> terrainBvh;
 
     //------------------------

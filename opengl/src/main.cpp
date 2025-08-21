@@ -117,7 +117,7 @@ int main()
    //loadIcoSphereData();
 
    // setup scene 
-   sceneBuilder.setPointers(&textureManager, &lightManager, rng);
+   sceneBuilder.setPointers(&physicsEngine, &textureManager, &lightManager, rng);
    sceneBuilder.createScene(physicsEngine, 0);
 
    // setup physics
@@ -129,17 +129,16 @@ int main()
    // main loop
    while (true) {
       float cpuClockStart = static_cast<float>(glfwGetTime());
-
-      glfwPollEvents();
-      if (glfwWindowShouldClose(window)) {
-          break;
-      }
-
       // update time
       auto current_time = std::chrono::high_resolution_clock::now();
       float currentFrame = static_cast<float>(glfwGetTime());
       deltaTime = currentFrame - lastFrame;
       lastFrame = currentFrame;
+
+      glfwPollEvents();
+      if (glfwWindowShouldClose(window)) {
+          break;
+      }
 
       // continous input 
       inputManager.processInput(window, deltaTime);
@@ -161,7 +160,6 @@ int main()
          int steps = 0;
          while (accumulator >= fixedTimeStep && steps < kMaxStepsPerFrame) 
          {
-            physicsEngine.getDynamicBvh().update(sceneBuilder.getDynamicObjects());
             for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
              {
                  // per-frame rotation (du har redan denna)
@@ -286,7 +284,7 @@ int main()
                 << std::setw(LABEL_W) << std::left
                 << "BVH:"
                 << std::setw(VALUE_W) << std::left
-                << physicsEngine.getDynamicBvh().numRebuilds << "\n"
+                << physicsEngine.getDynamicAwakeBvh().numRebuilds << "\n"
 
                 // Objects
                 << std::setw(LABEL_W) << std::left
@@ -308,7 +306,7 @@ int main()
             }
             std::cout << "-----------------------" << "\n";
             frames = 0;
-            physicsEngine.getDynamicBvh().numRebuilds = 0;
+            physicsEngine.getDynamicAwakeBvh().numRebuilds = 0;
 
             std::cout << std::setprecision(99);
          }

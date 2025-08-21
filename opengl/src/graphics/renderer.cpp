@@ -139,7 +139,8 @@ void Renderer::update(
     glDepthFunc(GL_LESS); 
 
     // debug
-    renderBVH(physics.getDynamicBvh());
+    renderBVH(physics.getDynamicAwakeBvh());
+    //renderBVH(physics.getDynamicAsleepBvh());
     //renderBVH(physics.getTerrainBvh());
     renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
     //renderFrustum(lightSpaceMatrix, debugShader);
@@ -512,6 +513,8 @@ void Renderer::renderBVH(BVHTree<E>& tree) {
     AABB toDraw;
 
     for (auto& node : tree.nodes) {
+        if (!node.alive) continue;
+
         if (node.isLeaf) {
             toDraw = node.tightBox;
             toDraw.centroid = (toDraw.wMin + toDraw.wMax) * 0.5f;

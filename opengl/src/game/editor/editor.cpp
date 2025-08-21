@@ -36,6 +36,15 @@ void Editor::update(float& deltaTime, Shader& shader) {
         this->objectRainSpheres = !this->objectRainSpheres;
     }
 
+    if (engineState->GetPressedKey() == "j") {
+        GameObject* obj = &sceneBuilder->getDynamicObjects()[1];
+        physicsEngine->queueAdd(obj);
+    }
+    if (engineState->GetPressedKey() == "k") {
+        GameObject* obj = &sceneBuilder->getDynamicObjects()[1];
+        physicsEngine->queueRemove(obj);
+    }
+
     if (engineState->GetPressedKey() == "M1_PRESS") 
         placeObject();
     if (engineState->GetPressedKey() == "M2_RELEASE")
@@ -76,11 +85,6 @@ void Editor::update(float& deltaTime, Shader& shader) {
     }
     if (engineState->GetPressedKey() == "F10") {
         physicsEngine->awakenAllObjects();
-    }
-
-
-    if (engineState->GetPressedKey() == "h") {
-        physicsEngine->collisionManifold->debugWarmstarting = true;
     }
 
     engineState->clearPressedKey();
@@ -130,12 +134,12 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree<GameObject>& dynamicBvh = physicsEngine->getDynamicBvh();
+    BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAwakeBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
         std::vector<GameObject*> collisions;
-        dynamicBvh.singleQuery(aabb, collisions);
+        dynamicAwakeBvh.singleQuery(aabb, collisions);
 
         if (collisions.size() == 0) {
             break;
@@ -186,6 +190,9 @@ void Editor::dropObject() {
         selectedObject->sleepCounter = 0.0f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
+
+        //physicsEngine->queueRemove(selectedObject);
+        //physicsEngine->queueAdd(selectedObject);
         return;
     }
 }
@@ -219,6 +226,9 @@ void Editor::selectObject() {
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+
+/*    physicsEngine->queueRemove(selectedObject);
+    physicsEngine->queueAdd(selectedObject);  */  
 }
 
 void Editor::updateSelectedObject(float fixedTimeStep) {

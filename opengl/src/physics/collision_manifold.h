@@ -62,8 +62,6 @@ public:
 
     size_t generateKey(int idA, int idB);
 
-    bool debugWarmstarting = false;
-
 private:
     std::vector<glm::vec3> selectedFace;
     void selectCollisionFace(GameObject& obj, const glm::vec3& normal);

@@ -28,20 +28,24 @@ class BVHTree {
     };
 
 public:
+    // public för att rendera AABBs
     struct Node {
+        bool alive  = true;
         bool isLeaf = false;
-        AABB  tightBox;               // endast för lövnoder
-        AABB  fatBox;                 // för alla noder
 
-        int parentIdx = -1;   // node index
+        int selfIdx   = -1;         // node index
+        int parentIdx = -1;
         int childAIdx = -1;
         int childBIdx = -1;
-        
+
         int   start;
         int   count;
         bool  dirty;
-        E* element;
+
+        AABB  tightBox;             // endast för lövnoder
+        AABB  fatBox;               // för alla noder
         AABBRenderer aabbRenderer;
+        E* element = nullptr;
     };
 
     struct NodePair {
@@ -52,21 +56,28 @@ public:
     int rootIdx = -1;
     std::vector<Node> nodes;
 
-    void build(std::vector<E>& elements);
-    void update(std::vector<E>& elements);
+    void build(std::vector<E>& elements, std::vector<int>& indexes);
+    void update(std::vector<E>& elements, std::vector<int>& indexes);
     void singleQuery(const AABB& qBox, std::vector<E*>& out); 
+
+    void insertLeaf(E* e);
+    typename BVHTree<E>::Node* findBestSibling(AABB& box);
+    typename BVHTree<E>::Node* createLeaf(E* e);
+
+    void removeLeaf(int leafIdx);
+    void refitParents(int leafIdx);
 
     // debug
     int numRebuilds = 0;
 
     // tree vs tree query
-    static constexpr int MaxStackSize = 64;
+    static constexpr int MaxStackSize = 256;
     static constexpr int MaxCollisionBuf = 25000;
 
 private:
     std::vector<BVHPrimitive> prims;
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
-    void createPrimitives(std::vector<E>& elements);
+    void createPrimitives(std::vector<E>& elements, std::vector<int>& indexes);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();

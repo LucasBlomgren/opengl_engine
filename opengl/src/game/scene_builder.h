@@ -10,7 +10,7 @@ class PhysicsEngine;
 class SceneBuilder {
 public:
    bool sceneDirty = true; 
-   void setPointers(TextureManager* tm, LightManager* lm, std::mt19937& rng);
+   void setPointers(PhysicsEngine* pm, TextureManager* tm, LightManager* lm, std::mt19937& rng);
    void objectRain(float& current_time, std::mt19937& rng, int mode);
 
    void createScene(PhysicsEngine& physicsEngine, int sceneID);
@@ -31,6 +31,7 @@ public:
       bool asleep = 0,
       const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
    );
+   int objectsAddedThisFrame = 0;
 
    void createBlockPyramid(
        const std::string& textureName,
@@ -107,8 +108,9 @@ public:
    float randomRange(float start, float end);
 
 private:
+   PhysicsEngine* physicsEngine   = nullptr;
    TextureManager* textureManager = nullptr;
-   LightManager* lightManager = nullptr;
+   LightManager* lightManager     = nullptr;
 
    int objectId;
    std::vector<GameObject> dynamicObjects;
