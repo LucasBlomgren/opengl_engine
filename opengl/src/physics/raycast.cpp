@@ -2,7 +2,7 @@
 #include "raycast.h"
 #include "aabb.h"
 
-RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<GameObject>& dynamicBvh)
+RaycastHit raycast(Ray& ray, BVHTree<GameObject>& bvh)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
@@ -12,7 +12,7 @@ RaycastHit raycast(Ray& ray, std::vector<GameObject>* gameObjectList, BVHTree<Ga
     float bestT = std::numeric_limits<float>::max();
 
     std::vector<GameObject*> collisions;
-    dynamicBvh.singleQuery(rayAABB, collisions);
+    bvh.singleQuery(rayAABB, collisions);
 
     for (int i = 0; i < collisions.size(); i++) {
         GameObject& obj = *collisions[i];

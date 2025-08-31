@@ -38,6 +38,8 @@ struct Contact {
 
     GameObject* objA_ptr;
     GameObject* objB_ptr;
+    bool freezeA = false;
+    bool freezeB = false;
 
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;

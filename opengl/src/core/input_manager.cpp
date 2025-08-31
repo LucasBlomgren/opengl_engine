@@ -99,8 +99,6 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->toggleShowColliders();     // Toggle the visibility of oriented bounding boxes in the scene
         if (key == GLFW_KEY_4)
             engineState->toggleShowContactPoints(); // Toggle the visibility of contact points in the scene
-        if (key == GLFW_KEY_5)
-            engineState->toggleShowBVH();           // Toggle the visibility of the BVH tree in the scene
         if (key == GLFW_KEY_0)
             engineState->toggleShowFPS();           // Toggle std::cout of metrics in the console
 
@@ -108,6 +106,15 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->togglePause();             // Toggle pause/resume of the physics simulation
         if (key == GLFW_KEY_F)
             engineState->setAdvanceStep(true);      // Advance the physics simulation by one step
+
+        if (key == GLFW_KEY_F5)
+            engineState->toggleShowBVH_awake();           // Toggle the visibility of the BVH tree in the scene
+        if (key == GLFW_KEY_F6)
+            engineState->toggleShowBVH_asleep();
+        if (key == GLFW_KEY_F7)
+            engineState->toggleShowBVH_static();
+        if (key == GLFW_KEY_F8)
+            engineState->toggleShowBVH_terrain();
     }
 }
 

@@ -37,7 +37,7 @@ public:
     bool contains(const AABB& other) const;
     void grow(glm::vec3 m);
     void growToInclude(const glm::vec3& p);
-    float mergeAABBsAndReturnSurfaceArea(const AABB& a, const AABB& b);
+    float getMergedSurfaceArea(const AABB& a, const AABB& b);
     void setSurfaceArea();
 
     // ----- editor funktioner -----

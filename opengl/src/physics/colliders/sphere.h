@@ -8,6 +8,11 @@ public:
     glm::vec3 wCenter;
     float     radius;
 
+    Sphere(const glm::mat4& modelMatrix, const float radi) {
+        wCenter = glm::vec3(modelMatrix * glm::vec4(lCenter, 1.0f));
+        radius = radi;
+    }
+
     void update(const glm::mat4& modelMatrix) {
         wCenter = glm::vec3(modelMatrix * glm::vec4(lCenter, 1.0f));
     }

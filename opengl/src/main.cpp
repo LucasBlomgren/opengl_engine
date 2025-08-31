@@ -34,7 +34,6 @@ const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 const unsigned int SHADOW_WIDTH = 16384;
 const unsigned int SHADOW_HEIGHT = 16384;
-const bool debug = 0;
 
 // timing
 float deltaTime = 0.0f;	
@@ -42,280 +41,340 @@ float lastFrame = 0.0f;
 
 int main()
 {
-   GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+    // initialize and configure OpenGL
+    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
-   // systems
-   EngineState engineState;
-   PhysicsEngine physicsEngine;
-   Renderer renderer;
+    // GPU logging
+    static constexpr int NQ = 4;          // ringbuffer (4–8 är lagom)
+    GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
+    int writeIdx = 0;                     // var vi börjar nya queries
+    int readIdx = (writeIdx + 1) % NQ;    // var vi försöker läsa från
+    glGenQueries(NQ, qShadow);
+    glGenQueries(NQ, qMain);
+    glGenQueries(NQ, qDebug);
+    double gpuShadowMs = 0.0, gpuMainMs = 0.0, gpuDebugMs = 0.0;
 
-   // managers
-   InputManager inputManager;
-   TextureManager textureManager;
-   SkyboxManager skyboxManager; 
-   SceneBuilder sceneBuilder;
-   LightManager lightManager;
-   ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
+    // systems
+    EngineState engineState;
+    PhysicsEngine physicsEngine;
+    Renderer renderer;
 
-   // view
-   Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
+    // managers
+    InputManager inputManager;
+    TextureManager textureManager;
+    SkyboxManager skyboxManager; 
+    SceneBuilder sceneBuilder;
+    LightManager lightManager;
+    ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
-   // editor
-   Editor editor;
+    // view
+    Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
 
-   // setup rng
-   std::mt19937 rng(std::random_device{}());
+    // editor
+    Editor editor;
 
-   // ---------- Clocks ----------
-   auto start_time = std::chrono::high_resolution_clock::now();
-   int frames = 0;
-   float last_second = 0.0f;
-   // fixed timestep
-   const float fixedTimeStep = 1.0f / 120.0f;
-   float accumulator = 0.0f;
-   float lastFrame = static_cast<float>(glfwGetTime());
+    // setup rng
+    std::mt19937 rng(std::random_device{}());
 
-   // setup input
-   inputManager.setPointers(&engineState, &camera);
-   inputManager.init(window);
+    // ---------- Clocks ----------
+    auto start_time = std::chrono::high_resolution_clock::now();
+    int frames = 0;
+    float last_second = 0.0f;
+    // fixed timestep
+    const float fixedTimeStep = 1.0f / 120.0f;
+    float accumulator = 0.0f;
+    float lastFrame = static_cast<float>(glfwGetTime());
 
-   // setup rendering
-   renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager, skyboxManager);
+    // setup input
+    inputManager.setPointers(&engineState, &camera);
+    inputManager.init(window);
 
-   // load textures
-   textureManager.loadTexture("crate", "src/assets/crate.jpg");
-   textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
-   textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
-   textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
+    // setup rendering
+    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager, skyboxManager);
 
-   std::vector<std::string> skyBoxFaces {
+    // load textures
+    textureManager.loadTexture("crate", "src/assets/crate.jpg");
+    textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
+    textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
+    textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
+
+    std::vector<std::string> skyBoxFaces {
         std::string("src/assets/skyboxes/learnopengl/right.jpg"),
         std::string("src/assets/skyboxes/learnopengl/left.jpg"),
         std::string("src/assets/skyboxes/learnopengl/top.jpg"),
         std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
         std::string("src/assets/skyboxes/learnopengl/front.jpg"),
         std::string("src/assets/skyboxes/learnopengl/back.jpg")
-   };
-   textureManager.loadCubemap("skybox_default", skyBoxFaces);
+    };
+    textureManager.loadCubemap("skybox_default", skyBoxFaces);
 
-   skyBoxFaces = {
+    skyBoxFaces = {
         std::string("src/assets/skyboxes/milkyway/right.png"),
         std::string("src/assets/skyboxes/milkyway/left.png"),
         std::string("src/assets/skyboxes/milkyway/top.png"),
         std::string("src/assets/skyboxes/milkyway/bottom.png"),
         std::string("src/assets/skyboxes/milkyway/front.png"),
         std::string("src/assets/skyboxes/milkyway/back.png")
-   };
-   textureManager.loadCubemap("skybox_night", skyBoxFaces);
+    };
+    textureManager.loadCubemap("skybox_night", skyBoxFaces);
 
-   // setup skybox
-   skyboxManager.init(); 
+    // setup skybox
+    skyboxManager.init(); 
 
-   // load geometry data
-   loadCubeData();
-   loadSphereData();
-   //loadIcoSphereData();
+    // load geometry data
+    loadCubeData();
+    loadSphereData();
+    //loadIcoSphereData();
 
-   // setup scene 
-   sceneBuilder.setPointers(&physicsEngine, &textureManager, &lightManager, rng);
-   sceneBuilder.createScene(physicsEngine, 0);
+    // setup scene 
+    sceneBuilder.setPointers(&physicsEngine, &textureManager, &lightManager, rng);
+    sceneBuilder.createScene(physicsEngine, 0);
 
-   // setup physics
-   physicsEngine.init(&engineState);
+    // setup physics
+    physicsEngine.init(&engineState);
 
-   // setup editor
-   editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager, &cubeVertices, &cubeIndices);
+    // setup editor
+    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager, &cubeVertices, &cubeIndices);
 
-   // main loop
-   while (true) {
-      float cpuClockStart = static_cast<float>(glfwGetTime());
-      // update time
-      auto current_time = std::chrono::high_resolution_clock::now();
-      float currentFrame = static_cast<float>(glfwGetTime());
-      deltaTime = currentFrame - lastFrame;
-      lastFrame = currentFrame;
+    // main loop
+    while (true) {
+        float cpuClockStart = static_cast<float>(glfwGetTime());
+        // update time
+        auto current_time = std::chrono::high_resolution_clock::now();
+        float currentFrame = static_cast<float>(glfwGetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
 
-      glfwPollEvents();
-      if (glfwWindowShouldClose(window)) {
-          break;
-      }
+        GLuint avail = 0;
+        // SHADOW
+        glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
+            gpuShadowMs = ns / 1e6;
+        }
 
-      // continous input 
-      inputManager.processInput(window, deltaTime);
+        // MAIN
+        glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
+            gpuMainMs = ns / 1e6;
+        }
 
-      // editor functions
-      editor.update(deltaTime, renderer.debugShader);
+        // DEBUG
+        glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
+            gpuDebugMs = ns / 1e6;
+        }
 
-      // physics step
-      float stepClockStart = static_cast<float>(glfwGetTime());
-      if (!engineState.isPaused() or engineState.getAdvanceStep()) 
-      {
-          const int   kMaxStepsPerFrame = 8;
-          const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
-          accumulator = std::min(accumulator + deltaTime, kMaxAccum);
+        // Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
+        // bumpa readIdx så vi läser nästa nästa gång
+        if (avail) {
+            readIdx = (readIdx + 1) % NQ;
+        }
 
-         if (engineState.getAdvanceStep())
-            accumulator = fixedTimeStep;
+        glfwPollEvents();
 
-         int steps = 0;
-         while (accumulator >= fixedTimeStep && steps < kMaxStepsPerFrame) 
-         {
-            for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
-             {
-                 // per-frame rotation (du har redan denna)
-                 glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
+        if (glfwWindowShouldClose(window)) {
+            break;
+        }
 
-                 for (int i = 0; i < halo.indices.size(); i++) {
-                     GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
+        // rendering
+        float renderClockStart = static_cast<float>(glfwGetTime());
+        renderer.update(camera, sceneBuilder, physicsEngine, editor, qShadow, qMain, qDebug, writeIdx);
+        // calculate render time
+        float renderClockEnd = static_cast<float>(glfwGetTime());
+        float renderClockMs = (renderClockEnd - renderClockStart) * 1000.0f;
+        sceneBuilder.sceneDirty = false;
+        writeIdx = (writeIdx + 1) % NQ;
 
-                     // --- 1) Spara föregående pose ---
-                     glm::vec3 prevPos = obj.position;
-                     glm::quat prevOri = obj.orientation;
+        // continous input 
+        inputManager.processInput(window, deltaTime);
 
-                     // --- 2) Sätt ny pose kinematiskt (din kod) ---
-                     glm::vec3 relativePos = obj.position - halo.center;
-                     glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+        // editor functions
+        editor.update(deltaTime, renderer.debugShader);
 
-                     obj.position = halo.center + rotatedRelPos;
-                     obj.orientation = perFrameRot * obj.orientation;
+        // physics step
+        float stepClockStart = static_cast<float>(glfwGetTime());
+        if (!engineState.isPaused() or engineState.getAdvanceStep()) 
+        {
+            const int   kMaxStepsPerFrame = 8;
+            const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
+            accumulator = std::min(accumulator + deltaTime, kMaxAccum);
 
-                     // --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
-                     // Linjär hastighet: differens
-                     obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
+            if (engineState.getAdvanceStep()) {
+                accumulator = fixedTimeStep;
+            }
 
-                     // Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
-                     glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
-                     dq = glm::normalize(dq);
-                     float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
-                     float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
-                     float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
-                     glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
-                         : glm::vec3(0, 0, 1);           // fallback
-                     obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
+            int steps = 0;
+            while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
+            {
+                for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
+                {
+                    // per-frame rotation (du har redan denna)
+                    glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
 
-                     // --- 4) Uppdatera render/collider ---
-                     obj.modelMatrixDirty = true;
-                     obj.setModelMatrix();
-                     obj.setHelperMatrices();
-                     obj.updateAABB();
-                     obj.updateCollider();
-                 }
-             }
-            physicsEngine.step(fixedTimeStep, rng);
+                    for (int i = 0; i < halo.indices.size(); i++) {
+                        GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
 
-            steps++;
-            accumulator -= fixedTimeStep;
-         }
-      }
+                        // --- 1) Spara föregående pose ---
+                        glm::vec3 prevPos = obj.position;
+                        glm::quat prevOri = obj.orientation;
 
-      if (engineState.getAdvanceStep()) {
-          engineState.setAdvanceStep(false);
-      }
+                        // --- 2) Sätt ny pose kinematiskt (din kod) ---
+                        glm::vec3 relativePos = obj.position - halo.center;
+                        glm::vec3 rotatedRelPos = perFrameRot * relativePos;
 
-      // calculate step time
-      float stepClockStop = static_cast<float>(glfwGetTime());
-      float stepClock = stepClockStop - stepClockStart;
-      float stepClockMs = stepClock * 1000.0f;
+                        obj.position = halo.center + rotatedRelPos;
+                        obj.orientation = perFrameRot * obj.orientation;
 
-      if (!engineState.isPaused()) {
-          if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, rng, 0);
-          else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, rng, 1);
-      }
+                        // --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
+                        // Linjär hastighet: differens
+                        obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
 
-      // rendering
-      float renderClockStart = static_cast<float>(glfwGetTime());
-      renderer.update(camera, sceneBuilder, physicsEngine, editor);
+                        // Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
+                        glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
+                        dq = glm::normalize(dq);
+                        float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
+                        float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
+                        float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
+                        glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
+                            : glm::vec3(0, 0, 1);           // fallback
+                        obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
 
-      // calculate render time
-      float renderClockEnd = static_cast<float>(glfwGetTime());
-      float renderClock = renderClockEnd - renderClockStart;
-      float renderClockMs = renderClock * 1000.0f;
+                        // --- 4) Uppdatera render/collider ---
+                        obj.modelMatrixDirty = true;
+                        obj.setModelMatrix();
+                        obj.setHelperMatrices();
+                        obj.updateAABB();
+                        obj.updateCollider();
+                    }
+                }
+                physicsEngine.step(fixedTimeStep, rng);
 
-      sceneBuilder.sceneDirty = false; 
+                steps++;
+                accumulator -= fixedTimeStep;
+            }
+        }
 
-      // swap buffers
-      float t1 = static_cast<float>(glfwGetTime());
-      glfwSwapBuffers(window);
-      float t2 = static_cast<float>(glfwGetTime());
-      float swapTime = (t2 - t1);
+        if (engineState.getAdvanceStep()) {
+            engineState.setAdvanceStep(false);
+        }
 
-      // calculate CPU time
-      float cpuClockStop = static_cast<float>(glfwGetTime());
-      float cpuClock = (cpuClockStop - cpuClockStart) - swapTime;
-      float cpuClockMs = cpuClock * 1000.0f;
-      float frameTimeMs = (cpuClockStop - cpuClockStart) * 1000.0f;
+        // calculate step time
+        float stepClockStop = static_cast<float>(glfwGetTime());
+        float stepClockMs = (stepClockStop - stepClockStart) * 1000.0f;
 
-      // print FPS and other stats
-      if (engineState.getShowFPS()) {
-         float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-         if (seconds > last_second) {
-            last_second = seconds;
-            const int LABEL_W = 10;
-            const int VALUE_W = 0;
+        if (!engineState.isPaused()) {
+            if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, rng, 0);
+            else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, rng, 1);
+        }
 
-            std::cout
-                // FPS
-                << std::setw(LABEL_W) << std::left
-                << "FPS:"
-                // värdefält, vänster-justerat
-                << std::setw(VALUE_W) << std::left
-                << frames << "\n"
+        // swap buffers
+        float t1 = static_cast<float>(glfwGetTime());
+        glfwSwapBuffers(window);
+        float t2 = static_cast<float>(glfwGetTime());
+        float swapTime = (t2 - t1);
 
-                // CPU Time
-                << std::setw(LABEL_W) << std::left
-                << "CPU:"
-                // värdefält, vänster-justerat
-                << std::setw(VALUE_W) << std::left
-                << std::fixed << std::setprecision(1) << cpuClockMs << " ms\n"
+        // calculate CPU time
+        float cpuClockStop = static_cast<float>(glfwGetTime());
+        float cpuClockMs = (cpuClockStop - cpuClockStart) * 1000.0f;
 
-                // Physics Time
-                << std::setw(LABEL_W) << std::left
-                << "Physics:"
-                << std::setw(VALUE_W) << std::left
-                << std::setprecision(1) << stepClockMs << " ms\n"
+        // print FPS and other stats
+        if (engineState.getShowFPS()) {
+            float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+            if (seconds > last_second) {
+                last_second = seconds;
+                const int LABEL_W = 11;
+                const int VALUE_W = 0;
 
-                // Render Time
-                << std::setw(LABEL_W) << std::left
-                << "Render:"
-                << std::setw(VALUE_W) << std::left
-                << std::setprecision(1) << renderClockMs << " ms\n"
+                std::cout
+                    // FPS
+                    << std::setw(LABEL_W) << std::left
+                    << "FPS:"
+                    // värdefält, vänster-justerat
+                    << std::setw(VALUE_W) << std::left
+                    << frames << "\n"
 
-                // BVH rebuilds
-                << std::setw(LABEL_W) << std::left
-                << "BVH:"
-                << std::setw(VALUE_W) << std::left
-                << physicsEngine.getDynamicAwakeBvh().numRebuilds << "\n"
+                    // Objects
+                    << std::setw(LABEL_W) << std::left
+                    << "Objects:"
+                    << std::setw(VALUE_W) << std::left
+                    << sceneBuilder.getDynamicObjects().size()
+                    << std::defaultfloat << "\n"
 
-                // Objects
-                << std::setw(LABEL_W) << std::left
-                << "Objects:"
-                << std::setw(VALUE_W) << std::left
-                << sceneBuilder.getDynamicObjects().size()
-                << std::defaultfloat << "\n";
+                    << "------" << "\n"
 
-                // opengl
-                //<< std::setw(LABEL_W) << std::left
-                //<< "Opengl:"
-                //<< std::setw(VALUE_W) << std::left;
-                //glcount::print();
-                //std::cout << std::defaultfloat << "\n";
+                    << std::setw(LABEL_W) << std::left
+                    << "GPU:"
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << std::setprecision(1) << (gpuShadowMs + gpuMainMs + gpuDebugMs) << " ms\n"
+                    // GPU Shadow
+                    << std::setw(LABEL_W) << std::left
+                    << "Shadow:"
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << gpuShadowMs << " ms\n"
+                    // GPU Main
+                    << std::setw(LABEL_W) << std::left
+                    << "Main:"
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << gpuMainMs << " ms\n"
+                    // GPU Debug
+                    << std::setw(LABEL_W) << std::left
+                    << "Debug:"
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << gpuDebugMs << " ms\n"
+
+                    << "------" << "\n"
+
+                    // CPU
+                    << std::setw(LABEL_W) << std::left
+                    << "CPU:"
+                    // värdefält, vänster-justerat
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << cpuClockMs << " ms\n"
+
+                    // Physics
+                    << std::setw(LABEL_W) << std::left
+                    << "Physics:"
+                    << std::setw(VALUE_W) << std::left
+                    << stepClockMs << " ms\n"
+
+                    // Render
+                    << std::setw(LABEL_W) << std::left
+                    << "Render:"
+                    << std::setw(VALUE_W) << std::left
+                    << renderClockMs << " ms\n";
+
+                    //// BVH rebuilds
+                    //<< std::setw(LABEL_W) << std::left
+                    //<< "BVH:"
+                    //<< std::setw(VALUE_W) << std::left
+                    //<< physicsEngine.getDynamicAwakeBvh().numRebuilds << "\n"
+
+                    // opengl
+                    //<< std::setw(LABEL_W) << std::left
+                    //<< "Opengl:"
+                    //<< std::setw(VALUE_W) << std::left;
+                    //glcount::print();
+                    //std::cout << std::defaultfloat << "\n";
            
 
-            if (deltaTime > 0.016f) {
-               std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << "\n";
+                if (deltaTime > 0.016f) {
+                    std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << "\n";
+                }
+                std::cout << "===============================" << "\n";
+
+                frames = 0;
+                physicsEngine.getDynamicAwakeBvh().numRebuilds = 0;
+
+                std::cout << std::setprecision(9);
             }
-            std::cout << "-----------------------" << "\n";
-            frames = 0;
-            physicsEngine.getDynamicAwakeBvh().numRebuilds = 0;
-
-            std::cout << std::setprecision(99);
-         }
-         frames++;
-      }
-
-      if (debug)
-        if (current_time - start_time > std::chrono::seconds(8))
-            break;
+            frames++;
+        }
    }
    glfwTerminate();
 

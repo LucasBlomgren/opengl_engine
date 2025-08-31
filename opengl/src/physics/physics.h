@@ -31,6 +31,7 @@ public:
     //------------------------
     BVHTree<GameObject>& getDynamicAwakeBvh();
     BVHTree<GameObject>& getDynamicAsleepBvh();
+    BVHTree<GameObject>& getStaticBvh();
     BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
@@ -44,7 +45,7 @@ private:
     EngineState* engineState = nullptr;
 
     //------------------------
-    //   Add/Remove commands
+    //      Add/Remove
     //------------------------
     struct PhysCmd { 
         enum Type { Add, Remove } 
@@ -52,6 +53,22 @@ private:
     };
     std::vector<PhysCmd> pending;
     void insertPendingObjects();
+    void moveToStatic(GameObject& obj);
+    bool staticBvhDirty = false;    
+
+    //------------------------
+    //       Sleeping
+    //------------------------
+    std::vector<int> toWake;
+    std::vector<int> toSleep;
+    void moveToAwake(GameObject& obj);
+    void moveToAsleep(GameObject& obj);
+    void decideSleep();
+    void updateSleepThresholds(GameObject& obj);
+    bool asleepBvhDirty = false;
+
+    struct WakeUpInfo { bool A, B; };
+    WakeUpInfo wakeUpCheck(GameObject& A, GameObject& B);
 
     //------------------------
     //     Game objects
@@ -61,6 +78,7 @@ private:
 
     std::vector<int> awake_DynamicObjects;   // indices in dynamicObjects
     std::vector<int> asleep_DynamicObjects;
+    std::vector<int> static_Objects;         
 
     //------------------------
     //      BVH Trees
@@ -73,8 +91,7 @@ private:
     //------------------------
     //    Update functions
     //------------------------
-    void updatePositions();
-    void updateSleepThresholds(GameObject& obj);
+    void updateStates();
     void updateContactCache();
 
     //------------------------
@@ -110,5 +127,4 @@ private:
     //  Collision Resolution
     //------------------------
     void resolveCollisions();
-    bool updateSleep(GameObject& A, GameObject& B);
 };

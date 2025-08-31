@@ -462,25 +462,43 @@ void CollisionManifold::computePenetrationDepth(std::vector<glm::vec3>& points, 
 
 void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) {
     constexpr float restitutionThreshold = 0.1f; // Minsta hastighet för att restitution ska aktiveras
-    constexpr float restitution = 0.1f; // exempelmaterial
+    float restitution = 0.1f; // exempelmaterial
+
+    //if (contact.freezeA or contact.freezeB) {
+    //    restitution = 0.0f; // ingen studs om någon av kropparna är frusen
+    //}
 
     GameObject& objA = *contact.objA_ptr; 
     GameObject& objB = *contact.objB_ptr; 
     glm::vec3& normal = contact.normal; 
 
-    glm::vec3 rA = cp.globalCoord - objA.position;
-    float invMassA = objA.invMass;
-    glm::mat3& invInertiaA = objA.inverseInertiaWorld;
-    glm::vec3& linearVelocityA = objA.linearVelocity;
-    glm::vec3& angularVelocityA = objA.angularVelocity;
-
-    glm::vec3 rB; 
+    glm::vec3 rA;
+    glm::vec3 rB;
+    float invMassA;
     float invMassB;
-    glm::mat3 invInertiaB; 
+    glm::mat3 invInertiaA;
+    glm::mat3 invInertiaB;
+    glm::vec3 linearVelocityA;
     glm::vec3 linearVelocityB;
+    glm::vec3 angularVelocityA;
     glm::vec3 angularVelocityB;
 
-    if (contact.objB_ptr == nullptr) {
+    if (contact.freezeA) {
+        rA = glm::vec3(0.0f);
+        invMassA = 0.0f;
+        invInertiaA = glm::mat3(0.0f);
+        linearVelocityA = glm::vec3(0.0f);
+        angularVelocityA = glm::vec3(0.0f);
+    }
+    else {
+        rA = cp.globalCoord - objA.position; 
+        invMassA = objA.invMass; 
+        invInertiaA = objA.inverseInertiaWorld; 
+        linearVelocityA = objA.linearVelocity; 
+        angularVelocityA = objA.angularVelocity;
+    }
+
+    if (contact.freezeB or contact.objB_ptr == nullptr) {
         rB = glm::vec3(0.0f);
         invMassB = 0.0f;
         invInertiaB = glm::mat3(0.0f);
@@ -544,6 +562,9 @@ size_t CollisionManifold::generateKey(int idA, int idB) {
 void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
     auto it = contactCache.find(contact.hashKey);
 
+    contact.wasUsedThisFrame = true;
+    contact.framesSinceUsed = 0;
+
     glm::vec3 n = contact.normal;
     glm::vec3 t1;
 
@@ -596,7 +617,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     std::vector<glm::vec3>& referenceFace = contact.referenceFace;
 
     // -------------- behöver ändras till att vara en faktor av objektens storlekar -------------
-    const float threshold = 0.005f;
+    const float threshold = 0.0005f;
 
     // iterera över alla nya contact points och se om någon är nära en existerande
     glm::mat3 M3; 

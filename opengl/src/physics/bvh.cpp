@@ -60,6 +60,11 @@ void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
 template<typename E>
 void BVHTree<E>::insertLeaf(E* e) 
 {
+    if (e->bvhLeafIdx != -1) {
+        // already in tree
+        return;
+    }
+
     // create leaf node
     Node* leaf = createLeaf(e);
 
@@ -103,10 +108,6 @@ void BVHTree<E>::insertLeaf(E* e)
         parent->parentIdx = oldParent->selfIdx;
     }
 
-    //std::cout << "Inserting leaf with ID: " << leaf->selfIdx << "\n";
-    //std::cout << "Sibling: " << sibling->selfIdx << "\n";
-    //std::cout << "Parent: " << parent->selfIdx << "\n";
-
     // refit all parents
     refitParents(leaf->parentIdx);
 }
@@ -119,11 +120,19 @@ void BVHTree<E>::refitParents(int parentIdx) {
     for (int p = parentIdx; p != -1; p = nodes[p].parentIdx) {
         Node& n = nodes[p];
 
-        const AABB& boxA = nodes[n.childAIdx].fatBox;
-        const AABB& boxB = nodes[n.childBIdx].fatBox;
+        Node& nA = nodes[n.childAIdx];
+        Node& nB = nodes[n.childBIdx];
+        const AABB* boxA;
+        const AABB* boxB;
 
-        n.fatBox.wMin = glm::min(boxA.wMin, boxB.wMin);
-        n.fatBox.wMax = glm::max(boxA.wMax, boxB.wMax);
+        if (nA.isLeaf) boxA = &nodes[n.childAIdx].tightBox;
+        else           boxA = &nodes[n.childAIdx].fatBox;
+
+        if (nB.isLeaf) boxB = &nodes[n.childBIdx].tightBox;
+        else           boxB = &nodes[n.childBIdx].fatBox;
+
+        n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
+        n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
 
         // valfritt: fyll centroid/halfExtents för debug/render
         n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
@@ -144,8 +153,8 @@ typename BVHTree<E>::Node* BVHTree<E>::findBestSibling(AABB& box)
         Node* B = &nodes[n->childBIdx];
 
         // ökning i area om vi lägger box under respektive barn
-        float mergedSurfaceA = box.mergeAABBsAndReturnSurfaceArea(A->fatBox, box);
-        float mergedSurfaceB = box.mergeAABBsAndReturnSurfaceArea(B->fatBox, box);
+        float mergedSurfaceA = box.getMergedSurfaceArea(A->fatBox, box);
+        float mergedSurfaceB = box.getMergedSurfaceArea(B->fatBox, box);
 
         A->fatBox.setSurfaceArea(); 
         B->fatBox.setSurfaceArea(); 
@@ -187,14 +196,18 @@ typename BVHTree<E>::Node* BVHTree<E>::createLeaf(E* e)
 template<typename E>
 void BVHTree<E>::removeLeaf(int leafIdx) 
 {
-    if (leafIdx == -1)
-        return; 
+    if (leafIdx == -1) {
+        return;
+    }
 
     Node& leaf = nodes[leafIdx];
 
     if (leafIdx == rootIdx) {
         // root is leaf, clear tree
+        leaf.alive = false;
+        leaf.parentIdx = -1;
         leaf.element->bvhLeafIdx = -1;
+        leaf.element = nullptr;
         rootIdx = -1;
         nodes.clear();
         prims.clear();
@@ -204,21 +217,10 @@ void BVHTree<E>::removeLeaf(int leafIdx)
     Node& parent = nodes[leaf.parentIdx];
     Node& sibling = (parent.childAIdx == leafIdx) ? nodes[parent.childBIdx] : nodes[parent.childAIdx];
 
-    std::cout
-        << "leaf=" << leafIdx
-        << " parent=(" << parent.selfIdx << " A=" << parent.childAIdx << " B=" << parent.childBIdx << ")"
-        << " gp=" << parent.parentIdx
-        << " sibling=" << sibling.selfIdx
-        << "\n";
-
-    std::cout << "Test1" << "\n";
-
     if (parent.selfIdx == rootIdx) {
         // parent is root, replace root with sibling
         rootIdx = sibling.selfIdx;
         sibling.parentIdx = -1;
-
-        std::cout << "Test2" << "\n";
     } 
     else {
         // replace parent with sibling
@@ -231,13 +233,9 @@ void BVHTree<E>::removeLeaf(int leafIdx)
             grandParent.childBIdx = sibling.selfIdx;
         }
 
-        std::cout << "Test3" << "\n";
-
         // refit all parents
         refitParents(grandParent.selfIdx);
     }
-
-    std::cout << "Test4" << "\n";
 
     // remove parent and leaf
     leaf.alive = false;
@@ -245,26 +243,20 @@ void BVHTree<E>::removeLeaf(int leafIdx)
     leaf.element->bvhLeafIdx = -1;
     leaf.element = nullptr; 
 
-    std::cout << "Test5" << "\n";
-
     parent.alive = false;
     parent.parentIdx = -1;
     parent.childAIdx = -1;
     parent.childBIdx = -1;
-
-    std::cout << "Test6" << "\n";
-
-
 }
 
 //------------------------------
 //          Update 
 //------------------------------
 template<typename E>
-void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes) {
+void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements) {
     if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
         // för många refits, bygg om trädet
-        build(elements, indexes);
+        build(elements, indexes, useAllElements);
         numRefits = 0; 
         numRebuilds++; 
         numIterationsSinceRebuild = 0; 
@@ -283,16 +275,17 @@ void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes) {
 //------------------------------
 template<typename E>
 void BVHTree<E>::updateLeaves() {
-    for (int i = 0; i < (int)nodes.size(); ++i) 
-    {
+    for (int i = 0; i < (int)nodes.size(); ++i) {
         Node& n = nodes[i];
 
-        if (!n.isLeaf or !n.alive) 
+        if (!n.isLeaf or !n.alive) {
             continue;
+        }
 
         n.tightBox = n.element->getAABB();
-        if (n.fatBox.contains(n.tightBox)) 
+        if (n.fatBox.contains(n.tightBox)) {
             continue;
+        }
 
         n.fatBox.wMin = n.tightBox.wMin;
         n.fatBox.wMax = n.tightBox.wMax;
@@ -345,16 +338,16 @@ void BVHTree<E>::refitNode(int nodeIdx) {
     node.dirty = false;
 }
 
-//----------------------------------
-//     Build & helper functions
-//----------------------------------
+//-------------------------
+//         Build 
+//-------------------------
 template<typename E>
-void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes) {
+void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements) {
     rootIdx = 0;
     nodes.clear();
 
     // Fyll primitives
-    createPrimitives(elements, indexes);
+    createPrimitives(elements, indexes, useAllElements);
 
     if (prims.empty())
         return;
@@ -368,6 +361,7 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes) {
     nodes.emplace_back();
 
     Node& root = nodes[rootIdx];
+    root.selfIdx = rootIdx;
     root.start = 0;
     root.count = prims.size();
 
@@ -392,19 +386,34 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes) {
 //      Create Primitives
 //------------------------------
 template<typename E>
-void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& idx) {
+void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& idx, bool useAllElements) {
     prims.clear();
-    prims.reserve(idx.size());
 
-    for (int i = 0; i < idx.size(); i++) {
-        E& elem = elements[idx[i]];
-        BVHPrimitive prim;
-        AABB Ebox = elem.getAABB();
-        prim.min = Ebox.wMin;
-        prim.max = Ebox.wMax;
-        prim.centroid = Ebox.centroid;
-        prim.element = &elem;
-        prims.push_back(prim);
+    if (useAllElements) {
+        prims.reserve(elements.size());
+        for (int i = 0; i < elements.size(); i++) {
+            E& elem = elements[i];
+            BVHPrimitive prim;
+            AABB Ebox = elem.getAABB();
+            prim.min = Ebox.wMin;
+            prim.max = Ebox.wMax;
+            prim.centroid = Ebox.centroid;
+            prim.element = &elem;
+            prims.push_back(prim);
+        }
+    }
+    else {
+        prims.reserve(idx.size());
+        for (int i = 0; i < idx.size(); i++) {
+            E& elem = elements[idx[i]];
+            BVHPrimitive prim;
+            AABB Ebox = elem.getAABB();
+            prim.min = Ebox.wMin;
+            prim.max = Ebox.wMax;
+            prim.centroid = Ebox.centroid;
+            prim.element = &elem;
+            prims.push_back(prim);
+        }
     }
 }
 

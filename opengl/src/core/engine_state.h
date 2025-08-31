@@ -15,7 +15,10 @@ public:
     void toggleShowContactPoints();
     void toggleShowCollisionNormal();
     void toggleShowNormals();
-    void toggleShowBVH();
+    void toggleShowBVH_awake();
+    void toggleShowBVH_asleep();
+    void toggleShowBVH_static();
+    void toggleShowBVH_terrain();
 
     void setPressedKey(const std::string& key);
     void clearPressedKey();
@@ -28,7 +31,10 @@ public:
     bool getShowColliders() const;
     bool getShowContactPoints() const;
     bool getShowCollisionNormal() const;
-    bool getShowBVH() const;
+    bool getShowBVH_awake() const;
+    bool getShowBVH_asleep() const;
+    bool getShowBVH_static() const;
+    bool getShowBVH_terrain() const;
     std::string GetPressedKey() const;
 
 private:
@@ -40,6 +46,9 @@ private:
     bool showContactPoints = false;
     bool showCollisionNormal = false;
     bool showNormals = false;
-    bool showBVH = false;
+    bool showBVH_awake = false;
+    bool showBVH_asleep = false;
+    bool showBVH_static = false;
+    bool showBVH_terrain = false;
     std::string pressedKey;
 };

@@ -9,9 +9,7 @@ void GameObject::resetDirtyFlags() {
     modelMatrixDirty = true;
     helperMatricesDirty = true;
     aabbDirty = true;
-
     aabb.facesDirty = true;
-
 }
 
 void GameObject::setRotatedFlag() {
@@ -136,20 +134,46 @@ void GameObject::updateCollider() {
     }, collider.shape);
 }
 
-void GameObject::updatePos(const float& deltaTime) {
+void GameObject::updateSleepCounter(const float& dt) {
+    if (std::abs(glm::length(linearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) {
+        sleepCounter += dt;
+    }
+    else {
+        sleepCounter = 0.0f;
+    }
+}
+
+bool GameObject::sleepCheck() {
     if (sleepCounter >= sleepCounterThreshold) {
-        setAsleep();
-        return;
+        return true;
     }
 
+    return false;
+}
+
+void GameObject::updateVelocities(const float& dt) {
+    if (allowGravity)
+        linearVelocity += g * dt;
+
+    linearVelocity *= std::pow(0.97f, dt);
+    angularVelocity *= std::pow(0.98f, dt);
+
+    if (!canMoveLinearly) {
+        linearVelocity = glm::vec3(0.0f);
+        angularVelocity.x = 0.0f;
+        angularVelocity.y = 0.0f;
+    }
+}
+
+void GameObject::updatePos(const float& dt) {
     if (selectedByEditor)
         return;
 
-    if (hasGravity)
-        linearVelocity += g * deltaTime;
+    if (allowGravity)
+        linearVelocity += g * dt;
 
-    linearVelocity *= std::pow(0.97f, deltaTime);
-    angularVelocity *= std::pow(0.98f, deltaTime);
+    linearVelocity *= std::pow(0.97f, dt);
+    angularVelocity *= std::pow(0.98f, dt);
 
     if (!canMoveLinearly) {
         linearVelocity = glm::vec3(0.0f);
@@ -158,16 +182,10 @@ void GameObject::updatePos(const float& deltaTime) {
     }
 
     lastPosition = position;
-    position += linearVelocity * deltaTime;
-    updateOrientation(orientation, angularVelocity, deltaTime);
+    position += linearVelocity * dt;
+    updateOrientation(orientation, angularVelocity, dt);
 
     setRotatedFlag();
-
-    // sleep counter
-    if (std::abs(glm::length(linearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) 
-        sleepCounter += deltaTime;
-    else 
-        sleepCounter = 0.0f;
 }
 
 void GameObject::setAsleep() {
@@ -189,6 +207,8 @@ void GameObject::setAwake() {
 }
 
 void GameObject::renderMesh(Shader& shader) {
+    if (seeThrough) return;
+
     shader.setMat4("model", modelMatrix);
 
     if (textureID != 999) {

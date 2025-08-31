@@ -317,7 +317,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
 //         Object rain
 //----------------------------------
 void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
-    constexpr float interval = 1.0f / 1000.0f;
+    constexpr float interval = 1.0f / 10.0f;
     if (current_time - lastTime < interval)
         return;
 
@@ -327,7 +327,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
     {
         // position
         constexpr glm::vec3 spawnPoint = glm::vec3(125, 125, 125);
-        float varianceRange = 200.0f;
+        float varianceRange = 5.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
         float zVariance = randomRange(-varianceRange, varianceRange);
@@ -341,19 +341,25 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
 
         // blocks
         if (mode == 0) {
-            xVariance = randomRange(0.2, 4);
-            yVariance = randomRange(0.2, 4);
-            zVariance = randomRange(0.2, 4);
+            xVariance = randomRange(0.5, 4);
+            yVariance = randomRange(0.5, 4);
+            zVariance = randomRange(0.5, 4);
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
+
+            //glm::vec3 size{ 4.0f };
+            //float mass = 2.0f;
 
             createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
         // spheres
         else if (mode == 1) {
-            float variance = randomRange(0.2, 2);
-            glm::vec3 size{ variance };
-            float mass = (variance * 3.0f) / 2.0f;
+            //float variance = randomRange(0.5, 2);
+            //glm::vec3 size{ variance };
+            //float mass = (variance * 3.0f) / 2.0f;
+
+            glm::vec3 size{ 2.0f };
+            float mass = 2.0f;
 
             createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }

@@ -75,15 +75,15 @@ void Editor::update(float& deltaTime, Shader& shader) {
         selectedObject = nullptr;
     }
 
-    if (engineState->GetPressedKey() == "F5") {
+    if (engineState->GetPressedKey() == "F9") {
         skyboxManager->toggleTexture();
         sceneBuilder->toggleDayNight();
     }
 
-    if (engineState->GetPressedKey() == "F9") {
+    if (engineState->GetPressedKey() == "F10") {
         physicsEngine->sleepAllObjects();
     }
-    if (engineState->GetPressedKey() == "F10") {
+    if (engineState->GetPressedKey() == "F11") {
         physicsEngine->awakenAllObjects();
     }
 
@@ -186,13 +186,11 @@ void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
         selectedObject->asleep = false;
+        physicsEngine->queueAdd(selectedObject);
         selectedObject->sleepCounterThreshold = 0.5f;
         selectedObject->sleepCounter = 0.0f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
-
-        //physicsEngine->queueRemove(selectedObject);
-        //physicsEngine->queueAdd(selectedObject);
         return;
     }
 }
@@ -215,6 +213,7 @@ void Editor::selectObject() {
 
     selectedObject->selectedByEditor = true;
     selectedObject->asleep = false;
+    physicsEngine->queueAdd(selectedObject);
     selectedObject->sleepCounterThreshold = 1000000.0f;
     selectedObject->lastPosition = selectedObject->position;
 
@@ -226,9 +225,6 @@ void Editor::selectObject() {
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
-
-/*    physicsEngine->queueRemove(selectedObject);
-    physicsEngine->queueAdd(selectedObject);  */  
 }
 
 void Editor::updateSelectedObject(float fixedTimeStep) {

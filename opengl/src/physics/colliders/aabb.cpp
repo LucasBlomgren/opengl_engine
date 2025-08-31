@@ -42,7 +42,7 @@ void AABB::grow(glm::vec3 m) {
     wMin -= m;
     wMax += m;
 }
-float AABB::mergeAABBsAndReturnSurfaceArea(const AABB& A, const AABB& B) {
+float AABB::getMergedSurfaceArea(const AABB& A, const AABB& B) {
     glm::vec3 wMin = glm::min(A.wMin, B.wMin);
     glm::vec3 wMax = glm::max(A.wMax, B.wMax);
     glm::vec3 halfExtents = (wMax - wMin) * 0.5f;

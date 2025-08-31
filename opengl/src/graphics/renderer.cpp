@@ -2,8 +2,8 @@
 #include "renderer.h"
 #include "draw_line.h"
 
-template void Renderer::renderBVH(BVHTree<GameObject>&); 
-template void Renderer::renderBVH(BVHTree<Tri>&); 
+template void Renderer::renderBVH(BVHTree<GameObject>&, glm::vec3&); 
+template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3&); 
 
 //-----------------------------
 //           Init
@@ -112,25 +112,33 @@ void Renderer::update(
     Camera& camera,
     SceneBuilder& builder,
     PhysicsEngine& physics,
-    Editor& editor)
+    Editor& editor,
+    GLuint qShadow[],
+    GLuint qMain[],
+    GLuint qDebug[],
+    int writeIdx)
 {
     if (builder.sceneDirty) {
         computeSceneBounds(builder);
     }
 
     // shadow depth map render
+    glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
     renderScene(shadowShader, camera, builder, physics, editor);
     cleanupShadowRender();
+    glEndQuery(GL_TIME_ELAPSED);
 
     // default render
+    glBeginQuery(GL_TIME_ELAPSED, qMain[writeIdx]);
     setDefaultRender(lightSpaceMatrix);
     setViewProjection(camera);
     uploadDirectionalLight();
     uploadLightsToShader();
     renderLights();
     renderScene(defaultShader, camera, builder, physics, editor);
+    glEndQuery(GL_TIME_ELAPSED);
 
     renderRayCastHit(camera, builder);
 
@@ -139,12 +147,28 @@ void Renderer::update(
     glDepthFunc(GL_LESS); 
 
     // debug
-    renderBVH(physics.getDynamicAwakeBvh());
-    //renderBVH(physics.getDynamicAsleepBvh());
-    //renderBVH(physics.getTerrainBvh());
+    glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
+
+    if (engineState->getShowBVH_awake()) {
+        glm::vec3 c{ 1,0,1 };
+        renderBVH(physics.getDynamicAwakeBvh(), c);
+    }
+    if (engineState->getShowBVH_asleep()) {
+        glm::vec3 c{ 0,0,1 };
+        renderBVH(physics.getDynamicAsleepBvh(), c);
+    }
+    if (engineState->getShowBVH_static()) {
+        glm::vec3 c{ 0.25 };
+        renderBVH(physics.getStaticBvh(), c);
+    }
+    if (engineState->getShowBVH_terrain()) {
+        glm::vec3 c{ 1,0,1 };
+        renderBVH(physics.getTerrainBvh(), c);
+    }
+
     renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
     //renderFrustum(lightSpaceMatrix, debugShader);
-
+    glEndQuery(GL_TIME_ELAPSED);
 }
 
 //-----------------------------
@@ -498,11 +522,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 //       Render BVH
 //-------------------------
 template<typename E>
-void Renderer::renderBVH(BVHTree<E>& tree) {
-    if (!engineState->getShowBVH()) {
-        return;
-    }
-
+void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& inColor) {
     debugShader.use();
     debugShader.setBool("debug.useUniformColor", true);
 
@@ -523,7 +543,7 @@ void Renderer::renderBVH(BVHTree<E>& tree) {
         }
         else {
             toDraw = node.fatBox;
-            color = glm::vec3(1, 0, 1);
+            color = inColor;
         }
 
         aabbRenderer.updateModel(toDraw, /*asleep=*/false);

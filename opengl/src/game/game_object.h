@@ -61,6 +61,7 @@ public:
 
     glm::mat4 modelMatrix;
     bool modelMatrixDirty = true;
+    bool seeThrough = false;
 
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
@@ -86,7 +87,7 @@ public:
     float mass;
     float invMass;
     float invInertia;
-    bool hasGravity;
+    bool allowGravity;
     bool isStatic;
     bool shouldRotate;
     bool isRotated = false;
@@ -98,6 +99,7 @@ public:
 
     // sleep variables
     bool asleep = false;
+    bool allowSleep = true;
     float sleepCounter = 0;
     float sleepCounterThreshold;
     float velocityThreshold = 2;
@@ -118,6 +120,7 @@ public:
     int dynamicObjectIdx = -1;
     int awakeListIdx     = -1;
     int asleepListIdx    = -1;
+    int staticListIdx    = -1;
 
     // editor variables
     bool selectedByEditor = false;
@@ -147,7 +150,7 @@ public:
         position(position),
         shouldRotate(true),
         scale(scale),
-        hasGravity(true),
+        allowGravity(true),
         isStatic(isStatic),
         mass(mass),
         textureID(textureID),
@@ -172,7 +175,7 @@ public:
         else {
             mass = 0;
             invMass = 0;
-            asleep = true;
+            asleep = false;
         }
 
         // plain color
@@ -211,9 +214,8 @@ public:
         }
 
         else if (colliderType == ColliderType::SPHERE) {
-            Sphere sphere; 
             radius = scale.x;
-            sphere.radius = scale.x;   // Assuming uniform scaling for sphere
+            Sphere sphere(modelMatrix, scale.x);
             collider.shape = sphere; 
 
             if (isStatic) {
@@ -260,7 +262,10 @@ public:
     void renderMesh(Shader& shader);
     void updateAABB();
     void updateCollider();
-    void updatePos(const float& deltaTime);
+    void updateVelocities(const float& dt);
+    void updatePos(const float& dt);
+    bool sleepCheck();
+    void updateSleepCounter(const float& dt);
     void setAsleep();
     void setAwake();
 

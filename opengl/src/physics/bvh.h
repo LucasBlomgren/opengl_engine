@@ -56,8 +56,8 @@ public:
     int rootIdx = -1;
     std::vector<Node> nodes;
 
-    void build(std::vector<E>& elements, std::vector<int>& indexes);
-    void update(std::vector<E>& elements, std::vector<int>& indexes);
+    void build(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements);
+    void update(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements);
     void singleQuery(const AABB& qBox, std::vector<E*>& out); 
 
     void insertLeaf(E* e);
@@ -77,7 +77,7 @@ public:
 private:
     std::vector<BVHPrimitive> prims;
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
-    void createPrimitives(std::vector<E>& elements, std::vector<int>& indexes);
+    void createPrimitives(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();
@@ -92,7 +92,9 @@ void treeVsTreeQuery(const BVHTree<Ea>& a,
     const BVHTree<Eb>& b,
     std::vector<std::pair<Ea*, Eb*>>& out) noexcept
 {
-    if (a.nodes.empty() || b.nodes.empty() || a.rootIdx == -1 || b.rootIdx == -1) return;
+    if (a.nodes.empty() || b.nodes.empty() || a.rootIdx == -1 || b.rootIdx == -1) {
+        return;
+    }
 
     out.clear();
     // Rimlig gissning: lika många löv ungefär som noder/2

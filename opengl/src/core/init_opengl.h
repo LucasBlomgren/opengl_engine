@@ -38,10 +38,5 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    auto* m = glfwGetPrimaryMonitor();
-    auto* vm = glfwGetVideoMode(m);
-    std::cout << "Desktop mode: " << vm->width << "x" << vm->height
-        << " @" << vm->refreshRate << " Hz\n";
-
     return window;
 }

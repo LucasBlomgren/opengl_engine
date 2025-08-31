@@ -10,7 +10,10 @@ void EngineState::toggleShowColliders() { showColliders = !showColliders; }
 void EngineState::toggleShowContactPoints() { showContactPoints = !showContactPoints; }
 void EngineState::toggleShowNormals() { showNormals = !showNormals; }
 void EngineState::toggleShowCollisionNormal() { showCollisionNormal = !showCollisionNormal; }
-void EngineState::toggleShowBVH() { showBVH = !showBVH; }
+void EngineState::toggleShowBVH_awake() { showBVH_awake = !showBVH_awake; }
+void EngineState::toggleShowBVH_asleep() { showBVH_asleep = !showBVH_asleep; }
+void EngineState::toggleShowBVH_static() { showBVH_static = !showBVH_static; }
+void EngineState::toggleShowBVH_terrain() { showBVH_terrain = !showBVH_terrain; }
 void EngineState::setPressedKey(const std::string& key) { pressedKey = key; }
 void EngineState::clearPressedKey() { pressedKey.clear(); }
 
@@ -22,5 +25,8 @@ bool EngineState::getShowColliders() const { return showColliders; }
 bool EngineState::getShowContactPoints() const { return showContactPoints; }
 bool EngineState::getShowNormals() const { return showNormals; }
 bool EngineState::getShowCollisionNormal() const { return showCollisionNormal; }
-bool EngineState::getShowBVH() const { return showBVH; }
+bool EngineState::getShowBVH_awake() const { return showBVH_awake; }
+bool EngineState::getShowBVH_asleep() const { return showBVH_asleep; }
+bool EngineState::getShowBVH_static() const { return showBVH_static; }
+bool EngineState::getShowBVH_terrain() const { return showBVH_terrain; }
 std::string EngineState::GetPressedKey() const { return pressedKey; }

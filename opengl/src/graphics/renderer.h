@@ -32,7 +32,11 @@ public:
         Camera& camera,
         SceneBuilder& builder,
         PhysicsEngine& physics,
-        Editor& editor
+        Editor& editor,
+        GLuint qShadow[],
+        GLuint qMain[],
+        GLuint qDebug[],
+        int writeIdx
     );
 
     void computeSceneBounds(SceneBuilder& builder);
@@ -62,7 +66,7 @@ public:
 
     // debug
     template<typename E>
-    void renderBVH(BVHTree<E>& tree);  
+    void renderBVH(BVHTree<E>& tree, glm::vec3& color);  
     void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
     void renderFrustum(const glm::mat4& viewProj, Shader& debugShader);
 

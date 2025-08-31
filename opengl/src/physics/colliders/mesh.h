@@ -12,6 +12,6 @@ public:
     Mesh(const std::vector<Tri>& t)
         : tris(t)
     {
-        bvh.build(tris, indexes);
+        bvh.build(tris, indexes, true);
     }
 };
