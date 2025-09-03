@@ -3,6 +3,8 @@
 #include "aabb.h"
 #include "sat.h"
 
+template class BVHTree<GameObject>;
+
 //-----------------------------
 //            Init
 //-----------------------------
@@ -16,13 +18,13 @@ void PhysicsEngine::init(EngineState* engineState) {
 //-----------------------------
 void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
-
+    
     awake_DynamicObjects.clear();
     awake_DynamicObjects.reserve(25000);
     asleep_DynamicObjects.clear();
     asleep_DynamicObjects.reserve(25000);
     static_Objects.clear();
-    static_Objects.reserve(20000);
+    static_Objects.reserve(25000);
 
     dynamicAwakeBvh.nodes.reserve(25000);
     dynamicAwakeBvh.rootIdx = -1;
@@ -32,7 +34,7 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     dynamicAsleepBvh.rootIdx = -1;
     dynamicAsleepBvh.nodes.clear();
 
-    staticBvh.nodes.reserve(20000);
+    staticBvh.nodes.reserve(25000);
     staticBvh.rootIdx = -1;
     staticBvh.nodes.clear();
 
@@ -105,9 +107,7 @@ RaycastHit PhysicsEngine::performRaycast(Ray& r) {
 //-----------------------------
 void PhysicsEngine::sleepAllObjects() {
     for (GameObject& obj : *dynamicObjects) {
-        if (!obj.isStatic) {
-            obj.setAsleep();
-        }
+        moveToAsleep(obj);
     }
 }
 
@@ -116,9 +116,7 @@ void PhysicsEngine::sleepAllObjects() {
 //-----------------------------
 void PhysicsEngine::awakenAllObjects() {
     for (GameObject& obj : *dynamicObjects) {
-        if (!obj.isStatic) {
-            obj.setAwake();
-        }
+        moveToAwake(obj);
     }
 }
 
@@ -128,6 +126,7 @@ void PhysicsEngine::awakenAllObjects() {
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     this->dt = deltaTime;
 
+    // prepare for this frame
     toWake.reserve(dynamicObjects->size());
     toWake.clear();
     toSleep.reserve(dynamicObjects->size());
@@ -144,34 +143,32 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         }
     }
 
+    // Update object states (position, orientation, AABB, collider)
     updateStates();
 
+    // Update BVH trees
     dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
 
-    if (asleepBvhDirty) {
+    if (dynamicAsleepBvh.dirty) {
         dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
-        asleepBvhDirty = false;
     }
-
-    if (staticBvhDirty) {
+    if (staticBvh.dirty) {
         staticBvh.update(*dynamicObjects, static_Objects, false);
-        staticBvhDirty = false;
     }
 
+    // Collision detection and resolution
     detectAndSolveCollisions();
 
+    // Update sleep thresholds based on collision history
     for (GameObject& obj : *dynamicObjects) {
         updateSleepThresholds(obj);
     }
 
+    // Decide which objects to put to sleep or wake up
     decideSleep();
 
+    // Clear contact points that were not used this frame
     updateContactCache();
-
-    //std::cout << "Physics: " << dynamicAwakeBvh.nodes.size() + dynamicAsleepBvh.nodes.size() << " BVH nodes, " 
-    //          << contactCache.size() << " contacts, "
-    //          << awake_DynamicObjects.size() << " awake objects, "
-    //    << asleep_DynamicObjects.size() << " asleep objects.\n";
 }
 
 //-----------------------------
@@ -207,6 +204,9 @@ void PhysicsEngine::insertPendingObjects() {
     pending.clear();
 }
 
+//-------------------------------
+//      Decide sleep/awake
+//-------------------------------
 void PhysicsEngine::decideSleep() {
     for (int idx : toWake) {
         moveToAwake((*dynamicObjects)[idx]);
@@ -215,6 +215,8 @@ void PhysicsEngine::decideSleep() {
     for (int idx : awake_DynamicObjects) {
         GameObject& obj = (*dynamicObjects)[idx];
         if (obj.isStatic) continue;
+        if (!obj.allowSleep) continue;
+        if (obj.inSleepTransition) continue;
 
         // sleep counter
         if (std::abs(glm::length(obj.linearVelocity)) < obj.velocityThreshold and std::abs(glm::length(obj.angularVelocity)) < obj.angularVelocityThreshold) {
@@ -231,10 +233,91 @@ void PhysicsEngine::decideSleep() {
     for (int idx : toSleep) {
         moveToAsleep((*dynamicObjects)[idx]);
     }
+
+    for (GameObject& obj : *dynamicObjects) {
+        obj.inSleepTransition = false;
+        obj.awokenThisFrame = false;
+    }
 }
 
+//-----------------------------
+//       Move to awake
+//-----------------------------
+inline void PhysicsEngine::moveToAwake(GameObject& obj) {
+    if (obj.isStatic) return;
+    if (obj.awakeListIdx != -1) { obj.setAwake(); return; } // redan där
+    if (obj.inSleepTransition) return; // redan på väg
+
+    obj.inSleepTransition = true;
+    if (obj.asleepListIdx != -1) { // ta ur asleep
+        int last = (int)asleep_DynamicObjects.size() - 1;
+        if (obj.asleepListIdx != last) {
+            GameObject& lastObj = (*dynamicObjects)[asleep_DynamicObjects[last]];
+            lastObj.asleepListIdx = obj.asleepListIdx;
+            asleep_DynamicObjects[obj.asleepListIdx] = lastObj.dynamicObjectIdx;
+        }
+        asleep_DynamicObjects.pop_back();
+        obj.asleepListIdx = -1;
+        dynamicAsleepBvh.removeLeaf(obj.bvhLeafIdx);
+        dynamicAsleepBvh.dirty = true;
+    }
+    obj.setAwake(); // <- synka state
+    awake_DynamicObjects.push_back(obj.dynamicObjectIdx);
+    obj.awakeListIdx = (int)awake_DynamicObjects.size() - 1;
+    dynamicAwakeBvh.insertLeaf(&obj);
+    //dynamicAwakeBvh.dirty = true;
+}
+
+//-----------------------------
+//       Move to asleep
+//-----------------------------
+inline void PhysicsEngine::moveToAsleep(GameObject& obj) {
+    if (obj.isStatic) return;
+    if (obj.asleepListIdx != -1) { obj.setAsleep(); return; } // redan där
+    if (obj.inSleepTransition) return; // redan på väg
+
+    obj.inSleepTransition = true;
+    if (obj.awakeListIdx != -1) { // ta ur awake
+        int last = (int)awake_DynamicObjects.size() - 1;
+        if (obj.awakeListIdx != last) {
+            GameObject& lastObj = (*dynamicObjects)[awake_DynamicObjects[last]];
+            lastObj.awakeListIdx = obj.awakeListIdx;
+            awake_DynamicObjects[obj.awakeListIdx] = lastObj.dynamicObjectIdx;
+        }
+        awake_DynamicObjects.pop_back();
+        obj.awakeListIdx = -1;
+        dynamicAwakeBvh.removeLeaf(obj.bvhLeafIdx);
+        //dynamicAwakeBvh.dirty = true;
+    }
+    obj.setAsleep(); // <- synka state
+    asleep_DynamicObjects.push_back(obj.dynamicObjectIdx);
+    obj.asleepListIdx = (int)asleep_DynamicObjects.size() - 1;
+    dynamicAsleepBvh.insertLeaf(&obj);
+    dynamicAsleepBvh.dirty = true;
+}
+
+//-----------------------------
+//       Move to static
+//-----------------------------
+inline void PhysicsEngine::moveToStatic(GameObject& obj) {
+    if (!obj.isStatic) return;
+    if (obj.staticListIdx != -1) { return; } // redan där
+
+    obj.awakeListIdx = -1;
+    obj.asleepListIdx = -1;
+
+    static_Objects.push_back(obj.dynamicObjectIdx);
+    obj.staticListIdx = (int)static_Objects.size() - 1;
+    staticBvh.insertLeaf(&obj);
+
+    staticBvh.dirty = true;
+}
+
+//-----------------------------
+//       Wake up check
+//-----------------------------
 PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& B) {
-    constexpr float velocityThreshold = 1.0f;
+    constexpr float velocityThreshold = 0.8f;
     constexpr float angularThreshold = 0.4f;
     constexpr float v2 = velocityThreshold * velocityThreshold;
     constexpr float w2 = angularThreshold * angularThreshold;
@@ -249,74 +332,24 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
 
     if (A.asleep && !A.isStatic) {
         if (Bv2 > v2 || Bw2 > w2) {
-            toWake.push_back(A.dynamicObjectIdx);
             info.A = true;
+            if (!A.awokenThisFrame) {
+                toWake.push_back(A.dynamicObjectIdx);
+                A.awokenThisFrame = true;
+            }
         }
     }
     if (B.asleep && !B.isStatic) {
         if (Av2 > v2 || Aw2 > w2) {
-            toWake.push_back(B.dynamicObjectIdx);
             info.B = true;
+            if (!B.awokenThisFrame) {
+                toWake.push_back(B.dynamicObjectIdx);
+                B.awokenThisFrame = true;
+            }
         }
     }
 
     return info;
-}
-
-inline void PhysicsEngine::moveToAwake(GameObject& obj) {
-    if (obj.awakeListIdx != -1) { obj.setAwake(); return; } // redan där
-
-    if (obj.asleepListIdx != -1) { // ta ur asleep
-        int last = (int)asleep_DynamicObjects.size() - 1;
-        if (obj.asleepListIdx != last) {
-            GameObject& lastObj = (*dynamicObjects)[asleep_DynamicObjects[last]];
-            lastObj.asleepListIdx = obj.asleepListIdx;
-            asleep_DynamicObjects[obj.asleepListIdx] = lastObj.dynamicObjectIdx;
-        }
-        asleep_DynamicObjects.pop_back();
-        obj.asleepListIdx = -1;
-        dynamicAsleepBvh.removeLeaf(obj.bvhLeafIdx);
-    }
-    obj.setAwake(); // <- synka state
-    awake_DynamicObjects.push_back(obj.dynamicObjectIdx);
-    obj.awakeListIdx = (int)awake_DynamicObjects.size() - 1;
-    dynamicAwakeBvh.insertLeaf(&obj);
-}
-
-inline void PhysicsEngine::moveToAsleep(GameObject& obj) {
-    if (obj.asleepListIdx != -1) { obj.setAsleep(); return; } // redan där
-
-    if (obj.awakeListIdx != -1) { // ta ur awake
-        int last = (int)awake_DynamicObjects.size() - 1;
-        if (obj.awakeListIdx != last) {
-            GameObject& lastObj = (*dynamicObjects)[awake_DynamicObjects[last]];
-            lastObj.awakeListIdx = obj.awakeListIdx;
-            awake_DynamicObjects[obj.awakeListIdx] = lastObj.dynamicObjectIdx;
-        }
-        awake_DynamicObjects.pop_back();
-        obj.awakeListIdx = -1;
-        dynamicAwakeBvh.removeLeaf(obj.bvhLeafIdx);
-    }
-    obj.setAsleep(); // <- synka state
-    asleep_DynamicObjects.push_back(obj.dynamicObjectIdx);
-    obj.asleepListIdx = (int)asleep_DynamicObjects.size() - 1;
-    dynamicAsleepBvh.insertLeaf(&obj);
-
-    asleepBvhDirty = true;
-}
-
-inline void PhysicsEngine::moveToStatic(GameObject& obj) {
-    if (!obj.isStatic) return;
-    if (obj.staticListIdx != -1) { return; } // redan där
-
-    obj.awakeListIdx = -1;
-    obj.asleepListIdx = -1;
-
-    static_Objects.push_back(obj.dynamicObjectIdx);
-    obj.staticListIdx = (int)static_Objects.size() - 1;
-    staticBvh.insertLeaf(&obj);
-
-    staticBvhDirty = true;
 }
 
 //-----------------------------
@@ -747,7 +780,7 @@ void PhysicsEngine::resolveCollisions() {
 
         // ----- Baumgarte stabilization -----
         float slop = 0.0005f; 
-        float baumgarteFactor = 0.2f; 
+        float baumgarteFactor = 0.1f; 
         for (int j = 0; j < contact->points.size(); j++) { 
             ContactPoint& cp = contact->points[j]; 
 

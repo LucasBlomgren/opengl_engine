@@ -211,7 +211,7 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
-    smoothHeightMap(heightMap, 1.0f, 70);
+    smoothHeightMap(heightMap, 0.5f, 75);
 
     std::vector<Tri>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices; 
@@ -317,7 +317,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
 //         Object rain
 //----------------------------------
 void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
-    constexpr float interval = 1.0f / 10.0f;
+    constexpr float interval = 1.0f / 30.0f;
     if (current_time - lastTime < interval)
         return;
 
@@ -326,7 +326,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
     for (int i = 0; i < 10; i++) 
     {
         // position
-        constexpr glm::vec3 spawnPoint = glm::vec3(125, 125, 125);
+        constexpr glm::vec3 spawnPoint = glm::vec3(125, 365, 125);
         float varianceRange = 5.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
@@ -341,14 +341,14 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
 
         // blocks
         if (mode == 0) {
-            xVariance = randomRange(0.5, 4);
-            yVariance = randomRange(0.5, 4);
-            zVariance = randomRange(0.5, 4);
-            glm::vec3 size{ xVariance, yVariance, zVariance };
-            float mass = xVariance * yVariance * zVariance;
+            //xVariance = randomRange(0.5, 4);
+            //yVariance = randomRange(0.5, 4);
+            //zVariance = randomRange(0.5, 4);
+            //glm::vec3 size{ xVariance, yVariance, zVariance };
+            //float mass = xVariance * yVariance * zVariance;
 
-            //glm::vec3 size{ 4.0f };
-            //float mass = 2.0f;
+            glm::vec3 size{ 4.0f };
+            float mass = 2.0f;
 
             createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }

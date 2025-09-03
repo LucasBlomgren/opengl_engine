@@ -40,7 +40,7 @@ public:
 private:
     bool advanceStep = false;
     bool paused = false;
-    bool showFPS = true;
+    bool showFPS = false;
     bool showAABB = false;
     bool showColliders = false;
     bool showContactPoints = false;

@@ -48,8 +48,8 @@ private:
     //      Add/Remove
     //------------------------
     struct PhysCmd { 
-        enum Type { Add, Remove } 
-        type; GameObject* obj; 
+        enum Type { Add, Remove } type; 
+        GameObject* obj; 
     };
     std::vector<PhysCmd> pending;
     void insertPendingObjects();

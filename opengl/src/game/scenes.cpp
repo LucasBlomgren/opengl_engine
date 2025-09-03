@@ -42,8 +42,8 @@ void SceneBuilder::testFloorScene() {
     int floorWidth = 1;
     int floorHeight = 1;
 
-    const float baseX = 125.0f;
-    const float baseZ = 125.0f;
+    const float baseX = 25.0f;
+    const float baseZ = 25.0f;
 
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
@@ -52,128 +52,106 @@ void SceneBuilder::testFloorScene() {
         }
     }
 
-// ___________________________________________________________
-// ------------------ walls around floor grid ----------------
-    const float tileSize = 50.0f;
-    const float halfTile = tileSize * 0.5f;
-    const int   w = floorWidth;
-    const int   h = floorHeight;
+    // 2d grid of block pyramid
+    //for (int i = 0; i < 8; i++) {
+    //    for (int j = 0; j < 8; j++) {
+    //         textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight, asleep
+    //        createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(125+20*i, 0, 125+20*j), 8, 5, 1.5f, 1.5f, 1.5f, 0, 0.75f, true);
+    //    }
+    //}
+    //createObject("crate", ColliderType::CUBOID, glm::vec3(120, 9.6, 120), glm::vec3(5.2), 10000, 0, {}, 1);
 
-    const float wallH = 500.0f;                  // höjd
-    const float thick = 20.0f;                  // tjocklek
-
-    // world-bounds för golvet
-    const float xMin = baseX - halfTile;
-    const float xMax = baseX + (w - 1) * tileSize + halfTile;
-    const float zMin = baseZ - halfTile;
-    const float zMax = baseZ + (h - 1) * tileSize + halfTile;
-
-    const float lenX = xMax - xMin + thick * 2;
-    const float lenZ = zMax - zMin + thick * 2;
-
-    const float y = wallH * 0.5f;               // center i Y
-    glm::quat wallOri = glm::quat(1, 0, 0, 0);
-
-    // syd (zMin)
-    createObject("plain", ColliderType::CUBOID,
-        glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
-        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& southWall = dynamicObjects.back();
-    southWall.seeThrough = true;
-
-    // nord (zMax)
-    createObject("plain", ColliderType::CUBOID,
-        glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
-        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& northWall = dynamicObjects.back();
-    northWall.seeThrough = true;
-
-    // väst (xMin)
-    createObject("plain", ColliderType::CUBOID,
-        glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
-        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& westWall = dynamicObjects.back();
-    westWall.seeThrough = true;
-
-    // öst (xMax)
-    createObject("plain", ColliderType::CUBOID,
-        glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
-        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& eastWall = dynamicObjects.back();
-    eastWall.seeThrough = true;
+//// ___________________________________________________________
+//// ------------------ walls around floor grid ----------------
+//    const float tileSize = 50.0f;
+//    const float halfTile = tileSize * 0.5f;
+//    const int   w = floorWidth;
+//    const int   h = floorHeight;
+//
+//    const float wallH = 400.0f;                  // höjd
+//    const float thick = 20.0f;                  // tjocklek
+//
+//    // world-bounds för golvet
+//    const float xMin = baseX - halfTile;
+//    const float xMax = baseX + (w - 1) * tileSize + halfTile;
+//    const float zMin = baseZ - halfTile;
+//    const float zMax = baseZ + (h - 1) * tileSize + halfTile;
+//
+//    const float lenX = xMax - xMin + thick * 2;
+//    const float lenZ = zMax - zMin + thick * 2;
+//
+//    const float y = wallH * 0.5f;               // center i Y
+//    glm::quat wallOri = glm::quat(1, 0, 0, 0);
+//
+//    // syd (zMin)
+//    createObject("plain", ColliderType::CUBOID,
+//        glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
+//        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+//    GameObject& southWall = dynamicObjects.back();
+//    southWall.seeThrough = true;
+//
+//    // nord (zMax)
+//    createObject("plain", ColliderType::CUBOID,
+//        glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
+//        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+//    GameObject& northWall = dynamicObjects.back();
+//    northWall.seeThrough = true;
+//
+//    // väst (xMin)
+//    createObject("plain", ColliderType::CUBOID,
+//        glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
+//        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+//    GameObject& westWall = dynamicObjects.back();
+//    westWall.seeThrough = true;
+//
+//    // öst (xMax)
+//    createObject("plain", ColliderType::CUBOID,
+//        glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
+//        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+//    GameObject& eastWall = dynamicObjects.back();
+//    eastWall.seeThrough = true;
+//
+//    for (int i = 0; i < floorWidth; i++) {
+//        for (int j = 0; j < floorHeight; j++) {
+//            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+//            createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, wallH, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+//        }
+//    }
 
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f)); 
 
 
-    //// ----- staplar ----- 
-    //std::vector<glm::vec3> randomColors = {
-    //    glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
-    //    glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
-    //};
+    // ----- staplar ----- 
+    std::vector<glm::vec3> randomcolors = {
+        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+    };
 
-    //for (int i = 0; i < 10; i++) {
-    //    for (int j = 0; j < 2; j++) {
-    //        for (int k = 0; k < 2; k++)
-    //        {
-    //            glm::vec3 pos = glm::vec3(20 + j * 5, 5 + i * 11, 20 + k * 5);
-    //            createObject("plain", ColliderType::CUBOID, pos, glm::vec3(1, 10, 1), 10, 0, orientation, 999, false, randomColors[0]);
-    //        }
-    //    }
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 2; j++) {
+            for (int k = 0; k < 2; k++)
+            {
+                glm::vec3 pos = glm::vec3(20 + j * 5, 5 + i * 11, 20 + k * 5);
+                createObject("plain", ColliderType::CUBOID, pos, glm::vec3(1, 10, 1), 10, 0, orientation, 1, false, randomcolors[0]);
+            }
+        }
 
-    //    glm::vec3 pos = glm::vec3(22.5, 10.5 + i * 11, 22.5); 
-    //    createObject("plain", ColliderType::CUBOID, pos, glm::vec3(6, 1, 6), 10, 0, orientation, 999, false, randomColors[1]); 
-    //}
+        glm::vec3 pos = glm::vec3(22.5, 10.5 + i * 11, 22.5); 
+        createObject("plain", ColliderType::CUBOID, pos, glm::vec3(6, 1, 6), 10, 0, orientation, 1, false, randomcolors[1]); 
+    }
 
-    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.0f, 15.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(17.5f, 0.0f, 17.5f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
     //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, false);
 
     // sphere stack
-    //for (int i = 0; i < 10; i++) {
-    //    createObject("plain", ColliderType::SPHERE, glm::vec3(5, 5+i*2,5), glm::vec3(0.5), 0.5f, 0, orientation);
-    //}
+    for (int i = 0; i < 10; i++) {
+        createObject("plain", ColliderType::SPHERE, glm::vec3(4, 5+i*2,5), glm::vec3(0.5), 0.5f, 0, orientation);
+    }
 
     // box stack
-    //for (int i = 0; i < 10; i++) {
-    //    createObject("plain", ColliderType::CUBOID, glm::vec3(5.5, 0.5f + i * 1.25f,5.5), glm::vec3(1), 1, 0, orientation, 1);
-    //}
-
-    //// ____________________________________________________________
-    //// ----------------------- brick wall -------------------------
-    //int wallHeight = 5;
-    //int wallWidth = 20;
-    //float brickWidth = 1.0f;
-    //float brickLength = 1.0f;
-    //float brickHeight = 1.0f;
-    //float brickDistance = 0.0f;
-
-    //int brickWeight = 10;
-    //int brickDecrease = 0;
-
-    //if (brickWeight < wallHeight) {
-    //    brickWeight = wallHeight;
-    //}
-    //int brickWeightStart = brickWeight;
-    //// col
-    //for (int col = 0; col < wallHeight / 2; col++) {
-    //    // row 0, 2, 4, 6...
-    //    for (int row = 0; row < wallWidth; row++) {
-    //        float x = 74.5f;
-    //        float y = brickHeight / 2 + col * brickHeight * 2;
-    //        float z = 8 + row * brickLength + brickDistance * row;
-    //        glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-    //        createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
-    //    }
-    //    brickWeight -= brickDecrease;
-    //    // row 1, 3, 5, 7...
-    //    for (int row = 0; row < wallWidth - 1; row++) {
-    //        float x = 74.5f;
-    //        float y = brickHeight + brickHeight / 2 + col * brickHeight * 2;
-    //        float z = 8.6f + row * brickLength + brickDistance * row;
-    //        glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-    //        createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
-    //    }
-    //    brickWeight -= brickDecrease;
-    //}
+    for (int i = 0; i < 6; i++) {
+        createObject("plain", ColliderType::CUBOID, glm::vec3(5.5, 0.5f + i * 1.25f,5.5), glm::vec3(1), 1, 0, orientation, 1);
+    }
 }
 
 

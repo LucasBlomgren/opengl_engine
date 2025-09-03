@@ -53,6 +53,7 @@ public:
         Node* B;
     };
 
+    bool dirty = false;
     int rootIdx = -1;
     std::vector<Node> nodes;
 

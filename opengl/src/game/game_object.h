@@ -102,6 +102,8 @@ public:
     bool allowSleep = true;
     float sleepCounter = 0;
     float sleepCounterThreshold;
+    bool awokenThisFrame = false;
+    bool inSleepTransition = false;
     float velocityThreshold = 2;
     float angularVelocityThreshold = 3;
 

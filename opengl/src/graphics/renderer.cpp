@@ -2,8 +2,8 @@
 #include "renderer.h"
 #include "draw_line.h"
 
-template void Renderer::renderBVH(BVHTree<GameObject>&, glm::vec3&); 
-template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3&); 
+template void Renderer::renderBVH(BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
+template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3& , glm::vec3&);
 
 //-----------------------------
 //           Init
@@ -150,20 +150,24 @@ void Renderer::update(
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
     if (engineState->getShowBVH_awake()) {
-        glm::vec3 c{ 1,0,1 };
-        renderBVH(physics.getDynamicAwakeBvh(), c);
+        glm::vec3 c{ 0.80f, 0.40f, 0.00f }; // Dynamic awake nodes
+        glm::vec3 c2{ 1.00f, 0.65f, 0.20f }; // Dynamic awake leaves (ljusare orange)
+        renderBVH(physics.getDynamicAwakeBvh(), c, c2);
     }
     if (engineState->getShowBVH_asleep()) {
-        glm::vec3 c{ 0,0,1 };
-        renderBVH(physics.getDynamicAsleepBvh(), c);
+        glm::vec3 c{ 0.13f, 0.33f, 0.67f }; // Dynamic asleep nodes
+        glm::vec3 c2{ 0.45f, 0.70f, 1.00f }; // Dynamic asleep leaves (ljusare blå)
+        renderBVH(physics.getDynamicAsleepBvh(), c,c2);
     }
     if (engineState->getShowBVH_static()) {
-        glm::vec3 c{ 0.25 };
-        renderBVH(physics.getStaticBvh(), c);
+        glm::vec3 c{ 0.10f, 0.60f, 0.27f }; // Static nodes
+        glm::vec3 c2{ 0.30f, 0.95f, 0.50f }; // Static leaves (ljusare grön)
+        renderBVH(physics.getStaticBvh(), c, c2);
     }
     if (engineState->getShowBVH_terrain()) {
-        glm::vec3 c{ 1,0,1 };
-        renderBVH(physics.getTerrainBvh(), c);
+        glm::vec3 c{ 0.40f, 0.31f, 0.13f }; // Terrain nodes
+        glm::vec3 c2{ 0.70f, 0.50f, 0.25f }; // Terrain leaves (ljusare brun/ockra)
+        renderBVH(physics.getTerrainBvh(), c, c2);
     }
 
     renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
@@ -522,7 +526,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 //       Render BVH
 //-------------------------
 template<typename E>
-void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& inColor) {
+void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
     debugShader.use();
     debugShader.setBool("debug.useUniformColor", true);
 
@@ -536,14 +540,16 @@ void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& inColor) {
         if (!node.alive) continue;
 
         if (node.isLeaf) {
+            glLineWidth(4.0f);
             toDraw = node.tightBox;
             toDraw.centroid = (toDraw.wMin + toDraw.wMax) * 0.5f;
             toDraw.halfExtents = (toDraw.wMax - toDraw.wMin) * 0.5f;
-            color = glm::vec3(0, 1, 1);
+            color = leafColor;
         }
         else {
+            glLineWidth(2.0f);
             toDraw = node.fatBox;
-            color = inColor;
+            color = nodeColor;
         }
 
         aabbRenderer.updateModel(toDraw, /*asleep=*/false);

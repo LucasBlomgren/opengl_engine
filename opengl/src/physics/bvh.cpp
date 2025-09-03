@@ -78,9 +78,6 @@ void BVHTree<E>::insertLeaf(E* e)
     Node* sibling = findBestSibling(leaf->fatBox);
 
     // create new parent node
-    auto* base = nodes.data();
-    size_t cap = nodes.capacity();
-
     Node* parent = &nodes.emplace_back(); 
 
     parent->selfIdx = nodes.size() - 1; 
@@ -110,6 +107,7 @@ void BVHTree<E>::insertLeaf(E* e)
 
     // refit all parents
     refitParents(leaf->parentIdx);
+
 }
 
 //------------------------------
@@ -122,14 +120,9 @@ void BVHTree<E>::refitParents(int parentIdx) {
 
         Node& nA = nodes[n.childAIdx];
         Node& nB = nodes[n.childBIdx];
-        const AABB* boxA;
-        const AABB* boxB;
 
-        if (nA.isLeaf) boxA = &nodes[n.childAIdx].tightBox;
-        else           boxA = &nodes[n.childAIdx].fatBox;
-
-        if (nB.isLeaf) boxB = &nodes[n.childBIdx].tightBox;
-        else           boxB = &nodes[n.childBIdx].fatBox;
+        const AABB* boxA = &nodes[n.childAIdx].fatBox;
+        const AABB* boxB = &nodes[n.childBIdx].fatBox;
 
         n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
         n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
@@ -268,6 +261,8 @@ void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes, boo
 
     updateLeaves();
     if (rootIdx != -1) refitNode(rootIdx);
+
+    this->dirty = false;
 }
 
 //------------------------------
@@ -343,14 +338,12 @@ void BVHTree<E>::refitNode(int nodeIdx) {
 //-------------------------
 template<typename E>
 void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements) {
-    rootIdx = 0;
-    nodes.clear();
 
+    nodes.clear();
     // Fyll primitives
     createPrimitives(elements, indexes, useAllElements);
 
-    if (prims.empty())
-        return;
+    if (prims.empty()) return;
 
     rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
 
@@ -358,8 +351,8 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool
     nodes.reserve(prims.size() * 2);
 
     // Skapa root-nod
+    rootIdx = 0;
     nodes.emplace_back();
-
     Node& root = nodes[rootIdx];
     root.selfIdx = rootIdx;
     root.start = 0;
@@ -393,6 +386,7 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& id
         prims.reserve(elements.size());
         for (int i = 0; i < elements.size(); i++) {
             E& elem = elements[i];
+            elem.bvhLeafIdx = -1; // reset
             BVHPrimitive prim;
             AABB Ebox = elem.getAABB();
             prim.min = Ebox.wMin;
@@ -406,6 +400,7 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& id
         prims.reserve(idx.size());
         for (int i = 0; i < idx.size(); i++) {
             E& elem = elements[idx[i]];
+            elem.bvhLeafIdx = -1;
             BVHPrimitive prim;
             AABB Ebox = elem.getAABB();
             prim.min = Ebox.wMin;
@@ -432,14 +427,14 @@ void BVHTree<E>::split(int parentIdx, int depth) {
         return;
     }
 
-    // välj enligt största extent + median
+    // choose by largest extent axis to split
     int axis;
     glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
     axis = (extent.x > extent.y
         ? (extent.x > extent.z ? 0 : 2)
         : (extent.y > extent.z ? 1 : 2));
 
-    // median‐partition av primitives
+    // median‐partition of primitives
     int mid = start + count / 2;
     std::nth_element(
         prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
@@ -485,6 +480,7 @@ void BVHTree<E>::initChild(int parentIdx, int childIdx, bool isLeft, int start, 
         child.fatBox.growToInclude(prims[i].min);
         child.fatBox.growToInclude(prims[i].max);
     }
+    child.fatBox.grow(fatBoxMargin);
 
     // setup aabbRenderer wireframe
     child.fatBox.centroid = (child.fatBox.wMin + child.fatBox.wMax) * 0.5f;
