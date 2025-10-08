@@ -149,29 +149,30 @@ void Renderer::update(
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
+    renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
+    //renderFrustum(lightSpaceMatrix, debugShader);
+
     if (engineState->getShowBVH_awake()) {
-        glm::vec3 c{ 0.80f, 0.40f, 0.00f }; // Dynamic awake nodes
-        glm::vec3 c2{ 1.00f, 0.65f, 0.20f }; // Dynamic awake leaves (ljusare orange)
+        static glm::vec3 c{ 0.80f, 0.40f, 0.00f }; // Dynamic awake nodes
+        static glm::vec3 c2{ 1.00f, 0.65f, 0.20f }; // Dynamic awake leaves (ljusare orange)
         renderBVH(physics.getDynamicAwakeBvh(), c, c2);
     }
     if (engineState->getShowBVH_asleep()) {
-        glm::vec3 c{ 0.13f, 0.33f, 0.67f }; // Dynamic asleep nodes
-        glm::vec3 c2{ 0.45f, 0.70f, 1.00f }; // Dynamic asleep leaves (ljusare blå)
+        static glm::vec3 c{ 0.13f, 0.33f, 0.67f }; // Dynamic asleep nodes
+        static glm::vec3 c2{ 0.45f, 0.70f, 1.00f }; // Dynamic asleep leaves (ljusare blå)
         renderBVH(physics.getDynamicAsleepBvh(), c,c2);
     }
     if (engineState->getShowBVH_static()) {
-        glm::vec3 c{ 0.10f, 0.60f, 0.27f }; // Static nodes
-        glm::vec3 c2{ 0.30f, 0.95f, 0.50f }; // Static leaves (ljusare grön)
+        static glm::vec3 c{ 0.10f, 0.60f, 0.27f }; // Static nodes
+        static glm::vec3 c2{ 0.30f, 0.95f, 0.50f }; // Static leaves (ljusare grön)
         renderBVH(physics.getStaticBvh(), c, c2);
     }
     if (engineState->getShowBVH_terrain()) {
-        glm::vec3 c{ 0.40f, 0.31f, 0.13f }; // Terrain nodes
-        glm::vec3 c2{ 0.70f, 0.50f, 0.25f }; // Terrain leaves (ljusare brun/ockra)
+        static glm::vec3 c{ 0.40f, 0.31f, 0.13f }; // Terrain nodes
+        static glm::vec3 c2{ 0.70f, 0.50f, 0.25f }; // Terrain leaves (ljusare brun/ockra)
         renderBVH(physics.getTerrainBvh(), c, c2);
     }
 
-    renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
-    //renderFrustum(lightSpaceMatrix, debugShader);
     glEndQuery(GL_TIME_ELAPSED);
 }
 
@@ -263,7 +264,7 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     shader.setBool("useUniformColor", true);
     shader.setVec3("uColor", glm::vec3(0, 1, 0));
 
-    glBindTexture(GL_TEXTURE_2D, 5);
+    glBindTexture(GL_TEXTURE_2D, 2);
     glBindVertexArray(VAO);
 
     // --- Fyllning ---
@@ -435,10 +436,10 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
             debugShader.setBool("debug.useUniformColor", true);
 
             if (obj.colliderType == ColliderType::CUBOID) {
-                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
+                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
-                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isRaycastHit);
+                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
 
             obj.isRaycastHit = false;
@@ -451,6 +452,11 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
 //     Render debug info
 //----------------------------
 void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
+
+    if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowNormals() || engineState->getShowContactPoints())) {
+        return;
+    }
+
     debugShader.use();
     debugShader.setBool("debug.useUniformColor", true); 
     debugShader.setInt("debug.objectType", 0); 
@@ -471,10 +477,10 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         for (GameObject& obj : objects) {
             debugShader.setBool("debug.useUniformColor", true);
             if (obj.colliderType == ColliderType::CUBOID) {
-                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isRaycastHit);
+                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
-                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isRaycastHit);
+                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
         }
     }

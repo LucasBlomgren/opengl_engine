@@ -127,9 +127,7 @@ void BVHTree<E>::refitParents(int parentIdx) {
         n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
         n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
 
-        // valfritt: fyll centroid/halfExtents för debug/render
-        n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
-        n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;
+        updateRenderData(n);
     }
 }
 
@@ -176,9 +174,7 @@ typename BVHTree<E>::Node* BVHTree<E>::createLeaf(E* e)
     leaf->fatBox = leaf->tightBox;
     leaf->fatBox.grow(fatBoxMargin);
 
-    // valfritt: fyll centroid/halfExtents för debug/render
-    leaf->fatBox.centroid = (leaf->fatBox.wMin + leaf->fatBox.wMax) * 0.5f;
-    leaf->fatBox.halfExtents = (leaf->fatBox.wMax - leaf->fatBox.wMin) * 0.5f;
+    updateRenderData(*leaf);
 
     return leaf;
 }
@@ -287,9 +283,7 @@ void BVHTree<E>::updateLeaves() {
         n.fatBox.grow(fatBoxMargin);
         this->numRefits++;
 
-        // aabbrenderer
-        n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
-        n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;
+        updateRenderData(n);
 
         // Markera just det lövet **och alla dess föräldrar**
         for (int p = i; p != -1; p = nodes[p].parentIdx) {
@@ -326,9 +320,7 @@ void BVHTree<E>::refitNode(int nodeIdx) {
         node.fatBox.wMax = glm::max(childA->fatBox.wMax, childB->fatBox.wMax);
     }
 
-    // aabbrenderer
-    node.fatBox.centroid = (node.fatBox.wMin + node.fatBox.wMax) * 0.5f;
-    node.fatBox.halfExtents = (node.fatBox.wMax - node.fatBox.wMin) * 0.5f;
+    updateRenderData(node);
 
     node.dirty = false;
 }
@@ -366,13 +358,22 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool
         root.fatBox.growToInclude(prims[i].max);
     }
 
-    // setup fatBoxRenderer
-    root.fatBox.centroid = (root.fatBox.wMin + root.fatBox.wMax) * 0.5f;
-    root.fatBox.halfExtents = (root.fatBox.wMax - root.fatBox.wMin) * 0.5f;
+    updateRenderData(root);
 
     // Splittra in i children
     int depth = 0;
     split(rootIdx, depth);
+
+    for (auto& n : nodes) {
+        if (n.isLeaf) {
+            n.fatBox.grow(fatBoxMargin);
+
+            updateRenderData(n);
+        } else {
+            n.dirty = true;
+        }
+    }
+    if (rootIdx != -1) refitNode(rootIdx);
 }
 
 //------------------------------
@@ -480,11 +481,6 @@ void BVHTree<E>::initChild(int parentIdx, int childIdx, bool isLeft, int start, 
         child.fatBox.growToInclude(prims[i].min);
         child.fatBox.growToInclude(prims[i].max);
     }
-    child.fatBox.grow(fatBoxMargin);
-
-    // setup aabbRenderer wireframe
-    child.fatBox.centroid = (child.fatBox.wMin + child.fatBox.wMax) * 0.5f;
-    child.fatBox.halfExtents = (child.fatBox.wMax - child.fatBox.wMin) * 0.5f;
 }
 
 //------------------------------
@@ -500,9 +496,10 @@ void BVHTree<E>::makeLeaf(int nodeIdx) {
     leaf.element->bvhLeafIdx = leaf.selfIdx;
     leaf.tightBox = leaf.element->getAABB(); 
     leaf.fatBox = leaf.tightBox;
-    leaf.fatBox.grow(fatBoxMargin);
+}
 
-    // setup aabbRenderer wireframe
-    leaf.fatBox.centroid = (leaf.fatBox.wMin + leaf.fatBox.wMax) * 0.5f;
-    leaf.fatBox.halfExtents = (leaf.fatBox.wMax - leaf.fatBox.wMin) * 0.5f;
+template<typename E>
+void BVHTree<E>::updateRenderData(Node& n) {
+    n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
+    n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;
 }

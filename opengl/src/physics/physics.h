@@ -35,11 +35,6 @@ public:
     BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
-    //------------------------
-    //          Misc
-    //------------------------
-    CollisionManifold* collisionManifold; // public for testing warmstarting
-
 private:
     float dt;
     EngineState* engineState = nullptr;
@@ -55,20 +50,6 @@ private:
     void insertPendingObjects();
     void moveToStatic(GameObject& obj);
     bool staticBvhDirty = false;    
-
-    //------------------------
-    //       Sleeping
-    //------------------------
-    std::vector<int> toWake;
-    std::vector<int> toSleep;
-    void moveToAwake(GameObject& obj);
-    void moveToAsleep(GameObject& obj);
-    void decideSleep();
-    void updateSleepThresholds(GameObject& obj);
-    bool asleepBvhDirty = false;
-
-    struct WakeUpInfo { bool A, B; };
-    WakeUpInfo wakeUpCheck(GameObject& A, GameObject& B);
 
     //------------------------
     //     Game objects
@@ -119,7 +100,7 @@ private:
     //------------------------
     //   Collision Manifold
     //------------------------
-    //CollisionManifold* collisionManifold;
+    CollisionManifold* collisionManifold;
     std::unordered_map<size_t, Contact> contactCache;
     std::vector<Contact*> contactsToSolve;
 
@@ -127,4 +108,20 @@ private:
     //  Collision Resolution
     //------------------------
     void resolveCollisions();
+
+    void pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d);
+
+    //------------------------
+    //       Sleeping
+    //------------------------
+    std::vector<int> toWake;
+    std::vector<int> toSleep;
+    void moveToAwake(GameObject& obj);
+    void moveToAsleep(GameObject& obj);
+    void decideSleep();
+    void updateSleepThresholds(GameObject& obj);
+    bool asleepBvhDirty = false;
+
+    struct WakeUpInfo { bool A, B; };
+    WakeUpInfo wakeUpCheck(GameObject& A, GameObject& B);
 };

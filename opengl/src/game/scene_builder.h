@@ -16,8 +16,11 @@ public:
    void createScene(PhysicsEngine& physicsEngine, int sceneID);
    void mainScene();
    void terrainScene();
-   void testFloorScene();
    void tumblerScene();
+   void tallStructureScene();
+   void castleScene();
+   void containerScene();
+   void testFloorScene();
 
    GameObject& createObject(
       const std::string& textureName,
@@ -57,6 +60,19 @@ public:
        float sDistance,
        float sWeight,
        bool asleep
+   );
+
+   void createBrickWall(
+       glm::vec3 startPos,
+       int wallDirection,
+       float wallHeight,
+       float wallWidth,
+       glm::vec3 brickSize,
+       float brickDistance,
+       int brickWeight,
+       int brickDecrease,
+       glm::vec2 colorRange,
+       bool fullColorRange
    );
 
    void createHalo(
@@ -106,6 +122,8 @@ public:
    void toggleDayNight();
 
    float randomRange(float start, float end);
+
+   int playerObjectId = -1;
 
 private:
    PhysicsEngine* physicsEngine   = nullptr;

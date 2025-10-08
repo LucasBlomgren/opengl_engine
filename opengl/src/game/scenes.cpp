@@ -33,17 +33,112 @@ void SceneBuilder::terrainScene() {
     );
 }
 
-
-
-//-----------------------------
-//       Test Floor Scene
-//-----------------------------
 void SceneBuilder::testFloorScene() {
-    int floorWidth = 1;
-    int floorHeight = 1;
+    int floorWidth = 4;
+    int floorHeight = 4;
+    const float baseX = -30.0f;
+    const float baseZ = -30.0f;
+    for (int i = 0; i < floorWidth; i++) {
+        for (int j = 0; j < floorHeight; j++) {
+            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+            createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+        }
+    }
+}
 
-    const float baseX = 25.0f;
-    const float baseZ = 25.0f;
+void SceneBuilder::containerScene() {
+
+    int floorWidth = 2;
+    int floorHeight = 3;
+
+    const float baseX = 0.0f;
+    const float baseZ = -30.0f;
+
+    float yOffset = 250.0f;
+
+    // bottom floor
+    for (int i = 0; i < floorWidth; i++) {
+        for (int j = 0; j < floorHeight; j++) {
+            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+            createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+            GameObject& floorTile = dynamicObjects.back();
+            floorTile.seeThrough = true;
+        }
+    }
+
+    // ___________________________________________________________
+    // ------------------ walls around floor grid ----------------
+    const float tileSize = 50.0f;
+    const float halfTile = tileSize * 0.5f;
+    const int   w = floorWidth;
+    const int   h = floorHeight;
+
+    const float wallH = 100.0f;                  // höjd
+    const float thick = 20.0f;                  // tjocklek
+
+    // world-bounds för golvet
+    const float xMin = baseX - halfTile;
+    const float xMax = baseX + (w - 1) * tileSize + halfTile;
+    const float zMin = baseZ - halfTile;
+    const float zMax = baseZ + (h - 1) * tileSize + halfTile;
+
+    const float lenX = xMax - xMin + thick * 2;
+    const float lenZ = zMax - zMin + thick * 2;
+
+    const float y = yOffset + wallH * 0.5f;                // center i Y
+    glm::quat wallOri = glm::quat(1, 0, 0, 0);
+
+    // syd (zMin)
+    createObject("plain", ColliderType::CUBOID,
+        glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
+        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+    GameObject& southWall = dynamicObjects.back();
+    southWall.seeThrough = true;
+
+    // nord (zMax)
+    createObject("plain", ColliderType::CUBOID,
+        glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
+        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+    GameObject& northWall = dynamicObjects.back();
+    northWall.seeThrough = true;
+
+    // väst (xMin)
+    createObject("plain", ColliderType::CUBOID,
+        glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
+        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+    GameObject& westWall = dynamicObjects.back();
+    westWall.seeThrough = true;
+
+    // öst (xMax)
+    createObject("plain", ColliderType::CUBOID,
+        glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
+        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
+    GameObject& eastWall = dynamicObjects.back();
+    eastWall.seeThrough = true;
+
+    //// top floor
+    //for (int i = 0; i < floorWidth; i++) {
+    //    for (int j = 0; j < floorHeight; j++) {
+    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    //        createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, wallH, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+    //        GameObject& floorTile = dynamicObjects.back();
+    //        floorTile.seeThrough = true;
+    //    }
+    //}
+}
+
+
+void SceneBuilder::castleScene() {
+    // player
+    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, -22), glm::vec3(0.5f, 1.86f, 0.5f), 1, 0, {}, 1);
+    GameObject& player = dynamicObjects.back();
+    playerObjectId = dynamicObjects.size() - 1;
+
+    int floorWidth = 4;
+    int floorHeight = 4;
+
+    const float baseX = -30.0f;
+    const float baseZ = -30.0f;
 
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
@@ -52,109 +147,157 @@ void SceneBuilder::testFloorScene() {
         }
     }
 
-    // 2d grid of block pyramid
-    //for (int i = 0; i < 8; i++) {
-    //    for (int j = 0; j < 8; j++) {
-    //         textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight, asleep
-    //        createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(125+20*i, 0, 125+20*j), 8, 5, 1.5f, 1.5f, 1.5f, 0, 0.75f, true);
-    //    }
-    //}
-    //createObject("crate", ColliderType::CUBOID, glm::vec3(120, 9.6, 120), glm::vec3(5.2), 10000, 0, {}, 1);
+    createBrickWall(glm::vec3(25, 0, 44), 0, 20, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(25, 0, 65), 0, 20, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(25, 0, 45), 1, 20, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(45, 0, 45), 1, 20, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
 
-//// ___________________________________________________________
-//// ------------------ walls around floor grid ----------------
-//    const float tileSize = 50.0f;
-//    const float halfTile = tileSize * 0.5f;
-//    const int   w = floorWidth;
-//    const int   h = floorHeight;
-//
-//    const float wallH = 400.0f;                  // höjd
-//    const float thick = 20.0f;                  // tjocklek
-//
-//    // world-bounds för golvet
-//    const float xMin = baseX - halfTile;
-//    const float xMax = baseX + (w - 1) * tileSize + halfTile;
-//    const float zMin = baseZ - halfTile;
-//    const float zMax = baseZ + (h - 1) * tileSize + halfTile;
-//
-//    const float lenX = xMax - xMin + thick * 2;
-//    const float lenZ = zMax - zMin + thick * 2;
-//
-//    const float y = wallH * 0.5f;               // center i Y
-//    glm::quat wallOri = glm::quat(1, 0, 0, 0);
-//
-//    // syd (zMin)
-//    createObject("plain", ColliderType::CUBOID,
-//        glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
-//        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-//    GameObject& southWall = dynamicObjects.back();
-//    southWall.seeThrough = true;
-//
-//    // nord (zMax)
-//    createObject("plain", ColliderType::CUBOID,
-//        glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
-//        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-//    GameObject& northWall = dynamicObjects.back();
-//    northWall.seeThrough = true;
-//
-//    // väst (xMin)
-//    createObject("plain", ColliderType::CUBOID,
-//        glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
-//        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-//    GameObject& westWall = dynamicObjects.back();
-//    westWall.seeThrough = true;
-//
-//    // öst (xMax)
-//    createObject("plain", ColliderType::CUBOID,
-//        glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
-//        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-//    GameObject& eastWall = dynamicObjects.back();
-//    eastWall.seeThrough = true;
-//
-//    for (int i = 0; i < floorWidth; i++) {
-//        for (int j = 0; j < floorHeight; j++) {
-//            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-//            createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, wallH, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
-//        }
-//    }
-
-    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f)); 
-
-
-    // ----- staplar ----- 
-    std::vector<glm::vec3> randomcolors = {
-        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
-        glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
-    };
-
-    for (int i = 0; i < 10; i++) {
-        for (int j = 0; j < 2; j++) {
-            for (int k = 0; k < 2; k++)
-            {
-                glm::vec3 pos = glm::vec3(20 + j * 5, 5 + i * 11, 20 + k * 5);
-                createObject("plain", ColliderType::CUBOID, pos, glm::vec3(1, 10, 1), 10, 0, orientation, 1, false, randomcolors[0]);
-            }
-        }
-
-        glm::vec3 pos = glm::vec3(22.5, 10.5 + i * 11, 22.5); 
-        createObject("plain", ColliderType::CUBOID, pos, glm::vec3(6, 1, 6), 10, 0, orientation, 1, false, randomcolors[1]); 
+    // castle walls
+    for (int i = 0; i < 4; i++) {
+        // -x, +z
+        // side of gate walls
+        createBrickWall(glm::vec3(20, 0, 39-i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        createBrickWall(glm::vec3(38, 0, 39-i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        // over gate wall
+        createBrickWall(glm::vec3(33, 6, 39 - i), 0, 4, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        // +x, +z
+        createBrickWall(glm::vec3(20, 0, 70+i), 0, 10, 31, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        // -x, -z
+        createBrickWall(glm::vec3(19-i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        // +x, -z
+        createBrickWall(glm::vec3(51+i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
     }
 
-    //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(17.5f, 0.0f, 17.5f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    //createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(20.0f, 0.5f, 30.0f), 8, 6, 0.5f, 0.0f, 0.5f, false);
+    // tower -x, -z
+    createBrickWall(glm::vec3(13, 0, 33), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(13, 0, 39), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(13, 0, 34), 1, 15, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(19, 0, 33), 1, 15, 7, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    // tower +x, -z
+    createBrickWall(glm::vec3(51, 0, 33), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(51, 0, 39), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(51, 0, 34), 1, 15, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(57, 0, 33), 1, 15, 7, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    // tower -x, +z
+    createBrickWall(glm::vec3(13, 0, 70), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(13, 0, 76), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(13, 0, 71), 1, 15, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(19, 0, 70), 1, 15, 7, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    // tower +x, +z
+    createBrickWall(glm::vec3(51, 0, 70), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(51, 0, 76), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(51, 0, 71), 1, 15, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    createBrickWall(glm::vec3(57, 0, 70), 1, 15, 7, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
 
-    // sphere stack
-    for (int i = 0; i < 10; i++) {
-        createObject("plain", ColliderType::SPHERE, glm::vec3(4, 5+i*2,5), glm::vec3(0.5), 0.5f, 0, orientation);
-    }
 
-    // box stack
-    for (int i = 0; i < 6; i++) {
-        createObject("plain", ColliderType::CUBOID, glm::vec3(5.5, 0.5f + i * 1.25f,5.5), glm::vec3(1), 1, 0, orientation, 1);
+
+    for (int i = 0; i < 1; i++) {
+        createObject("plain", ColliderType::SPHERE, glm::vec3(55-i*2, 40+i*2, -90-i*10), glm::vec3(0.75f), 150, 0, {}, 1);
+        GameObject& heavyBox = dynamicObjects.back();
+        heavyBox.linearVelocity = glm::vec3(0, 0, 50);
     }
 }
 
+//-----------------------------
+//    Tall Structure Scene
+//-----------------------------
+void SceneBuilder::tallStructureScene() {
+    // player
+    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, -22), glm::vec3(0.5f,1.86f,0.5f), 1, 0, {}, 1);
+    GameObject& player = dynamicObjects.back();
+    playerObjectId = dynamicObjects.size() - 1;
 
+    int floorWidth = 4;
+    int floorHeight = 4;
+
+    const float baseX = -30.0f;
+    const float baseZ = -30.0f;
+
+    for (int i = 0; i < floorWidth; i++) {
+        for (int j = 0; j < floorHeight; j++) {
+            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+            createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+        }
+    }
+
+    /*int cubeSize = 12;
+    bool sphereLayer = false;
+    glm::vec3 base = glm::vec3(0, 1.5f, 0);
+    for (int i = 0; i < cubeSize; i++) {
+
+        if (i % 2 == 0) sphereLayer = true;
+        else sphereLayer = false;
+
+        glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+        for (int j = 0; j < cubeSize; j++) {
+            for (int k = 0; k < cubeSize; k++) {
+
+                ColliderType type;
+                glm::vec3 size;
+                if (sphereLayer) {
+                    type = ColliderType::SPHERE;
+                    size = glm::vec3(0.5f);
+                }
+                else {
+                    type = ColliderType::CUBOID;
+                    size = glm::vec3(1);
+                }
+
+                createObject("plain", type, glm::vec3(base.x+j, base.y+i, base.z+k), size, 1, 0, {}, 1.0f, false, randomColor);
+            }
+        }
+    }*/
+
+    //// 2d grid of block pyramid
+    //for (int i = 0; i < 5; i++) {
+    //    for (int j = 0; j < 5; j++) {
+    //        // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight, asleep
+    //        createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(125+20*i, 0, 125+20*j), 8, 5, 1.5f, 1.5f, 1.5f, 0, 0.75f, true);
+    //    }
+    //}
+
+    createObject("crate", ColliderType::CUBOID, glm::vec3(-10, 5, -10), glm::vec3(7.2), 1000, 0, {}, 1);
+    GameObject& heavyBox = dynamicObjects.back();
+    //heavyBox.linearVelocity = glm::vec3(120, 180, 150);
+    //heavyBox.angularVelocity = glm::vec3(0, 100, 0);
+
+    // ----- staplar ----- 
+    std::vector<glm::vec3> randomcolors = {
+    glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+    glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255)),
+    };
+
+    //std::vector<glm::vec3> randomcolors = {
+    //    glm::vec3(67, 97, 167),
+    //    glm::vec3(244, 244, 107)
+    //};
+    for (int g = 1; g < 6; g++) {
+        for (int h = 1; h < 6; h++) {
+
+            for (int i = 0; i < 15; i++) {
+                for (int j = 0; j < 2; j++) {
+                    for (int k = 0; k < 2; k++)
+                    {
+                        glm::vec3 pos(
+                            (g*6) + j * 5, 
+                            5 + i * 11, 
+                            (h * 6) + k * 5
+                        );
+
+                        createObject("plain", ColliderType::CUBOID, pos, glm::vec3(1, 10, 1), 10, 0, {}, 1, true, randomcolors[0]);
+                    }
+                }
+
+                glm::vec3 pos(
+                    (g * 6) + 2.5,
+                    10.5 + i * 11, 
+                    (h * 6) + 2.5
+                );
+                createObject("plain", ColliderType::CUBOID, pos, glm::vec3(6, 1, 6), 10, 0, {}, 1, true, randomcolors[1]);
+            }
+        }
+    }
+}
 
 //---------------------------
 //       Tumbler Scene
@@ -166,13 +309,14 @@ void SceneBuilder::tumblerScene() {
     createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -50.0f, 105.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
 }
 
-
-
-
 //---------------------------
 //         Main Scene
 //---------------------------
 void SceneBuilder::mainScene() {
+    // player
+    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, 4), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+    GameObject& player = dynamicObjects.back();
+    playerObjectId = dynamicObjects.size() - 1;
 // ___________________________________________________________
 // ------------------------ floor tiles ----------------------
     int floorWidth = 8;
@@ -377,7 +521,7 @@ void SceneBuilder::mainScene() {
     int wallWidth = 20;
     float brickWidth = 1.0f;
     float brickLength = 1.0f;
-    float brickHeight = 1.0f;
+    float brickHeight = 0.5f;
     float brickDistance = 0.2f;
 
     int brickWeight = 10;
@@ -476,7 +620,7 @@ void SceneBuilder::mainScene() {
         for (int row = 0; row < wallWidth2 - 1; row++) {
             float x = 254.5f;
             float y = brickHeight2 + brickHeight2 / 2 + col * brickHeight2 * 2;
-            float z = 8.6f + row * brickLength2 + brickDistance2 * row;
+            float z = 8.5f + row * brickLength2 + brickDistance2 * row;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
             createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth2, brickHeight2, brickLength2), brickWeight2, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
         }
@@ -488,4 +632,20 @@ void SceneBuilder::mainScene() {
     //bigBox.linearVelocity = glm::vec3(0, 0, 250);
 
     createObject("uvmap", ColliderType::SPHERE, glm::vec3(224.5, 9.0, 30), glm::vec3(4.0), 100000, 0, {}, 1);
+
+
+    /** Creates brick walls in a square
+    * @param startPos(x,y,z)
+    * @param wallDirection(0=+x, 1=+z)
+    * @param wallHeight
+    * @param wallWidth
+    * @param brickSize(x,y,z)
+    * @param brickDistance
+    * @param brickWeight
+    * @param brickDecrease
+    */
+    createBrickWall(glm::vec3(120, 0, -1),  0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80,120), false);
+    createBrickWall(glm::vec3(120, 0, 20), 0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+    createBrickWall(glm::vec3(120, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+    createBrickWall(glm::vec3(140, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
 }

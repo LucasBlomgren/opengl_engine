@@ -1,11 +1,12 @@
 #include "pch.h"
 #include "oobb_renderer.h"
 
-void OOBBRenderer::renderBox(Shader& shader, glm::mat4& model, const bool asleep, const bool raycastHit)
+void OOBBRenderer::renderBox(Shader& shader, glm::mat4& model, const bool asleep, const bool isStatic, const bool raycastHit)
 {
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
     if (raycastHit) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
+    else if (isStatic) { shader.setVec3("debug.uColor", glm::vec3(0.30f, 0.95f, 0.50f)); }
     else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
     else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
 

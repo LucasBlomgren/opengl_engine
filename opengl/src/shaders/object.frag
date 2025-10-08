@@ -116,16 +116,6 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
     projCoords = projCoords * 0.5 + 0.5;
     float currentDepth = projCoords.z;
 
-	//	// 3) Om utanför ljusets kägla: ingen skugga
-	//	if(projCoords.z > 1.0)
-	//	    return 0.0;
-	//
-	//	if(projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
-	//		return 0.0;  // ingen skugga utanför
-	//	}
-	//
-    // 4) Texture lookup med inbyggd jämförelse
-    //    texture() returnerar 1.0 om projCoords.z <= djupet i shadowMap, annars 0.0 (PCF vid flervärde-implementation).
     float shadow = texture(shadowMap, projCoords);
     return shadow; // eller shadow beroende på hur du vill tolka: 1.0 = i skugga
 }  

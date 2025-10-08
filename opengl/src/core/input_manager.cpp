@@ -57,39 +57,7 @@ void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yof
 void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
 {
     if (action == GLFW_PRESS) {
-        const char* name = glfwGetKeyName(key, scancode);
-        if (name) {
-            engineState->setPressedKey(name);
-        }
-        else {
-            std::string special;
-            switch (key) {
-                case GLFW_KEY_SPACE:        special = "SPACE";          break;
-                case GLFW_KEY_ENTER:        special = "ENTER";          break;
-                case GLFW_KEY_ESCAPE:       special = "ESCAPE";         break;
-                case GLFW_KEY_LEFT:         special = "LEFT";           break;
-                case GLFW_KEY_RIGHT:        special = "RIGHT";          break;
-                case GLFW_KEY_UP:           special = "UP";             break;
-                case GLFW_KEY_DOWN:         special = "DOWN";           break;
-                case GLFW_KEY_F1:           special = "F1";             break;
-                case GLFW_KEY_F2:           special = "F2";             break;
-                case GLFW_KEY_F3:           special = "F3";             break;
-                case GLFW_KEY_F4:           special = "F4";             break;
-                case GLFW_KEY_F5:           special = "F5";             break;
-                case GLFW_KEY_F6:           special = "F6";             break;
-                case GLFW_KEY_F7:           special = "F7";             break;
-                case GLFW_KEY_F8:           special = "F8";             break;
-                case GLFW_KEY_F9:           special = "F9";             break;
-                case GLFW_KEY_F10:          special = "F10";            break;
-                case GLFW_KEY_F11:          special = "F11";            break;
-                case GLFW_KEY_F12:          special = "F12";            break;
-                case GLFW_KEY_LEFT_SHIFT:   special = "LEFT_SHIFT";     break;
-                case GLFW_KEY_LEFT_CONTROL: special = "LEFT_CONTROL";   break;
-                case GLFW_KEY_LEFT_ALT:     special = "LEFT_ALT";       break;
-                default:                    special = "UNKNOWN";        break;
-            }
-            engineState->setPressedKey(special);
-        }
+        engineState->SetKeyState(key, true);
 
         if (key == GLFW_KEY_1) 
             engineState->toggleShowNormals();       // Toggle the visibility of normals in the scene
@@ -115,6 +83,47 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
             engineState->toggleShowBVH_static();
         if (key == GLFW_KEY_F8)
             engineState->toggleShowBVH_terrain();
+
+        const char* name = glfwGetKeyName(key, scancode);
+        if (name) {
+            engineState->setPressedKey(name);
+        }
+        else {
+            std::string special;
+            switch (key) {
+            case GLFW_KEY_SPACE:        special = "SPACE";        break;
+            case GLFW_KEY_ENTER:        special = "ENTER";        break;
+            case GLFW_KEY_ESCAPE:       special = "ESCAPE";       break;
+            case GLFW_KEY_LEFT:         special = "LEFT";         break;
+            case GLFW_KEY_RIGHT:        special = "RIGHT";        break;
+            case GLFW_KEY_UP:           special = "UP";           break;
+            case GLFW_KEY_DOWN:         special = "DOWN";         break;
+
+            case GLFW_KEY_F1:           special = "F1";           break;
+            case GLFW_KEY_F2:           special = "F2";           break;
+            case GLFW_KEY_F3:           special = "F3";           break;
+            case GLFW_KEY_F4:           special = "F4";           break;
+            case GLFW_KEY_F5:           special = "F5";           break;
+            case GLFW_KEY_F6:           special = "F6";           break;
+            case GLFW_KEY_F7:           special = "F7";           break;
+            case GLFW_KEY_F8:           special = "F8";           break;
+            case GLFW_KEY_F9:           special = "F9";           break;
+            case GLFW_KEY_F10:          special = "F10";          break;
+            case GLFW_KEY_F11:          special = "F11";          break;
+            case GLFW_KEY_F12:          special = "F12";          break;
+
+            case GLFW_KEY_LEFT_SHIFT:   special = "LEFT_SHIFT";   break;
+            case GLFW_KEY_LEFT_CONTROL: special = "LEFT_CONTROL"; break;
+            case GLFW_KEY_LEFT_ALT:     special = "LEFT_ALT";     break;
+
+            default:                    special = "UNKNOWN";      break;
+            }
+
+            engineState->setPressedKey(special);
+        }
+    }
+    else if (action == GLFW_RELEASE) {
+        engineState->SetKeyState(key, false);
     }
 }
 
@@ -135,21 +144,28 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 
 void InputManager::processInput(GLFWwindow* window, float deltaTime)
 {
-    // Camera controls
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera->ProcessKeyboard(FORWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera->ProcessKeyboard(BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera->ProcessKeyboard(LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera->ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera->ProcessKeyboard(UP, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-        camera->ProcessKeyboard(DOWN, deltaTime);
-
-    //
+    if (!engineState->isPlayerMode()) {
+        // Camera controls
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            camera->ProcessKeyboard(FORWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            camera->ProcessKeyboard(BACKWARD, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            camera->ProcessKeyboard(LEFT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            camera->ProcessKeyboard(RIGHT, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            camera->ProcessKeyboard(UP, deltaTime);
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+            camera->ProcessKeyboard(DOWN, deltaTime);
+    }
+    else {
+        // Player controls
+        engineState->SetKeyState(GLFW_KEY_W, glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS);
+        engineState->SetKeyState(GLFW_KEY_S, glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS);
+        engineState->SetKeyState(GLFW_KEY_A, glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS);
+        engineState->SetKeyState(GLFW_KEY_D, glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
+    }
 
     // Hold shift to move faster
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) 

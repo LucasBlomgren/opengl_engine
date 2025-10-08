@@ -81,9 +81,9 @@ int main()
     int frames = 0;
     float last_second = 0.0f;
     // fixed timestep
-    const float fixedTimeStep = 1.0f / 120.0f;
+    const float fixedTimeStep = 1.0f / 60.0f;
     float accumulator = 0.0f;
-    float lastFrame = static_cast<float>(glfwGetTime());
+    lastFrame = static_cast<float>(glfwGetTime());
 
     // setup input
     inputManager.setPointers(&engineState, &camera);
@@ -95,7 +95,7 @@ int main()
     // load textures
     textureManager.loadTexture("crate", "src/assets/crate.jpg");
     textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
-    textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
+    //textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
     textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
     std::vector<std::string> skyBoxFaces {

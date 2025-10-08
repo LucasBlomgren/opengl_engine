@@ -67,13 +67,13 @@ void SceneBuilder::setLights() {
     }
     else if (lightsState == 1) {
         // red light
-        Light light(glm::vec3(125, 15, 300), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 35.0f);
+        Light light(glm::vec3(125, 35, 250), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 25.0f);
         lightManager->addLight(light);
         // green
-        Light light2(glm::vec3(125, 15, 150), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 35.0f);
+        Light light2(glm::vec3(125, 35, 120), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 25.0f);
         lightManager->addLight(light2);
         // blue light
-        Light light3(glm::vec3(125, 15, 0), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 35.0f);
+        Light light3(glm::vec3(125, 35, 0), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 25.0f);
         lightManager->addLight(light3);
     }
     else if (lightsState == 2) {
@@ -104,17 +104,26 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 
     allHalos.clear();
 
-    if (sceneID == 2) {
+    if (sceneID == 0) {
         mainScene(); 
     }
     else if (sceneID == 1) {
         terrainScene(); 
     }
-    else if (sceneID == 0) {
-        testFloorScene(); 
+    else if (sceneID == 2) {
+        tallStructureScene();
     }
     else if (sceneID == 3) {
         tumblerScene(); 
+    }
+    else if (sceneID == 4) {
+        castleScene();
+    }
+    else if (sceneID == 5) {
+        containerScene();
+    }
+    else if (sceneID == 6) {
+        testFloorScene();
     }
 
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
@@ -317,7 +326,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
 //         Object rain
 //----------------------------------
 void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
-    constexpr float interval = 1.0f / 30.0f;
+    constexpr float interval = 1.0f / 15.0f;
     if (current_time - lastTime < interval)
         return;
 
@@ -326,8 +335,8 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
     for (int i = 0; i < 10; i++) 
     {
         // position
-        constexpr glm::vec3 spawnPoint = glm::vec3(125, 365, 125);
-        float varianceRange = 5.0f;
+        constexpr glm::vec3 spawnPoint = glm::vec3(25, 275, 25);
+        float varianceRange = 20.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
         float zVariance = randomRange(-varianceRange, varianceRange);
@@ -348,7 +357,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
             //float mass = xVariance * yVariance * zVariance;
 
             glm::vec3 size{ 4.0f };
-            float mass = 2.0f;
+            float mass = 10.0f;
 
             createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
@@ -358,7 +367,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
             //glm::vec3 size{ variance };
             //float mass = (variance * 3.0f) / 2.0f;
 
-            glm::vec3 size{ 2.0f };
+            glm::vec3 size{ 4.0f };
             float mass = 2.0f;
 
             createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
@@ -448,6 +457,112 @@ void SceneBuilder::createSpherePyramid(
     }
 }
 
+void SceneBuilder::createBrickWall(
+    glm::vec3 startPos,
+    int wallDirection,
+    float wallHeight,
+    float wallWidth,
+    glm::vec3 brickSize,
+    float brickDistance,
+    int brickWeight,
+    int brickDecrease,
+    glm::vec2 colorRange,
+    bool fullColorRange) 
+{
+    if (brickWeight < wallHeight) {
+        brickWeight = wallHeight;
+    }
+
+    glm::vec3 edgeBrickSize = brickSize;
+    if (wallDirection == 0) {
+        edgeBrickSize.x = ((wallWidth * brickSize.x + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.x + (wallWidth - 2) * brickDistance)) / 2;
+    } else {
+        edgeBrickSize.z = ((wallWidth * brickSize.z + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.z + (wallWidth - 2) * brickDistance)) / 2;
+    }
+
+    // col
+    for (int col = 0; col < wallHeight / 2; col++) {
+        // row 0, 2, 4, 6...
+        for (int row = 0; row < wallWidth; row++) {
+            glm::vec3 pos = startPos;
+            pos.y += brickSize.y / 2 + col * brickSize.y * 2;
+            if (wallDirection == 0) {
+                pos.x = startPos.x + row * brickSize.x + brickDistance * row;
+                pos.z = startPos.z;
+            } else {
+                pos.x = startPos.x;
+                pos.z = startPos.z + row * brickSize.z + brickDistance * row;
+            }
+            glm::vec3 randomColor;
+            if (fullColorRange) {
+                randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+            } else {
+                float c = randomRange(colorRange.x, colorRange.y);
+                randomColor = glm::vec3(c,c,c);
+            }
+            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        }
+        brickWeight -= brickDecrease;
+        // row 1, 3, 5, 7...
+        // edge brick
+        glm::vec3 pos = startPos;
+        pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
+        if (wallDirection == 0) {
+            pos.x = startPos.x + (edgeBrickSize.x - brickSize.x) / 2;
+            pos.z = startPos.z;
+        } else {
+            pos.x = startPos.x;
+            pos.z = startPos.z + (edgeBrickSize.z - brickSize.z) / 2;
+        }
+        glm::vec3 randomColor;
+        if (fullColorRange) {
+            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+        } else {
+            float c = randomRange(colorRange.x, colorRange.y);
+            randomColor = glm::vec3(c, c, c);
+        }
+        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        // middle bricks
+        for (int row = 1; row < wallWidth - 2; row++) {
+            glm::vec3 pos = startPos;
+            pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
+            if (wallDirection == 0) {
+                pos.x = brickSize.x / 2 + startPos.x + row * brickSize.x + brickDistance * row;
+                pos.z = startPos.z;
+            } else {
+                pos.x = startPos.x;
+                pos.z = brickSize.z / 2 + startPos.z + row * brickSize.z + brickDistance * row;
+            }
+            glm::vec3 randomColor;
+            if (fullColorRange) {
+                randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+            } else {
+                float c = randomRange(colorRange.x, colorRange.y);
+                randomColor = glm::vec3(c, c, c);
+            }
+            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        }
+        // edge brick
+        pos = startPos;
+        pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
+        if (wallDirection == 0) {
+            pos.x = startPos.x + wallWidth - 1 * brickSize.x + brickDistance * wallWidth - (edgeBrickSize.x - brickSize.x) / 2;
+            pos.z = startPos.z;
+        } else {
+            pos.x = startPos.x;
+            pos.z = startPos.z + wallWidth - 1 * brickSize.z + brickDistance * wallWidth - (edgeBrickSize.z - brickSize.z) / 2;
+        }
+        if (fullColorRange) {
+            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+        } else {
+            float c = randomRange(colorRange.x, colorRange.y);
+            randomColor = glm::vec3(c, c, c);
+        }
+        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        brickWeight -= brickDecrease;
+    }
+}
+
 //----------------------------------
 //              Halo
 //----------------------------------
@@ -461,8 +576,7 @@ void SceneBuilder::createHalo(
     glm::vec3 pos,
     int segments,
     glm::vec3 color,
-    bool createsShadows
-) 
+    bool createsShadows) 
 {
     float baseRotAng = 90.0f;
     glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);

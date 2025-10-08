@@ -16,7 +16,6 @@ struct ContactPoint {
     float accumulatedImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
-    float accumulatedTwistImpulse = 0.0f;
     float m_eff;
     glm::vec3 rA, rB;
     float depth;
@@ -24,7 +23,6 @@ struct ContactPoint {
     float biasVelocity;
 
     float invMassT1, invMassT2;
-    float invMassTwist;
 
     bool wasUsedThisFrame = true;
     bool wasWarmStarted = false;
@@ -35,6 +33,11 @@ struct Contact {
     std::vector<ContactPoint> points;
     glm::vec3 normal;
     glm::vec3 t1, t2;
+
+    glm::mat3 invInertiaA;
+    glm::mat3 invInertiaB;
+    float accumulatedTwistImpulse = 0.0f;
+    float invMassTwist = 0.0f;
 
     GameObject* objA_ptr;
     GameObject* objB_ptr;

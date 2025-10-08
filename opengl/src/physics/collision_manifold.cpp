@@ -8,8 +8,6 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     referenceFace.clear(); 
     incidentFace.clear(); 
 
-    SAT::reverseNormal(contact.objA_ptr->position, contact.objB_ptr->position, satResult.normal);
-
     float linearSlop = 0.001f;
     const float k_tol = 0.1f * linearSlop; 
     contact.objBisReference = (satResult.separationB > satResult.separationA + k_tol);
@@ -476,8 +474,8 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     glm::vec3 rB;
     float invMassA;
     float invMassB;
-    glm::mat3 invInertiaA;
-    glm::mat3 invInertiaB;
+    glm::mat3& invInertiaA = contact.invInertiaA;
+    glm::mat3& invInertiaB = contact.invInertiaB;
     glm::vec3 linearVelocityA;
     glm::vec3 linearVelocityB;
     glm::vec3 angularVelocityA;
@@ -551,8 +549,6 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     cp.invMassT1 = 1.0f / k_t1;
     float k_t2 = (invMassA + invMassB) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
     cp.invMassT2 = 1.0f / k_t2;
-
-    cp.invMassTwist = 1.0f / (glm::dot(normal, invInertiaA * normal) + glm::dot(normal, invInertiaB * normal));
 }
 
 size_t CollisionManifold::generateKey(int idA, int idB) {
@@ -564,6 +560,8 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
 
     contact.wasUsedThisFrame = true;
     contact.framesSinceUsed = 0;
+
+    //1.0f / (glm::dot(contact.normal, contact.invInertiaA * contact.normal) + glm::dot(contact.normal, contact.invInertiaB * contact.normal));
 
     glm::vec3 n = contact.normal;
     glm::vec3 t1;
@@ -659,9 +657,6 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
                 newPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, contact.normal);
                 newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
                 newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
-
-                // Twist impulse is not used in this case, so we can just copy it
-                newPoint.accumulatedTwistImpulse = cachedPoint.accumulatedTwistImpulse;
 
                 matchedFinalPoints[i] = true;
                 matchedCachedPoints[j] = true;
@@ -768,10 +763,6 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             cachedPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, contact.normal);
             cachedPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
             cachedPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
-
-            // Twist impulse is not used in this case, so we can just copy it
-            cachedPoint.accumulatedTwistImpulse = cachedPoint.accumulatedTwistImpulse;
-
 
             contact.points.push_back(cachedPoint);
 

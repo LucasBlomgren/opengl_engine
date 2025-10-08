@@ -20,21 +20,21 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     this->dynamicObjects = gameObjects;
     
     awake_DynamicObjects.clear();
-    awake_DynamicObjects.reserve(25000);
+    awake_DynamicObjects.reserve(50000);
     asleep_DynamicObjects.clear();
-    asleep_DynamicObjects.reserve(25000);
+    asleep_DynamicObjects.reserve(50000);
     static_Objects.clear();
-    static_Objects.reserve(25000);
+    static_Objects.reserve(50000);
 
-    dynamicAwakeBvh.nodes.reserve(25000);
+    dynamicAwakeBvh.nodes.reserve(50000);
     dynamicAwakeBvh.rootIdx = -1;
     dynamicAwakeBvh.nodes.clear();
 
-    dynamicAsleepBvh.nodes.reserve(25000);
+    dynamicAsleepBvh.nodes.reserve(50000);
     dynamicAsleepBvh.rootIdx = -1;
     dynamicAsleepBvh.nodes.clear();
 
-    staticBvh.nodes.reserve(25000);
+    staticBvh.nodes.reserve(50000);
     staticBvh.rootIdx = -1;
     staticBvh.nodes.clear();
 
@@ -58,6 +58,7 @@ void PhysicsEngine::clearPhysicsData() {
     contactCache.clear();
     contactsToSolve.clear();
     pending.clear();
+    pending.reserve(10000);
 }
 
 //-----------------------------
@@ -95,11 +96,20 @@ const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() cons
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
     RaycastHit a = raycast(r, this->dynamicAwakeBvh);
     RaycastHit b = raycast(r, this->dynamicAsleepBvh);
+    RaycastHit c = raycast(r, this->staticBvh);
 
-    if (a.object == nullptr && b.object != nullptr) return b;
-    if (b.object == nullptr && a.object != nullptr) return a;
-
-    return (a.t < b.t ? a : b);
+    RaycastHit bestHit = a;
+    if (b.object != nullptr) {
+        if (bestHit.object == nullptr || b.t < bestHit.t) {
+            bestHit = b;
+        }
+    }
+    if (c.object != nullptr) {
+        if (bestHit.object == nullptr || c.t < bestHit.t) {
+            bestHit = c;
+        }
+    }
+    return bestHit;
 }
 
 //-----------------------------
@@ -204,51 +214,13 @@ void PhysicsEngine::insertPendingObjects() {
     pending.clear();
 }
 
-//-------------------------------
-//      Decide sleep/awake
-//-------------------------------
-void PhysicsEngine::decideSleep() {
-    for (int idx : toWake) {
-        moveToAwake((*dynamicObjects)[idx]);
-    }
-
-    for (int idx : awake_DynamicObjects) {
-        GameObject& obj = (*dynamicObjects)[idx];
-        if (obj.isStatic) continue;
-        if (!obj.allowSleep) continue;
-        if (obj.inSleepTransition) continue;
-
-        // sleep counter
-        if (std::abs(glm::length(obj.linearVelocity)) < obj.velocityThreshold and std::abs(glm::length(obj.angularVelocity)) < obj.angularVelocityThreshold) {
-            obj.sleepCounter += dt;
-        } else {
-            obj.sleepCounter = 0.0f;
-        }
-
-        if (obj.sleepCounter >= obj.sleepCounterThreshold) {
-            toSleep.push_back(idx);
-        }
-    }
-
-    for (int idx : toSleep) {
-        moveToAsleep((*dynamicObjects)[idx]);
-    }
-
-    for (GameObject& obj : *dynamicObjects) {
-        obj.inSleepTransition = false;
-        obj.awokenThisFrame = false;
-    }
-}
-
 //-----------------------------
 //       Move to awake
 //-----------------------------
 inline void PhysicsEngine::moveToAwake(GameObject& obj) {
     if (obj.isStatic) return;
     if (obj.awakeListIdx != -1) { obj.setAwake(); return; } // redan där
-    if (obj.inSleepTransition) return; // redan på väg
 
-    obj.inSleepTransition = true;
     if (obj.asleepListIdx != -1) { // ta ur asleep
         int last = (int)asleep_DynamicObjects.size() - 1;
         if (obj.asleepListIdx != last) {
@@ -265,7 +237,6 @@ inline void PhysicsEngine::moveToAwake(GameObject& obj) {
     awake_DynamicObjects.push_back(obj.dynamicObjectIdx);
     obj.awakeListIdx = (int)awake_DynamicObjects.size() - 1;
     dynamicAwakeBvh.insertLeaf(&obj);
-    //dynamicAwakeBvh.dirty = true;
 }
 
 //-----------------------------
@@ -274,9 +245,7 @@ inline void PhysicsEngine::moveToAwake(GameObject& obj) {
 inline void PhysicsEngine::moveToAsleep(GameObject& obj) {
     if (obj.isStatic) return;
     if (obj.asleepListIdx != -1) { obj.setAsleep(); return; } // redan där
-    if (obj.inSleepTransition) return; // redan på väg
 
-    obj.inSleepTransition = true;
     if (obj.awakeListIdx != -1) { // ta ur awake
         int last = (int)awake_DynamicObjects.size() - 1;
         if (obj.awakeListIdx != last) {
@@ -287,7 +256,6 @@ inline void PhysicsEngine::moveToAsleep(GameObject& obj) {
         awake_DynamicObjects.pop_back();
         obj.awakeListIdx = -1;
         dynamicAwakeBvh.removeLeaf(obj.bvhLeafIdx);
-        //dynamicAwakeBvh.dirty = true;
     }
     obj.setAsleep(); // <- synka state
     asleep_DynamicObjects.push_back(obj.dynamicObjectIdx);
@@ -311,105 +279,6 @@ inline void PhysicsEngine::moveToStatic(GameObject& obj) {
     staticBvh.insertLeaf(&obj);
 
     staticBvh.dirty = true;
-}
-
-//-----------------------------
-//       Wake up check
-//-----------------------------
-PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& B) {
-    constexpr float velocityThreshold = 0.8f;
-    constexpr float angularThreshold = 0.4f;
-    constexpr float v2 = velocityThreshold * velocityThreshold;
-    constexpr float w2 = angularThreshold * angularThreshold;
-
-    // Beräkna lokalt (aktuella värden just nu i narrow)
-    const float Av2 = glm::dot(A.linearVelocity, A.linearVelocity);
-    const float Aw2 = glm::dot(A.angularVelocity, A.angularVelocity);
-    const float Bv2 = glm::dot(B.linearVelocity, B.linearVelocity);
-    const float Bw2 = glm::dot(B.angularVelocity, B.angularVelocity);
-
-    WakeUpInfo info{ false, false };
-
-    if (A.asleep && !A.isStatic) {
-        if (Bv2 > v2 || Bw2 > w2) {
-            info.A = true;
-            if (!A.awokenThisFrame) {
-                toWake.push_back(A.dynamicObjectIdx);
-                A.awokenThisFrame = true;
-            }
-        }
-    }
-    if (B.asleep && !B.isStatic) {
-        if (Av2 > v2 || Aw2 > w2) {
-            info.B = true;
-            if (!B.awokenThisFrame) {
-                toWake.push_back(B.dynamicObjectIdx);
-                B.awokenThisFrame = true;
-            }
-        }
-    }
-
-    return info;
-}
-
-//-----------------------------
-//       Contact Cache
-//-----------------------------
-void PhysicsEngine::updateContactCache() {
-    constexpr int maxFramesWithoutCollision = 10;
-    for (auto it = contactCache.begin(); it != contactCache.end(); ) {
-        if (!it->second.wasUsedThisFrame) {
-            it->second.framesSinceUsed++;
-
-            // Ta bort manifold efter X antal frames utan kollisionsmatch
-            if (it->second.framesSinceUsed > maxFramesWithoutCollision) {
-                it = contactCache.erase(it);
-                continue;
-            }
-        }
-        else {
-            // Nollställ för nästa frame
-            it->second.wasUsedThisFrame = false;
-            it->second.framesSinceUsed = 0;  // Nollställ räknaren vid träff
-        }
-        ++it;
-    }
-}
-
-//-----------------------------
-//       Sleep Thresholds
-//-----------------------------
-void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
-    if (obj.isStatic or obj.asleep) 
-        return;
-
-    obj.collisionHistory.push(obj.totalCollisionCount);
-    obj.totalCollisionCount = 0;
-    float avg = obj.collisionHistory.average();
-
-    if (avg <= 0.0f) {
-        if (std::abs(avg - obj.lastAvg) >= 1)
-            obj.sleepCounter = 0.0f;
-        obj.lastAvg = avg;
-
-        return;
-    }
-
-    avg = std::max(avg, 1.0f);
-
-    // reset sleep counter if difference is big enough
-    if (std::abs(avg - obj.lastAvg) >= 1)
-        obj.sleepCounter = 0.0f;
-    obj.lastAvg = avg;
-
-    float linearFactor = 0.1f; 
-    float angularFactor = 0.2f;
-    // if only in contact with one object, use a smaller factor
-    if (avg > 0.0f and avg <= 1.0f) { angularFactor *= 0.5f; };
-
-    // set thresholds
-    obj.velocityThreshold = avg * linearFactor;
-    obj.angularVelocityThreshold = (avg * angularFactor) * 1.5f * obj.invRadius;
 }
 
 //---------------------------------------------
@@ -617,6 +486,11 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             avgNormal = glm::normalize(avgNormal); // average normal  
             contact.normal = avgNormal;
 
+            if (th.obj->player) {
+                pushAwayPlayer(*th.obj, false, avgNormal, allResults[0].depth);
+                continue;
+            }
+
             SAT::findBestTriangles(allResults);
 
             collisionManifold->boxMesh(contact, contactCache, allResults);
@@ -644,6 +518,11 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 avgNormal += res.normal; 
             }
             avgNormal = glm::normalize(avgNormal); // average normal 
+
+            if (th.obj->player) {
+                pushAwayPlayer(*th.obj, false, avgNormal, allResults[0].depth);
+                continue;
+            }
 
             Contact contact(th.obj, nullptr); 
             contact.normal = avgNormal; 
@@ -683,6 +562,17 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 objA->totalCollisionCount++;
                 objB->totalCollisionCount++;
 
+                SAT::reverseNormal(objA->position, objB->position, satResult.normal);
+
+                if (objA->player) {
+                    pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
+                    continue;
+                }
+                if (objB->player) {
+                    pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
+                    continue;
+                }
+
                 // used only for worldInertia (so far)
                 if (objA->helperMatricesDirty) objA->setHelperMatrices();
                 if (objB->helperMatricesDirty) objB->setHelperMatrices();
@@ -714,6 +604,15 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
                 objA->totalCollisionCount++; 
                 objB->totalCollisionCount++; 
+
+                if (objA->player) {
+                    pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
+                    continue;
+                }
+                if (objB->player) {
+                    pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
+                    continue;
+                }
 
                 Contact contact(objA, objB); 
 
@@ -750,6 +649,9 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
     }
 }
 
+//---------------------------------------------
+//         Collect active contacts
+//---------------------------------------------
 void PhysicsEngine::collectActiveContacts() {
     contactsToSolve.clear();
     contactsToSolve.reserve(contactCache.size());
@@ -770,9 +672,9 @@ void PhysicsEngine::collectActiveContacts() {
 //---------------------------------------------
 void PhysicsEngine::resolveCollisions() {
     // Justera beroende på material
-    constexpr float staticFriction = 0.8f;
-    constexpr float dynamicFriction = 0.6f;
-    constexpr float twistFriction = 0.2f;
+    constexpr float staticFriction = 0.5f;
+    constexpr float dynamicFriction = 0.4f;
+    constexpr float twistFriction = 0.1f;
 
     for (Contact* contact : contactsToSolve) { 
         GameObject& objA = *contact->objA_ptr; 
@@ -780,7 +682,7 @@ void PhysicsEngine::resolveCollisions() {
 
         // ----- Baumgarte stabilization -----
         float slop = 0.0005f; 
-        float baumgarteFactor = 0.1f; 
+        float baumgarteFactor = 0.15f; 
         for (int j = 0; j < contact->points.size(); j++) { 
             ContactPoint& cp = contact->points[j]; 
 
@@ -799,9 +701,10 @@ void PhysicsEngine::resolveCollisions() {
                 cp.accumulatedImpulse = 0.f;
                 cp.accumulatedFrictionImpulse1 = 0.f;
                 cp.accumulatedFrictionImpulse2 = 0.f;
-                cp.accumulatedTwistImpulse = 0.f;
             }
-        } else {
+            contact->accumulatedTwistImpulse = 0.f;
+        } 
+        else {
             for (ContactPoint& cp : contact->points) {
                 // total impuls från föregående steg 
                 glm::vec3 Pn = cp.accumulatedImpulse * contact->normal;
@@ -813,15 +716,17 @@ void PhysicsEngine::resolveCollisions() {
                 if (contact->objA_ptr and !contact->freezeA) {
                     objA.applyForceLinear(-J * objA.invMass);
                     objA.applyForceAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, J));
-                    // twist
-                    objA.applyForceAngular(-objA.inverseInertiaWorld * (cp.accumulatedTwistImpulse * contact->normal));
                 }
                 if (contact->objB_ptr and !contact->freezeB) {
                     objB.applyForceLinear(J * objB.invMass);
                     objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, J));
-                    // twist
-                    objB.applyForceAngular(objB.inverseInertiaWorld * (cp.accumulatedTwistImpulse * contact->normal));
                 }
+            }
+
+            if (contact->accumulatedTwistImpulse != 0.0f) {
+                glm::vec3 tauWS = contact->accumulatedTwistImpulse * contact->normal;
+                if (!contact->freezeA) objA.applyForceAngular(-objA.inverseInertiaWorld * tauWS);
+                if (!contact->freezeB) objB.applyForceAngular(objB.inverseInertiaWorld * tauWS);
             }
         }
     } 
@@ -941,15 +846,14 @@ void PhysicsEngine::resolveCollisions() {
                         objB.applyForceLinear(dFt * objB.invMass);
                         objB.applyForceAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, dFt));
                     }
-                }
-
-                // ---------- Dynamic friction ----------
+                } 
                 else {
+                // ---------- Dynamic friction ----------
                     // Dynamisk friktion: projektera TOTAL impuls till cirkeln μ_d * Jn
                     float maxDyn = dynamicFriction * Jn;
 
                     float len = std::sqrt(newLen2);
-                    if (len > 1e-8f) {
+                    if (len > 1e-6f) {
                         float s = maxDyn / len;
                         float clampedF1 = newF1 * s;
                         float clampedF2 = newF2 * s;
@@ -974,49 +878,206 @@ void PhysicsEngine::resolveCollisions() {
                     }
                 }
                 maxDelta = std::max(maxDelta, std::abs(dT));
+            }
 
-                // ---------- Twist friction ----------
-                // Beräkna den relativa rotationshastigheten kring kontaktnormalen
-                angVelA = glm::vec3{ 0.0f };
-                angVelB = glm::vec3{ 0.0f };
-                if (contact->objA_ptr and !contact->freezeA) {
-                    angVelA = objA.angularVelocity;
+            // ---------- Twist friction (per manifold) ----------
+            // 1) Relativ rotationshastighet kring normalen
+            glm::vec3 angVelA{ 0.0f };
+            glm::vec3 angVelB{ 0.0f };
+            if (contact->objA_ptr && !contact->freezeA) angVelA = objA.angularVelocity;
+            if (contact->objB_ptr && !contact->freezeB) angVelB = objB.angularVelocity;
+
+            float v_twist = glm::dot((angVelB - angVelA), contact->normal);
+
+            // 3) Friktionsbudget baserad på TOTAL normalimpuls i manifoldet
+            float Jn_total = 0.0f;
+            for (const ContactPoint& cp : contact->points) {
+                Jn_total += std::abs(cp.accumulatedImpulse);
+            }
+
+            float maxTwistImpulse = twistFriction * Jn_total;
+
+            // 4) PGS-uppdatering (delta) för en enda twist-λ per manifold
+            float oldTwist = contact->accumulatedTwistImpulse;
+            float dLambda = -v_twist * contact->invMassTwist;
+            float newTwist = glm::clamp(oldTwist + dLambda, -maxTwistImpulse, maxTwistImpulse);
+            float delta = newTwist - oldTwist;
+            contact->accumulatedTwistImpulse = newTwist;
+
+            // 5) Applicera moment kring n
+            glm::vec3 tau = delta * contact->normal;
+            if (glm::dot(tau, tau) > 1e-6f) {
+                if (contact->objA_ptr && !contact->freezeA) {
+                    objA.applyForceAngular(-objA.inverseInertiaWorld * tau);
                 }
-                if (contact->objB_ptr and !contact->freezeB) {
-                    angVelB = objB.angularVelocity;
+                if (contact->objB_ptr && !contact->freezeB) {
+                    objB.applyForceAngular(objB.inverseInertiaWorld * tau);
                 }
-                float relativeAngularSpeed = glm::dot((angVelB - angVelA), contact->normal);
-
-                // Beräkna preliminär twist impulse (i rotationsdomänen)
-                float twistImpulse = -relativeAngularSpeed * cp.invMassTwist;
-                float maxTwistImpulse = twistFriction * std::abs(cp.accumulatedImpulse);
-
-                // Ackumulera twistimpulsen
-                float oldTwistImpulse = cp.accumulatedTwistImpulse;
-                float newTwistImpulse = glm::clamp(oldTwistImpulse + twistImpulse, -maxTwistImpulse, maxTwistImpulse);
-                float deltaTwistImpulse = newTwistImpulse - oldTwistImpulse;
-                cp.accumulatedTwistImpulse = newTwistImpulse;
-
-                // Den twistimpuls vi applicerar är ett moment (angular impulse) kring kontaktnormalen
-                glm::vec3 twistImpulseVec = deltaTwistImpulse * contact->normal;
-
-                // Applicera twistimpulsen på kropparnas angulära hastigheter
-                float twistImpulseVecLen = glm::dot(twistImpulseVec, twistImpulseVec);
-                if (twistImpulseVecLen > 1e-6f) {
-
-                    if (contact->objA_ptr and !contact->freezeA) {
-                        objA.applyForceAngular(-objA.inverseInertiaWorld * twistImpulseVec);
-                    }
-                    if (contact->objB_ptr and !contact->freezeB) {
-                        objB.applyForceAngular(objB.inverseInertiaWorld * twistImpulseVec);
-                    }
-                }
-                maxDelta = std::max(maxDelta, std::abs(deltaTwistImpulse));
             }
         }
 
         if (maxDelta < 1e-4f) {
             break;
         }
+    }
+}
+
+//-----------------------------
+//       Wake up check
+//-----------------------------
+PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& B) {
+    constexpr float velocityThreshold = 1.6f; // hälften för 120hz
+    constexpr float angularThreshold = 0.8f;
+    constexpr float v2 = velocityThreshold * velocityThreshold;
+    constexpr float w2 = angularThreshold * angularThreshold;
+
+    // Beräkna lokalt (aktuella värden just nu i narrow)
+    const float Av2 = glm::dot(A.linearVelocity, A.linearVelocity);
+    const float Aw2 = glm::dot(A.angularVelocity, A.angularVelocity);
+    const float Bv2 = glm::dot(B.linearVelocity, B.linearVelocity);
+    const float Bw2 = glm::dot(B.angularVelocity, B.angularVelocity);
+
+    WakeUpInfo info{ false, false };
+
+    if (A.asleep && !A.isStatic) {
+        if (Bv2 > v2 || Bw2 > w2) {
+            info.A = true;
+            if (!A.inSleepTransition) {
+                toWake.push_back(A.dynamicObjectIdx);
+                A.inSleepTransition = true;
+            }
+        }
+    }
+    if (B.asleep && !B.isStatic) {
+        if (Av2 > v2 || Aw2 > w2) {
+            info.B = true;
+            if (!B.inSleepTransition) {
+                toWake.push_back(B.dynamicObjectIdx);
+                B.inSleepTransition = true;
+            }
+        }
+    }
+
+    return info;
+}
+
+//-----------------------------
+//       Sleep Thresholds
+//-----------------------------
+void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
+    if (obj.isStatic or obj.asleep or !obj.allowSleep)
+        return;
+
+    obj.collisionHistory.push(obj.totalCollisionCount);
+    obj.totalCollisionCount = 0;
+    float avg = obj.collisionHistory.average();
+
+    if (avg <= 0.0f) {
+        if (std::abs(avg - obj.lastAvg) >= 1) {
+            obj.sleepCounter = 0.0f;
+        }
+        obj.lastAvg = avg;
+
+        return;
+    }
+
+    avg = std::max(avg, 1.0f);
+
+    // reset sleep counter if difference is big enough
+    if (std::abs(avg - obj.lastAvg) >= 1) {
+        obj.sleepCounter = 0.0f;
+    }
+    obj.lastAvg = avg;
+
+    float linearFactor = 0.2f;  // hälften för 120hz
+    float angularFactor = 0.25f;
+    // if only in contact with one object, use a smaller factor
+    //if (avg > 0.0f and avg <= 1.0f) { angularFactor *= 0.5f; };
+
+    // set thresholds
+    obj.velocityThreshold = avg * linearFactor;
+    obj.angularVelocityThreshold = (avg * angularFactor) * 1.5f * obj.invRadius;
+}
+
+//-------------------------------
+//      Decide sleep/awake
+//-------------------------------
+void PhysicsEngine::decideSleep() {
+    for (int idx : toWake) {
+        moveToAwake((*dynamicObjects)[idx]);
+    }
+
+    for (int idx : awake_DynamicObjects) {
+        GameObject& obj = (*dynamicObjects)[idx];
+        if (obj.isStatic) continue;
+        if (obj.inSleepTransition) continue;
+        if (!obj.allowSleep) continue;
+
+        // sleep counter
+        if (std::abs(glm::length(obj.linearVelocity)) < obj.velocityThreshold and std::abs(glm::length(obj.angularVelocity)) < obj.angularVelocityThreshold) {
+            obj.sleepCounter += dt;
+        }
+        else {
+            obj.sleepCounter = 0.0f;
+        }
+
+        if (obj.sleepCounter >= obj.sleepCounterThreshold) {
+            toSleep.push_back(idx);
+        }
+    }
+
+    for (int idx : toSleep) {
+        moveToAsleep((*dynamicObjects)[idx]);
+    }
+
+    for (GameObject& obj : *dynamicObjects) {
+        obj.inSleepTransition = false;
+    }
+}
+
+//-----------------------------
+//       Contact Cache
+//-----------------------------
+void PhysicsEngine::updateContactCache() {
+    constexpr int maxFramesWithoutCollision = 10;
+    for (auto it = contactCache.begin(); it != contactCache.end(); ) {
+        if (!it->second.wasUsedThisFrame) {
+            it->second.framesSinceUsed++;
+
+            // Ta bort manifold efter X antal frames utan kollisionsmatch
+            if (it->second.framesSinceUsed > maxFramesWithoutCollision) {
+                it = contactCache.erase(it);
+                continue;
+            }
+        }
+        else {
+            // Nollställ för nästa frame
+            it->second.wasUsedThisFrame = false;
+            it->second.framesSinceUsed = 0;  // Nollställ räknaren vid träff
+        }
+        ++it;
+    }
+}
+
+void PhysicsEngine::pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d) {
+
+    float vn = glm::dot(player.linearVelocity, n);
+    glm::vec3 up;
+
+    if (playerIsA) {
+        player.position += n * (d + 0.001f);
+        up = glm::vec3(0.0f, 1.0f, 0.0f);
+    }
+    else {
+        player.position -= n * (d - 0.001f);
+        up = glm::vec3(0.0f, -1.0f, 0.0f);
+    }
+
+    player.onGround = false;
+
+    // Ground check
+    float t = glm::dot(up, n);
+    if (t > 0.75f) {
+        player.onGround = true;
     }
 }

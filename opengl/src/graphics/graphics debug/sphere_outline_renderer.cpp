@@ -20,7 +20,7 @@ void SphereOutlineRenderer::init() {
     glDisableVertexAttribArray(1);
 }
 
-void SphereOutlineRenderer::render(Shader& shader, glm::vec3& cameraPos, glm::vec3& sphereCenter, float radius, const bool asleep, const bool raycastHit) {
+void SphereOutlineRenderer::render(Shader& shader, glm::vec3& cameraPos, glm::vec3& sphereCenter, float radius, const bool asleep, const bool isStatic, const bool raycastHit) {
     glm::vec3 viewDir = glm::normalize(cameraPos - sphereCenter);
 
     glm::vec3 up = glm::abs(glm::dot(viewDir, glm::vec3(0, 1, 0))) > 0.99f
@@ -32,6 +32,7 @@ void SphereOutlineRenderer::render(Shader& shader, glm::vec3& cameraPos, glm::ve
 
     shader.setInt("debug.objectType", 1);
     if (raycastHit) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
+    else if (isStatic) { shader.setVec3("debug.uColor", glm::vec3(0.30f, 0.95f, 0.50f)); }
     else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
     else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
 

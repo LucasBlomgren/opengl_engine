@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <array>
+#include <GLFW/glfw3.h>
 
 class EngineState 
 {
@@ -36,8 +38,14 @@ public:
     bool getShowBVH_static() const;
     bool getShowBVH_terrain() const;
     std::string GetPressedKey() const;
+    void setPlayerMode(bool);
+    bool isPlayerMode() const;
+
+    bool IsKeyDown(int key) const;
+    void SetKeyState(int key, bool down);
 
 private:
+    bool playerMode = false;
     bool advanceStep = false;
     bool paused = false;
     bool showFPS = false;
@@ -51,4 +59,6 @@ private:
     bool showBVH_static = false;
     bool showBVH_terrain = false;
     std::string pressedKey;
+
+    std::array<bool, GLFW_KEY_LAST + 1> keyStates{};
 };

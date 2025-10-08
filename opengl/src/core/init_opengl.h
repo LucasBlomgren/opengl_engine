@@ -11,7 +11,7 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     GLFWmonitor* primary = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = glfwGetVideoMode(primary);
 
-    GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(width, height, title.c_str(), primary, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window\n";
         glfwTerminate();

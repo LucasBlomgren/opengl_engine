@@ -20,7 +20,7 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
 }
 
-struct CollisionHistory {
+struct CircBuffer {
    static constexpr int SLOTS = 3;
    int buffer[SLOTS] = { 0 };
    int index = 0;
@@ -47,6 +47,13 @@ struct CollisionHistory {
 
 class GameObject {
 public:
+    // player variables
+    bool player = false;
+    glm::vec3 playerMoveImpulse{ 0.0f };
+    float playerJumpImpulse = 0.0f;
+    bool onGround = false;
+    bool hasJumped = false;
+
    // mesh variables
     int id;
     glm::vec3 position;
@@ -102,14 +109,13 @@ public:
     bool allowSleep = true;
     float sleepCounter = 0;
     float sleepCounterThreshold;
-    bool awokenThisFrame = false;
-    bool inSleepTransition = false;
-    float velocityThreshold = 2;
-    float angularVelocityThreshold = 3;
+    bool inSleepTransition = false;     // to avoid waking up immediately and to not add duplicate wake-up requests
+    float velocityThreshold = 0;
+    float angularVelocityThreshold = 0;
 
     int totalCollisionCount = 0;
     float lastAvg = 0.0f;
-    CollisionHistory collisionHistory;
+    CircBuffer collisionHistory;
 
     // collision variables
     AABB aabb;
@@ -208,10 +214,12 @@ public:
                 inverseInertia = glm::mat3(0.0f);
             }
             else {
-                if (this->isUniformlyScaled)
+                if (this->isUniformlyScaled) {
                     calculateInverseInertiaForCube();
-                else
+                }
+                else {
                     calculateInverseInertiaForCuboid();
+                }
             }
         }
 

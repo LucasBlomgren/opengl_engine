@@ -17,6 +17,8 @@ RaycastHit raycast(Ray& ray, BVHTree<GameObject>& bvh)
     for (int i = 0; i < collisions.size(); i++) {
         GameObject& obj = *collisions[i];
 
+        if (obj.player) continue;
+
         glm::vec3 min = obj.aabb.wMin;
         glm::vec3 max = obj.aabb.wMax;
 

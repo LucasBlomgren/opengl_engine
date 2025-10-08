@@ -54,7 +54,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
         GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-        newObject.linearVelocity = camera->front * 100.0f;
+        newObject.linearVelocity = camera->front * 20.0f;
         newObject.asleep = false;
     }
 
@@ -74,6 +74,36 @@ void Editor::update(float& deltaTime, Shader& shader) {
         sceneBuilder->createScene(*physicsEngine, 3);
         selectedObject = nullptr;
     }
+    if (engineState->GetPressedKey() == ",") {
+        sceneBuilder->createScene(*physicsEngine, 4);
+        selectedObject = nullptr;
+    }
+    if (engineState->GetPressedKey() == ".") {
+        sceneBuilder->createScene(*physicsEngine, 5);
+        selectedObject = nullptr;
+    }
+    if (engineState->GetPressedKey() == "-") {
+        sceneBuilder->createScene(*physicsEngine, 6);
+        selectedObject = nullptr;
+    }
+    if (engineState->GetPressedKey() == "F1" || 
+        engineState->GetPressedKey() == "F2" || 
+        engineState->GetPressedKey() == "F3" || 
+        engineState->GetPressedKey() == "F4" ||
+        engineState->GetPressedKey() == ","  ||
+        engineState->GetPressedKey() == "."  || 
+        engineState->GetPressedKey() == "-") 
+    {
+        if (engineState->isPlayerMode()) {
+            GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
+            //player.seeThrough = !player.seeThrough;
+            player.player = !player.player;
+            player.allowSleep = !player.allowSleep;
+            player.asleep = false;
+            player.seeThrough = true;
+            physicsEngine->queueAdd(&player);
+        }
+    }
 
     if (engineState->GetPressedKey() == "F9") {
         skyboxManager->toggleTexture();
@@ -85,6 +115,49 @@ void Editor::update(float& deltaTime, Shader& shader) {
     }
     if (engineState->GetPressedKey() == "F11") {
         physicsEngine->awakenAllObjects();
+    }
+
+    if (engineState->GetPressedKey() == "F12") {
+        engineState->setPlayerMode(!engineState->isPlayerMode());
+        GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
+        //player.seeThrough = !player.seeThrough;
+        player.player = !player.player;
+        player.allowSleep = !player.allowSleep;
+        player.asleep = false;
+        physicsEngine->queueAdd(&player);
+
+        if (engineState->isPlayerMode()) player.seeThrough = true;
+        else player.seeThrough = false;
+    }
+
+    // update player movement
+    if (engineState->isPlayerMode()) {
+        GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
+
+        //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+        camera->position = player.position + glm::vec3(0, 0.76f, 0);
+        
+        glm::vec3 input(0.0f);
+        if (engineState->IsKeyDown(87)) input += camera->front;
+        if (engineState->IsKeyDown(83)) input -= camera->front;
+        if (engineState->IsKeyDown(68)) input += camera->right;
+        if (engineState->IsKeyDown(65)) input -= camera->right;
+
+        input.y = 0.0f;
+
+        // Undvik diag-fartbonus
+        if (glm::length2(input) > 0.0f) {
+            input = glm::normalize(input);
+        }
+
+        const float moveSpeed = 8.f; // meter per sekund
+        player.playerMoveImpulse = input * moveSpeed;
+
+        if (engineState->IsKeyDown(32) && player.onGround && !player.hasJumped) {
+            player.playerJumpImpulse += 10.5f;
+            player.onGround = false;
+            player.hasJumped = true;
+        }
     }
 
     engineState->clearPressedKey();
@@ -134,7 +207,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAwakeBvh();
+    BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {

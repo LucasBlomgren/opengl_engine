@@ -83,6 +83,7 @@ private:
     void split(int parentIdx, int depth);
     void updateLeaves();
     void refitNode(int nodeIdx);
+    void updateRenderData(Node& n);
 
     // single query
     std::vector<Node*> queryStack;
@@ -127,11 +128,8 @@ void treeVsTreeQuery(const BVHTree<Ea>& a,
         const auto& nA = a.nodes[ai];
         const auto& nB = b.nodes[bi];
 
-        // prune på fat
-        if (!nA.fatBox.intersects(nB.fatBox)) continue;
-
         // leaf–leaf
-        if (nA.isLeaf & nB.isLeaf) { // bitvis & undviker kortslutningsbranch
+        if (nA.isLeaf && nB.isLeaf) {
             if (nA.tightBox.intersects(nB.tightBox)) {
                 if constexpr (sameType) {
                     if (!needOrderCheck || ai < bi) {
@@ -143,6 +141,10 @@ void treeVsTreeQuery(const BVHTree<Ea>& a,
                 }
             }
             continue;
+        }
+        // node–node eller node–leaf
+        else {
+            if (!nA.fatBox.intersects(nB.fatBox)) continue;
         }
 
         // expandera den sida som är "större" (billig SAH-proxy) – push:a bara 2 par
