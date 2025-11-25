@@ -47,14 +47,14 @@ void Editor::update(float& deltaTime, Shader& shader) {
 
     if (engineState->GetPressedKey() == "M1_PRESS") 
         placeObject();
+    if (engineState->GetPressedKey() == "M2_PRESS")
+        selectObject();
     if (engineState->GetPressedKey() == "M2_RELEASE")
         dropObject();
-    if (engineState->GetPressedKey() == "M2_PRESS") 
-        selectObject();
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
         GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-        newObject.linearVelocity = camera->front * 20.0f;
+        newObject.linearVelocity = camera->front * 150.0f;
         newObject.asleep = false;
     }
 
@@ -95,13 +95,13 @@ void Editor::update(float& deltaTime, Shader& shader) {
         engineState->GetPressedKey() == "-") 
     {
         if (engineState->isPlayerMode()) {
-            GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
-            //player.seeThrough = !player.seeThrough;
-            player.player = !player.player;
-            player.allowSleep = !player.allowSleep;
-            player.asleep = false;
+            sceneBuilder->createObject("crate", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+            GameObject& player = sceneBuilder->getDynamicObjects().back();
+            sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
+
+            player.player = true;
+            player.allowSleep = false;
             player.seeThrough = true;
-            physicsEngine->queueAdd(&player);
         }
     }
 
@@ -118,16 +118,24 @@ void Editor::update(float& deltaTime, Shader& shader) {
     }
 
     if (engineState->GetPressedKey() == "F12") {
-        engineState->setPlayerMode(!engineState->isPlayerMode());
-        GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
-        //player.seeThrough = !player.seeThrough;
-        player.player = !player.player;
-        player.allowSleep = !player.allowSleep;
-        player.asleep = false;
-        physicsEngine->queueAdd(&player);
 
-        if (engineState->isPlayerMode()) player.seeThrough = true;
-        else player.seeThrough = false;
+        engineState->setPlayerMode(!engineState->isPlayerMode());
+
+        if (engineState->isPlayerMode()) {
+            sceneBuilder->createObject("crate", ColliderType::CUBOID, camera->position-glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+            GameObject& player = sceneBuilder->getDynamicObjects().back();
+            sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
+
+            player.player = true;
+            player.allowSleep = false;
+            player.seeThrough = true;
+        }
+        else {
+            GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
+            physicsEngine->queueRemove(&player);
+            //sceneBuilder->getDynamicObjects().erase(sceneBuilder->getDynamicObjects().begin() + sceneBuilder->playerObjectId);
+            sceneBuilder->playerObjectId = -1;
+        }
     }
 
     // update player movement
@@ -259,7 +267,11 @@ void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
         selectedObject->asleep = false;
-        physicsEngine->queueAdd(selectedObject);
+
+        // avoid nullptr dereference in physics engine
+        GameObject* obj = selectedObject;
+        physicsEngine->queueAdd(obj);
+
         selectedObject->sleepCounterThreshold = 0.5f;
         selectedObject->sleepCounter = 0.0f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
@@ -286,7 +298,11 @@ void Editor::selectObject() {
 
     selectedObject->selectedByEditor = true;
     selectedObject->asleep = false;
-    physicsEngine->queueAdd(selectedObject);
+
+    // avoid nullptr dereference in physics engine
+    GameObject* obj = selectedObject;
+    physicsEngine->queueAdd(obj);
+
     selectedObject->sleepCounterThreshold = 1000000.0f;
     selectedObject->lastPosition = selectedObject->position;
 

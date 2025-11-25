@@ -299,6 +299,13 @@ int main()
                     << std::setw(VALUE_W) << std::left
                     << frames << "\n"
 
+                    // Swap Time
+                    << std::setw(LABEL_W) << std::left
+                    << "Swap:"
+                    << std::setw(VALUE_W) << std::left
+                    << std::fixed << std::setprecision(3) << swapTime * 1000.0f << " ms\n"
+
+
                     // Objects
                     << std::setw(LABEL_W) << std::left
                     << "Objects:"

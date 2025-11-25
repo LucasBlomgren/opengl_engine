@@ -21,7 +21,7 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
 }
 
 struct CircBuffer {
-   static constexpr int SLOTS = 3;
+   static constexpr int SLOTS = 5;
    int buffer[SLOTS] = { 0 };
    int index = 0;
    int count = 0;
@@ -99,7 +99,6 @@ public:
     bool shouldRotate;
     bool isRotated = false;
     bool canMoveLinearly = true;
-    bool isUniformlyScaled;
     glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
     float radius;
     float invRadius;
@@ -170,7 +169,6 @@ public:
         collider(this)
     {
         // physics stuff
-        isUniformlyScaled = approxEqual(scale.x, scale.y) && approxEqual(scale.y, scale.z);
         setRotatedFlag();
         invRadius = 1.0f / (0.5f * glm::length(scale));
 
@@ -204,34 +202,31 @@ public:
 
         // Collider
         if (colliderType == ColliderType::CUBOID) {
-            OOBB oobb(verticesPositions, modelMatrix);
-            collider.shape = oobb;
+            OOBB box(verticesPositions, modelMatrix, scale);
+            collider.shape = box;
+
+            glm::vec3 size = box.lHalfExtents * 2.0f * scale;  
+            bool isUniform = approxEqual(size.x, size.y) && approxEqual(size.y, size.z);
 
             oobbRenderer.setupWireframeBox();
             oobbRenderer.setupNormals();
 
+            // detta ska vara baserat på OOBB storleken (halfExtents), inte bara scale som det är nu
             if (isStatic) {
                 inverseInertia = glm::mat3(0.0f);
-            }
-            else {
-                if (this->isUniformlyScaled) {
-                    calculateInverseInertiaForCube();
-                }
-                else {
-                    calculateInverseInertiaForCuboid();
-                }
+            } else if (isUniform) {
+                calculateInverseInertiaForCube(size.x);
+            } else {
+                calculateInverseInertiaForCuboid(size.x, size.y, size.z);
             }
         }
-
         else if (colliderType == ColliderType::SPHERE) {
-            radius = scale.x;
             Sphere sphere(modelMatrix, scale.x);
             collider.shape = sphere; 
 
             if (isStatic) {
                 inverseInertia = glm::mat3(0.0f); 
-            }
-            else {
+            } else {
                 calculateInverseInertiaForSolidSphere();
             }
         }
@@ -259,28 +254,23 @@ public:
         if (EBO) glDeleteBuffers(1, &EBO); glcount::decEBO();
     }
 
-    void setPhysicsVariables();
-
     void resetDirtyFlags();
     void setModelMatrix();
     void setHelperMatrices();
     void setRotatedFlag();
-    void calculateInverseInertiaForCube();
-    void calculateInverseInertiaForCuboid();
+    void calculateInverseInertiaForCube(float side);
+    void calculateInverseInertiaForCuboid(float sx, float sy, float sz);
     void calculateInverseInertiaForSolidSphere();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
     void renderMesh(Shader& shader);
     void updateAABB();
     void updateCollider();
-    void updateVelocities(const float& dt);
     void updatePos(const float& dt);
-    bool sleepCheck();
-    void updateSleepCounter(const float& dt);
     void setAsleep();
     void setAwake();
 
-    void applyForceLinear(glm::vec3 f);
-    void applyForceAngular(glm::vec3 f);
+    void applyImpulseLinear(const glm::vec3& j);
+    void applyImpulseAngular(const glm::vec3& j);
 
     AABB getAABB() const;
 

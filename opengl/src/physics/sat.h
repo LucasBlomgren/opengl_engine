@@ -37,6 +37,7 @@ namespace SAT {
         Result& satResult);
 
     void reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal);
+    void reverseNormalBoxBox(Collider& A, Collider& B, glm::vec3& normal);
     void findBestTriangles(std::vector<SAT::Result>& results);
     void addFurthestTriangle(std::vector<SAT::Result>& results, std::vector<int>& addedIndices);
 }

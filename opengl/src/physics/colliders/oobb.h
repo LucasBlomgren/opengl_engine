@@ -10,14 +10,16 @@ class OOBB {
 public:
     //constructor
     OOBB() = default;
-    OOBB(std::vector<glm::vec3>& verts, const glm::mat4& M)
-    {
+    OOBB(std::vector<glm::vec3>& verts, const glm::mat4& M, const glm::vec3& scale) {
+        this->scale = scale;
         init(verts, M);
         update(M);
     };
 
-    glm::vec3 centroid;
-    glm::vec3 halfExtents;
+    glm::vec3 lCenter;
+    glm::vec3 wCenter;
+    glm::vec3 lHalfExtents;
+    glm::vec3 scale;
     std::array<glm::vec3, 8> lVertices;
     std::array<glm::vec3, 8> wVertices;
 

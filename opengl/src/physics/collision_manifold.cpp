@@ -12,6 +12,9 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     const float k_tol = 0.1f * linearSlop; 
     contact.objBisReference = (satResult.separationB > satResult.separationA + k_tol);
 
+    // print who is reference face on line below and the IDs of the objects
+    //std::cout << "Reference face on object ID: " << (contact.objBisReference ? contact.objB_ptr->id : contact.objA_ptr->id) << std::endl;
+
     if (contact.objBisReference) {
         selectCollisionFace(*contact.objB_ptr, -satResult.normal); referenceFace = this->selectedFace;
         selectCollisionFace(*contact.objA_ptr, satResult.normal);  incidentFace  = this->selectedFace;
@@ -30,6 +33,7 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     contact.incidentFace = incidentFace;
     contact.referenceFaceNormal = n_ref; 
 
+    this->clippingPlanes.clear();
     clipPoints(referenceFace, incidentFace, n_ref); 
 
     std::vector<float> pointsDepth;
@@ -357,7 +361,6 @@ void CollisionManifold::clipPoints(std::vector<glm::vec3>& referenceFace, std::v
    for (int i = 0; i < counter; i++) {
       if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0], 1e-7f))
           this->clippedPoints.push_back(contactPoints[i]);
-
    }
 }
 
@@ -459,12 +462,12 @@ void CollisionManifold::computePenetrationDepth(std::vector<glm::vec3>& points, 
 }
 
 void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) {
-    constexpr float restitutionThreshold = 0.1f; // Minsta hastighet för att restitution ska aktiveras
-    float restitution = 0.1f; // exempelmaterial
+    constexpr float restitutionThreshold = 0.2f; // Minsta hastighet för att restitution ska aktiveras
+    float restitution = 0.0f; // exempelmaterial
 
-    //if (contact.freezeA or contact.freezeB) {
-    //    restitution = 0.0f; // ingen studs om någon av kropparna är frusen
-    //}
+    if (contact.freezeA or contact.freezeB) {
+        restitution = 0.0f; // ingen studs om någon av kropparna är frusen
+    }
 
     GameObject& objA = *contact.objA_ptr; 
     GameObject& objB = *contact.objB_ptr; 
@@ -521,16 +524,25 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         glm::dot(rA_cross_n, invInertiaA * rA_cross_n) +
         glm::dot(rB_cross_n, invInertiaB * rB_cross_n));
 
+    //if (cp.m_eff <= 1e-8f) {
+    //    std::cout << "Warning: contact point with near-zero effective mass!" << std::endl;
+    //}
+
     // Räkna ut den relativa hastigheten vid kontaktpunkten, baserat på de aktuella kropparnas tillstånd
     glm::vec3 relativeVelocity = 
         (linearVelocityB + glm::cross(angularVelocityB, rB)) -
         (linearVelocityA + glm::cross(angularVelocityA, rA));
 
-    float normalVelocity = glm::dot(relativeVelocity, normal);
-    if (normalVelocity < -restitutionThreshold) {
-        cp.targetBounceVelocity = -restitution * normalVelocity;
+    // om kontakten warm startas (dvs är “gammal”) → ingen studs
+    bool allowRestitution = true;
+    if (cp.wasWarmStarted or contact.framesSinceUsed > 0) {
+        allowRestitution = false;
     }
-    else {
+
+    float normalVelocity = glm::dot(relativeVelocity, normal);
+    if (allowRestitution and normalVelocity < -restitutionThreshold) {
+        cp.targetBounceVelocity = -restitution * normalVelocity;
+    } else {
         cp.targetBounceVelocity = 0.0f;
     }
 
@@ -549,6 +561,10 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     cp.invMassT1 = 1.0f / k_t1;
     float k_t2 = (invMassA + invMassB) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
     cp.invMassT2 = 1.0f / k_t2;
+
+    //if (k_t1 <= 1e-8f || k_t2 <= 1e-8f) {
+    //    std::cout << "Warning: contact point with near-zero tangential effective mass!" << std::endl;
+    //}
 }
 
 size_t CollisionManifold::generateKey(int idA, int idB) {
@@ -561,8 +577,6 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     contact.wasUsedThisFrame = true;
     contact.framesSinceUsed = 0;
 
-    //1.0f / (glm::dot(contact.normal, contact.invInertiaA * contact.normal) + glm::dot(contact.normal, contact.invInertiaB * contact.normal));
-
     glm::vec3 n = contact.normal;
     glm::vec3 t1;
 
@@ -571,12 +585,12 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         t1 = it->second.t1 - n * glm::dot(it->second.t1, n); // reproject
     }
 
-    // ingen cache eller degenererat? seeda opartiskt (per-kontakt, inte per frame)
+    // no cache or degenerated? seed impartial per-contact
     if (it == contactCache.end() or glm::length2(t1) < 1e-8f) {
         uint64_t h = contact.hashKey * 0x9E3779B97F4A7C15ull;
         float theta = float((h >> 33) & 0x7fffffff) * (2.0f * 3.1415926535f) / float(0x80000000);
 
-        // bygg en ortonormal bas i planet runt n
+        // build a ortonormal basis around n
         glm::vec3 seed = (std::abs(n.y) < 0.9f) ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0);
         glm::vec3 b = glm::normalize(glm::cross(seed, n));
         glm::vec3 c = glm::normalize(glm::cross(n, b));
@@ -615,7 +629,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     std::vector<glm::vec3>& referenceFace = contact.referenceFace;
 
     // -------------- behöver ändras till att vara en faktor av objektens storlekar -------------
-    const float threshold = 0.0005f;
+    const float threshold = 0.005f;
 
     // iterera över alla nya contact points och se om någon är nära en existerande
     glm::mat3 M3; 
@@ -623,8 +637,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     if (cachedContact.objBisReference and contact.objB_ptr) {
         M3 = glm::mat3(cachedContact.objB_ptr->modelMatrix); 
         T3 = glm::vec3(cachedContact.objB_ptr->modelMatrix[3]); 
-    }
-    else {
+    } else {
         M3 = glm::mat3(cachedContact.objA_ptr->modelMatrix); 
         T3 = glm::vec3(cachedContact.objA_ptr->modelMatrix[3]); 
     }
@@ -689,6 +702,8 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         }
     }
 
+    // only done for box vs box 
+
     if (this->clippingPlanes.size() > 0)
     // fyll på med cachade punkter som inte blivit matchade med en ny punkt
     if (contact.points.size() < 4) {
@@ -698,8 +713,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         if (contact.objBisReference and contact.objB_ptr) {
             M3 = glm::mat3(contact.objB_ptr->modelMatrix); 
             T3 = glm::vec3(contact.objB_ptr->modelMatrix[3]); 
-        }
-        else {
+        } else {
             M3 = glm::mat3(contact.objA_ptr->modelMatrix); 
             T3 = glm::vec3(contact.objA_ptr->modelMatrix[3]); 
         }
@@ -708,7 +722,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             if (matchedCachedPoints[i] == true)
                 continue;
 
-            ContactPoint cachedPoint = cachedContact.points[i];
+            ContactPoint& cachedPoint = cachedContact.points[i];
 
             // transformera till world space
             glm::vec3 transformedPoint = M3 * cachedPoint.localCoord + T3;
@@ -716,20 +730,23 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             // kolla om punkten är innanför referensface
             bool inside = true;
             for (auto& plane : this->clippingPlanes) {
-                if (glm::dot(plane.normal, transformedPoint - plane.point) >= 0.1f) {
+                if (glm::dot(plane.normal, transformedPoint - plane.point) >= 0.001f) {
                     inside = false;
                     break;
                 }
             }
             if (!inside) continue;  // hoppa över till nästa cachedPoint
 
+            // return glm::dot(planeNormal, point - planePoint) <= tolerance;
+            // if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0], 1e-7f))
+
             // kolla om punkten är innanför referensface normal
-            constexpr float keepN = 0.001f; // minsta avståndet till referensface normal
+            constexpr float keepN = 0.1f; // minsta avståndet till referensface normal
             float dn = glm::dot(referenceFaceNormal, transformedPoint - referenceFace[0]);
             if (dn > keepN) {
                 continue;
             }
-            if (dn < -0.05f) {
+            if (dn < -0.00001f) {
                 continue;
             }
 
@@ -739,8 +756,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             glm::mat4* invM;
             if (contact.objBisReference and contact.objB_ptr) {
                 invM = &contact.objB_ptr->invModelMatrix;
-            }
-            else {
+            } else {
                 invM = &contact.objA_ptr->invModelMatrix;
             }
 
@@ -809,4 +825,3 @@ std::array<glm::vec3, 2> CollisionManifold::edgeEdgePoints(glm::vec3& P0, glm::v
 
     return contactPoints;
 }
-

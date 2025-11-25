@@ -2,8 +2,6 @@
 #include "oobb.h"
 
 void OOBB::update(const glm::mat4& M) {
-    centroid = glm::vec3(M[3]);
-
     // rotate normals
     glm::mat3 R = glm::mat3(M);
     for (int i = 0; i < 3; i++) {
@@ -14,6 +12,9 @@ void OOBB::update(const glm::mat4& M) {
     for (int i = 0; i < 8; ++i) {
         wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
     }
+
+    // compute centroid
+    wCenter = glm::vec3(M * glm::vec4(lCenter, 1.0f));
 }
 
 std::array<OOBB::Edge, 4> OOBB::createEdgesAlongAxis(int axisIdx) const {
@@ -21,17 +22,17 @@ std::array<OOBB::Edge, 4> OOBB::createEdgesAlongAxis(int axisIdx) const {
     int k = (axisIdx + 2) % 3;
 
     glm::vec3 N1 = wAxes[j], N2 = wAxes[k];
-    float e1 = halfExtents[j], e2 = halfExtents[k];
-    float e3 = halfExtents[axisIdx];
+    float e1 = lHalfExtents[j], e2 = lHalfExtents[k];
+    float e3 = lHalfExtents[axisIdx];
 
     std::array<Edge, 4> edges;
     int idx = 0;
     for (int s1 : { -1, +1 }) {
         for (int s2 : { -1, +1 }) {
-            glm::vec3 corner = centroid + float(s1) * e1 * N1 + float(s2) * e2 * N2;
+            glm::vec3 corner = wCenter + float(s1) * e1 * N1 + float(s2) * e2 * N2;
             edges[idx++] = {
-              corner - e3 * wAxes[axisIdx],
-              corner + e3 * wAxes[axisIdx]
+                corner - e3 * wAxes[axisIdx],
+                corner + e3 * wAxes[axisIdx]
             };
         }
     }
@@ -45,24 +46,26 @@ void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
         lMax = glm::max(lMax, v); 
     }
 
-    halfExtents = (lMax - lMin) * 0.5f;
+    lHalfExtents = (lMax - lMin) * 0.5f;
+
+    lCenter = (lMin + lMax) * 0.5f;
 
     lVertices = {
-      glm::vec3(lMin.x, lMin.y, lMin.z), 
-      glm::vec3(lMax.x, lMin.y, lMin.z),
-      glm::vec3(lMax.x, lMax.y, lMin.z), 
-      glm::vec3(lMin.x, lMax.y, lMin.z), 
+        glm::vec3(lMin.x, lMin.y, lMin.z), 
+        glm::vec3(lMax.x, lMin.y, lMin.z),
+        glm::vec3(lMax.x, lMax.y, lMin.z), 
+        glm::vec3(lMin.x, lMax.y, lMin.z), 
 
-      glm::vec3(lMin.x, lMin.y, lMax.z), 
-      glm::vec3(lMax.x, lMin.y, lMax.z), 
-      glm::vec3(lMax.x, lMax.y, lMax.z), 
-      glm::vec3(lMin.x, lMax.y, lMax.z)  
+        glm::vec3(lMin.x, lMin.y, lMax.z), 
+        glm::vec3(lMax.x, lMin.y, lMax.z), 
+        glm::vec3(lMax.x, lMax.y, lMax.z), 
+        glm::vec3(lMin.x, lMax.y, lMax.z)  
     };
 
     wAxes = {
-     glm::vec3(1,  0,  0),
-     glm::vec3(0,  1,  0),
-     glm::vec3(0,  0,  1),
+        glm::vec3(1,  0,  0),
+        glm::vec3(0,  1,  0),
+        glm::vec3(0,  0,  1),
     };
 
     // transform world corners

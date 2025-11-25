@@ -1,37 +1,8 @@
 #include "pch.h"
 #include "scene_builder.h"
 
-//-------------------------
-//       Terrain Scene
-//-------------------------
-void SceneBuilder::terrainScene() {
-
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(210.0f, 120.0f, 225.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(250.0f, 120.0f, 155.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
-
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 205.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
-    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 105.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
-
-    for (int x = 0; x < 2; x++)
-        for (int z = 0; z < 2; z++) {
-            glm::vec3 pos = glm::vec3(150 + x * 25, 100, 150 + z * 25);
-            createSpherePyramid("plain", glm::vec3(-1, -1, -1), pos, 10, 8, 0.5f, 0.01f, 0.5f, false);
-        }
-
-    //for (int x = 0; x < 2; x++)
-    //for (int z = 0; z < 2; z++) {
-    //    glm::vec3 pos = glm::vec3(150 + x * 85, 100 + x*60 + z*30, 150 + z * 85);
-    //    createBlockPyramid("plain", glm::vec3(-1, -1, -1), pos, 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
-    //}
-
-    generateFlatTerrain(
-        /*offset*/glm::vec3(0.0f, 0.0f, 0.0f),
-        /*gridX=*/144,
-        /*gridZ=*/144,
-        /*cellSize=*/3.f,
-        /*maxHeight=*/120.0f
-    );
-}
+#include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 void SceneBuilder::testFloorScene() {
     int floorWidth = 4;
@@ -44,6 +15,101 @@ void SceneBuilder::testFloorScene() {
             createObject("uvmap", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
         }
     }
+
+    // stack of boxes
+    int amountObjects = 7;
+    for (int i = 0; i < amountObjects; i++)
+        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 0.5 + (1.0 * i), 34.5), glm::vec3(1), 1, 0, {}, 2.5);
+    for (int i = 0; i < amountObjects; i++)
+        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 0.5 + (1.0 * i), 34.5), glm::vec3(1), 1, 0, {}, 2.5);
+    for (int i = 0; i < amountObjects; i++)
+        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 0.5 + (1.0 * i), 35.5), glm::vec3(1), 1, 0, {}, 2.5);
+    for (int i = 0; i < amountObjects; i++)
+        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 0.5 + (1.0 * i), 35.5), glm::vec3(1), 1, 0, {}, 2.5);
+
+    createObject("crate", ColliderType::CUBOID, glm::vec3(22.5, 6.0f, 35.0), glm::vec3(1.5f), 1, 0, {}, 2.5);
+    GameObject& box = dynamicObjects.back();
+    box.linearVelocity = glm::vec3(16.7f, 0.0f, 0.0f);
+
+    // 2D pyramid of boxes
+    //for (int col = 0; col < 50; col++) {
+    //    for (int row = 50; row-col > 0; row--) {
+
+    //        float x = 54.5f;
+    //        float y = 0.5f + col;
+    //        float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+    //        glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+    //        createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(1), 1, 0, {}, 2.5f, 0, randomColor);
+    //    }
+    //}
+
+    // circular tower of boxes
+    float angleRad;
+    glm::vec3 axis = glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 center = glm::vec3(0.0f, 0.5f, 25.0f);
+    glm::vec3 startPos = center + glm::vec3(0.0f, 0.0f, 5.5f);
+    glm::quat oldOrientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+
+    int height = 20;
+    for (int i = 0; i < height; i++) {
+        angleRad = glm::radians(i * 15.0f);
+        for (int j = 0; j < 12; j++) {
+
+            glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
+            glm::vec3 newCenter = center + (q * (startPos - center));
+            glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
+            newCenter.y += i;
+
+            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+            createObject("plain", ColliderType::CUBOID, glm::vec3(newCenter), glm::vec3(2.5, 1, 1), 1, 0, orientation, 1.5, 1, randomColor);
+
+            angleRad += glm::radians(30.0f);
+        }
+    }
+
+    // // big cube of boxes
+    //int w = 20;
+    //int h = 20;
+    //int d = 10;
+    //int cubeSize = 1;
+    //int spacing = 0.25f;
+    //for (int i = 0; i < w; i++) {
+    //    for (int j = 0; j < d; j++) {
+    //        for (int k = 0; k < h; k++) {
+
+    //            float x = -15.0f + i * (cubeSize + spacing);
+    //            float y = 0.5f + j * (cubeSize + spacing);
+    //            float z = -15.0f + k * (cubeSize + spacing);
+    //            createObject("crate", ColliderType::CUBOID, glm::vec3(x,y,z), glm::vec3(cubeSize), 1, 0, {}, 0.75, 1);
+    //        }
+    //    }
+    //}
+
+    //createObject("plain", ColliderType::TEAPOT, glm::vec3(0,0,0), glm::vec3(1), 100, 0, {}, 3.5f, 0);
+
+}
+
+//-------------------------
+//       Terrain Scene
+//-------------------------
+void SceneBuilder::terrainScene() {
+
+    //createObject("plain", ColliderType::TEAPOT, glm::vec3(40, 120, 40), glm::vec3(1), 100, 0, {}, 3.5f, 0);
+
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(210.0f, 120.0f, 225.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(250.0f, 120.0f, 155.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, true);
+
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 205.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+    createSpherePyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(100.0f, 120.0f, 105.0f), 12, 10, 0.5f, 0.0f, 0.5f, true);
+
+    generateFlatTerrain(
+        /*offset*/glm::vec3(0.0f, 0.0f, 0.0f),
+        /*gridX=*/144,
+        /*gridZ=*/144,
+        /*cellSize=*/3.f,
+        /*maxHeight=*/120.0f
+    );
 }
 
 void SceneBuilder::containerScene() {
@@ -74,7 +140,7 @@ void SceneBuilder::containerScene() {
     const int   h = floorHeight;
 
     const float wallH = 100.0f;                  // höjd
-    const float thick = 20.0f;                  // tjocklek
+    const float thick = 20.0f;                   // tjocklek
 
     // world-bounds för golvet
     const float xMin = baseX - halfTile;
@@ -129,11 +195,6 @@ void SceneBuilder::containerScene() {
 
 
 void SceneBuilder::castleScene() {
-    // player
-    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, -22), glm::vec3(0.5f, 1.86f, 0.5f), 1, 0, {}, 1);
-    GameObject& player = dynamicObjects.back();
-    playerObjectId = dynamicObjects.size() - 1;
-
     int floorWidth = 4;
     int floorHeight = 4;
 
@@ -202,11 +263,6 @@ void SceneBuilder::castleScene() {
 //    Tall Structure Scene
 //-----------------------------
 void SceneBuilder::tallStructureScene() {
-    // player
-    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, -22), glm::vec3(0.5f,1.86f,0.5f), 1, 0, {}, 1);
-    GameObject& player = dynamicObjects.back();
-    playerObjectId = dynamicObjects.size() - 1;
-
     int floorWidth = 4;
     int floorHeight = 4;
 
@@ -256,9 +312,11 @@ void SceneBuilder::tallStructureScene() {
     //    }
     //}
 
+    createObject("plain", ColliderType::CUBOID, glm::vec3(0,-10,0), glm::vec3(135, 10, 135), 1, 0, {});
+
     createObject("crate", ColliderType::CUBOID, glm::vec3(-10, 5, -10), glm::vec3(7.2), 1000, 0, {}, 1);
     GameObject& heavyBox = dynamicObjects.back();
-    //heavyBox.linearVelocity = glm::vec3(120, 180, 150);
+    heavyBox.linearVelocity = glm::vec3(120, 180, 150);
     //heavyBox.angularVelocity = glm::vec3(0, 100, 0);
 
     // ----- staplar ----- 
@@ -307,16 +365,14 @@ void SceneBuilder::tumblerScene() {
 
     createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -30.0f, 165.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
     createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -50.0f, 105.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -30.0f, 215.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
+    createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -50.0f, 55.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
 }
 
 //---------------------------
 //         Main Scene
 //---------------------------
 void SceneBuilder::mainScene() {
-    // player
-    createObject("crate", ColliderType::CUBOID, glm::vec3(50.5, 0.93, 4), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
-    GameObject& player = dynamicObjects.back();
-    playerObjectId = dynamicObjects.size() - 1;
 // ___________________________________________________________
 // ------------------------ floor tiles ----------------------
     int floorWidth = 8;
@@ -394,7 +450,7 @@ void SceneBuilder::mainScene() {
     float lastAngle = -90.0f;
     glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0, 0, 1));
 
-    for (int i = 0; i < 36; ++i) {
+    for (int i = 0; i < 37; ++i) {
         glm::quat newOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0, 0, 1));
         glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(halfDepth, 0, 0);
         glm::vec3 newPos = frontTip1 + newOrient * glm::vec3(halfDepth, 0, 0);
@@ -490,7 +546,7 @@ void SceneBuilder::mainScene() {
     createObject("crate", ColliderType::CUBOID, glm::vec3(34.5, 1.5, 20), glm::vec3(0.5, 3, 2), 1, 1);
 
     // plank
-    int mass = 50;
+    int mass = 10;
     glm::vec3 size = glm::vec3(14, 0.2, 0.5);
     createObject("crate", ColliderType::CUBOID, glm::vec3(34.5, 3.1, 20), size, mass, 0, {}, 999);
     dynamicObjects.back().canMoveLinearly = false;
@@ -504,15 +560,15 @@ void SceneBuilder::mainScene() {
 
 // ____________________________________________________________
 // ----------------------- box stacks -------------------------
-    int amountObjects = 5;
+    int amountObjects = 7;
     for (int i = 0; i < amountObjects; i++)
-        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 1 + (1.2 * i), 34.5), glm::vec3(1), 1, 0, {}, 0.5);
+        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 1 + (1.2 * i), 34.5), glm::vec3(1), 1, 0, {}, 2.5);
     for (int i = 0; i < amountObjects; i++)
-        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 1 + (1.2 * i), 34.5), glm::vec3(1), 1, 0, {}, 0.5);
+        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 1 + (1.2 * i), 34.5), glm::vec3(1), 1, 0, {}, 2.5);
     for (int i = 0; i < amountObjects; i++)
-        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 1 + (1.2 * i), 35.5), glm::vec3(1), 1, 0, {}, 0.5);
+        createObject("crate", ColliderType::CUBOID, glm::vec3(24.5, 1 + (1.2 * i), 35.5), glm::vec3(1), 1, 0, {}, 2.5);
     for (int i = 0; i < amountObjects; i++)
-        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 1 + (1.2 * i), 35.5), glm::vec3(1), 1, 0, {}, 0.5);
+        createObject("crate", ColliderType::CUBOID, glm::vec3(25.5, 1 + (1.2 * i), 35.5), glm::vec3(1), 1, 0, {}, 2.5);
 
 
 // ____________________________________________________________
@@ -539,7 +595,7 @@ void SceneBuilder::mainScene() {
             float y = brickHeight / 2 + col * brickHeight * 2;
             float z = 8 + row * brickLength + brickDistance * row;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -548,7 +604,7 @@ void SceneBuilder::mainScene() {
             float y = brickHeight + brickHeight / 2 + col * brickHeight * 2;
             float z = 8.6f + row * brickLength + brickDistance * row;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
     }
@@ -565,7 +621,7 @@ void SceneBuilder::mainScene() {
             float y = brickHeight + brickHeight / 2 + col * brickHeight * 2;
             float z = 7;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -574,7 +630,7 @@ void SceneBuilder::mainScene() {
             float y = brickHeight / 2 + col * brickHeight * 2;
             float z = 7;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(brickWidth, brickHeight, brickLength), brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
     }
@@ -583,7 +639,7 @@ void SceneBuilder::mainScene() {
 // ----------------------- BIG pyramid -------------------------
 
     // textureName, color, pos, pHeight, pWidth, sWidth, sLength, sHeight, sDistance, sWeight, asleep
-    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 74.5f), 15, 12, 0.5f, 0.5f, 3, 0, 0.75f, true);  
+    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);  
 
     // terrain mesh pyramid
     //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(-100.0f, 30.0f, 45.0f), 10, 8, 1.0f, 1.0f, 1.0f, 0.0f, 1, true); 
@@ -644,8 +700,26 @@ void SceneBuilder::mainScene() {
     * @param brickWeight
     * @param brickDecrease
     */
-    createBrickWall(glm::vec3(120, 0, -1),  0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80,120), false);
-    createBrickWall(glm::vec3(120, 0, 20), 0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
-    createBrickWall(glm::vec3(120, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
-    createBrickWall(glm::vec3(140, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+    //createBrickWall(glm::vec3(120, 0, -1),  0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80,120), false);
+    //createBrickWall(glm::vec3(120, 0, 20), 0, 50, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+    //createBrickWall(glm::vec3(120, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+    //createBrickWall(glm::vec3(140, 0, 0),  1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(80, 120), false);
+
+
+    // 2d pyramid of colored blocks
+    for (int col = 10, test = 0; col > 0; col--, test++) {
+        for (int row = 0; row < col; row++) {
+
+            float x = 104.5f;
+            float y = test + 0.5f;
+            float z = 100.5f + row- (col+0.5f) / 2;
+            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+            createObject("plain", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(1), 1, 0, {}, 99, 0, randomColor);
+        }
+    }
+
+    createObject("plain", ColliderType::CUBOID, glm::vec3(1.25), glm::vec3(2.5), 10, 0, {}, 3.5f, 0);
+
+    createObject("plain", ColliderType::TEAPOT, glm::vec3(55, 55, 55), glm::vec3(2), 10, 0, {}, 3.5f, 0, glm::vec3(255,0,255));
 }

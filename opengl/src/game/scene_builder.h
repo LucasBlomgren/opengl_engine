@@ -24,7 +24,7 @@ public:
 
    GameObject& createObject(
       const std::string& textureName,
-      const ColliderType colliderType,
+      ColliderType colliderType,
       const glm::vec3& pos,
       const glm::vec3& size,
       float mass,

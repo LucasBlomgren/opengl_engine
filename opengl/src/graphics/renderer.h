@@ -89,7 +89,7 @@ private:
     AABBRenderer aabbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;
 
-    float maxViewDistance = 10000.0f;
+    float maxViewDistance = 10000000000000.0f;
 
     glm::vec3 sceneCenter = { 0.0f, 0.0f, 0.0f };
     glm::vec3 sceneMin = { 0.0f, 0.0f, 0.0f };

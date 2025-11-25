@@ -104,7 +104,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 
     allHalos.clear();
 
-    if (sceneID == 0) {
+    if (sceneID == 6) {
         mainScene(); 
     }
     else if (sceneID == 1) {
@@ -122,7 +122,7 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
     else if (sceneID == 5) {
         containerScene();
     }
-    else if (sceneID == 6) {
+    else if (sceneID == 0) {
         testFloorScene();
     }
 
@@ -130,11 +130,11 @@ void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
 }
 
 //----------------------------------
-//          Game Object
+//        Create GameObject
 //----------------------------------
 GameObject& SceneBuilder::createObject(
     const std::string& textureName,
-    const ColliderType colliderType,
+    ColliderType colliderType,
     const glm::vec3& pos,
     const glm::vec3& size,
     float mass,
@@ -161,6 +161,12 @@ GameObject& SceneBuilder::createObject(
     else if (colliderType == ColliderType::SPHERE) {
         vertices = sphereVertices;
         indices = sphereIndices;
+    }
+    else if (colliderType == ColliderType::TEAPOT) {
+        vertices = teapotVertices;
+        indices = teapotIndices;
+
+        colliderType = ColliderType::CUBOID;
     }
 
     dynamicObjects.emplace_back(objectId, vertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
@@ -335,7 +341,8 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
     for (int i = 0; i < 10; i++) 
     {
         // position
-        constexpr glm::vec3 spawnPoint = glm::vec3(25, 275, 25);
+        constexpr glm::vec3 spawnPoint = glm::vec3(170, 135, 170);
+        // constexpr glm::vec3 spawnPoint = glm::vec3(25, 275, 25);
         float varianceRange = 20.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
@@ -350,16 +357,19 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
 
         // blocks
         if (mode == 0) {
-            //xVariance = randomRange(0.5, 4);
-            //yVariance = randomRange(0.5, 4);
-            //zVariance = randomRange(0.5, 4);
-            //glm::vec3 size{ xVariance, yVariance, zVariance };
-            //float mass = xVariance * yVariance * zVariance;
+            xVariance = randomRange(1.0, 1.01);
+            yVariance = randomRange(1.0, 1.01);
+            zVariance = randomRange(1.0, 1.01);
+            //xVariance = randomRange(2.0, 6.0);
+            //yVariance = randomRange(2.0, 6.0);
+            //zVariance = randomRange(2.0, 6.0);
+            glm::vec3 size{ xVariance, yVariance, zVariance };
+            float mass = xVariance * yVariance * zVariance;
 
-            glm::vec3 size{ 4.0f };
-            float mass = 10.0f;
+            //glm::vec3 size{ 4.0f };
+            //float mass = 10.0f;
 
-            createObject("plain", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            createObject("plain", ColliderType::TEAPOT, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
         // spheres
         else if (mode == 1) {

@@ -1,9 +1,9 @@
 ﻿#include "pch.h"
 #include "SAT.h"
 
-void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) { 
-    glm::vec3 direction = posA - posB; 
-    if (glm::dot(direction, normal) > 0) { 
+void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) {
+    glm::vec3 direction = posB - posA; 
+    if (glm::dot(direction, normal) < 0) { 
         normal = -normal; 
     }
 }
@@ -96,9 +96,9 @@ bool SAT::boxSphere(Collider& A, Collider& B, Result& out) {
 
     // Clamp i lokal AABB
     glm::vec3 clamped;
-    clamped.x = glm::clamp(localC.x, -box->halfExtents.x, +box->halfExtents.x);
-    clamped.y = glm::clamp(localC.y, -box->halfExtents.y, +box->halfExtents.y);
-    clamped.z = glm::clamp(localC.z, -box->halfExtents.z, +box->halfExtents.z);
+    clamped.x = glm::clamp(localC.x, -box->lHalfExtents.x, +box->lHalfExtents.x);
+    clamped.y = glm::clamp(localC.y, -box->lHalfExtents.y, +box->lHalfExtents.y);
+    clamped.z = glm::clamp(localC.z, -box->lHalfExtents.z, +box->lHalfExtents.z);
 
     // Transformera local → world
     glm::vec3 closestWorld = glm::vec3(M * glm::vec4(clamped, 1.0f));

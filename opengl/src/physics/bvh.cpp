@@ -247,8 +247,8 @@ void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes, boo
         // för många refits, bygg om trädet
         build(elements, indexes, useAllElements);
         numRefits = 0; 
-        numRebuilds++; 
         numIterationsSinceRebuild = 0; 
+        numRebuilds++;
         return;
     }
     numIterationsSinceRebuild++;
@@ -281,7 +281,7 @@ void BVHTree<E>::updateLeaves() {
         n.fatBox.wMin = n.tightBox.wMin;
         n.fatBox.wMax = n.tightBox.wMax;
         n.fatBox.grow(fatBoxMargin);
-        this->numRefits++;
+        numRefits++;
 
         updateRenderData(n);
 
@@ -337,6 +337,8 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool
 
     if (prims.empty()) return;
 
+    numRefits = 0;
+    numIterationsSinceRebuild = 0;
     rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
 
     // Förallokera nod-poolen
@@ -396,8 +398,7 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& id
             prim.element = &elem;
             prims.push_back(prim);
         }
-    }
-    else {
+    } else {
         prims.reserve(idx.size());
         for (int i = 0; i < idx.size(); i++) {
             E& elem = elements[idx[i]];

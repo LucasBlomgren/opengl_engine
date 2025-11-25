@@ -25,26 +25,11 @@ void GameObject::setRotatedFlag() {
     }
 }
 
-void GameObject::setPhysicsVariables() {
-    // dynamic
-    if (!isStatic) {
-        invMass = 1.0f / mass;
-        asleep = false;
-    }
-    // static
-    else {
-        mass = 0;
-        invMass = 0;
-        inverseInertia = glm::mat3(0.0f);
-        asleep = true;
-    }
+void GameObject::applyImpulseLinear(const glm::vec3& j) {
+    linearVelocity += j;
 }
-
-void GameObject::applyForceLinear(glm::vec3 f) {
-    linearVelocity += f;
-}
-void GameObject::applyForceAngular(glm::vec3 f) {
-    angularVelocity += f;
+void GameObject::applyImpulseAngular(const glm::vec3& j) {
+    angularVelocity += j;
 }
 
 void GameObject::setModelMatrix() {
@@ -70,8 +55,8 @@ void GameObject::setHelperMatrices() {
     helperMatricesDirty = false;
 }
 
-void GameObject::calculateInverseInertiaForCube() {
-    float I = 6.0f / (mass * scale.x * scale.x);
+void GameObject::calculateInverseInertiaForCube(float side) {
+    float I = 6.0f / (mass * side * side);
 
     inverseInertia = glm::mat3(
         glm::vec3(I, 0.0f, 0.0f),
@@ -80,19 +65,20 @@ void GameObject::calculateInverseInertiaForCube() {
     );
 }
 
-void GameObject::calculateInverseInertiaForCuboid() {
-   float I_x = (1.0f / 12.0f) * mass * (scale.y * scale.y + scale.z * scale.z);
-   float I_y = (1.0f / 12.0f) * mass * (scale.x * scale.x + scale.z * scale.z);
-   float I_z = (1.0f / 12.0f) * mass * (scale.x * scale.x + scale.y * scale.y);
+void GameObject::calculateInverseInertiaForCuboid(float sx, float sy, float sz) {
+    float I_x = (1.0f / 12.0f) * mass * (sy * sy + sz * sz);
+    float I_y = (1.0f / 12.0f) * mass * (sx * sx + sz * sz);
+    float I_z = (1.0f / 12.0f) * mass * (sx * sx + sy * sy);
 
-   inverseInertia = glm::mat3(
-      glm::vec3(1.0f / I_x, 0.0f, 0.0f),
-      glm::vec3(0.0f, 1.0f / I_y, 0.0f),
-      glm::vec3(0.0f, 0.0f, 1.0f / I_z));
+    inverseInertia = glm::mat3(
+        glm::vec3(1.0f / I_x, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f / I_y, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f / I_z));
 }
 
 void GameObject::calculateInverseInertiaForSolidSphere() {
-    float I = (2.0f / 5.0f) * (mass * radius * radius);
+    Sphere& sphere = std::get<Sphere>(collider.shape);
+    float I = (2.0f / 5.0f) * (mass * sphere.radius * sphere.radius);
     float invI = 1.0f / I;
 
     inverseInertia = glm::mat3(
@@ -134,37 +120,6 @@ void GameObject::updateCollider() {
     }, collider.shape);
 }
 
-void GameObject::updateSleepCounter(const float& dt) {
-    if (std::abs(glm::length(linearVelocity)) < velocityThreshold and std::abs(glm::length(angularVelocity)) < angularVelocityThreshold) {
-        sleepCounter += dt;
-    }
-    else {
-        sleepCounter = 0.0f;
-    }
-}
-
-bool GameObject::sleepCheck() {
-    if (sleepCounter >= sleepCounterThreshold) {
-        return true;
-    }
-
-    return false;
-}
-
-void GameObject::updateVelocities(const float& dt) {
-    if (allowGravity)
-        linearVelocity += g * dt;
-
-    //linearVelocity *= std::pow(0.97f, dt);
-    //angularVelocity *= std::pow(0.98f, dt);
-
-    if (!canMoveLinearly) {
-        linearVelocity = glm::vec3(0.0f);
-        angularVelocity.x = 0.0f;
-        angularVelocity.y = 0.0f;
-    }
-}
-
 void GameObject::updatePos(const float& dt) {
     if (selectedByEditor)
         return;
@@ -174,38 +129,42 @@ void GameObject::updatePos(const float& dt) {
 
     float aLin;
     float aAng;
+    bool avgCollisions = collisionHistory.average() > 0;
+
     if (colliderType == ColliderType::SPHERE) {
         aLin = 0.1f; // konstant linjär retardation (m/s^2)
         aAng = 1.0f; // konstant angulär retardation (rad/s^2)
-    }
-    else {
-        aLin = 0.1f; // konstant linjär retardation (m/s^2)
-        aAng = 0.2f; // konstant angulär retardation (rad/s^2)
-    }
 
-    float vMag = glm::length(linearVelocity);
-    if (vMag > 0.0f) {
-        float newMag = vMag - aLin * dt;
-        if (newMag < 0.0f) newMag = 0.0f;
-        linearVelocity *= (newMag / vMag); // behåll riktningen
-    }
+        float vMag = glm::length(linearVelocity);
+        if (vMag > 0.0f && avgCollisions) {
+            float newMag = vMag - aLin * dt;
+            if (newMag < 0.0f) newMag = 0.0f;
+            linearVelocity *= (newMag / vMag); // behåll riktningen
+        }
 
-    float wMag = glm::length(angularVelocity);
-    if (wMag > 0.0f) {
-        float newMag = wMag - aAng * dt;
-        if (newMag < 0.0f) newMag = 0.0f;
-        angularVelocity *= (newMag / wMag);
+        float wMag = glm::length(angularVelocity);
+        if (wMag > 0.0f && avgCollisions) {
+            float newMag = wMag - aAng * dt;
+            if (newMag < 0.0f) newMag = 0.0f;
+            angularVelocity *= (newMag / wMag);
+        }
     }
 
-    linearVelocity = linearVelocity * std::pow(0.97f, dt);
-    angularVelocity = angularVelocity * std::pow(0.98f, dt);
+    // anti stuck for objects with high collision counts
+    avgCollisions = collisionHistory.average() > 3;
+    if (avgCollisions) {
+        linearVelocity = linearVelocity * std::pow(0.98f, dt);
+        angularVelocity = angularVelocity * std::pow(0.98f, dt);
+    }
 
+    // fake constraints
     if (!canMoveLinearly) {
         linearVelocity = glm::vec3(0.0f);
         angularVelocity.x = 0.0f;
         angularVelocity.y = 0.0f;
     }
 
+    // player controls
     if (player) {
         glm::vec3 v = linearVelocity;
 
@@ -257,6 +216,7 @@ void GameObject::updatePos(const float& dt) {
         onGround = false;
     }
 
+    // update position and orientation
     lastPosition = position;
     position += linearVelocity * dt;
     updateOrientation(orientation, angularVelocity, dt);

@@ -194,6 +194,7 @@ void Renderer::renderScene(
 //     Render game objects
 //-----------------------------
 void Renderer::renderGameObjects(Shader& shader, std::vector<GameObject>& objects, Camera& camera) {
+    glLineWidth(2.0f);
     for (GameObject& obj : objects) {
         obj.renderMesh(shader);
     }
@@ -264,14 +265,14 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     shader.setBool("useUniformColor", true);
     shader.setVec3("uColor", glm::vec3(0, 1, 0));
 
-    glBindTexture(GL_TEXTURE_2D, 2);
+    glBindTexture(GL_TEXTURE_2D, 4);
     glBindVertexArray(VAO);
 
     // --- Fyllning ---
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
 
-    //// --- Wireframe ---
-    // 
+    // --- Wireframe ---
+    
     //debugShader.use();
     //debugShader.setMat4("model", model);
     //debugShader.setInt("debug.objectType", 0);
@@ -436,10 +437,12 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
             debugShader.setBool("debug.useUniformColor", true);
 
             if (obj.colliderType == ColliderType::CUBOID) {
-                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                OOBB& box = std::get<OOBB>(obj.collider.shape);
+                obj.oobbRenderer.renderBox(debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
-                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                Sphere& sphere = std::get<Sphere>(obj.collider.shape);
+                sphereOutlineRenderer.render(debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
 
             obj.isRaycastHit = false;
@@ -452,7 +455,6 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
 //     Render debug info
 //----------------------------
 void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
-
     if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowNormals() || engineState->getShowContactPoints())) {
         return;
     }
@@ -476,11 +478,14 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         glLineWidth(2.0f);
         for (GameObject& obj : objects) {
             debugShader.setBool("debug.useUniformColor", true);
-            if (obj.colliderType == ColliderType::CUBOID) {
-                obj.oobbRenderer.renderBox(debugShader, obj.modelMatrix, obj.asleep, obj.isStatic, obj.isRaycastHit);
+
+            if (obj.colliderType == ColliderType::CUBOID or obj.colliderType == ColliderType::TEAPOT) {
+                OOBB& box = std::get<OOBB>(obj.collider.shape);
+                obj.oobbRenderer.renderBox(debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
-                sphereOutlineRenderer.render(debugShader, camera.position, obj.position, obj.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                Sphere& sphere = std::get<Sphere>(obj.collider.shape);
+                sphereOutlineRenderer.render(debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
         }
     }
@@ -514,8 +519,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
                 if (contact.points[i].wasWarmStarted) {
                     debugShader.setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
-                }
-                else {
+                } else {
                     debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
                 }
 

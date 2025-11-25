@@ -14,6 +14,7 @@ enum class ColliderType {
     CUBOID,
     SPHERE,
     MESH,
+    TEAPOT
 };
 
 using ColliderShape = std::variant<OOBB, Sphere, Mesh>;
