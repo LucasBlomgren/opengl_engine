@@ -29,8 +29,7 @@ unsigned int TextureManager::loadTexture(const std::string& name, const std::str
     if (data) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
+    } else {
         std::cerr << "Failed to load texture: " << path << std::endl;
     }
 
@@ -41,7 +40,13 @@ unsigned int TextureManager::loadTexture(const std::string& name, const std::str
 }
 
 unsigned int TextureManager::getTexture(const std::string& name) {
-    return textures[name];
+    auto it = textures.find(name);
+    if (it == textures.end()) {
+        std::cerr << "[TextureManager] No texture called \"" << name << "\"\n";
+        return 0; // eller assert, eller fallback-texture-id
+    }
+
+    return it->second;
 }
 
 // ----------------------------

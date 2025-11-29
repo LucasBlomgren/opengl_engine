@@ -25,7 +25,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/io.hpp>
 
-#include "shader.h"
+#include "shaders/shader.h"
 #include "camera.h"
 
 

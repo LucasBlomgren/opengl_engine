@@ -4,8 +4,7 @@
 #include <array>
 #include <GLFW/glfw3.h>
 
-class EngineState 
-{
+class EngineState {
 public:
 
     void setAdvanceStep(bool);

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "skybox_manager.h"
 #include "geometry/sky_box_data.h"
-#include "graphics/texture_manager.h"
+#include "graphics/textures/texture_manager.h"
 
 void SkyboxManager::init() {
     glGenVertexArrays(1, &skyboxVAO);
@@ -27,8 +27,7 @@ void SkyboxManager::render(Shader& shader) {
 void SkyboxManager::toggleTexture() {
     if (cubemapTexture == TextureManager::getCubemap("skybox_night")) {
         cubemapTexture = TextureManager::getCubemap("skybox_default");
-    }
-    else {
+    } else {
         cubemapTexture = TextureManager::getCubemap("skybox_night");
     }
 }

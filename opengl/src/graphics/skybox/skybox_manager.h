@@ -1,10 +1,9 @@
 #pragma once
 
-#include "shader.h"
+#include "shaders/shader.h"
 #include "camera.h"
 
-class SkyboxManager 
-{
+class SkyboxManager {
 private:
     unsigned int skyboxVAO, skyboxVBO; 
     unsigned int cubemapTexture;

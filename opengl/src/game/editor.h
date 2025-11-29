@@ -7,7 +7,7 @@
 #include "physics.h"
 #include "game_object.h"
 #include "camera.h"
-#include "skybox_manager.h"
+#include "skybox/skybox_manager.h"
 #include "vertex.h"
 
 #define objPlaceSize 1.0f, 1.0f, 1.0f
@@ -25,10 +25,9 @@ public:
         SceneBuilder* sceneBuilder,
         PhysicsEngine* physicsEngine,
         Camera* camera,
-        SkyboxManager* skyboxManager,
-        std::vector<Vertex>* cubeVertices,
-        std::vector<unsigned int>* indices
+        SkyboxManager* skyboxManager
     );
+
     void update(float& deltaTime, Shader& shader);
     RaycastHit rayCast(float length);
     RaycastHit& getLastRayHit();
@@ -57,9 +56,6 @@ private:
     PhysicsEngine* physicsEngine = nullptr;
     SkyboxManager* skyboxManager = nullptr;
     Camera* camera = nullptr;
-
-    std::vector<Vertex>* cubeVertices = nullptr;
-    std::vector<unsigned int>* indices = nullptr;
 
     RaycastHit lastHitData;
 };

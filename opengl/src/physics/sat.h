@@ -2,6 +2,7 @@
 
 #include <span>
 #include "game_object.h"
+#include "tri.h"
 
 namespace SAT { 
     enum class AxisType { FaceA, FaceB, EdgeEdge };

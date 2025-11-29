@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "renderer.h"
-#include "draw_line.h"
+#include "debug/draw_line.h"
 
 template void Renderer::renderBVH(BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
 template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3& , glm::vec3&);
@@ -13,26 +13,27 @@ void Renderer::init(
     unsigned int height, 
     EngineState& engineState, 
     LightManager& lightManager, 
+    ShaderManager& shaderManager,
     ShadowManager& shadowManager, 
-    SkyboxManager& skyboxManager
-) {
-    screenWidth = (float)width;
+    SkyboxManager& skyboxManager) 
+{
+    screenWidth  = (float)width;
     screenHeight = (float)height;
 
-    this->engineState = &engineState;
-    this->lightManager = &lightManager;
+    this->engineState   = &engineState;
+    this->lightManager  = &lightManager;
     this->shadowManager = &shadowManager;
     this->skyboxManager = &skyboxManager;
 
     aabbRenderer.InitShared();
     sphereOutlineRenderer.init();
 
-    defaultShader = Shader("src/shaders/object.vert", "src/shaders/object.frag");
-    debugShader = Shader("src/shaders/debug.vert", "src/shaders/debug.frag");
-    shadowShader = Shader("src/shaders/shadow.vert", "src/shaders/shadow.frag");
-    skyboxShader = Shader("src/shaders/skybox.vert", "src/shaders/skybox.frag"); 
+    defaultShader = shaderManager.getShader("default");
+    debugShader   = shaderManager.getShader("debug");
+    shadowShader  = shaderManager.getShader("shadow");
+    skyboxShader  = shaderManager.getShader("skybox");
 
-    defaultShader.use();
+    defaultShader->use();
 
     this->VAO_line = setupLine();
     this->VAO_xyz = setup_xyzObject();
@@ -52,19 +53,19 @@ void Renderer::setViewProjection(Camera& camera) {
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
 
-    defaultShader.use();
-    defaultShader.setMat4("projection", projection);
-    defaultShader.setMat4("view", view);
-    defaultShader.setVec3("viewPos", camera.position);
+    defaultShader->use();
+    defaultShader->setMat4("projection", projection);
+    defaultShader->setMat4("view", view);
+    defaultShader->setVec3("viewPos", camera.position);
 
-    debugShader.use();
-    debugShader.setMat4("projection", projection);
-    debugShader.setMat4("view", view);
-    debugShader.setVec3("viewPos", camera.position);
+    debugShader->use();
+    debugShader->setMat4("projection", projection);
+    debugShader->setMat4("view", view);
+    debugShader->setVec3("viewPos", camera.position);
 
-    skyboxShader.use();
-    skyboxShader.setMat4("projection", projection);
-    skyboxShader.setMat4("view", glm::mat4(glm::mat3(view))); // remove translation from the view matrix
+    skyboxShader->use();
+    skyboxShader->setMat4("projection", projection);
+    skyboxShader->setMat4("view", glm::mat4(glm::mat3(view))); // remove translation from the view matrix
 }
 
 //-----------------------------
@@ -76,8 +77,8 @@ void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
     glClear(GL_DEPTH_BUFFER_BIT);
     glCullFace(GL_FRONT);
 
-    shadowShader.use();
-    shadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    shadowShader->use();
+    shadowShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 }
 
 //-----------------------------
@@ -96,9 +97,9 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-    defaultShader.use();
-    defaultShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    defaultShader.setInt("shadowMap", 1);
+    defaultShader->use();
+    defaultShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    defaultShader->setInt("shadowMap", 1);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadowManager->depthMap);
@@ -126,7 +127,7 @@ void Renderer::update(
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
-    renderScene(shadowShader, camera, builder, physics, editor);
+    renderScene(*shadowShader, camera, builder, physics, editor);
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
 
@@ -137,20 +138,20 @@ void Renderer::update(
     uploadDirectionalLight();
     uploadLightsToShader();
     renderLights();
-    renderScene(defaultShader, camera, builder, physics, editor);
+    renderScene(*defaultShader, camera, builder, physics, editor);
     glEndQuery(GL_TIME_ELAPSED);
 
     renderRayCastHit(camera, builder);
 
     glDepthFunc(GL_LEQUAL);
-    skyboxManager->render(skyboxShader); 
+    skyboxManager->render(*skyboxShader); 
     glDepthFunc(GL_LESS); 
 
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
     renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
-    //renderFrustum(lightSpaceMatrix, debugShader);
+    //renderFrustum(lightSpaceMatrix);
 
     if (engineState->getShowBVH_awake()) {
         static glm::vec3 c{ 0.80f, 0.40f, 0.00f }; // Dynamic awake nodes
@@ -273,11 +274,11 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
 
     // --- Wireframe ---
     
-    //debugShader.use();
-    //debugShader.setMat4("model", model);
-    //debugShader.setInt("debug.objectType", 0);
-    //debugShader.setBool("debug.useUniformColor", true); 
-    //debugShader.setVec3("debug.uColor", glm::vec3{ 0.2 });
+    //debugShader->use();
+    //debugShader->setMat4("model", model);
+    //debugShader->setInt("debug.objectType", 0);
+    //debugShader->setBool("debug.useUniformColor", true); 
+    //debugShader->setVec3("debug.uColor", glm::vec3{ 0.2 });
     // 
     //glDisable(GL_CULL_FACE); // ta bort cull face
     //glEnable(GL_POLYGON_OFFSET_LINE); 
@@ -384,26 +385,26 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
 //------------------------------
 void Renderer::uploadLightsToShader() {
 
-    defaultShader.use();
+    defaultShader->use();
     const std::vector<Light>& lights = lightManager->getLights();
 
     for (int i = 0; i < lights.size(); ++i) {
         const Light& light = lights[i];
         std::string base = "pointLights[" + std::to_string(i) + "]";
 
-        defaultShader.setVec3(base + ".position", light.position);
-        defaultShader.setVec3(base + ".color", light.color);
+        defaultShader->setVec3(base + ".position", light.position);
+        defaultShader->setVec3(base + ".color", light.color);
 
-        defaultShader.setVec3(base + ".ambient", light.ambient * light.intensity);
-        defaultShader.setVec3(base + ".diffuse", light.diffuse * light.intensity);
-        defaultShader.setVec3(base + ".specular", light.specular * light.intensity);
+        defaultShader->setVec3(base + ".ambient", light.ambient * light.intensity);
+        defaultShader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
+        defaultShader->setVec3(base + ".specular", light.specular * light.intensity);
 
-        defaultShader.setFloat(base + ".constant", light.constant);
-        defaultShader.setFloat(base + ".linear", light.linear);
-        defaultShader.setFloat(base + ".quadratic", light.quadratic);
+        defaultShader->setFloat(base + ".constant", light.constant);
+        defaultShader->setFloat(base + ".linear", light.linear);
+        defaultShader->setFloat(base + ".quadratic", light.quadratic);
     }
 
-    defaultShader.setInt("numPointLights", static_cast<int>(lights.size()));
+    defaultShader->setInt("numPointLights", static_cast<int>(lights.size()));
 }
 
 //---------------------------------
@@ -412,17 +413,17 @@ void Renderer::uploadLightsToShader() {
 void Renderer::uploadDirectionalLight() {
     const DirectionalLight& light = lightManager->getDirectionalLight();
 
-    defaultShader.use();
-    defaultShader.setVec3("dirLight.direction", light.direction);
-    defaultShader.setVec3("dirLight.ambient", light.ambient);
-    defaultShader.setVec3("dirLight.diffuse", light.diffuse);
-    defaultShader.setVec3("dirLight.specular", light.specular);
+    defaultShader->use();
+    defaultShader->setVec3("dirLight.direction", light.direction);
+    defaultShader->setVec3("dirLight.ambient", light.ambient);
+    defaultShader->setVec3("dirLight.diffuse", light.diffuse);
+    defaultShader->setVec3("dirLight.specular", light.specular);
 }
 
 void Renderer::renderLights() const {
     const std::vector<Light>& lights = lightManager->getLights();
     for (const Light& light : lights) {
-        light.render(defaultShader);
+        light.render(*defaultShader);
     }
 }
 
@@ -433,16 +434,16 @@ void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
     for (GameObject& obj : builder.getDynamicObjects()) {
         if (obj.isRaycastHit) {
 
-            debugShader.use();
-            debugShader.setBool("debug.useUniformColor", true);
+            debugShader->use();
+            debugShader->setBool("debug.useUniformColor", true);
 
             if (obj.colliderType == ColliderType::CUBOID) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
                 Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
 
             obj.isRaycastHit = false;
@@ -459,9 +460,9 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         return;
     }
 
-    debugShader.use();
-    debugShader.setBool("debug.useUniformColor", true); 
-    debugShader.setInt("debug.objectType", 0); 
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true); 
+    debugShader->setInt("debug.objectType", 0); 
 
     if (engineState->getShowAABB()) {
         glLineWidth(2.0f); 
@@ -470,22 +471,22 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
         for (GameObject& obj : objects) {
             aabbRenderer.updateModel(obj.aabb, false);
-            aabbRenderer.render(color, debugShader);
+            aabbRenderer.render(color, *debugShader);
         }
     }
 
     if (engineState->getShowColliders()) {
         glLineWidth(2.0f);
         for (GameObject& obj : objects) {
-            debugShader.setBool("debug.useUniformColor", true);
+            debugShader->setBool("debug.useUniformColor", true);
 
             if (obj.colliderType == ColliderType::CUBOID or obj.colliderType == ColliderType::TEAPOT) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
                 Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
         }
     }
@@ -493,18 +494,18 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
     if (engineState->getShowNormals()) {
         glLineWidth(4.0f); 
         glBindVertexArray(objects[0].oobbRenderer.VAO_normals);
-        debugShader.setInt("debug.objectType", 0);
-        debugShader.setBool("debug.useUniformColor", false);
+        debugShader->setInt("debug.objectType", 0);
+        debugShader->setBool("debug.useUniformColor", false);
 
         for (GameObject& obj : objects) {
-            obj.oobbRenderer.renderNormals(debugShader, obj.modelMatrix);
+            obj.oobbRenderer.renderNormals(*debugShader, obj.modelMatrix);
         }
     }
 
     if (engineState->getShowContactPoints()) {
-        debugShader.setInt("debug.objectType", 2);
-        debugShader.setBool("debug.useUniformColor", true);
-        debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154));
+        debugShader->setInt("debug.objectType", 2);
+        debugShader->setBool("debug.useUniformColor", true);
+        debugShader->setVec3("debug.uColor", glm::vec3(0, 250, 154));
 
         // skip depth test
         glDisable(GL_DEPTH_TEST);
@@ -518,18 +519,18 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
                 }
 
                 if (contact.points[i].wasWarmStarted) {
-                    debugShader.setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
+                    debugShader->setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
                 } else {
-                    debugShader.setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
+                    debugShader->setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
                 }
 
-                renderContactPoint(debugShader, VAO_contactPoint, contact.points[i].globalCoord);
+                renderContactPoint(*debugShader, VAO_contactPoint, contact.points[i].globalCoord);
             }
         }
         glEnable(GL_DEPTH_TEST); // återställ depth test
     }
 
-    render_xyzObject(debugShader, VAO_xyz);
+    render_xyzObject(*debugShader, VAO_xyz);
 }
 
 //-------------------------
@@ -537,8 +538,8 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 //-------------------------
 template<typename E>
 void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
-    debugShader.use();
-    debugShader.setBool("debug.useUniformColor", true);
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true);
 
     glLineWidth(2.0f); 
     glBindVertexArray(aabbRenderer.sVAO); 
@@ -563,14 +564,14 @@ void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leaf
         }
 
         aabbRenderer.updateModel(toDraw, /*asleep=*/false);
-        aabbRenderer.render(color, debugShader);
+        aabbRenderer.render(color, *debugShader);
     }
 }
 
 //------------------------------
 //     Render Shadow Frustum
 //------------------------------
-void Renderer::renderFrustum(const glm::mat4& viewProj, Shader& debugShader)
+void Renderer::renderFrustum(const glm::mat4& viewProj)
 {
     // 1) Invertera viewProj för att gå från clip → world
     glm::mat4 inv = glm::inverse(viewProj);
@@ -612,9 +613,9 @@ void Renderer::renderFrustum(const glm::mat4& viewProj, Shader& debugShader)
     }
 
     // 6) Rita
-    debugShader.use();
-    debugShader.setBool("debug.useUniformColor", true);
-    debugShader.setVec3("debug.uColor", glm::vec3(1, 0, 0));
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true);
+    debugShader->setVec3("debug.uColor", glm::vec3(1, 0, 0));
     glBindVertexArray(vao);
     glDrawArrays(GL_LINES, 0, 24);
     glBindVertexArray(0);

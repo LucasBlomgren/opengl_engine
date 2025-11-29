@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 
-#include "shader.h"
+#include "shaders/shader.h"
 #include "vertex.h"
 
 struct Faces {

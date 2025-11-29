@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "aabb_renderer.h"
+#include "debug/aabb_renderer.h"
 
 class AABB; 
 class GameObject; 

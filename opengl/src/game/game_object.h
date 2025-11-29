@@ -4,14 +4,14 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
-#include "shader.h"
+#include "shaders/shader.h"
+#include "mesh/mesh.h"
 #include "colliders/collider.h"
 #include "colliders/aabb.h"
 #include "colliders/oobb.h"
 #include "colliders/sphere.h"
-#include "colliders/mesh.h"
-#include "oobb_renderer.h"
-#include "aabb_renderer.h"
+#include "debug/oobb_renderer.h"
+#include "debug/aabb_renderer.h"
 
 #include <glm/gtc/quaternion.hpp>    // defines glm::quat
 #include <glm/gtx/quaternion.hpp>    // extra helpers om du behöver
@@ -57,9 +57,7 @@ public:
    // mesh variables
     int id;
     glm::vec3 position;
-    std::vector<Vertex> vertices;
     std::vector<glm::vec3> verticesPositions;
-    std::vector<unsigned int> indices;
     GLuint VAO;
     GLuint VBO;
     GLuint EBO;
@@ -76,7 +74,10 @@ public:
     glm::mat3 invRotationMatrix;
     bool helperMatricesDirty = true;
 
-    int textureID;
+    Shader* shader = nullptr;
+    unsigned int shaderId = 0;
+    unsigned int textureId;
+    Mesh* mesh = nullptr;
     glm::vec3 color;
 
     // physics variables
@@ -138,29 +139,27 @@ public:
     // constructor
     GameObject(
         int id,
-        std::vector<Vertex> vertices,
-        std::vector<unsigned int> indices,
+        Mesh* mesh,
         glm::vec3 position,
         glm::vec3 scale,
         ColliderType colliderType,
         float mass,
         bool isStatic,
-        int textureID,
+        int textureId,
         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float sleepCounterThreshold = 1.0f,
         bool asleep = false,
         glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
     )
         : id(id),
-        vertices(vertices),
-        indices(indices),
+        mesh(mesh),
         position(position),
         shouldRotate(true),
         scale(scale),
         allowGravity(true),
         isStatic(isStatic),
         mass(mass),
-        textureID(textureID),
+        textureId(textureId),
         orientation(orientation),
         sleepCounterThreshold(sleepCounterThreshold),
         asleep(asleep),
@@ -185,16 +184,17 @@ public:
         }
 
         // plain color
-        if (textureID == 999)
+        if (textureId == 999)
            this->color = color / 255.0f;
 
-        for (const Vertex& vertex : this->vertices)
+        for (const Vertex& vertex : mesh->vertices) {
             verticesPositions.push_back(vertex.position);
+        }
 
         setModelMatrix();
 
         // render mesh
-        setupMesh();
+        //setupMesh();
 
         // AABB 
         aabb.Init(verticesPositions);
@@ -231,20 +231,6 @@ public:
             }
         }
 
-        else if (colliderType == ColliderType::MESH) {
-            std::vector<Tri> worldTris;
-            worldTris.reserve(verticesPositions.size() / 3);
-
-            for (size_t i = 0; i < verticesPositions.size(); i += 3) {
-                glm::vec4 v0 = modelMatrix * glm::vec4(verticesPositions[i + 0], 1.0f);
-                glm::vec4 v1 = modelMatrix * glm::vec4(verticesPositions[i + 1], 1.0f);
-                glm::vec4 v2 = modelMatrix * glm::vec4(verticesPositions[i + 2], 1.0f);
-                worldTris.emplace_back(glm::vec3(v0), glm::vec3(v1), glm::vec3(v2));
-            }
-
-            collider.shape.emplace<Mesh>(worldTris);
-        }
-
         inverseInertiaWorld = inverseInertia; 
     }
 
@@ -275,5 +261,5 @@ public:
     AABB getAABB() const;
 
 private:
-    void setupMesh();
+    //void setupMesh();
 };

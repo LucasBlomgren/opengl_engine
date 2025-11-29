@@ -6,18 +6,13 @@ void Editor::setPointers(
     SceneBuilder* sceneBuilder,
     PhysicsEngine* physicsEngine,
     Camera* camera,
-    SkyboxManager* skyboxManager,
-    std::vector<Vertex>* cubeVertices,
-    std::vector<unsigned int>* indices) 
+    SkyboxManager* skyboxManager) 
 {
         this->engineState = engineState;
         this->sceneBuilder = sceneBuilder;
         this->physicsEngine = physicsEngine;
         this->camera = camera;
         this->skyboxManager = skyboxManager;
-
-        this->cubeVertices = cubeVertices;
-        this->indices = indices;
 }
 
 void Editor::update(float& deltaTime, Shader& shader) {
@@ -59,31 +54,31 @@ void Editor::update(float& deltaTime, Shader& shader) {
     }
 
     if (engineState->GetPressedKey() == "F1") {
-        sceneBuilder->createScene(*physicsEngine, 0);
+        sceneBuilder->createScene(0);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "F2") {
-        sceneBuilder->createScene(*physicsEngine, 1);
+        sceneBuilder->createScene(1);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "F3") {
-        sceneBuilder->createScene(*physicsEngine, 2);
+        sceneBuilder->createScene(2);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "F4") {
-        sceneBuilder->createScene(*physicsEngine, 3);
+        sceneBuilder->createScene(3);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == ",") {
-        sceneBuilder->createScene(*physicsEngine, 4);
+        sceneBuilder->createScene(4);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == ".") {
-        sceneBuilder->createScene(*physicsEngine, 5);
+        sceneBuilder->createScene(5);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "-") {
-        sceneBuilder->createScene(*physicsEngine, 6);
+        sceneBuilder->createScene(6);
         selectedObject = nullptr;
     }
     if (engineState->GetPressedKey() == "F1" || 
@@ -252,8 +247,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     if (iter >= maxIter) {
         this->placementObstructed = true;
         color = glm::vec3{ 1,0,0 };
-    }
-    else {
+    } else {
         this->placementObstructed = false;
         aabbToPlace = aabb;
         color = glm::vec3{ 0.9f, 0.7f, 0.2f };

@@ -8,6 +8,8 @@
 #include "game_object.h"
 #include "bvh.h"
 
+#include "tri.h"
+
 class PhysicsEngine {
 public:
     //------------------------
@@ -80,20 +82,16 @@ private:
     //------------------------
     struct TerrainHit {
         GameObject* obj;
-        std::vector<Tri*> coarse;                                // original bvh query
-        std::vector<std::pair<Tri*, std::vector<Tri*>>> refined; // refined trimesh vs coarse
+        std::vector<Tri*> tris;                                // original bvh query
     };
 
     struct DynamicHit {
         GameObject* A;
         GameObject* B;
-        std::vector<Tri*> singleMeshTris;                   // one mesh             
-        std::vector<std::pair<Tri*, Tri*>> doubleMeshTris;  // two meshes
     };
 
     void detectAndSolveCollisions();
     void broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
-    void midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
     void narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
     void collectActiveContacts();
 

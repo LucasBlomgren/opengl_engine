@@ -2,10 +2,11 @@
 #include "scene_builder.h"
 
 #include "geometry/vertex.h"
-#include "geometry/geometry_loader.h"
 
-#include "texture_manager.h"
-#include "light_manager.h"
+#include "textures/texture_manager.h"
+#include "mesh/mesh_manager.h"
+#include "shaders/shader_manager.h"
+#include "lighting/light_manager.h"
 #include "physics.h"
 
 std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
@@ -16,13 +17,6 @@ SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
 }
 
-void SceneBuilder::setPointers(PhysicsEngine* pm, TextureManager* tm, LightManager* lm, std::mt19937& rng) {
-    this->physicsEngine = pm;
-    this->textureManager = tm;
-    this->lightManager = lm;
-    this->rng = &rng;
-}
-
 float SceneBuilder::randomRange(float start, float end) {
    if (start > end or start == end) {
       std::cerr << "Invalid range: " << start << " to " << end << std::endl;
@@ -30,7 +24,7 @@ float SceneBuilder::randomRange(float start, float end) {
    }
 
    std::uniform_real_distribution<float> dist(start, end);
-   return dist(*this->rng);
+   return dist(this->rng);
 }
 
 void SceneBuilder::toggleLightsState() {
@@ -53,28 +47,28 @@ void SceneBuilder::toggleDayNight() {
 //         Set Lights
 //----------------------------------
 void SceneBuilder::setLights() {
-    lightManager->clearLights();
-    lightManager->clearDirectionalLight();
+    lightManager.clearLights();
+    lightManager.clearDirectionalLight();
 
     if (lightsState == 0) {
         // sun light
         if (dayNightCycle == 0) {
-            lightManager->setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7), glm::vec3(0.5)); 
+            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7), glm::vec3(0.5)); 
         }
         else {
-            lightManager->setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0), glm::vec3(0.0));
+            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0), glm::vec3(0.0));
         }
     }
     else if (lightsState == 1) {
         // red light
         Light light(glm::vec3(125, 35, 250), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 25.0f);
-        lightManager->addLight(light);
+        lightManager.addLight(light);
         // green
         Light light2(glm::vec3(125, 35, 120), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 25.0f);
-        lightManager->addLight(light2);
+        lightManager.addLight(light2);
         // blue light
         Light light3(glm::vec3(125, 35, 0), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 25.0f);
-        lightManager->addLight(light3);
+        lightManager.addLight(light3);
     }
     else if (lightsState == 2) {
         // create no lights
@@ -84,7 +78,7 @@ void SceneBuilder::setLights() {
 //----------------------------------
 //         Scene Creation
 //----------------------------------
-void SceneBuilder::createScene(PhysicsEngine& physicsEngine, int sceneID)
+void SceneBuilder::createScene(int sceneID)
 {
     sceneDirty = true;
     physicsEngine.clearPhysicsData();
@@ -145,33 +139,36 @@ GameObject& SceneBuilder::createObject(
     const glm::vec3& color
 )
 {
-    unsigned int textureID;
-    if (textureName == "plain") 
-        textureID = 999;
-    else 
-        textureID = textureManager->getTexture(textureName);
+    unsigned int textureId;
+    if (textureName == "plain") {
+        textureId = 999;
+    } else {
+        textureId = textureManager.getTexture(textureName);
+    }
 
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-
+    Mesh* mesh = nullptr;
     if (colliderType == ColliderType::CUBOID) {
-        vertices = cubeVertices;
-        indices = cubeIndices;
+        mesh = meshManager.getMesh("cube");
     } 
     else if (colliderType == ColliderType::SPHERE) {
-        vertices = sphereVertices;
-        indices = sphereIndices;
+        mesh = meshManager.getMesh("sphere");
     }
     else if (colliderType == ColliderType::TEAPOT) {
-        vertices = teapotVertices;
-        indices = teapotIndices;
-
+        mesh = meshManager.getMesh("teapot");
+        colliderType = ColliderType::CUBOID;
+    } 
+    else if (colliderType == ColliderType::PYLON) {
+        mesh = meshManager.getMesh("pylon");
         colliderType = ColliderType::CUBOID;
     }
 
-    dynamicObjects.emplace_back(objectId, vertices, indices, pos, size, colliderType, mass, isStatic, textureID, orientation, sleepCounterThreshold, asleep, color);
-    physicsEngine->queueAdd(&dynamicObjects.back());
-    dynamicObjects.back().dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1; 
+    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color);
+    physicsEngine.queueAdd(&dynamicObjects.back());
+
+    GameObject& newObject = dynamicObjects.back();
+    newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
+    newObject.shaderId = shaderManager.getShaderId("default");
+    newObject.shader = shaderManager.getShader("default");
 
     objectId++;
     return dynamicObjects.back();
@@ -267,6 +264,11 @@ void SceneBuilder::generateFlatTerrain(
         glm::vec3 edgeA = v1 - v0; 
         glm::vec3 edgeB = v2 - v1;
         faceNormals.emplace_back(glm::normalize(glm::cross(edgeA, edgeB)));
+
+        glm::vec3 n = faceNormals.back();
+        if (n.y < 0) {
+            std::cout << "Inverted normal detected at triangle " << (i / 3) << ": " << n.x << ", " << n.y << ", " << n.z << std::endl;
+        }
     }
 
     // vertex normals
@@ -331,7 +333,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
 //----------------------------------
 //         Object rain
 //----------------------------------
-void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) {
+void SceneBuilder::objectRain(float& current_time, int mode) {
     constexpr float interval = 1.0f / 15.0f;
     if (current_time - lastTime < interval)
         return;
@@ -377,7 +379,7 @@ void SceneBuilder::objectRain(float& current_time, std::mt19937& rng, int mode) 
             //glm::vec3 size{ variance };
             //float mass = (variance * 3.0f) / 2.0f;
 
-            glm::vec3 size{ 4.0f };
+            glm::vec3 size{ 2.0f };
             float mass = 2.0f;
 
             createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
@@ -418,7 +420,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
+                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -460,7 +462,7 @@ void SceneBuilder::createSpherePyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 0.75f, asleep, color);
+                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -510,7 +512,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c,c,c);
             }
-            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -531,7 +533,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         // middle bricks
         for (int row = 1; row < wallWidth - 2; row++) {
             glm::vec3 pos = startPos;
@@ -550,7 +552,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         // edge brick
         pos = startPos;
@@ -568,7 +570,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 0.5f, 1, randomColor);
+        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         brickWeight -= brickDecrease;
     }
 }

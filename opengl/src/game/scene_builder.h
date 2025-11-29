@@ -2,141 +2,150 @@
 
 #include "game_object.h"
 #include "collider.h"
+#include "tri.h"
 
 class TextureManager;
 class LightManager;
 class PhysicsEngine;
+class ShaderManager;
+class MeshManager;
 
 class SceneBuilder {
 public:
-   bool sceneDirty = true; 
-   void setPointers(PhysicsEngine* pm, TextureManager* tm, LightManager* lm, std::mt19937& rng);
-   void objectRain(float& current_time, std::mt19937& rng, int mode);
+    SceneBuilder(
+        PhysicsEngine& pe, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
+        physicsEngine(pe), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
+    {}
 
-   void createScene(PhysicsEngine& physicsEngine, int sceneID);
-   void mainScene();
-   void terrainScene();
-   void tumblerScene();
-   void tallStructureScene();
-   void castleScene();
-   void containerScene();
-   void testFloorScene();
+    bool sceneDirty = true; 
+    void objectRain(float& current_time, int mode);
 
-   GameObject& createObject(
-      const std::string& textureName,
-      ColliderType colliderType,
-      const glm::vec3& pos,
-      const glm::vec3& size,
-      float mass,
-      bool isStatic,
-      const glm::quat& orientation = glm::quat(1, 0, 0, 0),
-      float sleepCounterThreshold = 1.0f,
-      bool asleep = 0,
-      const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
-   );
-   int objectsAddedThisFrame = 0;
+    void createScene(int sceneID);
+    void mainScene();
+    void terrainScene();
+    void tumblerScene();
+    void tallStructureScene();
+    void castleScene();
+    void containerScene();
+    void testFloorScene();
 
-   void createBlockPyramid(
-       const std::string& textureName,
-       glm::vec3 color,
-       const glm::vec3& pos,
-       int pWidth,
-       int pHeight,
-       float sWidth,
-       float sLength,
-       float sHeight,
-       float sDistance,
-       float sWeight,
-       bool asleep
-   );
+    GameObject& createObject(
+        const std::string& textureName,
+        ColliderType colliderType,
+        const glm::vec3& pos,
+        const glm::vec3& size,
+        float mass,
+        bool isStatic,
+        const glm::quat& orientation = glm::quat(1, 0, 0, 0),
+        float sleepCounterThreshold = 1.0f,
+        bool asleep = 0,
+        const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
+    );
+    int objectsAddedThisFrame = 0;
 
-   void createSpherePyramid(
-       const std::string& textureName,
-       glm::vec3 color,
-       const glm::vec3& pos,
-       int pWidth,
-       int pHeight,
-       float sRadius,
-       float sDistance,
-       float sWeight,
-       bool asleep
-   );
+    void createBlockPyramid(
+        const std::string& textureName,
+        glm::vec3 color,
+        const glm::vec3& pos,
+        int pWidth,
+        int pHeight,
+        float sWidth,
+        float sLength,
+        float sHeight,
+        float sDistance,
+        float sWeight,
+        bool asleep
+    );
 
-   void createBrickWall(
-       glm::vec3 startPos,
-       int wallDirection,
-       float wallHeight,
-       float wallWidth,
-       glm::vec3 brickSize,
-       float brickDistance,
-       int brickWeight,
-       int brickDecrease,
-       glm::vec2 colorRange,
-       bool fullColorRange
-   );
+    void createSpherePyramid(
+        const std::string& textureName,
+        glm::vec3 color,
+        const glm::vec3& pos,
+        int pWidth,
+        int pHeight,
+        float sRadius,
+        float sDistance,
+        float sWeight,
+        bool asleep
+    );
 
-   void createHalo(
-       float width,
-       float height,
-       float length,
-       glm::vec3 baseRot,
-       glm::vec3 rotDir,
-       float rotSpeed,
-       glm::vec3 pos,
-       int segments,
-       glm::vec3 color,
-       bool createsShadows
-   );
+    void createBrickWall(
+        glm::vec3 startPos,
+        int wallDirection,
+        float wallHeight,
+        float wallWidth,
+        glm::vec3 brickSize,
+        float brickDistance,
+        int brickWeight,
+        int brickDecrease,
+        glm::vec2 colorRange,
+        bool fullColorRange
+    );
 
-   // halos
-   struct Halo { 
-       glm::vec3 center; 
-       glm::vec3 rotDir;  
-       float rotSpeed; 
-       std::vector<int> indices; 
-   };
-   std::vector<Halo> allHalos; 
+    void createHalo(
+        float width,
+        float height,
+        float length,
+        glm::vec3 baseRot,
+        glm::vec3 rotDir,
+        float rotSpeed,
+        glm::vec3 pos,
+        int segments,
+        glm::vec3 color,
+        bool createsShadows
+    );
 
-   void generateFlatTerrain(
-       glm::vec3 offset,
-       int   gridSizeX,
-       int   gridSizeZ,
-       float cellSize,
-       float maxHeight
-   );
+    // halos
+    struct Halo { 
+        glm::vec3 center; 
+        glm::vec3 rotDir;  
+        float rotSpeed; 
+        std::vector<int> indices; 
+    };
+    std::vector<Halo> allHalos; 
 
-   void smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes);
+    void generateFlatTerrain(
+        glm::vec3 offset,
+        int   gridSizeX,
+        int   gridSizeZ,
+        float cellSize,
+        float maxHeight
+    );
 
-   struct TerrainData {
-       std::vector<Vertex> vertices;
-       std::vector<uint32_t> indices;
-       std::vector<Tri> triangles; 
-   };
+    void smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes);
 
-   TerrainData terrainData; 
-   TerrainData& getTerrainData();
+    struct TerrainData {
+        std::vector<Vertex> vertices;
+        std::vector<uint32_t> indices;
+        std::vector<Tri> triangles; 
+    };
 
-   std::vector<GameObject>& getDynamicObjects();
-   void toggleLightsState();
-   void setLights();
-   void toggleDayNight();
+    TerrainData terrainData; 
+    TerrainData& getTerrainData();
 
-   float randomRange(float start, float end);
+    std::vector<GameObject>& getDynamicObjects();
+    void toggleLightsState();
+    void setLights();
+    void toggleDayNight();
 
-   int playerObjectId = -1;
+    float randomRange(float start, float end);
+
+    int playerObjectId = -1;
 
 private:
-   PhysicsEngine* physicsEngine   = nullptr;
-   TextureManager* textureManager = nullptr;
-   LightManager* lightManager     = nullptr;
+    PhysicsEngine& physicsEngine;
+    TextureManager& textureManager;
+    MeshManager& meshManager;
+    ShaderManager& shaderManager;
+    LightManager& lightManager;
+    std::mt19937& rng;
 
-   int objectId;
-   std::vector<GameObject> dynamicObjects;
-   std::vector<GameObject> staticObjects;
+    int objectId = 0;
+    std::vector<GameObject> dynamicObjects;
+    std::vector<GameObject> staticObjects;
 
-   int lightsState = 0;
-   int dayNightCycle = 0;
+    int lightsState = 0;
+    int dayNightCycle = 0;
 
-   std::mt19937* rng;
-   float lastTime = 0.0f;
+    float lastTime = 0.0f;
 };

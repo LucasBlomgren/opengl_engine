@@ -292,7 +292,6 @@ void PhysicsEngine::detectAndSolveCollisions() {
     dHits.reserve(BVHTree<GameObject>::MaxCollisionBuf); 
 
     broadPhase(tHits, dHits);       // hashmap kanske långsam? 
-    midPhase(tHits, dHits);         // reserve behöver definieras (inte 16).
     narrowPhase(tHits, dHits);      // SAT + collisionManifold
     collectActiveContacts();        // collect contacts to solve
     resolveCollisions();            // PGS + Baumgarte stabilization
@@ -379,59 +378,6 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
 }
 
 //---------------------------------------------
-//                 Midphase
-//---------------------------------------------
-void PhysicsEngine::midPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
-    // gameobject.collider == TriMesh: run BVH queries
-    for (TerrainHit& th : tHits) {
-        if (th.obj->colliderType != ColliderType::MESH)
-            continue;
-
-        Mesh* triMeshPtr = std::get_if<Mesh>(&th.obj->collider.shape);
-        int cap = static_cast<int>(th.coarse.size());
-        th.refined.resize(cap);
-
-        int sp = 0;
-        BVHTree<Tri>& bvh = triMeshPtr->bvh;
-
-        for (Tri* tri : th.coarse) {
-            std::vector<Tri*> hitsBuf;
-            hitsBuf.reserve(16);
-
-            bvh.singleQuery(tri->getAABB(), hitsBuf);
-            th.refined[sp++] = { tri, std::move(hitsBuf) };
-        }
-
-        th.refined.resize(sp);
-    }
-
-    // gameobject.collider == TriMesh: run BVH queries 
-    for (DynamicHit& dh : dHits) {
-        if ((dh.A->colliderType != ColliderType::MESH) and (dh.B->colliderType != ColliderType::MESH))
-            continue;
-
-        Mesh* meshA = std::get_if<Mesh>(&dh.A->collider.shape);
-        Mesh* meshB = std::get_if<Mesh>(&dh.B->collider.shape);
-
-        if (meshA and meshB) {
-            dh.doubleMeshTris.reserve(16);
-            treeVsTreeQuery(meshA->bvh, meshB->bvh, dh.doubleMeshTris);
-        }
-
-        else if (meshA) {
-            AABB& boxB = dh.B->collider.getAABB();
-            dh.singleMeshTris.reserve(16);
-            meshA->bvh.singleQuery(boxB, dh.singleMeshTris);
-        }
-
-        else {
-            AABB& boxA = dh.A->collider.getAABB();
-            dh.singleMeshTris.reserve(16);
-            meshB->bvh.singleQuery(boxA, dh.singleMeshTris);
-        }
-    }
-}
-//---------------------------------------------
 //               Narrow phase
 //---------------------------------------------
 void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) 
@@ -443,23 +389,13 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
         }
 
         static std::vector<SAT::Result> allResults;
+        int reserveSize = th.tris.size() * 2; // worst case
         allResults.clear(); 
-        int reserveSize = 0;
-        if (th.refined.size() == 0) {
-            reserveSize = th.coarse.size() * 2; // worst case: all tris collide with collider 
-        }
-        else {
-            reserveSize = th.refined.size() * 2; 
-        }
         allResults.reserve(reserveSize); // reserve space for results
 
-        // MESH vs tris
-        if (th.obj->colliderType == ColliderType::MESH) {
-            // gå igenom refined
-        }
         // BOX vs tris
-        else if (th.obj->colliderType == ColliderType::CUBOID) {
-            for (Tri* tri : th.coarse) {
+        if (th.obj->colliderType == ColliderType::CUBOID) {
+            for (Tri* tri : th.tris) {
                 SAT::Result satResult;
                 if (!SAT::boxTri(th.obj->collider, *tri, satResult)) {
                     continue;
@@ -496,7 +432,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
         }
         // SPHERE vs tris
         else if (th.obj->colliderType == ColliderType::SPHERE) {
-            for (Tri* tri : th.coarse) { 
+            for (Tri* tri : th.tris) { 
                 SAT::Result satResult; 
                 if (!SAT::sphereTri(th.obj->collider, *tri, satResult)) { 
                     continue; 
@@ -540,113 +476,102 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
         GameObject* objA = dh.A; 
         GameObject* objB = dh.B; 
 
-        if (dh.singleMeshTris.size() > 0) {
-            // collider vs tris
+        // CUBE vs CUBE
+        if (objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::CUBOID) {
+            SAT::Result satResult;
+            if (!SAT::boxBox(objA->collider, objB->collider, satResult)) {
+                continue;
+            }
+            objA->totalCollisionCount++;
+            objB->totalCollisionCount++;
+
+            glm::vec3 centerA = std::get<OOBB>(objA->collider.shape).wCenter;
+            glm::vec3 centerB = std::get<OOBB>(objB->collider.shape).wCenter;
+            SAT::reverseNormal(centerA, centerB, satResult.normal);
+
+            if (objA->player) {
+                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
+                continue;
+            }
+            if (objB->player) {
+                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
+                continue;
+            }
+
+            // used only for worldInertia (so far)
+            if (objA->helperMatricesDirty) objA->setHelperMatrices();
+            if (objB->helperMatricesDirty) objB->setHelperMatrices();
+
+            Contact contact(objA, objB);
+
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
+            // editor-freeze bara om motparten INTE är statisk
+            bool editorFreezeA = objA->selectedByEditor && !objB->isStatic;
+            bool editorFreezeB = objB->selectedByEditor && !objA->isStatic;
+            contact.freezeA = editorFreezeA || (objA->asleep && !wakeInfo.A);
+            contact.freezeB = editorFreezeB || (objB->asleep && !wakeInfo.B);
+
+            collisionManifold->boxBox(contact, contactCache, satResult);
         }
+        // CUBE vs SPHERE
+        else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or 
+                (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) {
+            // swap if A is not cuboid
+            if (objA->colliderType != ColliderType::CUBOID) {
+                std::swap(objA, objB);
+            }
 
-        else if (dh.doubleMeshTris.size() > 0) {
-            // tris vs tris
+            // used in SAT
+            if (objA->helperMatricesDirty) objA->setHelperMatrices();
+            if (objB->helperMatricesDirty) objB->setHelperMatrices();
+
+            SAT::Result satResult;
+
+            if (!SAT::boxSphere(objA->collider, objB->collider, satResult)) {
+                continue;
+            }
+
+            objA->totalCollisionCount++; 
+            objB->totalCollisionCount++; 
+
+            if (objA->player) {
+                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
+                continue;
+            }
+            if (objB->player) {
+                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
+                continue;
+            }
+
+            Contact contact(objA, objB); 
+
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
+            contact.freezeA = (objA->isStatic) || (objA->asleep && !wakeInfo.A);
+            contact.freezeB = (objB->isStatic) || (objB->asleep && !wakeInfo.B);
+
+            collisionManifold->boxSphere(contact, contactCache, satResult); 
         }
-
-        // collider vs collider
-        else {
-            // CUBE vs CUBE
-            if (objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::CUBOID) {
-                SAT::Result satResult;
-                if (!SAT::boxBox(objA->collider, objB->collider, satResult)) {
-                    continue;
-                }
-                objA->totalCollisionCount++;
-                objB->totalCollisionCount++;
-
-                glm::vec3 centerA = std::get<OOBB>(objA->collider.shape).wCenter;
-                glm::vec3 centerB = std::get<OOBB>(objB->collider.shape).wCenter;
-                SAT::reverseNormal(centerA, centerB, satResult.normal);
-
-                if (objA->player) {
-                    pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
-                    continue;
-                }
-                if (objB->player) {
-                    pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
-                    continue;
-                }
-
-                // used only for worldInertia (so far)
-                if (objA->helperMatricesDirty) objA->setHelperMatrices();
-                if (objB->helperMatricesDirty) objB->setHelperMatrices();
-
-                Contact contact(objA, objB);
-
-                PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
-                // editor-freeze bara om motparten INTE är statisk
-                bool editorFreezeA = objA->selectedByEditor && !objB->isStatic;
-                bool editorFreezeB = objB->selectedByEditor && !objA->isStatic;
-                contact.freezeA = editorFreezeA || (objA->asleep && !wakeInfo.A);
-                contact.freezeB = editorFreezeB || (objB->asleep && !wakeInfo.B);
-
-                collisionManifold->boxBox(contact, contactCache, satResult);
+        // SPHERE vs SPHERE
+        else if (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::SPHERE) {
+            SAT::Result satResult;
+            if (!SAT::sphereSphere(objA->collider, objB->collider, satResult)) { 
+                continue;
             }
-            // CUBE vs SPHERE
-            else if ((objA->colliderType == ColliderType::CUBOID and objB->colliderType == ColliderType::SPHERE) or 
-                    (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::CUBOID)) {
-                // swap if A is not cuboid
-                if (objA->colliderType != ColliderType::CUBOID) {
-                    std::swap(objA, objB);
-                }
 
-                // used in SAT
-                if (objA->helperMatricesDirty) objA->setHelperMatrices();
-                if (objB->helperMatricesDirty) objB->setHelperMatrices();
+            // used only for worldInertia
+            if (objA->helperMatricesDirty) objA->setHelperMatrices();
+            if (objB->helperMatricesDirty) objB->setHelperMatrices();
 
-                SAT::Result satResult;
+            objA->totalCollisionCount++; 
+            objB->totalCollisionCount++; 
 
-                if (!SAT::boxSphere(objA->collider, objB->collider, satResult)) {
-                    continue;
-                }
+            Contact contact(objA, objB); 
 
-                objA->totalCollisionCount++; 
-                objB->totalCollisionCount++; 
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
+            contact.freezeA = (objA->isStatic) || (objA->asleep && !wakeInfo.A);
+            contact.freezeB = (objB->isStatic) || (objB->asleep && !wakeInfo.B);
 
-                if (objA->player) {
-                    pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
-                    continue;
-                }
-                if (objB->player) {
-                    pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
-                    continue;
-                }
-
-                Contact contact(objA, objB); 
-
-                PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
-                contact.freezeA = (objA->isStatic) || (objA->asleep && !wakeInfo.A);
-                contact.freezeB = (objB->isStatic) || (objB->asleep && !wakeInfo.B);
-
-                collisionManifold->boxSphere(contact, contactCache, satResult); 
-            }
-            // SPHERE vs SPHERE
-            else if (objA->colliderType == ColliderType::SPHERE and objB->colliderType == ColliderType::SPHERE) {
-                SAT::Result satResult;
-                if (!SAT::sphereSphere(objA->collider, objB->collider, satResult)) { 
-                    continue;
-                }
-
-                // used only for worldInertia
-                if (objA->helperMatricesDirty) objA->setHelperMatrices();
-                if (objB->helperMatricesDirty) objB->setHelperMatrices();
-
-                objA->totalCollisionCount++; 
-                objB->totalCollisionCount++; 
-
-                Contact contact(objA, objB); 
-
-                PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
-                contact.freezeA = (objA->isStatic) || (objA->asleep && !wakeInfo.A);
-                contact.freezeB = (objB->isStatic) || (objB->asleep && !wakeInfo.B);
-
-                collisionManifold->sphereSphere(contact, contactCache, satResult);  
-            }
+            collisionManifold->sphereSphere(contact, contactCache, satResult);  
         }
     }
 }
@@ -769,7 +694,7 @@ void PhysicsEngine::resolveCollisions() {
 
     // ------ PGS solver ------
     int maxIterations = 8; 
-
+    int iterCount = 0;
     for (int i = 0; i < maxIterations; i++) {
         float maxDelta = 0.0f;
 
@@ -952,11 +877,13 @@ void PhysicsEngine::resolveCollisions() {
                 }
             }
         }
+        iterCount++;
 
-        if (maxDelta < 1e-4f) {
+        if (maxDelta < 1e-3f) {
             break;
         }
     }
+    //std::cout << "PGS iterations: " << iterCount << "\n";
 }
 
 //-----------------------------
@@ -1091,15 +1018,12 @@ void PhysicsEngine::updateContactCache() {
 }
 
 void PhysicsEngine::pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d) {
-
-    float vn = glm::dot(player.linearVelocity, n);
     glm::vec3 up;
 
     if (playerIsA) {
         player.position += n * (d + 0.001f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
-    }
-    else {
+    } else {
         player.position -= n * (d - 0.001f);
         up = glm::vec3(0.0f, -1.0f, 0.0f);
     }

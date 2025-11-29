@@ -1,17 +1,18 @@
 #pragma once
 
-#include "shader.h"
+#include "shaders/shader.h"
 #include "camera.h"
 #include "game_object.h"
 #include "physics.h"
 #include "engine_state.h"
-#include "light_manager.h"
-#include "shadow_manager.h"
-#include "skybox_manager.h"
+#include "lighting/light_manager.h"
+#include "shaders/shader_manager.h"
+#include "lighting/shadow_manager.h"
+#include "skybox/skybox_manager.h"
 
-#include "render_contact_points.h"
-#include "xyz_object.h"
-#include "sphere_outline_renderer.h"
+#include "debug/render_contact_points.h"
+#include "debug/xyz_object.h"
+#include "debug/sphere_outline_renderer.h"
 
 #include "bvh.h"
 #include "scene_builder.h"
@@ -24,6 +25,7 @@ public:
         unsigned int height, 
         EngineState& engineState, 
         LightManager& lightManager, 
+        ShaderManager& shaderManager,
         ShadowManager& shadowManager, 
         SkyboxManager& skyboxManager
     );
@@ -68,12 +70,12 @@ public:
     template<typename E>
     void renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor);  
     void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
-    void renderFrustum(const glm::mat4& viewProj, Shader& debugShader);
+    void renderFrustum(const glm::mat4& viewProj);
 
-    Shader defaultShader;
-    Shader debugShader;
-    Shader shadowShader;
-    Shader skyboxShader;
+    Shader* defaultShader;
+    Shader* debugShader;
+    Shader* shadowShader;
+    Shader* skyboxShader;
 
     float terrainRotationAngle = 0.0f;
 
@@ -83,6 +85,7 @@ private:
 
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;
+    ShaderManager* shaderManager = nullptr;
     ShadowManager* shadowManager = nullptr;
     SkyboxManager* skyboxManager = nullptr;
 

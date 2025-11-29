@@ -7,17 +7,18 @@
 #include "camera.h"
 #include "physics.h"
 #include "scene_builder.h"
-#include "renderer.h"
-#include "shader.h"
-#include "texture_manager.h"
-#include "skybox_manager.h"
+#include "renderer/renderer.h"
+#include "shaders/shader.h"
+#include "textures/texture_manager.h"
+#include "mesh/mesh_manager.h"
+#include "shaders/shader_manager.h"
+#include "skybox/skybox_manager.h"
 
 #include "game_object.h"
-#include "light.h"
-#include "light_manager.h"
-#include "shadow_manager.h"
-#include "editor/editor.h"
-#include "geometry/geometry_loader.h"
+#include "lighting/light.h"
+#include "lighting/light_manager.h"
+#include "lighting/shadow_manager.h"
+#include "editor.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -54,6 +55,9 @@ int main()
     glGenQueries(NQ, qDebug);
     double gpuShadowMs = 0.0, gpuMainMs = 0.0, gpuDebugMs = 0.0;
 
+    // setup rng
+    std::mt19937 rng(std::random_device{}());
+
     // systems
     EngineState engineState;
     PhysicsEngine physicsEngine;
@@ -62,19 +66,18 @@ int main()
     // managers
     InputManager inputManager;
     TextureManager textureManager;
+    MeshManager meshManager;
+    ShaderManager shaderManager;
     SkyboxManager skyboxManager; 
-    SceneBuilder sceneBuilder;
     LightManager lightManager;
     ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
+    SceneBuilder sceneBuilder(physicsEngine, textureManager, meshManager, shaderManager, lightManager, rng);
 
     // view
     Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
 
     // editor
     Editor editor;
-
-    // setup rng
-    std::mt19937 rng(std::random_device{}());
 
     // ---------- Clocks ----------
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -90,7 +93,7 @@ int main()
     inputManager.init(window);
 
     // setup rendering
-    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shadowManager, skyboxManager);
+    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
 
     // load textures
     textureManager.loadTexture("crate", "src/assets/crate.jpg");
@@ -122,19 +125,20 @@ int main()
     skyboxManager.init(); 
 
     // load geometry data
-    loadCubeData();
-    loadSphereData();
+    //loadCubeData();
+    //loadSphereData();
+    //loadTeapotData();
+    //loadPylonData();
     //loadIcoSphereData();
 
     // setup scene 
-    sceneBuilder.setPointers(&physicsEngine, &textureManager, &lightManager, rng);
-    sceneBuilder.createScene(physicsEngine, 0);
+    sceneBuilder.createScene(0);
 
     // setup physics
     physicsEngine.init(&engineState);
 
     // setup editor
-    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager, &cubeVertices, &cubeIndices);
+    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
 
     // main loop
     while (true) {
@@ -195,7 +199,7 @@ int main()
         inputManager.processInput(window, deltaTime);
 
         // editor functions
-        editor.update(deltaTime, renderer.debugShader);
+        editor.update(deltaTime, *renderer.debugShader);
 
         // physics step
         float stepClockStart = static_cast<float>(glfwGetTime());
@@ -269,8 +273,8 @@ int main()
         float stepClockMs = (stepClockStop - stepClockStart) * 1000.0f;
 
         if (!engineState.isPaused()) {
-            if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, rng, 0);
-            else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, rng, 1);
+            if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
+            else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
         }
 
         // swap buffers

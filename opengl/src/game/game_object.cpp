@@ -247,40 +247,42 @@ void GameObject::renderMesh(Shader& shader) {
 
     shader.setMat4("model", modelMatrix);
 
-    if (textureID != 999) {
+    if (textureId != 999) {
         shader.setBool("useTexture", true);
         shader.setBool("useUniformColor", false);
-    }
-    else {
+    } else {
         shader.setBool("useTexture", false);
         shader.setBool("useUniformColor", true);
         shader.setVec3("uColor", this->color);
     }
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    mesh->draw();
+
+    //glBindVertexArray(VAO);
+    //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 }
 
-void GameObject::setupMesh() {
-    glGenVertexArrays(1, &VAO); glcount::incVAO();
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); glcount::incVBO();
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
-
-    glGenBuffers(1, &EBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); glcount::incEBO();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
-    glEnableVertexAttribArray(0);
-    // normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-    glEnableVertexAttribArray(1);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
-    glEnableVertexAttribArray(2);
-}
+//void GameObject::setupMesh() {
+//    glGenVertexArrays(1, &VAO); glcount::incVAO();
+//    glGenBuffers(1, &VBO);
+//
+//    glBindVertexArray(VAO);
+//
+//    glBindBuffer(GL_ARRAY_BUFFER, VBO); glcount::incVBO();
+//    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+//
+//    glGenBuffers(1, &EBO);
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); glcount::incEBO();
+//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+//
+//    // position attribute
+//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+//    glEnableVertexAttribArray(0);
+//    // normal attribute
+//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+//    glEnableVertexAttribArray(1);
+//    // texture coord attribute
+//    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
+//    glEnableVertexAttribArray(2);
+//}

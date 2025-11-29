@@ -490,8 +490,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         invInertiaA = glm::mat3(0.0f);
         linearVelocityA = glm::vec3(0.0f);
         angularVelocityA = glm::vec3(0.0f);
-    }
-    else {
+    } else {
         rA = cp.globalCoord - objA.position; 
         invMassA = objA.invMass; 
         invInertiaA = objA.inverseInertiaWorld; 
@@ -505,8 +504,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         invInertiaB = glm::mat3(0.0f);
         linearVelocityB = glm::vec3(0.0f);
         angularVelocityB = glm::vec3(0.0f);
-    }
-    else {
+    } else {
         rB = cp.globalCoord - objB.position; 
         invMassB = objB.invMass; 
         invInertiaB = objB.inverseInertiaWorld; 
@@ -736,9 +734,6 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
                 }
             }
             if (!inside) continue;  // hoppa över till nästa cachedPoint
-
-            // return glm::dot(planeNormal, point - planePoint) <= tolerance;
-            // if (isPointInsidePlane(contactPoints[i], referenceFaceNormal, referenceFace[0], 1e-7f))
 
             // kolla om punkten är innanför referensface normal
             constexpr float keepN = 0.1f; // minsta avståndet till referensface normal
