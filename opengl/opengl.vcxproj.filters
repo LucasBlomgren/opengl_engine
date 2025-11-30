@@ -108,6 +108,7 @@
     <ClInclude Include="src\graphics\shaders\shader_manager.h" />
     <ClInclude Include="src\graphics\mesh\mesh.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
+    <ClInclude Include="src\graphics\debug\render_contact_points.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />
