@@ -58,9 +58,6 @@ public:
     int id;
     glm::vec3 position;
     std::vector<glm::vec3> verticesPositions;
-    GLuint VAO;
-    GLuint VBO;
-    GLuint EBO;
 
     bool isInsideShadowFrustum = true;
 
@@ -75,9 +72,8 @@ public:
     bool helperMatricesDirty = true;
 
     Shader* shader = nullptr;
-    unsigned int shaderId = 0;
-    unsigned int textureId;
     Mesh* mesh = nullptr;
+    GLuint textureId;
     glm::vec3 color;
 
     // physics variables
@@ -234,12 +230,6 @@ public:
         inverseInertiaWorld = inverseInertia; 
     }
 
-    ~GameObject() {
-        if (VAO) glDeleteVertexArrays(1, &VAO); glcount::decVAO();
-        if (VBO) glDeleteBuffers(1, &VBO); glcount::decVBO();
-        if (EBO) glDeleteBuffers(1, &EBO); glcount::decEBO();
-    }
-
     void resetDirtyFlags();
     void setModelMatrix();
     void setHelperMatrices();
@@ -261,5 +251,5 @@ public:
     AABB getAABB() const;
 
 private:
-    //void setupMesh();
+
 };

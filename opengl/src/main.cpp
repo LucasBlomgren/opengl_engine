@@ -74,7 +74,10 @@ int main()
     SceneBuilder sceneBuilder(physicsEngine, textureManager, meshManager, shaderManager, lightManager, rng);
 
     // view
-    Camera camera(glm::vec3(-5.0f, 20.0f, 0.3f));
+    Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
+    camera.yaw = 35.0f;
+    camera.pitch = -20.0f;
+    camera.ProcessMouseMovement(0.0f, 0.0f);
 
     // editor
     Editor editor;
@@ -188,7 +191,7 @@ int main()
 
         // rendering
         float renderClockStart = static_cast<float>(glfwGetTime());
-        renderer.update(camera, sceneBuilder, physicsEngine, editor, qShadow, qMain, qDebug, writeIdx);
+        renderer.update(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
         // calculate render time
         float renderClockEnd = static_cast<float>(glfwGetTime());
         float renderClockMs = (renderClockEnd - renderClockStart) * 1000.0f;

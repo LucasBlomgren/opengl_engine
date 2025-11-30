@@ -34,7 +34,6 @@ public:
         Camera& camera,
         SceneBuilder& builder,
         PhysicsEngine& physics,
-        Editor& editor,
         GLuint qShadow[],
         GLuint qMain[],
         GLuint qDebug[],
@@ -53,15 +52,10 @@ public:
     void uploadLightsToShader(); 
     void uploadDirectionalLight(); 
 
-    void renderScene(
-        Shader& shader,
-        Camera& camera,
-        SceneBuilder& builder,
-        PhysicsEngine& physics,
-        Editor& editor
-    );
+    void renderScene(Shader& shader, SceneBuilder& builder);
 
-    void renderGameObjects(Shader& shader, std::vector<GameObject>& objects, Camera& camera);
+    void renderGameObjects(std::vector<GameObject>& objects);
+    void renderGameObjectsShadow();
     void renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty);
     void renderLights() const; 
     void renderRayCastHit(Camera& camera, SceneBuilder& builder); 
@@ -102,4 +96,19 @@ private:
     unsigned int VAO_line;
     unsigned int VAO_xyz;
     unsigned int VAO_contactPoint;
+
+    struct RenderItem {
+        Shader* shader;
+        Mesh* mesh;
+        GLuint textureId;
+        glm::mat4 modelMatrix;
+        glm::vec3 color;
+
+        RenderItem(Shader* s, Mesh* m, GLuint tex, const glm::mat4& mm, const glm::vec3& c) :
+            shader(s), mesh(m), textureId(tex), modelMatrix(mm), color(c) {
+        }
+    };
+
+    std::vector<RenderItem> renderQueue;
+    void createRenderQueue(std::vector<GameObject>& objects);
 };

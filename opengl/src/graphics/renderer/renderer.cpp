@@ -113,7 +113,6 @@ void Renderer::update(
     Camera& camera,
     SceneBuilder& builder,
     PhysicsEngine& physics,
-    Editor& editor,
     GLuint qShadow[],
     GLuint qMain[],
     GLuint qDebug[],
@@ -123,11 +122,13 @@ void Renderer::update(
         computeSceneBounds(builder);
     }
 
+    createRenderQueue(builder.getDynamicObjects());
+
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
-    renderScene(*shadowShader, camera, builder, physics, editor);
+    renderGameObjectsShadow();
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
 
@@ -138,7 +139,7 @@ void Renderer::update(
     uploadDirectionalLight();
     uploadLightsToShader();
     renderLights();
-    renderScene(*defaultShader, camera, builder, physics, editor);
+    renderScene(*defaultShader, builder);
     glEndQuery(GL_TIME_ELAPSED);
 
     renderRayCastHit(camera, builder);
@@ -178,26 +179,95 @@ void Renderer::update(
 }
 
 //-----------------------------
+//      Create Render Queue
+//-----------------------------
+void Renderer::createRenderQueue(std::vector<GameObject>& dynamicObjects) {
+    renderQueue.clear();
+    renderQueue.reserve(dynamicObjects.size());
+
+    for (GameObject& obj : dynamicObjects) {
+        renderQueue.emplace_back(obj.shader, obj.mesh, obj.textureId, obj.modelMatrix, obj.color);
+    }
+
+    std::sort(renderQueue.begin(), renderQueue.end(),
+        [](const RenderItem& a, const RenderItem& b) {
+            if (a.shader < b.shader) return true;
+            if (a.shader > b.shader) return false;
+
+            if (a.mesh < b.mesh) return true;
+            if (a.mesh > b.mesh) return false;
+
+            return a.textureId < b.textureId;
+        });
+}
+
+//-----------------------------
+//       Render Shadows
+//-----------------------------
+void Renderer::renderGameObjectsShadow() {
+    shadowShader->use();    
+    Mesh* currentMesh = nullptr;
+
+    for (const auto& item : renderQueue) {
+        if (item.mesh != currentMesh) {
+            currentMesh = item.mesh;
+            glBindVertexArray(currentMesh->VAO);
+        }
+
+        shadowShader->setMat4("model", item.modelMatrix);
+        currentMesh->draw();
+    }
+}
+
+//-----------------------------
 //       Render scene
 //-----------------------------
-void Renderer::renderScene(
-    Shader& shader,
-    Camera& camera,
-    SceneBuilder& builder,
-    PhysicsEngine& physics,
-    Editor& editor
-) {
-    renderGameObjects(shader, builder.getDynamicObjects(), camera);
+void Renderer::renderScene(Shader& shader, SceneBuilder& builder) {
+    renderGameObjects(builder.getDynamicObjects());
     renderTerrain(shader, builder.getTerrainData(), builder.sceneDirty);
 }
 
 //-----------------------------
 //     Render game objects
 //-----------------------------
-void Renderer::renderGameObjects(Shader& shader, std::vector<GameObject>& objects, Camera& camera) {
-    glLineWidth(2.0f);
-    for (GameObject& obj : objects) {
-        obj.renderMesh(shader);
+void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
+    Shader* currentShader = nullptr;
+    Mesh* currentMesh = nullptr;
+    unsigned int currentTex = UINT_MAX;
+
+    for (const auto& item : renderQueue) {
+        // Switch shader if needed
+        if (item.shader != currentShader) {
+            currentShader = item.shader;
+            currentShader->use();
+        }
+        // Switch mesh if needed
+        if (item.mesh != currentMesh) {
+            currentMesh = item.mesh;
+            glBindVertexArray(currentMesh->VAO);
+        }
+        // Switch texture if needed
+        if (item.textureId != currentTex) {
+            currentTex = item.textureId;
+
+            // Bind texture only if there is a texture
+            if (currentTex != 999) {
+                glBindTexture(GL_TEXTURE_2D, currentTex);
+            }
+        }
+
+        // Set texture or uniform color
+        if (currentTex != 999) {
+            currentShader->setBool("useTexture", true);
+            currentShader->setBool("useUniformColor", false);
+        } else {
+            currentShader->setBool("useTexture", false);
+            currentShader->setBool("useUniformColor", true);
+            currentShader->setVec3("uColor", item.color);
+        }
+
+        currentShader->setMat4("model", item.modelMatrix);
+        currentMesh->draw();
     }
 }
 

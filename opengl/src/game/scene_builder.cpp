@@ -167,7 +167,6 @@ GameObject& SceneBuilder::createObject(
 
     GameObject& newObject = dynamicObjects.back();
     newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
-    newObject.shaderId = shaderManager.getShaderId("default");
     newObject.shader = shaderManager.getShader("default");
 
     objectId++;

@@ -15,7 +15,6 @@ public:
     };
 
     Shader* getShader(const std::string& name);
-    unsigned int getShaderId(const std::string& name);
 
 private:
     static std::unordered_map<std::string, Shader> shaders;

@@ -13,14 +13,3 @@ Shader* ShaderManager::getShader(const std::string& name) {
 
     return &it->second;
 }
-
-unsigned int ShaderManager::getShaderId(const std::string& name) {
-    auto it = shaders.find(name);
-
-    if (it == shaders.end()) {
-        std::cerr << "[ShaderManager] No shader called \"" << name << "\"\n";
-        return 0; // eller assert, eller fallback-shader-id
-    }
-
-    return it->second.ID;
-}
