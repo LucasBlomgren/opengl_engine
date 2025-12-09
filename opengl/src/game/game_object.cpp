@@ -87,9 +87,9 @@ void GameObject::calculateInverseInertiaForSolidSphere() {
         glm::vec3(0.0f, 0.0f, invI));
 }
 
-void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime) {
+void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
     glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
-    orientation += 0.5f * deltaTime * (omegaQuat * orientation);
+    orientation += 0.5f * dt * (omegaQuat * orientation);
     orientation = glm::normalize(orientation);
 }
 
@@ -240,22 +240,4 @@ void GameObject::setAwake() {
 
     asleep = false;
     sleepCounter = 0.0f;
-}
-
-void GameObject::renderMesh(Shader& shader) {
-    if (seeThrough) return;
-
-    shader.setMat4("model", modelMatrix);
-
-    if (textureId != 999) {
-        shader.setBool("useTexture", true);
-        shader.setBool("useUniformColor", false);
-    } else {
-        shader.setBool("useTexture", false);
-        shader.setBool("useUniformColor", true);
-        shader.setVec3("uColor", this->color);
-    }
-
-    glBindTexture(GL_TEXTURE_2D, textureId);
-    mesh->draw();
 }

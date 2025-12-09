@@ -58,6 +58,14 @@ void Renderer::setViewProjection(Camera& camera) {
     defaultShader->setMat4("view", view);
     defaultShader->setVec3("viewPos", camera.position);
 
+    Shader* defaultInstancedShader = defaultShader->instancedVariant;
+    if (defaultInstancedShader) {
+        defaultInstancedShader->use();
+        defaultInstancedShader->setMat4("projection", projection);
+        defaultInstancedShader->setMat4("view", view);
+        defaultInstancedShader->setVec3("viewPos", camera.position);
+    }
+
     debugShader->use();
     debugShader->setMat4("projection", projection);
     debugShader->setMat4("view", view);
@@ -79,6 +87,12 @@ void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
 
     shadowShader->use();
     shadowShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+    Shader* shadowInstancedShader = shadowShader->instancedVariant;
+    if (shadowInstancedShader) {
+        shadowInstancedShader->use();
+        shadowInstancedShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    }
 }
 
 //-----------------------------
@@ -101,15 +115,20 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
     defaultShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
     defaultShader->setInt("shadowMap", 1);
 
+    Shader* defaultInstancedShader = defaultShader->instancedVariant;
+    defaultInstancedShader->use();
+    defaultInstancedShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    defaultInstancedShader->setInt("shadowMap", 1);
+
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadowManager->depthMap);
     glActiveTexture(GL_TEXTURE0);
 }
 
 //-----------------------------
-//        Main Update
+//        Main render
 //-----------------------------
-void Renderer::update(
+void Renderer::render(
     Camera& camera,
     SceneBuilder& builder,
     PhysicsEngine& physics,
@@ -123,6 +142,7 @@ void Renderer::update(
     }
 
     createRenderQueue(builder.getDynamicObjects());
+    buildBatchesFromRenderQueue();
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -186,6 +206,9 @@ void Renderer::createRenderQueue(std::vector<GameObject>& dynamicObjects) {
     renderQueue.reserve(dynamicObjects.size());
 
     for (GameObject& obj : dynamicObjects) {
+        if (obj.seeThrough) {
+            continue;
+        }
         renderQueue.emplace_back(obj.shader, obj.mesh, obj.textureId, obj.modelMatrix, obj.color);
     }
 
@@ -202,20 +225,72 @@ void Renderer::createRenderQueue(std::vector<GameObject>& dynamicObjects) {
 }
 
 //-----------------------------
+//   Build Batches from Queue
+//-----------------------------
+void Renderer::buildBatchesFromRenderQueue() {
+    batches.clear();
+    if (renderQueue.empty()) return;
+
+    // start first batch
+    Batch current;
+    current.mesh = renderQueue[0].mesh;
+    current.shader = renderQueue[0].shader;
+    current.textureId = renderQueue[0].textureId;
+
+    auto sameKey = [](const RenderItem& a, const RenderItem& b) {
+        return a.mesh == b.mesh &&
+            a.shader == b.shader &&
+            a.textureId == b.textureId;
+        };
+
+    for (int i = 0; i < renderQueue.size(); ++i) {
+        const auto& item = renderQueue[i];
+
+        if (i > 0 && !sameKey(item, renderQueue[i - 1])) {
+            batches.push_back(std::move(current)); // new combination -> move old batch
+
+            // start new batch
+            current = Batch{};
+            current.mesh = item.mesh;
+            current.shader = item.shader;
+            current.textureId = item.textureId;
+        }
+
+        current.instances.emplace_back(item.modelMatrix, item.color);
+    }
+
+    // last batch
+    batches.push_back(std::move(current));
+}
+
+//-----------------------------
 //       Render Shadows
 //-----------------------------
 void Renderer::renderGameObjectsShadow() {
-    shadowShader->use();    
-    Mesh* currentMesh = nullptr;
+    for (auto& batch : batches) {
+        auto& instances = batch.instances;
+        Shader* shader;
+        Mesh* mesh = batch.mesh;
+        glBindVertexArray(mesh->VAO);
 
-    for (const auto& item : renderQueue) {
-        if (item.mesh != currentMesh) {
-            currentMesh = item.mesh;
-            glBindVertexArray(currentMesh->VAO);
+        // without instancing
+        if (instances.size() < INSTANCING_THRESHOLD) {
+            shader = shadowShader;
+            shader->use();
+            for (const auto& inst : instances) {
+                shader->setMat4("model", inst.model);
+                mesh->draw();
+            }
         }
+        else {
+            // with instancing
+            shader = shadowShader->instancedVariant;
+            shader->use();
 
-        shadowShader->setMat4("model", item.modelMatrix);
-        currentMesh->draw();
+            glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
+            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
+            glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());
+        }
     }
 }
 
@@ -227,47 +302,62 @@ void Renderer::renderScene(Shader& shader, SceneBuilder& builder) {
     renderTerrain(shader, builder.getTerrainData(), builder.sceneDirty);
 }
 
-//-----------------------------
-//     Render game objects
-//-----------------------------
+//---------------------------
+//    Render game objects 
+//---------------------------
 void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
-    Shader* currentShader = nullptr;
-    Mesh* currentMesh = nullptr;
-    unsigned int currentTex = UINT_MAX;
+    for (auto& batch : batches) {
+        auto& instances = batch.instances;
 
-    for (const auto& item : renderQueue) {
-        // Switch shader if needed
-        if (item.shader != currentShader) {
-            currentShader = item.shader;
-            currentShader->use();
-        }
-        // Switch mesh if needed
-        if (item.mesh != currentMesh) {
-            currentMesh = item.mesh;
-            glBindVertexArray(currentMesh->VAO);
-        }
-        // Switch texture if needed
-        if (item.textureId != currentTex) {
-            currentTex = item.textureId;
+        Shader* shader;
+        Mesh* mesh = batch.mesh;
+        GLuint texId = batch.textureId;
 
-            // Bind texture only if there is a texture
-            if (currentTex != 999) {
-                glBindTexture(GL_TEXTURE_2D, currentTex);
+        glBindVertexArray(mesh->VAO);
+        glBindTexture(GL_TEXTURE_2D, texId);
+
+        // without instancing
+        if (instances.size() < INSTANCING_THRESHOLD) {
+            shader = batch.shader;
+            shader->use();
+            for (const auto& inst : instances) {
+                // Set texture or uniform color
+                if (texId != 999) {
+                    shader->setBool("useTexture", true);
+                } else {
+                    shader->setBool("useTexture", false);
+                    shader->setVec3("uColor", inst.color);
+                }
+
+                // random color shader hack
+                if (inst.color.x == -1 && inst.color.y == -1 && inst.color.z == -1) {
+                    shader->setBool("useRandomColor", true);
+                } else {
+                    shader->setBool("useRandomColor", false);
+                }
+
+                shader->setMat4("model", inst.model);
+                mesh->draw();
             }
         }
+        // with instancing
+        else {
+            shader = batch.shader->instancedVariant;
+            shader->use();
 
-        // Set texture or uniform color
-        if (currentTex != 999) {
-            currentShader->setBool("useTexture", true);
-            currentShader->setBool("useUniformColor", false);
-        } else {
-            currentShader->setBool("useTexture", false);
-            currentShader->setBool("useUniformColor", true);
-            currentShader->setVec3("uColor", item.color);
+            if (texId != 999) {
+                shader->setBool("useTexture", true);
+            } else {
+                shader->setBool("useTexture", false);
+            }
+
+            // fyll instanceVbo med alla instanser i batchen
+            glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
+            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
+
+            // gör ETT draw call för alla instanser
+            glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());
         }
-
-        currentShader->setMat4("model", item.modelMatrix);
-        currentMesh->draw();
     }
 }
 
@@ -333,7 +423,7 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     shader.setMat4("model", model);
 
     shader.setBool("useTexture", true);
-    shader.setBool("useUniformColor", true);
+    shader.setBool("useRandomColor", false);
     shader.setVec3("uColor", glm::vec3(0, 1, 0));
 
     glBindTexture(GL_TEXTURE_2D, 4);
@@ -347,7 +437,6 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     //debugShader->use();
     //debugShader->setMat4("model", model);
     //debugShader->setInt("debug.objectType", 0);
-    //debugShader->setBool("debug.useUniformColor", true); 
     //debugShader->setVec3("debug.uColor", glm::vec3{ 0.2 });
     // 
     //glDisable(GL_CULL_FACE); // ta bort cull face
@@ -488,6 +577,13 @@ void Renderer::uploadDirectionalLight() {
     defaultShader->setVec3("dirLight.ambient", light.ambient);
     defaultShader->setVec3("dirLight.diffuse", light.diffuse);
     defaultShader->setVec3("dirLight.specular", light.specular);
+
+    Shader* defaultInstancedShader = defaultShader->instancedVariant;
+    defaultInstancedShader->use();
+    defaultInstancedShader->setVec3("dirLight.direction", light.direction);
+    defaultInstancedShader->setVec3("dirLight.ambient", light.ambient);
+    defaultInstancedShader->setVec3("dirLight.diffuse", light.diffuse);
+    defaultInstancedShader->setVec3("dirLight.specular", light.specular);
 }
 
 void Renderer::renderLights() const {
@@ -550,7 +646,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         for (GameObject& obj : objects) {
             debugShader->setBool("debug.useUniformColor", true);
 
-            if (obj.colliderType == ColliderType::CUBOID or obj.colliderType == ColliderType::TEAPOT) {
+            if (obj.colliderType == ColliderType::CUBOID) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
                 obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
             }
@@ -684,6 +780,7 @@ void Renderer::renderFrustum(const glm::mat4& viewProj)
 
     // 6) Rita
     debugShader->use();
+    debugShader->setMat4("model", glm::mat4(1.0f));
     debugShader->setBool("debug.useUniformColor", true);
     debugShader->setVec3("debug.uColor", glm::vec3(1, 0, 0));
     glBindVertexArray(vao);

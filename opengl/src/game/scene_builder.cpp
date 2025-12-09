@@ -53,10 +53,10 @@ void SceneBuilder::setLights() {
     if (lightsState == 0) {
         // sun light
         if (dayNightCycle == 0) {
-            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7), glm::vec3(0.5)); 
+            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7f), glm::vec3(0.5f)); 
         }
         else {
-            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0), glm::vec3(0.0));
+            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0f), glm::vec3(0.0f));
         }
     }
     else if (lightsState == 1) {
@@ -98,7 +98,7 @@ void SceneBuilder::createScene(int sceneID)
 
     allHalos.clear();
 
-    if (sceneID == 6) {
+    if (sceneID == 0) {
         mainScene(); 
     }
     else if (sceneID == 1) {
@@ -116,9 +116,13 @@ void SceneBuilder::createScene(int sceneID)
     else if (sceneID == 5) {
         containerScene();
     }
-    else if (sceneID == 0) {
+    else if (sceneID == 6) {
         testFloorScene();
     }
+    else if (sceneID == 7) {
+        emptyFloorScene();
+    }
+
 
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
 }
@@ -128,6 +132,7 @@ void SceneBuilder::createScene(int sceneID)
 //----------------------------------
 GameObject& SceneBuilder::createObject(
     const std::string& textureName,
+    const std::string& meshName,
     ColliderType colliderType,
     const glm::vec3& pos,
     const glm::vec3& size,
@@ -136,8 +141,7 @@ GameObject& SceneBuilder::createObject(
     const glm::quat& orientation,
     float sleepCounterThreshold,
     bool asleep,
-    const glm::vec3& color
-)
+    const glm::vec3& color) 
 {
     unsigned int textureId;
     if (textureName == "plain") {
@@ -146,21 +150,7 @@ GameObject& SceneBuilder::createObject(
         textureId = textureManager.getTexture(textureName);
     }
 
-    Mesh* mesh = nullptr;
-    if (colliderType == ColliderType::CUBOID) {
-        mesh = meshManager.getMesh("cube");
-    } 
-    else if (colliderType == ColliderType::SPHERE) {
-        mesh = meshManager.getMesh("sphere");
-    }
-    else if (colliderType == ColliderType::TEAPOT) {
-        mesh = meshManager.getMesh("teapot");
-        colliderType = ColliderType::CUBOID;
-    } 
-    else if (colliderType == ColliderType::PYLON) {
-        mesh = meshManager.getMesh("pylon");
-        colliderType = ColliderType::CUBOID;
-    }
+    Mesh* mesh = meshManager.getMesh(meshName);
 
     dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color);
     physicsEngine.queueAdd(&dynamicObjects.back());
@@ -181,8 +171,8 @@ void SceneBuilder::generateFlatTerrain(
     int   gridSizeX,
     int   gridSizeZ,
     float cellSize,
-    float maxHeight
-) {
+    float maxHeight) 
+{
     float startHeight = maxHeight * 0.5f;  // t.ex. halvvägs upp
     float maxStep = maxHeight * 0.1f;      // hur stort steg vi tillåter 
 
@@ -237,10 +227,12 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
+    int cutOff = 4;
+
     // indices
     terrainData.indices.reserve(gridSizeX * gridSizeZ * 6);
-    for (int z = 4; z < gridSizeZ-4; ++z) {
-        for (int x = 4; x < gridSizeX-4; ++x) {
+    for (int z = cutOff; z < gridSizeZ-cutOff; ++z) {
+        for (int x = cutOff; x < gridSizeX-cutOff; ++x) {
             // triangel 1:
             indices.emplace_back(x + z * (gridSizeX + 1));
             indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
@@ -300,7 +292,7 @@ void SceneBuilder::generateFlatTerrain(
     }
 
     // Vertices
-    for (size_t i = 0; i < points.size(); ++i) {
+    for (int i = 0; i < points.size(); ++i) {
         glm::vec3 pos = points[i];
         glm::vec3 normal = vertexNormals[i];
 
@@ -313,7 +305,8 @@ void SceneBuilder::generateFlatTerrain(
 }
 
 void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes) {
-    int W = H.size(), D = H[0].size();
+    int W = static_cast<int>(H.size());
+    int D = static_cast<int>(H[0].size());
     for (int pass = 0; pass < passes; ++pass) {
         auto copy = H;
         for (int x = 1; x < W - 1; ++x) {
@@ -358,9 +351,9 @@ void SceneBuilder::objectRain(float& current_time, int mode) {
 
         // blocks
         if (mode == 0) {
-            xVariance = randomRange(1.0, 1.01);
-            yVariance = randomRange(1.0, 1.01);
-            zVariance = randomRange(1.0, 1.01);
+            xVariance = randomRange(1.0f, 1.01f);
+            yVariance = randomRange(1.0f, 1.01f);
+            zVariance = randomRange(1.0f, 1.01f);
             //xVariance = randomRange(2.0, 6.0);
             //yVariance = randomRange(2.0, 6.0);
             //zVariance = randomRange(2.0, 6.0);
@@ -370,7 +363,7 @@ void SceneBuilder::objectRain(float& current_time, int mode) {
             //glm::vec3 size{ 4.0f };
             //float mass = 10.0f;
 
-            createObject("plain", ColliderType::TEAPOT, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            createObject("plain", "cube", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
         // spheres
         else if (mode == 1) {
@@ -381,7 +374,7 @@ void SceneBuilder::objectRain(float& current_time, int mode) {
             glm::vec3 size{ 2.0f };
             float mass = 2.0f;
 
-            createObject("plain", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            createObject("plain", "sphere", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
     }
 }
@@ -419,7 +412,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
+                createObject("plain", "cube", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -461,7 +454,7 @@ void SceneBuilder::createSpherePyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
+                createObject("plain", "sphere", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -475,7 +468,7 @@ void SceneBuilder::createBrickWall(
     float wallWidth,
     glm::vec3 brickSize,
     float brickDistance,
-    int brickWeight,
+    float brickWeight,
     int brickDecrease,
     glm::vec2 colorRange,
     bool fullColorRange) 
@@ -492,9 +485,9 @@ void SceneBuilder::createBrickWall(
     }
 
     // col
-    for (int col = 0; col < wallHeight / 2; col++) {
+    for (int col = 0; col < static_cast<int>(wallHeight) / 2; col++) {
         // row 0, 2, 4, 6...
-        for (int row = 0; row < wallWidth; row++) {
+        for (int row = 0; row < static_cast<int>(wallWidth); row++) {
             glm::vec3 pos = startPos;
             pos.y += brickSize.y / 2 + col * brickSize.y * 2;
             if (wallDirection == 0) {
@@ -511,7 +504,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c,c,c);
             }
-            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+            createObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -532,7 +525,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+        createObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         // middle bricks
         for (int row = 1; row < wallWidth - 2; row++) {
             glm::vec3 pos = startPos;
@@ -551,7 +544,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            createObject("plain", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+            createObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         // edge brick
         pos = startPos;
@@ -569,7 +562,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+        createObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         brickWeight -= brickDecrease;
     }
 }
@@ -611,7 +604,7 @@ void SceneBuilder::createHalo(
         glm::vec3 newPos = baseRot * newPosLocal;
         glm::quat newOrient = baseRot * newOrientLocal;
 
-        createObject("plain", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color);
+        createObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color);
         GameObject& obj = dynamicObjects.back();
         obj.isInsideShadowFrustum = createsShadows;
 

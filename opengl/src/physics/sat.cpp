@@ -204,10 +204,6 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     return false;
 }
 
-bool SAT::triTri(Tri& A, Tri& B, Result& out) {
-    return false;
-}
-
 std::pair<float, float> SAT::projectVertices(std::span<const glm::vec3> vertices, const glm::vec3& axis) {
     float min = std::numeric_limits<float>::max();
     float max = std::numeric_limits<float>::lowest();

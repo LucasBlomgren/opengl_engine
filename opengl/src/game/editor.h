@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "input_manager.h"
 #include "engine_state.h"
 #include "scene_builder.h"
 #include "physics.h"
@@ -21,6 +22,10 @@ class Editor
 {
 public:
     void setPointers(
+        const unsigned int SCR_WIDTH,
+        const unsigned int SCR_HEIGHT,
+        GLFWwindow* window,
+        InputManager* inputManager,
         EngineState* engineState,
         SceneBuilder* sceneBuilder,
         PhysicsEngine* physicsEngine,
@@ -28,6 +33,7 @@ public:
         SkyboxManager* skyboxManager
     );
 
+    void cameraMode();
     void update(float& deltaTime, Shader& shader);
     RaycastHit rayCast(float length);
     RaycastHit& getLastRayHit();
@@ -51,11 +57,17 @@ private:
     bool drawPlacementAABB = false;
     glm::vec3 selectedObjVelocity = { 0.0f, 0.0f, 0.0f };
 
+    GLFWwindow* window = nullptr;
     EngineState* engineState = nullptr;
+    InputManager* inputManager = nullptr;
     SceneBuilder* sceneBuilder = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
     SkyboxManager* skyboxManager = nullptr;
     Camera* camera = nullptr;
 
     RaycastHit lastHitData;
+
+    double savedMouseX, savedMouseY;
+    unsigned int SCR_WIDTH;
+    unsigned int SCR_HEIGHT;
 };

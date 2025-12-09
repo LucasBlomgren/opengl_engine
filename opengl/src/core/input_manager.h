@@ -17,6 +17,8 @@ public:
     static void mouseMovementCallback(GLFWwindow* window, double xpos, double ypos);
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
+    void resetFirstMouse();
+
 private:
     static EngineState* engineState;
 

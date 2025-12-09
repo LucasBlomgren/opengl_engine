@@ -167,10 +167,6 @@ void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, 
     integrateContact(cache, contact); 
 }
 
-void CollisionManifold::meshMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
-    
-}
-
 void CollisionManifold::pickFourFurthestPoints() {
     int N = (int)this->allClippedPoints.size();
     if (N <= 4) {

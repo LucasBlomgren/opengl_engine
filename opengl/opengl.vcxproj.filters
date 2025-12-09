@@ -40,6 +40,13 @@
     <ClCompile Include="src\graphics\shaders\shader_manager.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -118,8 +125,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\externals\glfw3.dll" />
-    <None Include="src\graphics\shaders\object.frag" />
-    <None Include="src\graphics\shaders\object.vert" />
+    <None Include="src\graphics\shaders\default.frag" />
     <None Include="src\graphics\shaders\debug.vert">
       <Filter>src\shaders</Filter>
     </None>
@@ -136,5 +142,8 @@
     <None Include="src\graphics\shaders\skybox.vert">
       <Filter>src\shaders</Filter>
     </None>
+    <None Include="src\graphics\shaders\default.vert" />
+    <None Include="src\graphics\shaders\default_instanced.vert" />
+    <None Include="src\graphics\shaders\shadow_instanced.vert" />
   </ItemGroup>
 </Project>

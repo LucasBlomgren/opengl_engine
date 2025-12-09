@@ -7,6 +7,7 @@
 class EngineState {
 public:
 
+    void toggleCameraMode();
     void setAdvanceStep(bool);
     void setPaused(bool);
     void togglePause();
@@ -24,6 +25,7 @@ public:
     void setPressedKey(const std::string& key);
     void clearPressedKey();
 
+    bool getCameraMode() const;
     bool isPaused() const;
     bool getAdvanceStep() const;
     bool getShowFPS() const;
@@ -44,6 +46,7 @@ public:
     void SetKeyState(int key, bool down);
 
 private:
+    bool cameraMode = true; // true = mouse camera mode, false = free mouse
     bool playerMode = false;
     bool advanceStep = false;
     bool paused = false;

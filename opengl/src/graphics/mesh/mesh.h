@@ -14,6 +14,7 @@ public:
     GLuint VAO = 0;
     GLuint VBO = 0;
     GLuint EBO = 0;
+    GLuint instanceVBO = 0;
     GLsizei indexCount = 0;
 
     Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {

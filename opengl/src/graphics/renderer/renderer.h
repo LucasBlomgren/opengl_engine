@@ -30,7 +30,7 @@ public:
         SkyboxManager& skyboxManager
     );
 
-    void update(
+    void render(
         Camera& camera,
         SceneBuilder& builder,
         PhysicsEngine& physics,
@@ -73,6 +73,11 @@ public:
 
     float terrainRotationAngle = 0.0f;
 
+    struct InstanceData {
+        glm::mat4 model;
+        glm::vec3 color;  // valfritt, om du vill ha per-instans-färg
+    };
+
 private:
     float screenWidth;
     float screenHeight;
@@ -97,6 +102,14 @@ private:
     unsigned int VAO_xyz;
     unsigned int VAO_contactPoint;
 
+    struct Batch {
+        Mesh* mesh;
+        Shader* shader;
+        GLuint  textureId;
+        std::vector<InstanceData> instances;
+    };
+    std::vector<Batch> batches;
+
     struct RenderItem {
         Shader* shader;
         Mesh* mesh;
@@ -108,7 +121,9 @@ private:
             shader(s), mesh(m), textureId(tex), modelMatrix(mm), color(c) {
         }
     };
-
     std::vector<RenderItem> renderQueue;
+
     void createRenderQueue(std::vector<GameObject>& objects);
+    void buildBatchesFromRenderQueue();
+    constexpr static int INSTANCING_THRESHOLD = 10;
 };

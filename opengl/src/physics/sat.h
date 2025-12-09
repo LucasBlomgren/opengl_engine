@@ -27,7 +27,6 @@ namespace SAT {
     bool boxTri(Collider& A, Tri& tri, Result& out);
     bool sphereSphere(Collider& A, Collider& B, Result& out);
     bool sphereTri(Collider& A, Tri& tri, Result& out);
-    bool triTri(Tri& A, Tri& B, Result& out);
 
     std::pair<float, float> projectVertices(const std::span<const glm::vec3> vertices, const glm::vec3& axis);
     bool intersectPolygons(

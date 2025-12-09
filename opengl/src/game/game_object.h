@@ -75,6 +75,7 @@ public:
     Mesh* mesh = nullptr;
     GLuint textureId;
     glm::vec3 color;
+    bool useRandomColor = false;
 
     // physics variables
     glm::quat orientation;
@@ -112,6 +113,9 @@ public:
     int totalCollisionCount = 0;
     float lastAvg = 0.0f;
     CircBuffer collisionHistory;
+
+    glm::vec3 anchorPoint;
+    float anchorCounter = 0;
 
     // collision variables
     AABB aabb;
@@ -180,7 +184,7 @@ public:
         }
 
         // plain color
-        if (textureId == 999)
+        if (textureId == 999 && color.x != -1)      // color.x for random color shader hack
            this->color = color / 255.0f;
 
         for (const Vertex& vertex : mesh->vertices) {
@@ -238,7 +242,6 @@ public:
     void calculateInverseInertiaForCuboid(float sx, float sy, float sz);
     void calculateInverseInertiaForSolidSphere();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
-    void renderMesh(Shader& shader);
     void updateAABB();
     void updateCollider();
     void updatePos(const float& dt);

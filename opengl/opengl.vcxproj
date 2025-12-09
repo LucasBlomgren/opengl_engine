@@ -19,6 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="Linking\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="src\core\engine_state.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -265,8 +272,11 @@
     <None Include="src\graphics\shaders\debug.frag">
       <FileType>Document</FileType>
     </None>
+    <None Include="src\graphics\shaders\default.vert" />
+    <None Include="src\graphics\shaders\default_instanced.vert" />
     <None Include="src\graphics\shaders\shadow.frag" />
     <None Include="src\graphics\shaders\shadow.vert" />
+    <None Include="src\graphics\shaders\shadow_instanced.vert" />
     <None Include="src\graphics\shaders\skybox.frag" />
     <None Include="src\graphics\shaders\skybox.vert" />
   </ItemGroup>
@@ -319,8 +329,7 @@
   <ItemGroup>
     <None Include="src\externals\glfw3.dll" />
     <None Include="src\graphics\shaders\debug.vert" />
-    <None Include="src\graphics\shaders\object.frag" />
-    <None Include="src\graphics\shaders\object.vert" />
+    <None Include="src\graphics\shaders\default.frag" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -422,7 +431,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui;$(ProjectDir)Linking\include\imgui\backends;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -452,7 +461,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui;$(ProjectDir)Linking\include\imgui\backends;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>

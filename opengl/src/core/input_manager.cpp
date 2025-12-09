@@ -30,8 +30,15 @@ void InputManager::setPointers(EngineState* state, Camera* camera) {
     this->camera = camera;
 }
 
+void InputManager::resetFirstMouse() {
+    firstMouse = true;
+}
+
 void InputManager::mouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn)
 {
+    if (engineState->getCameraMode() == false)
+        return;
+
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
 

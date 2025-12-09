@@ -2,17 +2,52 @@
 #include "editor.h"
 
 void Editor::setPointers(
+    const unsigned int SCR_WIDTH,
+    const unsigned int SCR_HEIGHT,
+    GLFWwindow* window,
+    InputManager* inputManager,
     EngineState* engineState,
     SceneBuilder* sceneBuilder,
     PhysicsEngine* physicsEngine,
     Camera* camera,
     SkyboxManager* skyboxManager) 
 {
-        this->engineState = engineState;
-        this->sceneBuilder = sceneBuilder;
-        this->physicsEngine = physicsEngine;
-        this->camera = camera;
-        this->skyboxManager = skyboxManager;
+    this->SCR_HEIGHT = SCR_HEIGHT;
+    this->SCR_WIDTH = SCR_WIDTH;
+    this->window = window;
+    this->inputManager = inputManager;
+    this->engineState = engineState;
+    this->sceneBuilder = sceneBuilder;
+    this->physicsEngine = physicsEngine;
+    this->camera = camera;
+    this->skyboxManager = skyboxManager;
+}
+
+void Editor::cameraMode() {
+    // toggle camera/mouse mode
+    if (engineState->GetPressedKey() == "c") {
+        engineState->toggleCameraMode();
+
+        if (engineState->getCameraMode()) {
+            glfwGetCursorPos(window, &savedMouseX, &savedMouseY);
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);    // hide cursor and capture it
+
+            inputManager->resetFirstMouse();
+        }
+        else {
+            double uiX = savedMouseX;
+            double uiY = savedMouseY;
+
+            glfwSetCursorPos(window, uiX, uiY);
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+
+        engineState->clearPressedKey();
+    }
+
+    // Exit 
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
 }
 
 void Editor::update(float& deltaTime, Shader& shader) {
@@ -48,7 +83,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
         dropObject();
 
     if (engineState->GetPressedKey() == "M3_PRESS") {
-        GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
+        GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
         newObject.linearVelocity = camera->front * 150.0f;
         newObject.asleep = false;
     }
@@ -90,7 +125,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
         engineState->GetPressedKey() == "-") 
     {
         if (engineState->isPlayerMode()) {
-            sceneBuilder->createObject("crate", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+            sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
             GameObject& player = sceneBuilder->getDynamicObjects().back();
             sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
 
@@ -112,12 +147,12 @@ void Editor::update(float& deltaTime, Shader& shader) {
         physicsEngine->awakenAllObjects();
     }
 
-    if (engineState->GetPressedKey() == "F12") {
+    if (engineState->GetPressedKey() == "q") {
 
         engineState->setPlayerMode(!engineState->isPlayerMode());
 
         if (engineState->isPlayerMode()) {
-            sceneBuilder->createObject("crate", ColliderType::CUBOID, camera->position-glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+            sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
             GameObject& player = sceneBuilder->getDynamicObjects().back();
             sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
 
@@ -182,7 +217,7 @@ void Editor::placeObject() {
     glm::vec3 size{ objPlaceSize };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    GameObject& newObject = sceneBuilder->createObject("crate", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 0.5f, 1);
+    GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 0.5f, 1);
     newObject.linearVelocity = glm::vec3(0.0f);
 }
 

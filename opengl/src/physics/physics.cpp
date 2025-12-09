@@ -623,6 +623,8 @@ void PhysicsEngine::resolveCollisions() {
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction   = 0.1f;
 
+    float lastResidualSq = 0.0f;
+
     for (Contact* contact : contactsToSolve) { 
         GameObject& objA = *contact->objA_ptr; 
         GameObject& objB = *contact->objB_ptr; 
@@ -697,6 +699,7 @@ void PhysicsEngine::resolveCollisions() {
     int iterCount = 0;
     for (int i = 0; i < maxIterations; i++) {
         float maxDelta = 0.0f;
+        float residualSq = 0.0f;
 
         for (Contact* contact : contactsToSolve) {
 
@@ -737,13 +740,14 @@ void PhysicsEngine::resolveCollisions() {
                 cp.accumulatedImpulse = glm::max(temp + J, 0.0f);
                 float deltaImpulse = cp.accumulatedImpulse - temp;
 
+                residualSq += deltaImpulse * deltaImpulse;
+
                 // Add normal to impulse
                 glm::vec3 deltaNormalImpulse = deltaImpulse * contact->normal;
 
                 // Apply impulses
                 float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
                 if (deltaNormalImpulseLen > 1e-6f) {
-
                     if (contact->objA_ptr and !contact->freezeA) {
                         objA.applyImpulseLinear(-deltaNormalImpulse * objA.invMass);
                         objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
@@ -799,6 +803,8 @@ void PhysicsEngine::resolveCollisions() {
                     glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
                     dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
 
+                    residualSq += dT * dT;
+
                     // Applicera den statiska friktionsimpulsen:
                     if (contact->objA_ptr and !contact->freezeA) {
                         objA.applyImpulseLinear(-dFt * objA.invMass);
@@ -830,6 +836,9 @@ void PhysicsEngine::resolveCollisions() {
 
                         glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
                         if (contact->objA_ptr and !contact->freezeA) {
+
+                            residualSq += dT * dT;
+
                             objA.applyImpulseLinear(-dFt * objA.invMass);
                             objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, dFt));
                         }
@@ -869,6 +878,9 @@ void PhysicsEngine::resolveCollisions() {
             // 5) Applicera moment kring n
             glm::vec3 tau = delta * contact->normal;
             if (glm::dot(tau, tau) > 1e-6f) {
+
+                residualSq += delta * delta;
+
                 if (contact->objA_ptr && !contact->freezeA) {
                     objA.applyImpulseAngular(-objA.inverseInertiaWorld * tau);
                 }
@@ -879,11 +891,17 @@ void PhysicsEngine::resolveCollisions() {
         }
         iterCount++;
 
+        lastResidualSq = residualSq;
+
         if (maxDelta < 1e-3f) {
             break;
         }
     }
     //std::cout << "PGS iterations: " << iterCount << "\n";
+
+
+    //loat residual = std::sqrt(lastResidualSq);
+    //std::cout << "Residual impulse: " << residual << "\n";
 }
 
 //-----------------------------

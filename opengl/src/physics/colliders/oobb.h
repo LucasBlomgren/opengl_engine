@@ -45,6 +45,8 @@ public:
     void update(const glm::mat4& M);
     void getFace(int index);
 
+    void init(std::vector<glm::vec3>& verts, const glm::mat4& M);   // för COM tillfälligt
+
 private:
-    void init(std::vector<glm::vec3>& verts, const glm::mat4& M);
+    //void init(std::vector<glm::vec3>& verts, const glm::mat4& M);
 };

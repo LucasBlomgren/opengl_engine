@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "engine_state.h"
 
+void EngineState::toggleCameraMode() { cameraMode = !cameraMode; }
 void EngineState::setAdvanceStep(bool arg) { advanceStep = arg; }
 void EngineState::setPaused(bool arg) { paused = arg; }
 void EngineState::togglePause() { paused = !paused; }
@@ -27,6 +28,7 @@ void EngineState::SetKeyState(int key, bool down) {
     keyStates[key] = down;
 }
 
+bool EngineState::getCameraMode() const { return cameraMode; }
 bool EngineState::getAdvanceStep() const { return advanceStep; }
 bool EngineState::isPaused() const { return paused; }
 bool EngineState::getShowFPS() const { return showFPS; }

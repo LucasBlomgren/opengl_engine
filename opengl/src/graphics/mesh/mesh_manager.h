@@ -19,10 +19,18 @@ public:
         std::vector<Vertex> pylonVerts          = loadVerticesFromTxt("src/assets/pylon_vertices.txt");
         std::vector<unsigned int> pylonIndices  = loadIndicesFromTxt("src/assets/pylon_indices.txt");
 
+        std::vector<Vertex> girlVerts           = loadVerticesFromTxt("src/assets/girl_vertices.txt");
+        std::vector<unsigned int> girlIndices   = loadIndicesFromTxt("src/assets/girl_indices.txt");
+
+        std::vector<Vertex> tankVerts           = loadVerticesFromTxt("src/assets/tank_vertices.txt");
+        std::vector<unsigned int> tankIndices   = loadIndicesFromTxt("src/assets/tank_indices.txt");
+
         meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
         meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
         meshes.emplace("teapot", Mesh(teapotVerts, teapotIndices));
         meshes.emplace("pylon", Mesh(pylonVerts, pylonIndices));
+        meshes.emplace("girl", Mesh(girlVerts, girlIndices));
+        meshes.emplace("tank", Mesh(tankVerts, tankIndices));
     };
 
     Mesh* getMesh(const std::string& name);

@@ -12,8 +12,6 @@ class TriMesh;
 enum class ColliderType {
     CUBOID,
     SPHERE,
-    TEAPOT,
-    PYLON
 };
 
 using ColliderShape = std::variant<OOBB, Sphere>;

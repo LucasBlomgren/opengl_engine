@@ -20,6 +20,10 @@
 #include "lighting/shadow_manager.h"
 #include "editor.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -33,8 +37,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 16384;
-const unsigned int SHADOW_HEIGHT = 16384;
+const unsigned int SHADOW_WIDTH = 1920;
+const unsigned int SHADOW_HEIGHT = 1920;
 
 // timing
 float deltaTime = 0.0f;	
@@ -127,24 +131,107 @@ int main()
     // setup skybox
     skyboxManager.init(); 
 
-    // load geometry data
-    //loadCubeData();
-    //loadSphereData();
-    //loadTeapotData();
-    //loadPylonData();
-    //loadIcoSphereData();
-
     // setup scene 
-    sceneBuilder.createScene(0);
+    sceneBuilder.createScene(6);
 
     // setup physics
     physicsEngine.init(&engineState);
 
     // setup editor
-    editor.setPointers(&engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
+    editor.setPointers(SCR_WIDTH, SCR_HEIGHT, window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
+
+    // --- ImGui init ---
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    // init backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");   // eller den GLSL-version du använder
+    // --- slut ImGui init ---
 
     // main loop
     while (true) {
+
+        // --- Börja ImGui-frame ---
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        // Visa demo-fönstret
+        bool show_demo = true;
+        ImGui::ShowDemoWindow(&show_demo);
+
+        if (engineState.getCameraMode()) {
+            io.MouseDown[0] = io.MouseDown[1] = io.MouseDown[2] = false;
+            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        }
+
+        ImGui::Begin("Settings");
+        ImGui::SeparatorText("Objects");
+        ImGui::Spacing();
+        bool showNormals = engineState.getShowNormals();
+        if (ImGui::Checkbox("Normals", &showNormals)) {
+            engineState.toggleShowNormals();
+        }
+        bool showAABB = engineState.getShowAABB();
+        if (ImGui::Checkbox("Bounding boxes", &showAABB)) {
+            engineState.toggleShowAABB();
+        }
+        bool showColliders = engineState.getShowColliders();
+        if (ImGui::Checkbox("Colliders", &showColliders)) {
+            engineState.toggleShowColliders();
+        }
+        bool showContactPoints = engineState.getShowContactPoints();
+        if (ImGui::Checkbox("Contacts", &showContactPoints)) {
+            engineState.toggleShowContactPoints();
+        }
+
+        ImGui::NewLine();
+        ImGui::SeparatorText("BVH");
+        ImGui::Spacing();
+        bool getShowBVH_awake = engineState.getShowBVH_awake();
+        if (ImGui::Checkbox("Awake", &getShowBVH_awake)) {
+            engineState.toggleShowBVH_awake();
+        }
+        bool getShowBVH_asleep = engineState.getShowBVH_asleep();
+        if (ImGui::Checkbox("Asleep", &getShowBVH_asleep)) {
+            engineState.toggleShowBVH_asleep();
+        }
+        bool getShowBVH_static = engineState.getShowBVH_static();
+        if (ImGui::Checkbox("Static", &getShowBVH_static)) {
+            engineState.toggleShowBVH_static();
+        }
+        bool getShowBVH_terrain = engineState.getShowBVH_terrain();
+        if (ImGui::Checkbox("Terrain", &getShowBVH_terrain)) {
+            engineState.toggleShowBVH_terrain();
+        }
+
+        ImGui::NewLine();
+        ImGui::SeparatorText("Scene");
+        ImGui::Spacing();
+        static int currentItem = 0;
+        const char* items[] = { "Test", "Empty", "Main", "Terrain", "Tall structure", "Tumbler", "Castle", "Invisible container" };
+        ImGui::Combo("##quality", &currentItem, items, IM_ARRAYSIZE(items));
+        ImGui::SameLine();
+        if (ImGui::Button("Load")) {
+            switch (currentItem) {
+            case 0: sceneBuilder.createScene(6); break;
+            case 1: sceneBuilder.createScene(7); break;
+            case 2: sceneBuilder.createScene(0); break;
+            case 3: sceneBuilder.createScene(1); break;
+            case 4: sceneBuilder.createScene(2); break;
+            case 5: sceneBuilder.createScene(3); break;
+            case 6: sceneBuilder.createScene(4); break;
+            case 7: sceneBuilder.createScene(5); break;
+            default: break;
+            }
+        }
+
+        //static glm::vec3 pos{ 0.0f, 1.0f, 2.0f };
+        //ImGui::SliderFloat3("Position", (float*)&pos, -10.0f, 10.0f);
+
+        ImGui::End();
+
+
         float cpuClockStart = static_cast<float>(glfwGetTime());
         // update time
         auto current_time = std::chrono::high_resolution_clock::now();
@@ -191,18 +278,20 @@ int main()
 
         // rendering
         float renderClockStart = static_cast<float>(glfwGetTime());
-        renderer.update(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
+        renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
         // calculate render time
         float renderClockEnd = static_cast<float>(glfwGetTime());
         float renderClockMs = (renderClockEnd - renderClockStart) * 1000.0f;
         sceneBuilder.sceneDirty = false;
         writeIdx = (writeIdx + 1) % NQ;
 
-        // continous input 
-        inputManager.processInput(window, deltaTime);
+        editor.cameraMode();
 
-        // editor functions
-        editor.update(deltaTime, *renderer.debugShader);
+        // input & editor update
+        if (engineState.getCameraMode()) {
+            inputManager.processInput(window, deltaTime);
+            editor.update(deltaTime, *renderer.debugShader);
+        }
 
         // physics step
         float stepClockStart = static_cast<float>(glfwGetTime());
@@ -279,6 +368,9 @@ int main()
             if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
             else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
         }
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // swap buffers
         float t1 = static_cast<float>(glfwGetTime());

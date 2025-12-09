@@ -28,9 +28,11 @@ public:
     void castleScene();
     void containerScene();
     void testFloorScene();
+    void emptyFloorScene();
 
     GameObject& createObject(
         const std::string& textureName,
+        const std::string& meshName,
         ColliderType colliderType,
         const glm::vec3& pos,
         const glm::vec3& size,
@@ -76,7 +78,7 @@ public:
         float wallWidth,
         glm::vec3 brickSize,
         float brickDistance,
-        int brickWeight,
+        float brickWeight,
         int brickDecrease,
         glm::vec2 colorRange,
         bool fullColorRange
