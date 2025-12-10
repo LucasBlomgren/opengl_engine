@@ -132,7 +132,6 @@ public:
 
     // editor variables
     bool selectedByEditor = false;
-    bool isRaycastHit = false;
     glm::vec3 lastPosition;
     glm::vec3 pushCorrection;
     

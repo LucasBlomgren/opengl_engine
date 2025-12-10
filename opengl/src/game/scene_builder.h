@@ -9,12 +9,13 @@ class LightManager;
 class PhysicsEngine;
 class ShaderManager;
 class MeshManager;
+class Renderer;
 
 class SceneBuilder {
 public:
     SceneBuilder(
-        PhysicsEngine& pe, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
-        physicsEngine(pe), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
+        PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
+        physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
     {}
 
     bool sceneDirty = true; 
@@ -136,6 +137,7 @@ public:
 
 private:
     PhysicsEngine& physicsEngine;
+    Renderer& renderer;
     TextureManager& textureManager;
     MeshManager& meshManager;
     ShaderManager& shaderManager;

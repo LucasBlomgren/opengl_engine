@@ -37,8 +37,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 1920;
-const unsigned int SHADOW_HEIGHT = 1920;
+const unsigned int SHADOW_WIDTH = 2048;
+const unsigned int SHADOW_HEIGHT = 2048;
 
 // timing
 float deltaTime = 0.0f;	
@@ -75,7 +75,6 @@ int main()
     SkyboxManager skyboxManager; 
     LightManager lightManager;
     ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
-    SceneBuilder sceneBuilder(physicsEngine, textureManager, meshManager, shaderManager, lightManager, rng);
 
     // view
     Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
@@ -85,6 +84,7 @@ int main()
 
     // editor
     Editor editor;
+    SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
     // ---------- Clocks ----------
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -100,7 +100,7 @@ int main()
     inputManager.init(window);
 
     // setup rendering
-    renderer.init(SCR_WIDTH, SCR_HEIGHT, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
+    renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
 
     // load textures
     textureManager.loadTexture("crate", "src/assets/crate.jpg");

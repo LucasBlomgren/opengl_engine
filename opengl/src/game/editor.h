@@ -11,8 +11,6 @@
 #include "skybox/skybox_manager.h"
 #include "vertex.h"
 
-#define objPlaceSize 1.0f, 1.0f, 1.0f
-
 struct rayCast {
     glm::vec3 start;
     glm::vec3 end;
@@ -70,4 +68,7 @@ private:
     double savedMouseX, savedMouseY;
     unsigned int SCR_WIDTH;
     unsigned int SCR_HEIGHT;
+
+    constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
+    constexpr static bool EDITOR_RAYCAST_ENABLED = true;
 };

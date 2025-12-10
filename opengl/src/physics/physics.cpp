@@ -20,21 +20,21 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     this->dynamicObjects = gameObjects;
     
     awake_DynamicObjects.clear();
-    awake_DynamicObjects.reserve(50000);
+    awake_DynamicObjects.reserve(5000000);
     asleep_DynamicObjects.clear();
-    asleep_DynamicObjects.reserve(50000);
+    asleep_DynamicObjects.reserve(5000000);
     static_Objects.clear();
-    static_Objects.reserve(50000);
+    static_Objects.reserve(5000000);
 
-    dynamicAwakeBvh.nodes.reserve(50000);
+    dynamicAwakeBvh.nodes.reserve(5000000);
     dynamicAwakeBvh.rootIdx = -1;
     dynamicAwakeBvh.nodes.clear();
 
-    dynamicAsleepBvh.nodes.reserve(50000);
+    dynamicAsleepBvh.nodes.reserve(5000000);
     dynamicAsleepBvh.rootIdx = -1;
     dynamicAsleepBvh.nodes.clear();
 
-    staticBvh.nodes.reserve(50000);
+    staticBvh.nodes.reserve(5000000);
     staticBvh.rootIdx = -1;
     staticBvh.nodes.clear();
 

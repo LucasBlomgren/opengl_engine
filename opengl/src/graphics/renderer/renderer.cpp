@@ -11,6 +11,7 @@ template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3& , glm::vec3&);
 void Renderer::init(
     unsigned int width, 
     unsigned int height, 
+    Editor& editor,
     EngineState& engineState, 
     LightManager& lightManager, 
     ShaderManager& shaderManager,
@@ -20,6 +21,7 @@ void Renderer::init(
     screenWidth  = (float)width;
     screenHeight = (float)height;
 
+    this->editor        = &editor;
     this->engineState   = &engineState;
     this->lightManager  = &lightManager;
     this->shadowManager = &shadowManager;
@@ -42,6 +44,36 @@ void Renderer::init(
 
 void Renderer::setViewPort(unsigned int w, unsigned int h) {
     glViewport(0, 0, w, h);
+}
+
+void Renderer::clearRenderBatches() {
+    batches.clear();
+}
+
+//-----------------------------
+//    Add Object to Bucket
+//----------------------------- 
+void Renderer::addObjectToBatch(GameObject* obj) {
+    // check existing buckets
+    for (RenderBatch& bucket : batches) {
+        if (bucket.mesh == obj->mesh &&
+            bucket.shader == defaultShader &&
+            bucket.textureId == obj->textureId)
+        {
+            bucket.objects.push_back(obj);
+            bucket.instances.emplace_back(obj->modelMatrix, obj->color);
+            return;
+        }
+    }
+
+    // no existing bucket found, create a new one
+    RenderBatch newBatch;
+    newBatch.mesh = obj->mesh;
+    newBatch.shader = defaultShader;
+    newBatch.textureId = obj->textureId;
+    newBatch.objects.push_back(obj);
+
+    batches.push_back(std::move(newBatch));
 }
 
 //-----------------------------
@@ -141,8 +173,7 @@ void Renderer::render(
         computeSceneBounds(builder);
     }
 
-    createRenderQueue(builder.getDynamicObjects());
-    buildBatchesFromRenderQueue();
+    fillBatchInstances();
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -199,68 +230,15 @@ void Renderer::render(
 }
 
 //-----------------------------
-//      Create Render Queue
+//   Fill Batch Instances
 //-----------------------------
-void Renderer::createRenderQueue(std::vector<GameObject>& dynamicObjects) {
-    renderQueue.clear();
-    renderQueue.reserve(dynamicObjects.size());
-
-    for (GameObject& obj : dynamicObjects) {
-        if (obj.seeThrough) {
-            continue;
+void Renderer::fillBatchInstances() {
+    for (RenderBatch& bucket : batches) {
+        bucket.instances.clear();
+        for (GameObject* obj : bucket.objects) {
+            bucket.instances.emplace_back(obj->modelMatrix, obj->color);
         }
-        renderQueue.emplace_back(obj.shader, obj.mesh, obj.textureId, obj.modelMatrix, obj.color);
     }
-
-    std::sort(renderQueue.begin(), renderQueue.end(),
-        [](const RenderItem& a, const RenderItem& b) {
-            if (a.shader < b.shader) return true;
-            if (a.shader > b.shader) return false;
-
-            if (a.mesh < b.mesh) return true;
-            if (a.mesh > b.mesh) return false;
-
-            return a.textureId < b.textureId;
-        });
-}
-
-//-----------------------------
-//   Build Batches from Queue
-//-----------------------------
-void Renderer::buildBatchesFromRenderQueue() {
-    batches.clear();
-    if (renderQueue.empty()) return;
-
-    // start first batch
-    Batch current;
-    current.mesh = renderQueue[0].mesh;
-    current.shader = renderQueue[0].shader;
-    current.textureId = renderQueue[0].textureId;
-
-    auto sameKey = [](const RenderItem& a, const RenderItem& b) {
-        return a.mesh == b.mesh &&
-            a.shader == b.shader &&
-            a.textureId == b.textureId;
-        };
-
-    for (int i = 0; i < renderQueue.size(); ++i) {
-        const auto& item = renderQueue[i];
-
-        if (i > 0 && !sameKey(item, renderQueue[i - 1])) {
-            batches.push_back(std::move(current)); // new combination -> move old batch
-
-            // start new batch
-            current = Batch{};
-            current.mesh = item.mesh;
-            current.shader = item.shader;
-            current.textureId = item.textureId;
-        }
-
-        current.instances.emplace_back(item.modelMatrix, item.color);
-    }
-
-    // last batch
-    batches.push_back(std::move(current));
 }
 
 //-----------------------------
@@ -306,19 +284,18 @@ void Renderer::renderScene(Shader& shader, SceneBuilder& builder) {
 //    Render game objects 
 //---------------------------
 void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
-    for (auto& batch : batches) {
-        auto& instances = batch.instances;
-
+    for (RenderBatch& bucket : batches) {
         Shader* shader;
-        Mesh* mesh = batch.mesh;
-        GLuint texId = batch.textureId;
+        Mesh* mesh = bucket.mesh;
+        GLuint texId = bucket.textureId;
+        auto& instances = bucket.instances;
 
         glBindVertexArray(mesh->VAO);
         glBindTexture(GL_TEXTURE_2D, texId);
 
         // without instancing
         if (instances.size() < INSTANCING_THRESHOLD) {
-            shader = batch.shader;
+            shader = bucket.shader;
             shader->use();
             for (const auto& inst : instances) {
                 // Set texture or uniform color
@@ -342,7 +319,7 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
         }
         // with instancing
         else {
-            shader = batch.shader->instancedVariant;
+            shader = bucket.shader->instancedVariant;
             shader->use();
 
             if (texId != 999) {
@@ -351,11 +328,11 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
                 shader->setBool("useTexture", false);
             }
 
-            // fyll instanceVbo med alla instanser i batchen
+            // fill instace buffer
             glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
             glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
 
-            // gör ETT draw call för alla instanser
+            // draw instanced
             glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());
         }
     }
@@ -597,24 +574,22 @@ void Renderer::renderLights() const {
 //     Render Raycast Hit
 //----------------------------
 void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
-    for (GameObject& obj : builder.getDynamicObjects()) {
-        if (obj.isRaycastHit) {
+    RaycastHit& hitData = editor->getLastRayHit();
+    if (hitData.object == nullptr) {
+        return;
+    }
+    GameObject& obj = *hitData.object;
 
-            debugShader->use();
-            debugShader->setBool("debug.useUniformColor", true);
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true);
 
-            if (obj.colliderType == ColliderType::CUBOID) {
-                OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
-            }
-            else if (obj.colliderType == ColliderType::SPHERE) {
-                Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
-            }
-
-            obj.isRaycastHit = false;
-            break;
-        }
+    if (obj.colliderType == ColliderType::CUBOID) {
+        OOBB& box = std::get<OOBB>(obj.collider.shape);
+        obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, true);
+    }
+    else if (obj.colliderType == ColliderType::SPHERE) {
+        Sphere& sphere = std::get<Sphere>(obj.collider.shape);
+        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, true);
     }
 }
 
@@ -648,11 +623,11 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
             if (obj.colliderType == ColliderType::CUBOID) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
                 Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, obj.isRaycastHit);
+                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, false);
             }
         }
     }

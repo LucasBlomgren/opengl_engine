@@ -5,20 +5,16 @@
 #include <glm/gtx/quaternion.hpp>
 
 void SceneBuilder::emptyFloorScene() {
-    int floorWidth = 4;
-    int floorHeight = 4;
-    const float baseX = -30.0f;
-    const float baseZ = -30.0f;
+    int floorWidth = 1;
+    int floorHeight = 1;
+    const float baseX = 0.0f;
+    const float baseZ = 0.0f;
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             createObject("uvmap", "cube", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation);
         }
     }
-
-    for (int i = 0; i < 10; i++)
-        createObject("crate", "cube", ColliderType::CUBOID, glm::vec3(25.5, 0.5 + (1.0 * i), 35.5), glm::vec3(1.0), 1, 0, {}, 2.5);
-
 }
 
 void SceneBuilder::testFloorScene() {

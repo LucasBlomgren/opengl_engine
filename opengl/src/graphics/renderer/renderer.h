@@ -17,12 +17,14 @@
 #include "bvh.h"
 #include "scene_builder.h"
 #include "editor.h"
+#include "raycast.h"
 
 class Renderer {
 public:
     void init(
         unsigned int width, 
         unsigned int height, 
+        Editor& editor,
         EngineState& engineState, 
         LightManager& lightManager, 
         ShaderManager& shaderManager,
@@ -54,6 +56,7 @@ public:
 
     void renderScene(Shader& shader, SceneBuilder& builder);
 
+    void fillBatchInstances();
     void renderGameObjects(std::vector<GameObject>& objects);
     void renderGameObjectsShadow();
     void renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty);
@@ -77,11 +80,15 @@ public:
         glm::mat4 model;
         glm::vec3 color;  // valfritt, om du vill ha per-instans-färg
     };
+    void addObjectToBatch(GameObject* obj);
+
+    void clearRenderBatches();
 
 private:
     float screenWidth;
     float screenHeight;
 
+    Editor* editor = nullptr;
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;
     ShaderManager* shaderManager = nullptr;
@@ -102,28 +109,15 @@ private:
     unsigned int VAO_xyz;
     unsigned int VAO_contactPoint;
 
-    struct Batch {
+    struct RenderBatch {
         Mesh* mesh;
         Shader* shader;
         GLuint  textureId;
-        std::vector<InstanceData> instances;
+
+        std::vector<GameObject*> objects;      // vilka som använder detta
+        std::vector<InstanceData> instances;   // fylls varje frame
     };
-    std::vector<Batch> batches;
+    std::vector<RenderBatch> batches;
 
-    struct RenderItem {
-        Shader* shader;
-        Mesh* mesh;
-        GLuint textureId;
-        glm::mat4 modelMatrix;
-        glm::vec3 color;
-
-        RenderItem(Shader* s, Mesh* m, GLuint tex, const glm::mat4& mm, const glm::vec3& c) :
-            shader(s), mesh(m), textureId(tex), modelMatrix(mm), color(c) {
-        }
-    };
-    std::vector<RenderItem> renderQueue;
-
-    void createRenderQueue(std::vector<GameObject>& objects);
-    void buildBatchesFromRenderQueue();
-    constexpr static int INSTANCING_THRESHOLD = 10;
+    constexpr static int INSTANCING_THRESHOLD = 3;
 };

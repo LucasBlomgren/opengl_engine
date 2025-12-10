@@ -200,13 +200,12 @@ void Editor::update(float& deltaTime, Shader& shader) {
 
     engineState->clearPressedKey();
 
-    if (selectedObject == nullptr) {
-        RaycastHit hitData = rayCast(5000);
-        if (hitData.object != nullptr) {
-            hitData.object->isRaycastHit = true;
-        }
 
-        createPlaceObjectAABB(shader);
+    if (EDITOR_RAYCAST_ENABLED) {
+        if (selectedObject == nullptr) {
+            createPlaceObjectAABB(shader);
+            RaycastHit hitData = rayCast(5000);
+        }
     }
 }
 
@@ -214,7 +213,7 @@ void Editor::placeObject() {
     if (placementObstructed) 
         return;
 
-    glm::vec3 size{ objPlaceSize };
+    glm::vec3 size{ OBJ_PLACE_SIZE };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
     GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 0.5f, 1);
@@ -223,7 +222,7 @@ void Editor::placeObject() {
 
 void Editor::createPlaceObjectAABB(Shader& shader) {
     float placeDist = 150.0f;
-    glm::vec3 size{ objPlaceSize };
+    glm::vec3 size{ OBJ_PLACE_SIZE };
 
     AABB aabb;
     aabb.centroid = camera->position + camera->front * placeDist;

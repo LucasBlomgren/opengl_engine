@@ -2,7 +2,7 @@
 #include "scene_builder.h"
 
 #include "geometry/vertex.h"
-
+#include "renderer/renderer.h"
 #include "textures/texture_manager.h"
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
@@ -85,18 +85,20 @@ void SceneBuilder::createScene(int sceneID)
 
     objectId = 0;
     dynamicObjects.clear();
-    dynamicObjects.reserve(20000);
+    dynamicObjects.reserve(5000000);
 
     terrainData.triangles.clear(); 
-    terrainData.triangles.reserve(20000);
+    terrainData.triangles.reserve(5000000);
     terrainData.vertices.clear(); 
-    terrainData.vertices.reserve(20000);
+    terrainData.vertices.reserve(5000000);
     terrainData.indices.clear();
-    terrainData.indices.reserve(20000); 
+    terrainData.indices.reserve(5000000); 
 
     setLights();
 
     allHalos.clear();
+
+    renderer.clearRenderBatches();
 
     if (sceneID == 0) {
         mainScene(); 
@@ -158,6 +160,8 @@ GameObject& SceneBuilder::createObject(
     GameObject& newObject = dynamicObjects.back();
     newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
     newObject.shader = shaderManager.getShader("default");
+
+    renderer.addObjectToBatch(&newObject);
 
     objectId++;
     return dynamicObjects.back();
