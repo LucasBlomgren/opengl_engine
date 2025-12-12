@@ -8,8 +8,8 @@ void SphereOutlineRenderer::init() {
         unitCircle.emplace_back(cos(a), sin(a), 0.0f); 
     }
     
-    glGenVertexArrays(1, &VAO); 
-    glGenBuffers(1, &VBO); 
+    glGenVertexArrays(1, &VAO); glcount::incVAO();
+    glGenBuffers(1, &VBO); glcount::incVBO();
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);

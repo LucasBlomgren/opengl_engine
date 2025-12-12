@@ -100,33 +100,21 @@ void SceneBuilder::createScene(int sceneID)
 
     renderer.clearRenderBatches();
 
-    if (sceneID == 0) {
-        mainScene(); 
+    switch (sceneID) {
+    case 0: mainScene(); break;
+    case 1: terrainScene(); break;
+    case 2: tallStructureScene(); break;
+    case 3: tumblerScene(); break;
+    case 4: castleScene(); break;
+    case 5: containerScene(); break;
+    case 6: testFloorScene(); break;
+    case 7: emptyFloorScene(); break;
+    default: break;
     }
-    else if (sceneID == 1) {
-        terrainScene(); 
-    }
-    else if (sceneID == 2) {
-        tallStructureScene();
-    }
-    else if (sceneID == 3) {
-        tumblerScene(); 
-    }
-    else if (sceneID == 4) {
-        castleScene();
-    }
-    else if (sceneID == 5) {
-        containerScene();
-    }
-    else if (sceneID == 6) {
-        testFloorScene();
-    }
-    else if (sceneID == 7) {
-        emptyFloorScene();
-    }
-
 
     physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
+
+    glcount::print();
 }
 
 //----------------------------------
@@ -155,12 +143,12 @@ GameObject& SceneBuilder::createObject(
     Mesh* mesh = meshManager.getMesh(meshName);
 
     dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color);
-    physicsEngine.queueAdd(&dynamicObjects.back());
 
     GameObject& newObject = dynamicObjects.back();
     newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
     newObject.shader = shaderManager.getShader("default");
 
+    physicsEngine.queueAdd(&dynamicObjects.back());
     renderer.addObjectToBatch(&newObject);
 
     objectId++;

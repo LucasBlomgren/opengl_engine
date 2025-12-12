@@ -114,9 +114,6 @@ public:
     float lastAvg = 0.0f;
     CircBuffer collisionHistory;
 
-    glm::vec3 anchorPoint;
-    float anchorCounter = 0;
-
     // collision variables
     AABB aabb;
     bool aabbDirty = true;

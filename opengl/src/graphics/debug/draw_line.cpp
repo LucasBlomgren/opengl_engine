@@ -4,7 +4,7 @@
 unsigned int setupLine() {
     // Din kod för att skapa och konfigurera VAO
     unsigned int VAO;
-    glGenVertexArrays(1, &VAO);
+    glGenVertexArrays(1, &VAO); glcount::incVAO();
     glBindVertexArray(VAO);
     glBindVertexArray(0); // Återställ bindningen
     return VAO;

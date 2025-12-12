@@ -43,6 +43,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\core\timer.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor.cpp">
@@ -187,6 +188,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\core\imgui_manager.cpp" />
     <ClCompile Include="src\main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -285,6 +287,7 @@
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
     <ClInclude Include="src\core\input_manager.h" />
+    <ClInclude Include="src\core\timer.h" />
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
     <ClInclude Include="src\game\editor.h" />
@@ -308,6 +311,7 @@
     <ClInclude Include="src\graphics\lighting\shadow_manager.h" />
     <ClInclude Include="src\graphics\skybox\skybox_manager.h" />
     <ClInclude Include="src\graphics\textures\texture_manager.h" />
+    <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\physics\bvh.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />

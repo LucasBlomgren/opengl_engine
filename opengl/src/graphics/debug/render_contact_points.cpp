@@ -55,11 +55,11 @@ unsigned int setupContactPoint() {
     };
 
     unsigned int VAO, VBO;
-    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &VBO); glcount::incVBO();
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    glGenVertexArrays(1, &VAO);
+    glGenVertexArrays(1, &VAO); glcount::incVAO();
     glBindVertexArray(VAO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);

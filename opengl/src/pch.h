@@ -17,8 +17,9 @@
 #include <stdexcept>
 
 
+#define GLFW_INCLUDE_NONE
 #include <glad/glad.h>
-#include <glm/glm.hpp>
+#include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/component_wise.hpp>
@@ -28,11 +29,11 @@
 #include "shaders/shader.h"
 #include "camera.h"
 
-
-
 #include <atomic>
+
+
 namespace glcount {
-    inline std::atomic<int> vaos{ 0 }, vbos{ 0 }, ebos{ 0 };
+    inline std::atomic<int> vaos{ 0 }, vbos{ 0 }, ebos{ 0 }, ibos{ 0 };
 
     inline void incVAO(int n = 1) { vaos += n; }
     inline void decVAO(int n = 1) { vaos -= n; }
@@ -40,9 +41,11 @@ namespace glcount {
     inline void decVBO(int n = 1) { vbos -= n; }
     inline void incEBO(int n = 1) { ebos += n; }
     inline void decEBO(int n = 1) { ebos -= n; }
+    inline void incIBO(int n = 1) { ibos += n; }
+    inline void decIBO(int n = 1) { ibos -= n; }
 
     inline void print() {
-        printf("[GL] live VAO=%d VBO=%d EBO=%d\n",
-            (int)vaos.load(), (int)vbos.load(), (int)ebos.load());
+        printf("[GL] live VAO=%d VBO=%d EBO=%d IBO=%d\n",
+            (int)vaos.load(), (int)vbos.load(), (int)ebos.load(), (int)ibos.load());
     }
 }

@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "init_opengl.h"
+#include "timer.h"
 #include "engine_state.h"
 #include "input_manager.h"
 #include "camera.h"
@@ -13,16 +14,13 @@
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
 #include "skybox/skybox_manager.h"
+#include "imgui_manager.h"
 
 #include "game_object.h"
 #include "lighting/light.h"
 #include "lighting/light_manager.h"
 #include "lighting/shadow_manager.h"
 #include "editor.h"
-
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
@@ -37,8 +35,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 2048;
-const unsigned int SHADOW_HEIGHT = 2048;
+const unsigned int SHADOW_WIDTH = 16384;
+const unsigned int SHADOW_HEIGHT = 16384;
 
 // timing
 float deltaTime = 0.0f;	
@@ -57,7 +55,7 @@ int main()
     glGenQueries(NQ, qShadow);
     glGenQueries(NQ, qMain);
     glGenQueries(NQ, qDebug);
-    double gpuShadowMs = 0.0, gpuMainMs = 0.0, gpuDebugMs = 0.0;
+    GpuTimers gpu;
 
     // setup rng
     std::mt19937 rng(std::random_device{}());
@@ -66,8 +64,10 @@ int main()
     EngineState engineState;
     PhysicsEngine physicsEngine;
     Renderer renderer;
+    FrameTimers frameTimers;
 
     // managers
+    ImGuiManager imguiManager;
     InputManager inputManager;
     TextureManager textureManager;
     MeshManager meshManager;
@@ -140,135 +140,17 @@ int main()
     // setup editor
     editor.setPointers(SCR_WIDTH, SCR_HEIGHT, window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
 
-    // --- ImGui init ---
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    // init backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 330");   // eller den GLSL-version du använder
-    // --- slut ImGui init ---
+    // ImGui setup
+    imguiManager.init(window, engineState, sceneBuilder);
 
     // main loop
     while (true) {
 
-        // --- Börja ImGui-frame ---
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-        // Visa demo-fönstret
-        bool show_demo = true;
-        ImGui::ShowDemoWindow(&show_demo);
+        frameTimers.beginFrame();
 
-        if (engineState.getCameraMode()) {
-            io.MouseDown[0] = io.MouseDown[1] = io.MouseDown[2] = false;
-            io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-        }
-
-        ImGui::Begin("Settings");
-        ImGui::SeparatorText("Objects");
-        ImGui::Spacing();
-        bool showNormals = engineState.getShowNormals();
-        if (ImGui::Checkbox("Normals", &showNormals)) {
-            engineState.toggleShowNormals();
-        }
-        bool showAABB = engineState.getShowAABB();
-        if (ImGui::Checkbox("Bounding boxes", &showAABB)) {
-            engineState.toggleShowAABB();
-        }
-        bool showColliders = engineState.getShowColliders();
-        if (ImGui::Checkbox("Colliders", &showColliders)) {
-            engineState.toggleShowColliders();
-        }
-        bool showContactPoints = engineState.getShowContactPoints();
-        if (ImGui::Checkbox("Contacts", &showContactPoints)) {
-            engineState.toggleShowContactPoints();
-        }
-
-        ImGui::NewLine();
-        ImGui::SeparatorText("BVH");
-        ImGui::Spacing();
-        bool getShowBVH_awake = engineState.getShowBVH_awake();
-        if (ImGui::Checkbox("Awake", &getShowBVH_awake)) {
-            engineState.toggleShowBVH_awake();
-        }
-        bool getShowBVH_asleep = engineState.getShowBVH_asleep();
-        if (ImGui::Checkbox("Asleep", &getShowBVH_asleep)) {
-            engineState.toggleShowBVH_asleep();
-        }
-        bool getShowBVH_static = engineState.getShowBVH_static();
-        if (ImGui::Checkbox("Static", &getShowBVH_static)) {
-            engineState.toggleShowBVH_static();
-        }
-        bool getShowBVH_terrain = engineState.getShowBVH_terrain();
-        if (ImGui::Checkbox("Terrain", &getShowBVH_terrain)) {
-            engineState.toggleShowBVH_terrain();
-        }
-
-        ImGui::NewLine();
-        ImGui::SeparatorText("Scene");
-        ImGui::Spacing();
-        static int currentItem = 0;
-        const char* items[] = { "Test", "Empty", "Main", "Terrain", "Tall structure", "Tumbler", "Castle", "Invisible container" };
-        ImGui::Combo("##quality", &currentItem, items, IM_ARRAYSIZE(items));
-        ImGui::SameLine();
-        if (ImGui::Button("Load")) {
-            switch (currentItem) {
-            case 0: sceneBuilder.createScene(6); break;
-            case 1: sceneBuilder.createScene(7); break;
-            case 2: sceneBuilder.createScene(0); break;
-            case 3: sceneBuilder.createScene(1); break;
-            case 4: sceneBuilder.createScene(2); break;
-            case 5: sceneBuilder.createScene(3); break;
-            case 6: sceneBuilder.createScene(4); break;
-            case 7: sceneBuilder.createScene(5); break;
-            default: break;
-            }
-        }
-
-        //static glm::vec3 pos{ 0.0f, 1.0f, 2.0f };
-        //ImGui::SliderFloat3("Position", (float*)&pos, -10.0f, 10.0f);
-
-        ImGui::End();
-
-
-        float cpuClockStart = static_cast<float>(glfwGetTime());
-        // update time
-        auto current_time = std::chrono::high_resolution_clock::now();
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
-        GLuint avail = 0;
-        // SHADOW
-        glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
-            gpuShadowMs = ns / 1e6;
-        }
-
-        // MAIN
-        glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
-            gpuMainMs = ns / 1e6;
-        }
-
-        // DEBUG
-        glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
-            gpuDebugMs = ns / 1e6;
-        }
-
-        // Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
-        // bumpa readIdx så vi läser nästa nästa gång
-        if (avail) {
-            readIdx = (readIdx + 1) % NQ;
-        }
 
         glfwPollEvents();
 
@@ -276,14 +158,44 @@ int main()
             break;
         }
 
+        imguiManager.newFrame();
+        imguiManager.setInputMode(engineState.getCameraMode());
+
+        GLuint avail = 0;
+        // SHADOW
+        glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
+            gpu.shadowMs = ns / 1e6;
+        }
+        // MAIN
+        glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
+            gpu.mainMs = ns / 1e6;
+        }
+        // DEBUG
+        glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+        if (avail) {
+            GLuint64 ns = 0;
+            glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
+            gpu.debugMs = ns / 1e6;
+        }
+        // Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
+        // bumpa readIdx så vi läser nästa nästa gång
+        if (avail) {
+            readIdx = (readIdx + 1) % NQ;
+        }
+
         // rendering
-        float renderClockStart = static_cast<float>(glfwGetTime());
-        renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
-        // calculate render time
-        float renderClockEnd = static_cast<float>(glfwGetTime());
-        float renderClockMs = (renderClockEnd - renderClockStart) * 1000.0f;
-        sceneBuilder.sceneDirty = false;
-        writeIdx = (writeIdx + 1) % NQ;
+        {
+            ScopedTimer t(frameTimers, "Render");
+            renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
+            sceneBuilder.sceneDirty = false;
+            writeIdx = (writeIdx + 1) % NQ;
+        }
 
         editor.cameraMode();
 
@@ -294,9 +206,9 @@ int main()
         }
 
         // physics step
-        float stepClockStart = static_cast<float>(glfwGetTime());
         if (!engineState.isPaused() or engineState.getAdvanceStep()) 
         {
+            ScopedTimer t(frameTimers, "Physics");
             const int   kMaxStepsPerFrame = 8;
             const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
             accumulator = std::min(accumulator + deltaTime, kMaxAccum);
@@ -360,128 +272,20 @@ int main()
             engineState.setAdvanceStep(false);
         }
 
-        // calculate step time
-        float stepClockStop = static_cast<float>(glfwGetTime());
-        float stepClockMs = (stepClockStop - stepClockStart) * 1000.0f;
-
         if (!engineState.isPaused()) {
             if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
             else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
         }
 
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        frameTimers.endFrame();  
+        imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
+        imguiManager.render();
 
         // swap buffers
-        float t1 = static_cast<float>(glfwGetTime());
         glfwSwapBuffers(window);
-        float t2 = static_cast<float>(glfwGetTime());
-        float swapTime = (t2 - t1);
-
-        // calculate CPU time
-        float cpuClockStop = static_cast<float>(glfwGetTime());
-        float cpuClockMs = (cpuClockStop - cpuClockStart) * 1000.0f;
-
-        // print FPS and other stats
-        if (engineState.getShowFPS()) {
-            float seconds = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-            if (seconds > last_second) {
-                last_second = seconds;
-                const int LABEL_W = 11;
-                const int VALUE_W = 0;
-
-                std::cout
-                    // FPS
-                    << std::setw(LABEL_W) << std::left
-                    << "FPS:"
-                    // värdefält, vänster-justerat
-                    << std::setw(VALUE_W) << std::left
-                    << frames << "\n"
-
-                    // Swap Time
-                    << std::setw(LABEL_W) << std::left
-                    << "Swap:"
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << std::setprecision(3) << swapTime * 1000.0f << " ms\n"
-
-
-                    // Objects
-                    << std::setw(LABEL_W) << std::left
-                    << "Objects:"
-                    << std::setw(VALUE_W) << std::left
-                    << sceneBuilder.getDynamicObjects().size()
-                    << std::defaultfloat << "\n"
-
-                    << "------" << "\n"
-
-                    << std::setw(LABEL_W) << std::left
-                    << "GPU:"
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << std::setprecision(1) << (gpuShadowMs + gpuMainMs + gpuDebugMs) << " ms\n"
-                    // GPU Shadow
-                    << std::setw(LABEL_W) << std::left
-                    << "Shadow:"
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << gpuShadowMs << " ms\n"
-                    // GPU Main
-                    << std::setw(LABEL_W) << std::left
-                    << "Main:"
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << gpuMainMs << " ms\n"
-                    // GPU Debug
-                    << std::setw(LABEL_W) << std::left
-                    << "Debug:"
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << gpuDebugMs << " ms\n"
-
-                    << "------" << "\n"
-
-                    // CPU
-                    << std::setw(LABEL_W) << std::left
-                    << "CPU:"
-                    // värdefält, vänster-justerat
-                    << std::setw(VALUE_W) << std::left
-                    << std::fixed << cpuClockMs << " ms\n"
-
-                    // Physics
-                    << std::setw(LABEL_W) << std::left
-                    << "Physics:"
-                    << std::setw(VALUE_W) << std::left
-                    << stepClockMs << " ms\n"
-
-                    // Render
-                    << std::setw(LABEL_W) << std::left
-                    << "Render:"
-                    << std::setw(VALUE_W) << std::left
-                    << renderClockMs << " ms\n";
-
-                    //// BVH rebuilds
-                    //<< std::setw(LABEL_W) << std::left
-                    //<< "BVH:"
-                    //<< std::setw(VALUE_W) << std::left
-                    //<< physicsEngine.getDynamicAwakeBvh().numRebuilds << "\n"
-
-                    // opengl
-                    //<< std::setw(LABEL_W) << std::left
-                    //<< "Opengl:"
-                    //<< std::setw(VALUE_W) << std::left;
-                    //glcount::print();
-                    //std::cout << std::defaultfloat << "\n";
-           
-
-                if (deltaTime > 0.016f) {
-                    std::cout << "-- Warning: deltaTime is larger than 1/60 -- " << "\n";
-                }
-                std::cout << "===============================" << "\n";
-
-                frames = 0;
-                physicsEngine.getDynamicAwakeBvh().numRebuilds = 0;
-
-                std::cout << std::setprecision(9);
-            }
-            frames++;
-        }
    }
+
+   imguiManager.shutdown();
    glfwTerminate();
 
    return 0;

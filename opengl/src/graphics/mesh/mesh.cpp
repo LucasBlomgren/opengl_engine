@@ -11,9 +11,16 @@ void Mesh::setup() {
 
     // generate buffers/arrays
     glGenVertexArrays(1, &VAO);
+    glcount::incVAO();
+
     glGenBuffers(1, &VBO);
+    glcount::incVBO();
+
     glGenBuffers(1, &EBO);
+    glcount::incEBO();
+
     glGenBuffers(1, &instanceVBO);
+    glcount::incIBO();
 
     // bind VAO
     glBindVertexArray(VAO);

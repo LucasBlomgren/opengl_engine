@@ -81,25 +81,25 @@ void SceneBuilder::testFloorScene() {
         }
     }
 
-    // // big cube of boxes
-    //int w = 20;
-    //int h = 20;
-    //int d = 10;
-    //int cubeSize = 1;
-    //int spacing = 0.25f;
-    //for (int i = 0; i < w; i++) {
-    //    for (int j = 0; j < d; j++) {
-    //        for (int k = 0; k < h; k++) {
+     // big cube of boxes
+    int w = 20;
+    int h = 20;
+    int d = 10;
+    int cubeSize = 1;
+    int spacing = 0.25f;
+    for (int i = 0; i < w; i++) {
+        for (int j = 0; j < d; j++) {
+            for (int k = 0; k < h; k++) {
 
-    //            float x = -15.0f + i * (cubeSize + spacing);
-    //            float y = 0.5f + j * (cubeSize + spacing);
-    //            float z = -15.0f + k * (cubeSize + spacing);
-    //            createObject("crate", ColliderType::CUBOID, glm::vec3(x,y,z), glm::vec3(cubeSize), 1, 0, {}, 0.75, 1);
-    //        }
-    //    }
-    //}
+                float x = -15.0f + i * (cubeSize + spacing);
+                float y = 0.5f + j * (cubeSize + spacing);
+                float z = -15.0f + k * (cubeSize + spacing);
+                createObject("crate", "cube", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(cubeSize), 1, 0, {}, 0.75, 1);
+            }
+        }
+    }
 
-    //createObject("plain", ColliderType::TEAPOT, glm::vec3(0,0,0), glm::vec3(1), 100, 0, {}, 3.5f, 0);
+    createObject("plain", "cube", ColliderType::CUBOID, glm::vec3(-30, 3, -30), glm::vec3(4), 1000, 0, {}, 3.5f, 0);
 
     createBlockPyramid("plain", glm::vec3(246.0, 215.0, 176.0), glm::vec3(8.0, 0.0, 74.5), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
 }

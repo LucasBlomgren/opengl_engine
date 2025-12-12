@@ -51,8 +51,8 @@ void OOBBRenderer::setupWireframeBox() {
        -0.5f, -0.5f,  0.5f,  -0.5f, 0.5f,  0.5f
     };
 
-    glGenVertexArrays(1, &VAO_box);
-    glGenBuffers(1, &VBO_box);
+    glGenVertexArrays(1, &VAO_box); glcount::incVAO();
+    glGenBuffers(1, &VBO_box); glcount::incVBO();
 
     glBindVertexArray(VAO_box);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_box);

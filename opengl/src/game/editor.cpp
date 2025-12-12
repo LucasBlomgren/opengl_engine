@@ -148,7 +148,6 @@ void Editor::update(float& deltaTime, Shader& shader) {
     }
 
     if (engineState->GetPressedKey() == "q") {
-
         engineState->setPlayerMode(!engineState->isPlayerMode());
 
         if (engineState->isPlayerMode()) {

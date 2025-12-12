@@ -18,12 +18,12 @@ unsigned int setup_xyzObject()
     // VBO
     unsigned int VAO_xyz;
     unsigned int VBO_xyz;
-    glGenBuffers(1, &VBO_xyz);
+    glGenBuffers(1, &VBO_xyz); glcount::incVBO();
     glBindBuffer(GL_ARRAY_BUFFER, VBO_xyz);
     glBufferData(GL_ARRAY_BUFFER, xyzEdges.size() * sizeof(float), xyzEdges.data(), GL_STATIC_DRAW);
 
     // VAO
-    glGenVertexArrays(1, &VAO_xyz);
+    glGenVertexArrays(1, &VAO_xyz); glcount::incVAO();
     glBindVertexArray(VAO_xyz);
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
