@@ -30,6 +30,7 @@ public:
     void containerScene();
     void testFloorScene();
     void emptyFloorScene();
+    void shapePileScene();
 
     GameObject& createObject(
         const std::string& textureName,

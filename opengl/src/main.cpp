@@ -62,9 +62,9 @@ int main()
 
     // systems
     EngineState engineState;
-    PhysicsEngine physicsEngine;
-    Renderer renderer;
     FrameTimers frameTimers;
+    PhysicsEngine physicsEngine(&frameTimers);
+    Renderer renderer;
 
     // managers
     ImGuiManager imguiManager;
@@ -133,9 +133,6 @@ int main()
 
     // setup scene 
     sceneBuilder.createScene(6);
-
-    // setup physics
-    physicsEngine.init(&engineState);
 
     // setup editor
     editor.setPointers(SCR_WIDTH, SCR_HEIGHT, window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
@@ -208,7 +205,6 @@ int main()
         // physics step
         if (!engineState.isPaused() or engineState.getAdvanceStep()) 
         {
-            ScopedTimer t(frameTimers, "Physics");
             const int   kMaxStepsPerFrame = 8;
             const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
             accumulator = std::min(accumulator + deltaTime, kMaxAccum);
@@ -279,6 +275,7 @@ int main()
 
         frameTimers.endFrame();  
         imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
+        imguiManager.selectedObjectUI(editor.selectedObject);
         imguiManager.render();
 
         // swap buffers

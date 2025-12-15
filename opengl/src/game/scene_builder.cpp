@@ -109,6 +109,7 @@ void SceneBuilder::createScene(int sceneID)
     case 5: containerScene(); break;
     case 6: testFloorScene(); break;
     case 7: emptyFloorScene(); break;
+    case 8: shapePileScene(); break;
     default: break;
     }
 

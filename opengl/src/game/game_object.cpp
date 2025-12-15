@@ -9,7 +9,6 @@ void GameObject::resetDirtyFlags() {
     modelMatrixDirty = true;
     helperMatricesDirty = true;
     aabbDirty = true;
-    aabb.facesDirty = true;
 }
 
 void GameObject::setRotatedFlag() {
@@ -44,6 +43,9 @@ void GameObject::setModelMatrix() {
 }
 
 void GameObject::setHelperMatrices() {
+    if (!helperMatricesDirty)
+        return;
+
     invModelMatrix = glm::inverse(modelMatrix);
 
     rotationMatrix = glm::mat3_cast(orientation);  // enbart ortonormal rotation
@@ -55,7 +57,7 @@ void GameObject::setHelperMatrices() {
     helperMatricesDirty = false;
 }
 
-void GameObject::calculateInverseInertiaForCube(float side) {
+void GameObject::inertiaCube(float side) {
     float I = 6.0f / (mass * side * side);
 
     inverseInertia = glm::mat3(
@@ -65,7 +67,7 @@ void GameObject::calculateInverseInertiaForCube(float side) {
     );
 }
 
-void GameObject::calculateInverseInertiaForCuboid(float sx, float sy, float sz) {
+void GameObject::inertiaCuboid(float sx, float sy, float sz) {
     float I_x = (1.0f / 12.0f) * mass * (sy * sy + sz * sz);
     float I_y = (1.0f / 12.0f) * mass * (sx * sx + sz * sz);
     float I_z = (1.0f / 12.0f) * mass * (sx * sx + sy * sy);
@@ -76,7 +78,7 @@ void GameObject::calculateInverseInertiaForCuboid(float sx, float sy, float sz) 
         glm::vec3(0.0f, 0.0f, 1.0f / I_z));
 }
 
-void GameObject::calculateInverseInertiaForSolidSphere() {
+void GameObject::inertiaSphere() {
     Sphere& sphere = std::get<Sphere>(collider.shape);
     float I = (2.0f / 5.0f) * (mass * sphere.radius * sphere.radius);
     float invI = 1.0f / I;
@@ -87,12 +89,33 @@ void GameObject::calculateInverseInertiaForSolidSphere() {
         glm::vec3(0.0f, 0.0f, invI));
 }
 
+void GameObject::calculateInverseInertia() {
+    if (isStatic) {
+        inverseInertia = glm::mat3(0.0f);
+        return;
+    }
+
+    if (colliderType == ColliderType::CUBOID) {
+        OOBB& box = std::get<OOBB>(collider.shape);
+        glm::vec3 size = box.lHalfExtents * 2.0f * scale;  
+        bool isUniform = approxEqual(size.x, size.y) && approxEqual(size.y, size.z);
+
+        if (isUniform) {
+            inertiaCube(size.x);
+        } else {
+            inertiaCuboid(size.x, size.y, size.z);
+        }
+    }
+    else if (colliderType == ColliderType::SPHERE) {
+        inertiaSphere();
+    }
+}
+
 void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
     glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
     orientation += 0.5f * dt * (omegaQuat * orientation);
     orientation = glm::normalize(orientation);
 }
-
 
 void GameObject::updateAABB() {
     setModelMatrix();
@@ -100,22 +123,18 @@ void GameObject::updateAABB() {
 }
 
 void GameObject::updateCollider() {
-    setModelMatrix();
+    //setModelMatrix();
 
     std::visit([&](auto& shape) {
         using T = std::decay_t<decltype(shape)>;
 
         // OOBB
         if constexpr (std::is_same_v<T, OOBB>) {
-            shape.update(modelMatrix);
+            shape.update(modelMatrix, scale);
         }
         // Sphere
         else if constexpr (std::is_same_v<T, Sphere>) {
             shape.update(modelMatrix);
-        }
-        // TriMesh
-        else if constexpr (std::is_same_v<T, TriMesh>) {
-
         }
     }, collider.shape);
 }
@@ -221,7 +240,7 @@ void GameObject::updatePos(const float& dt) {
     position += linearVelocity * dt;
     updateOrientation(orientation, angularVelocity, dt);
 
-    setRotatedFlag();
+    //setRotatedFlag();
 }
 
 void GameObject::setAsleep() {

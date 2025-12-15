@@ -133,6 +133,8 @@ void AABB::transform_noRotation(const glm::mat4& M, const glm::vec3& T, const gl
     wMax.y = lMax.y * S.y + T.y;
     wMax.z = lMax.z * S.z + T.z;
 }
+
+// fungerar bara om mesh är centrerad i origo
 void AABB::transform_withRotation(const glm::mat3& M, const glm::vec3& T) {
     float  a, b;
     float  Amin[3], Amax[3];

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "oobb.h"
 
-void OOBB::update(const glm::mat4& M) {
+void OOBB::update(const glm::mat4& M, const glm::vec3& scale) {
     // rotate normals
     glm::mat3 R = glm::mat3(M);
     for (int i = 0; i < 3; i++) {
@@ -12,6 +12,8 @@ void OOBB::update(const glm::mat4& M) {
     for (int i = 0; i < 8; ++i) {
         wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
     }
+
+    this->scale = scale;
 
     // compute centroid
     wCenter = glm::vec3(M * glm::vec4(lCenter, 1.0f));

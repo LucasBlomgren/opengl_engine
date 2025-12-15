@@ -21,9 +21,11 @@ public:
 
         std::vector<Vertex> girlVerts           = loadVerticesFromTxt("src/assets/girl_vertices.txt");
         std::vector<unsigned int> girlIndices   = loadIndicesFromTxt("src/assets/girl_indices.txt");
+        recenterVertices(girlVerts);
 
         std::vector<Vertex> tankVerts           = loadVerticesFromTxt("src/assets/tank_vertices.txt");
         std::vector<unsigned int> tankIndices   = loadIndicesFromTxt("src/assets/tank_indices.txt");
+        recenterVertices(tankVerts);
 
         meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
         meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
@@ -37,4 +39,5 @@ public:
 
 private:
     static std::unordered_map<std::string, Mesh> meshes;
+    void recenterVertices(std::vector<Vertex>& vertices);
 };

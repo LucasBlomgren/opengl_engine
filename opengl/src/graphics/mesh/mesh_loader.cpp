@@ -38,3 +38,18 @@ std::vector<unsigned int> loadIndicesFromTxt(const std::string& path) {
     }
     return indices;
 }
+
+std::vector<Vertex> recenterMesh(std::vector<Vertex>& vertices) {
+    glm::vec3 minPos(+FLT_MAX);
+    glm::vec3 maxPos(-FLT_MAX);
+    for (const auto& v : vertices) {
+        minPos = glm::min(minPos, v.position);
+        maxPos = glm::max(maxPos, v.position);
+    }
+    glm::vec3 center = (minPos + maxPos) * 0.5f;
+    std::vector<Vertex> recenteredVertices = vertices;
+    for (auto& v : recenteredVertices) {
+        v.position -= center;
+    }
+    return recenteredVertices;
+}

@@ -78,7 +78,7 @@ public:
     bool useRandomColor = false;
 
     // physics variables
-    glm::quat orientation;
+    glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
     glm::mat3 inverseInertia;
     glm::mat3 inverseInertiaWorld;
     glm::vec3 scale;
@@ -95,7 +95,7 @@ public:
     bool allowGravity;
     bool isStatic;
     bool shouldRotate;
-    bool isRotated = false;
+    bool isRotated = true;
     bool canMoveLinearly = true;
     glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
     float radius;
@@ -164,7 +164,7 @@ public:
         collider(this)
     {
         // physics stuff
-        setRotatedFlag();
+        //setRotatedFlag();
         invRadius = 1.0f / (0.5f * glm::length(scale));
 
         // dynamic
@@ -201,30 +201,16 @@ public:
             OOBB box(verticesPositions, modelMatrix, scale);
             collider.shape = box;
 
-            glm::vec3 size = box.lHalfExtents * 2.0f * scale;  
-            bool isUniform = approxEqual(size.x, size.y) && approxEqual(size.y, size.z);
+            calculateInverseInertia();
 
             oobbRenderer.setupWireframeBox();
             oobbRenderer.setupNormals();
-
-            // detta ska vara baserat på OOBB storleken (halfExtents), inte bara scale som det är nu
-            if (isStatic) {
-                inverseInertia = glm::mat3(0.0f);
-            } else if (isUniform) {
-                calculateInverseInertiaForCube(size.x);
-            } else {
-                calculateInverseInertiaForCuboid(size.x, size.y, size.z);
-            }
         }
         else if (colliderType == ColliderType::SPHERE) {
             Sphere sphere(modelMatrix, scale.x);
             collider.shape = sphere; 
 
-            if (isStatic) {
-                inverseInertia = glm::mat3(0.0f); 
-            } else {
-                calculateInverseInertiaForSolidSphere();
-            }
+            calculateInverseInertia();
         }
 
         inverseInertiaWorld = inverseInertia; 
@@ -234,9 +220,10 @@ public:
     void setModelMatrix();
     void setHelperMatrices();
     void setRotatedFlag();
-    void calculateInverseInertiaForCube(float side);
-    void calculateInverseInertiaForCuboid(float sx, float sy, float sz);
-    void calculateInverseInertiaForSolidSphere();
+    void calculateInverseInertia(); 
+    void inertiaCube(float side);
+    void inertiaCuboid(float sx, float sy, float sz);
+    void inertiaSphere();
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float deltaTime);
     void updateAABB();
     void updateCollider();

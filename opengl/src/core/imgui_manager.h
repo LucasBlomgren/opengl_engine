@@ -20,6 +20,8 @@ public:
     void settingsUI();
     void performanceUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpu, size_t amountObjects);
 
+    void selectedObjectUI(GameObject* obj);
+
 private:
     EngineState* engineState = nullptr;
     SceneBuilder* sceneBuilder = nullptr;

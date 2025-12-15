@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "timer.h"
 #include "engine_state.h"
 #include "collision_manifold.h"
 #include "raycast.h"
@@ -12,10 +13,14 @@
 
 class PhysicsEngine {
 public:
+    PhysicsEngine(FrameTimers* ft) { 
+        this->collisionManifold = new CollisionManifold(); 
+        this->frameTimers = ft;
+    }
+
     //------------------------
     //     Main functions
     //------------------------
-    void init(EngineState* engineState);
     void setupScene(std::vector<GameObject>* gameObjectList, std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
     void step(float deltaTime, std::mt19937 rng);
@@ -39,7 +44,7 @@ public:
 
 private:
     float dt;
-    EngineState* engineState = nullptr;
+    FrameTimers* frameTimers;
 
     //------------------------
     //      Add/Remove

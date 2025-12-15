@@ -6,19 +6,11 @@
 template class BVHTree<GameObject>;
 
 //-----------------------------
-//            Init
-//-----------------------------
-void PhysicsEngine::init(EngineState* engineState) {
-    this->engineState = engineState;
-    this->collisionManifold = new CollisionManifold();
-}
-
-//-----------------------------
 //         Setup scene
 //-----------------------------
 void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
-    
+
     awake_DynamicObjects.clear();
     awake_DynamicObjects.reserve(5000000);
     asleep_DynamicObjects.clear();
@@ -134,51 +126,62 @@ void PhysicsEngine::awakenAllObjects() {
 //         Time step
 //-----------------------------
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
-    this->dt = deltaTime;
+    ScopedTimer t(*frameTimers, "Physics");
 
-    // prepare for this frame
-    toWake.reserve(dynamicObjects->size());
-    toWake.clear();
-    toSleep.reserve(dynamicObjects->size());
-    toSleep.clear();
+    {
+        ScopedTimer t(*frameTimers, "Pre step");
+        this->dt = deltaTime;
 
-    // add/remove objects to the BVH trees
-    insertPendingObjects();
+        // prepare for this frame
+        toWake.reserve(dynamicObjects->size());
+        toWake.clear();
+        toSleep.reserve(dynamicObjects->size());
+        toSleep.clear();
 
-    // Reset contact points for the current frame
-    for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
-        for (ContactPoint& cp : it->second.points) {
-            cp.wasUsedThisFrame = false;
-            cp.wasWarmStarted = false;
+        // add/remove objects to the BVH trees
+        insertPendingObjects();
+
+        // Reset contact points for the current frame
+        for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
+            for (ContactPoint& cp : it->second.points) {
+                cp.wasUsedThisFrame = false;
+                cp.wasWarmStarted = false;
+            }
         }
+
+        // Update object states (position, orientation, AABB, collider)
+        updateStates();
     }
 
-    // Update object states (position, orientation, AABB, collider)
-    updateStates();
+    {
+        ScopedTimer t(*frameTimers, "BVH update");
+        // Update BVH trees
+        dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
 
-    // Update BVH trees
-    dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
-
-    if (dynamicAsleepBvh.dirty) {
-        dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
-    }
-    //if (staticBvh.dirty) {
+        if (dynamicAsleepBvh.dirty) {
+            dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
+        }
+        //if (staticBvh.dirty) {
         staticBvh.update(*dynamicObjects, static_Objects, false);
-    //}
+        //}
+    }
 
     // Collision detection and resolution
     detectAndSolveCollisions();
 
-    // Update sleep thresholds based on collision history
-    for (GameObject& obj : *dynamicObjects) {
-        updateSleepThresholds(obj);
+    {
+        ScopedTimer t(*frameTimers, "Post step");
+        // Update sleep thresholds based on collision history
+        for (GameObject& obj : *dynamicObjects) {
+            updateSleepThresholds(obj);
+        }
+
+        // Decide which objects to put to sleep or wake up
+        decideSleep();
+
+        // Clear contact points that were not used this frame
+        updateContactCache();
     }
-
-    // Decide which objects to put to sleep or wake up
-    decideSleep();
-
-    // Clear contact points that were not used this frame
-    updateContactCache();
 }
 
 //-----------------------------
@@ -301,6 +304,8 @@ void PhysicsEngine::detectAndSolveCollisions() {
 //                Broadphase
 //---------------------------------------------
 void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
+    ScopedTimer t(*frameTimers, "Broadphase");
+
     // ----- dynamic vs terrain -----
     static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
     hitsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
@@ -380,8 +385,9 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
 //---------------------------------------------
 //               Narrow phase
 //---------------------------------------------
-void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) 
-{
+void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) {
+    ScopedTimer t(*frameTimers, "Narrowphase");
+
     // ----- Terrain vs collider ----- 
     for (TerrainHit& th : terrainHits) {
         if (th.obj->asleep) {
@@ -410,7 +416,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 continue;
             }
 
-            if (th.obj->helperMatricesDirty) th.obj->setHelperMatrices();  // update helper matrixes and aabb faces
+            th.obj->setHelperMatrices();  // update helper matrixes and aabb faces
 
             Contact contact(th.obj, nullptr);
 
@@ -445,7 +451,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 continue; 
             }
 
-            if (th.obj->helperMatricesDirty) th.obj->setHelperMatrices();
+            th.obj->setHelperMatrices();
 
             glm::vec3 avgNormal{ 0.0f };
             for (const SAT::Result& res : allResults) { 
@@ -499,8 +505,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             // used only for worldInertia (so far)
-            if (objA->helperMatricesDirty) objA->setHelperMatrices();
-            if (objB->helperMatricesDirty) objB->setHelperMatrices();
+            objA->setHelperMatrices();
+            objB->setHelperMatrices();
 
             Contact contact(objA, objB);
 
@@ -522,8 +528,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             // used in SAT
-            if (objA->helperMatricesDirty) objA->setHelperMatrices();
-            if (objB->helperMatricesDirty) objB->setHelperMatrices();
+            objA->setHelperMatrices();
+            objB->setHelperMatrices();
 
             SAT::Result satResult;
 
@@ -559,8 +565,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
             }
 
             // used only for worldInertia
-            if (objA->helperMatricesDirty) objA->setHelperMatrices();
-            if (objB->helperMatricesDirty) objB->setHelperMatrices();
+            objA->setHelperMatrices();
+            objB->setHelperMatrices();
 
             objA->totalCollisionCount++; 
             objB->totalCollisionCount++; 
@@ -580,6 +586,8 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 //         Collect active contacts
 //---------------------------------------------
 void PhysicsEngine::collectActiveContacts() {
+    ScopedTimer t(*frameTimers, "Contact collection");
+
     contactsToSolve.clear();
     contactsToSolve.reserve(contactCache.size());
 
@@ -618,6 +626,8 @@ void PhysicsEngine::collectActiveContacts() {
 //            Resolve collisions
 //---------------------------------------------
 void PhysicsEngine::resolveCollisions() {
+    ScopedTimer t(*frameTimers, "Collision resolution");
+
     // Justera beroende på material
     constexpr float staticFriction  = 0.6f;
     constexpr float dynamicFriction = 0.4f;
