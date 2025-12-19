@@ -51,7 +51,7 @@ void Renderer::clearRenderBatches() {
 }
 
 //-----------------------------
-//    Add Object to Bucket
+//    Add Object to Batch
 //----------------------------- 
 void Renderer::addObjectToBatch(GameObject* obj) {
     // check existing buckets
@@ -62,6 +62,9 @@ void Renderer::addObjectToBatch(GameObject* obj) {
         {
             bucket.objects.push_back(obj);
             bucket.instances.emplace_back(obj->modelMatrix, obj->color);
+
+            obj->batchIdx = static_cast<int>(&bucket - &batches[0]);
+            obj->batchInstanceIdx = static_cast<int>(bucket.objects.size()) - 1;
             return;
         }
     }
@@ -72,8 +75,36 @@ void Renderer::addObjectToBatch(GameObject* obj) {
     newBatch.shader = defaultShader;
     newBatch.textureId = obj->textureId;
     newBatch.objects.push_back(obj);
+    newBatch.instances.emplace_back(obj->modelMatrix, obj->color);
+
+    // new batch & instance
+    obj->batchIdx = static_cast<int>(batches.size());
+    obj->batchInstanceIdx = 0;
 
     batches.push_back(std::move(newBatch));
+}
+
+//-----------------------------
+//  Remove Object from Batch
+//----------------------------- 
+void Renderer::removeObjectFromBatch(GameObject* obj) {
+    if (obj->batchIdx == -1) return; // not in a batch
+
+    RenderBatch& batch = batches[obj->batchIdx];
+    int lastIdx = static_cast<int>(batch.objects.size()) - 1;
+
+    if (obj->batchInstanceIdx != lastIdx) {
+        // swap with last object
+        GameObject* lastObj = batch.objects[lastIdx];
+        batch.objects[obj->batchInstanceIdx] = lastObj;
+        batch.instances[obj->batchInstanceIdx] = batch.instances[lastIdx];
+        lastObj->batchInstanceIdx = obj->batchInstanceIdx;
+    }
+
+    batch.objects.pop_back();
+    batch.instances.pop_back();
+    obj->batchIdx = -1;
+    obj->batchInstanceIdx = -1;
 }
 
 //-----------------------------
@@ -541,6 +572,29 @@ void Renderer::uploadLightsToShader() {
     }
 
     defaultShader->setInt("numPointLights", static_cast<int>(lights.size()));
+
+    // Instanced shader
+    Shader* defaultInstancedShader = defaultShader->instancedVariant;
+    defaultInstancedShader->use();
+
+    for (int i = 0; i < lights.size(); ++i) {
+        const Light& light = lights[i];
+        std::string base = "pointLights[" + std::to_string(i) + "]";
+
+        defaultInstancedShader->setVec3(base + ".position", light.position);
+        defaultInstancedShader->setVec3(base + ".color", light.color);
+
+        defaultInstancedShader->setVec3(base + ".ambient", light.ambient * light.intensity);
+        defaultInstancedShader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
+        defaultInstancedShader->setVec3(base + ".specular", light.specular * light.intensity);
+
+        defaultInstancedShader->setFloat(base + ".constant", light.constant);
+        defaultInstancedShader->setFloat(base + ".linear", light.linear);
+        defaultInstancedShader->setFloat(base + ".quadratic", light.quadratic);
+    }
+
+    defaultInstancedShader->setInt("numPointLights", static_cast<int>(lights.size()));
+
 }
 
 //---------------------------------

@@ -8,8 +8,7 @@ bool InputManager::firstMouse;
 float InputManager::lastX;
 float InputManager::lastY;
 
-void InputManager::init(GLFWwindow* window) 
-{
+void InputManager::init(GLFWwindow* window) {
     glfwSetKeyCallback(window, keyCallback);
     glfwSetCursorPosCallback(window, mouseMovementCallback);
     glfwSetScrollCallback(window, scrollCallback);
@@ -34,8 +33,7 @@ void InputManager::resetFirstMouse() {
     firstMouse = true;
 }
 
-void InputManager::mouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn)
-{
+void InputManager::mouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn) {
     if (engineState->getCameraMode() == false)
         return;
 
@@ -61,8 +59,7 @@ void InputManager::scrollCallback(GLFWwindow* window, double xoffset, double yof
     camera->ProcessMouseScroll(static_cast<float>(yoffset));
 }
 
-void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) 
-{
+void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         engineState->SetKeyState(key, true);
 
@@ -134,8 +131,7 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
     }
 }
 
-void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) 
-{
+void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     // PRESS
     if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS)
         engineState->setPressedKey("M1_PRESS");                 // Place an object in the scene
@@ -145,12 +141,14 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
         engineState->setPressedKey("M3_PRESS");                 // Create a new object in the scene with high velocity
 
     // RELEASE
+    if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_RELEASE)
+        engineState->setPressedKey("M1_RELEASE");               // Drop the selected object in the scene
     if (button == GLFW_MOUSE_BUTTON_2 && action == GLFW_RELEASE)
-        engineState->setPressedKey("M2_RELEASE");               // Drop the selected object in the scene
+        engineState->setPressedKey("M2_RELEASE");
+    
 }
 
-void InputManager::processInput(GLFWwindow* window, float deltaTime)
-{
+void InputManager::processInput(GLFWwindow* window, float deltaTime) {
     if (!engineState->isPlayerMode()) {
         // Camera controls
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -175,10 +173,11 @@ void InputManager::processInput(GLFWwindow* window, float deltaTime)
     }
 
     // Hold shift to move faster
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) 
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
         camera->movementSpeed = camera->fastSpeed;
-    else
+    } else {
         camera->movementSpeed = camera->standardSpeed;
+    }
 
     // Exit 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

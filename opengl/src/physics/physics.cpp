@@ -128,6 +128,7 @@ void PhysicsEngine::awakenAllObjects() {
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     ScopedTimer t(*frameTimers, "Physics");
 
+    // Pre-step preparations
     {
         ScopedTimer t(*frameTimers, "Pre step");
         this->dt = deltaTime;
@@ -153,32 +154,25 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         updateStates();
     }
 
+    // Update BVH trees
     {
         ScopedTimer t(*frameTimers, "BVH update");
-        // Update BVH trees
-        dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
+        /*if (dynamicAwakeBvh.dirty)*/ dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
+        if (dynamicAsleepBvh.dirty) dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
+        /*if (staticBvh.dirty)*/ staticBvh.update(*dynamicObjects, static_Objects, false);
 
-        if (dynamicAsleepBvh.dirty) {
-            dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
-        }
-        //if (staticBvh.dirty) {
-        staticBvh.update(*dynamicObjects, static_Objects, false);
-        //}
     }
 
     // Collision detection and resolution
     detectAndSolveCollisions();
 
+    // Post-step updates
     {
         ScopedTimer t(*frameTimers, "Post step");
         // Update sleep thresholds based on collision history
-        for (GameObject& obj : *dynamicObjects) {
-            updateSleepThresholds(obj);
-        }
-
+        updateSleepThresholds();
         // Decide which objects to put to sleep or wake up
         decideSleep();
-
         // Clear contact points that were not used this frame
         updateContactCache();
     }
@@ -188,15 +182,12 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //       Update methods
 //-----------------------------
 void PhysicsEngine::updateStates() {
-    for (GameObject& obj : *dynamicObjects) {
-        if (!obj.isStatic and !obj.asleep) {
-            obj.resetDirtyFlags();
-
-            obj.updatePos(this->dt);
-
-            obj.updateAABB();
-            obj.updateCollider();
-        }
+    for (int idx : awake_DynamicObjects) {
+        GameObject& obj = (*dynamicObjects)[idx];
+        obj.resetDirtyFlags();
+        obj.updatePos(this->dt);
+        obj.updateAABB();
+        obj.updateCollider();
     }
 }
 
@@ -307,78 +298,88 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
     ScopedTimer t(*frameTimers, "Broadphase");
 
     // ----- dynamic vs terrain -----
-    static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
-    hitsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
-    hitsBufTerrain.clear();
-    treeVsTreeQuery(dynamicAwakeBvh, terrainBvh, hitsBufTerrain);          // query terrain vs dynamic objects
+    if (terrainBvh.rootIdx != -1) {
+        static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
+        hitsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
+        hitsBufTerrain.clear();
+        treeVsTreeQuery(dynamicAwakeBvh, terrainBvh, hitsBufTerrain);          // query terrain vs dynamic objects
 
-    // Sort terrain hits by GameObject to avoid duplicates 
-    std::unordered_map<GameObject*, std::vector<Tri*>> temp; 
-    temp.reserve(hitsBufTerrain.size());
-    if (temp.bucket_count() < hitsBufTerrain.size())
+        // Sort terrain hits by GameObject to avoid duplicates 
+        std::unordered_map<GameObject*, std::vector<Tri*>> temp;
         temp.reserve(hitsBufTerrain.size());
+        if (temp.bucket_count() < hitsBufTerrain.size())
+            temp.reserve(hitsBufTerrain.size());
 
-    for (int i = 0; i < hitsBufTerrain.size(); i++) {
-        auto [obj, tri] = hitsBufTerrain[i];  
-        temp[obj].push_back(tri);
+        for (int i = 0; i < hitsBufTerrain.size(); i++) {
+            auto [obj, tri] = hitsBufTerrain[i];
+            temp[obj].push_back(tri);
+        }
+
+        // Finalize terrain hits
+        tHits.clear();
+        int cap = static_cast<int>(temp.size());
+        tHits.resize(cap);
+        int sp = 0;
+
+        for (auto& [obj, trisVec] : temp) {
+            tHits[sp++] = TerrainHit{ obj, std::move(trisVec) };
+        }
+        tHits.resize(sp);
     }
 
-    // Finalize terrain hits
-    tHits.clear();
-    int cap = static_cast<int>(temp.size());
-    tHits.resize(cap); 
-    int sp = 0;
-
-    for (auto& [obj, trisVec] : temp) {
-        tHits[sp++] = TerrainHit{ obj, std::move(trisVec) };
-    }
-    tHits.resize(sp);
+    static std::vector<std::pair<GameObject*, GameObject*>> hitsBufDynamic; // hits buffer
+    dHits.clear();
 
     // ----- dynamic vs dynamic -----
-    static std::vector<std::pair<GameObject*, GameObject*>> hitsBufDynamic; // hits buffer
-    hitsBufDynamic.clear();
-    treeVsTreeQuery(dynamicAwakeBvh, dynamicAwakeBvh, hitsBufDynamic);                // query dynamic vs dynamic objects
+    if (dynamicAwakeBvh.rootIdx != -1) {
+        hitsBufDynamic.clear();
+        treeVsTreeQuery(dynamicAwakeBvh, dynamicAwakeBvh, hitsBufDynamic);
 
-    cap = static_cast<int>(hitsBufDynamic.size()); 
-    dHits.resize(cap);         
-    sp = 0; 
+        int cap = static_cast<int>(hitsBufDynamic.size());
+        dHits.resize(cap);
+        int sp = 0;
 
-    for (auto& hp : hitsBufDynamic) { 
-        GameObject* A = hp.first, * B = hp.second; 
+        for (auto& hp : hitsBufDynamic) {
+            GameObject* A = hp.first, * B = hp.second;
 
-        if (A == B) continue; 
-        dHits[sp++] = DynamicHit{ A,B };
+            if (A == B) continue;
+            dHits[sp++] = DynamicHit{ A,B };
+        }
+        dHits.resize(sp);
     }
-    dHits.resize(sp);
 
     // ----- dynamic vs asleep -----
-    hitsBufDynamic.clear();
-    treeVsTreeQuery(dynamicAwakeBvh, dynamicAsleepBvh, hitsBufDynamic);
+    if (dynamicAsleepBvh.rootIdx != -1) {
+        hitsBufDynamic.clear();
+        treeVsTreeQuery(dynamicAwakeBvh, dynamicAsleepBvh, hitsBufDynamic);
 
-    cap = static_cast<int>(hitsBufDynamic.size());
-    dHits.reserve(dHits.size() + cap);
-    sp = 0;
+        int cap = static_cast<int>(hitsBufDynamic.size());
+        dHits.reserve(dHits.size() + cap);
+        int sp = 0;
 
-    for (auto& hp : hitsBufDynamic) {
-        GameObject* A = hp.first, * B = hp.second;
+        for (auto& hp : hitsBufDynamic) {
+            GameObject* A = hp.first, * B = hp.second;
 
-        if (A == B) continue;
-        dHits.emplace_back(DynamicHit{ A,B });
+            if (A == B) continue;
+            dHits.emplace_back(DynamicHit{ A,B });
+        }
     }
 
     // ----- dynamic vs static -----
-    hitsBufDynamic.clear();
-    treeVsTreeQuery(dynamicAwakeBvh, staticBvh, hitsBufDynamic);
+    if (staticBvh.rootIdx != -1) {
+        hitsBufDynamic.clear();
+        treeVsTreeQuery(dynamicAwakeBvh, staticBvh, hitsBufDynamic);
 
-    cap = static_cast<int>(hitsBufDynamic.size());
-    dHits.reserve(dHits.size() + cap);
-    sp = 0;
+        int cap = static_cast<int>(hitsBufDynamic.size());
+        dHits.reserve(dHits.size() + cap);
+        int sp = 0;
 
-    for (auto& hp : hitsBufDynamic) {
-        GameObject* A = hp.first, * B = hp.second;
+        for (auto& hp : hitsBufDynamic) {
+            GameObject* A = hp.first, * B = hp.second;
 
-        if (A == B) continue;
-        dHits.emplace_back(DynamicHit{ A,B });
+            if (A == B) continue;
+            dHits.emplace_back(DynamicHit{ A,B });
+        }
     }
 }
 
@@ -388,7 +389,7 @@ void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<Dynam
 void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) {
     ScopedTimer t(*frameTimers, "Narrowphase");
 
-    // ----- Terrain vs collider ----- 
+    // ----- Terrain vs dynamic ----- 
     for (TerrainHit& th : terrainHits) {
         if (th.obj->asleep) {
             continue;
@@ -399,7 +400,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
         allResults.clear(); 
         allResults.reserve(reserveSize); // reserve space for results
 
-        // BOX vs tris
+        // CUBE vs tris
         if (th.obj->colliderType == ColliderType::CUBOID) {
             for (Tri* tri : th.tris) {
                 SAT::Result satResult;
@@ -458,11 +459,6 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
                 avgNormal += res.normal; 
             }
             avgNormal = glm::normalize(avgNormal); // average normal 
-
-            if (th.obj->player) {
-                pushAwayPlayer(*th.obj, false, avgNormal, allResults[0].depth);
-                continue;
-            }
 
             Contact contact(th.obj, nullptr); 
             contact.normal = avgNormal; 
@@ -931,7 +927,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
 
     WakeUpInfo info{ false, false };
 
-    if (A.asleep && !A.isStatic) {
+    if (A.asleep and !A.isStatic and A.allowSleep) {
         if (Bv2 > v2 || Bw2 > w2) {
             info.A = true;
             if (!A.inSleepTransition) {
@@ -940,7 +936,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
             }
         }
     }
-    if (B.asleep && !B.isStatic) {
+    if (B.asleep and !B.isStatic and B.allowSleep) {
         if (Av2 > v2 || Aw2 > w2) {
             info.B = true;
             if (!B.inSleepTransition) {
@@ -956,47 +952,48 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
 //-----------------------------
 //       Sleep Thresholds
 //-----------------------------
-void PhysicsEngine::updateSleepThresholds(GameObject& obj) {
-    if (obj.isStatic or obj.asleep or !obj.allowSleep)
-        return;
+void PhysicsEngine::updateSleepThresholds() {
+    for (int idx : awake_DynamicObjects) {
+        GameObject& obj = (*dynamicObjects)[idx];
 
-    obj.collisionHistory.push(obj.totalCollisionCount);
-    obj.totalCollisionCount = 0;
-    float avg = obj.collisionHistory.average();
+        if (obj.isStatic or obj.asleep or !obj.allowSleep)
+            continue;
 
-    if (avg <= 0.0f) {
-        if (std::abs(avg - obj.lastAvg) >= 1) {
-            obj.sleepCounter = 0.0f;
+        obj.collisionHistory.push(obj.totalCollisionCount);
+        obj.totalCollisionCount = 0;
+        float avg = obj.collisionHistory.average();
+
+        if (avg <= 0.0f) {
+            if (std::abs(avg - obj.lastAvg) >= 1) {
+                obj.sleepCounter = 0.0f;
+            }
+            obj.lastAvg = avg;
+
+            continue;
         }
+
+        avg = std::max(avg, 1.0f);
         obj.lastAvg = avg;
 
-        return;
+        constexpr float linearFactor  = 0.17f;
+        constexpr float angularFactor = 0.10f;
+
+        // set thresholds
+        obj.velocityThreshold = avg * linearFactor;
+        obj.angularVelocityThreshold = avg * angularFactor * obj.invRadius;
     }
-
-    avg = std::max(avg, 1.0f);
-    obj.lastAvg = avg;
-
-    constexpr float linearFactor  = 0.17f;
-    constexpr float angularFactor = 0.10f;
-
-    // set thresholds
-    obj.velocityThreshold = avg * linearFactor;
-    obj.angularVelocityThreshold = avg * angularFactor * obj.invRadius;
 }
 
 //-------------------------------
 //      Decide sleep/awake
 //-------------------------------
-void PhysicsEngine::decideSleep() {
-    for (int idx : toWake) {
-        moveToAwake((*dynamicObjects)[idx]);
-    }
-
+void PhysicsEngine::decideSleep() 
+{
     for (int idx : awake_DynamicObjects) {
         GameObject& obj = (*dynamicObjects)[idx];
         if (obj.isStatic) continue;
-        if (obj.inSleepTransition) continue;
         if (!obj.allowSleep) continue;
+        //if (obj.inSleepTransition) continue;
 
         // sleep counter
         if (glm::length(obj.linearVelocity) < obj.velocityThreshold and 
@@ -1016,7 +1013,9 @@ void PhysicsEngine::decideSleep() {
         moveToAsleep((*dynamicObjects)[idx]);
     }
 
-    for (GameObject& obj : *dynamicObjects) {
+    for (int idx : toWake) {
+        GameObject& obj = (*dynamicObjects)[idx];
+        moveToAwake(obj);
         obj.inSleepTransition = false;
     }
 }

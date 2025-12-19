@@ -81,7 +81,7 @@ public:
         glm::vec3 color;  // valfritt, om du vill ha per-instans-färg
     };
     void addObjectToBatch(GameObject* obj);
-
+    void removeObjectFromBatch(GameObject* obj);
     void clearRenderBatches();
 
 private:

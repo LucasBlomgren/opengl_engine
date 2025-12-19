@@ -122,7 +122,7 @@ private:
     void moveToAwake(GameObject& obj);
     void moveToAsleep(GameObject& obj);
     void decideSleep();
-    void updateSleepThresholds(GameObject& obj);
+    void updateSleepThresholds();
     bool asleepBvhDirty = false;
 
     struct WakeUpInfo { bool A, B; };

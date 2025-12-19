@@ -344,28 +344,17 @@ void SceneBuilder::objectRain(float& current_time, int mode) {
 
         // blocks
         if (mode == 0) {
-            xVariance = randomRange(1.0f, 1.01f);
-            yVariance = randomRange(1.0f, 1.01f);
-            zVariance = randomRange(1.0f, 1.01f);
-            //xVariance = randomRange(2.0, 6.0);
-            //yVariance = randomRange(2.0, 6.0);
-            //zVariance = randomRange(2.0, 6.0);
+            xVariance = randomRange(2.0, 5.0);
+            yVariance = randomRange(2.0, 5.0);
+            zVariance = randomRange(2.0, 5.0);
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
-
-            //glm::vec3 size{ 4.0f };
-            //float mass = 10.0f;
-
             createObject("plain", "cube", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
         // spheres
         else if (mode == 1) {
-            //float variance = randomRange(0.5, 2);
-            //glm::vec3 size{ variance };
-            //float mass = (variance * 3.0f) / 2.0f;
-
             glm::vec3 size{ 2.0f };
-            float mass = 2.0f;
+            float mass = (size.x * 3.0f) / 2.0f;
 
             createObject("plain", "sphere", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }

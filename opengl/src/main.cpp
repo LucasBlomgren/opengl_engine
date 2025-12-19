@@ -35,8 +35,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 16384;
-const unsigned int SHADOW_HEIGHT = 16384;
+const unsigned int SHADOW_WIDTH = 4096;
+const unsigned int SHADOW_HEIGHT = 4096;
 
 // timing
 float deltaTime = 0.0f;	
@@ -78,6 +78,7 @@ int main()
 
     // view
     Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
+    // set initial rotation
     camera.yaw = 35.0f;
     camera.pitch = -20.0f;
     camera.ProcessMouseMovement(0.0f, 0.0f);
@@ -86,14 +87,9 @@ int main()
     Editor editor;
     SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
-    // ---------- Clocks ----------
-    auto start_time = std::chrono::high_resolution_clock::now();
-    int frames = 0;
-    float last_second = 0.0f;
     // fixed timestep
     const float fixedTimeStep = 1.0f / 60.0f;
     float accumulator = 0.0f;
-    lastFrame = static_cast<float>(glfwGetTime());
 
     // setup input
     inputManager.setPointers(&engineState, &camera);
@@ -135,29 +131,33 @@ int main()
     sceneBuilder.createScene(6);
 
     // setup editor
-    editor.setPointers(SCR_WIDTH, SCR_HEIGHT, window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
+    editor.setPointers(window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
 
     // ImGui setup
-    imguiManager.init(window, engineState, sceneBuilder);
+    imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager);
 
     // main loop
     while (true) {
 
+        // timing
         frameTimers.beginFrame();
-
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        // events
         glfwPollEvents();
 
+        // exit condition
         if (glfwWindowShouldClose(window)) {
             break;
         }
 
+        // start ImGui frame
         imguiManager.newFrame();
         imguiManager.setInputMode(engineState.getCameraMode());
 
+        // read GPU timers from previous frames
         GLuint avail = 0;
         // SHADOW
         glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
@@ -186,6 +186,7 @@ int main()
             readIdx = (readIdx + 1) % NQ;
         }
 
+
         // rendering
         {
             ScopedTimer t(frameTimers, "Render");
@@ -195,26 +196,32 @@ int main()
         }
 
         editor.cameraMode();
-
         // input & editor update
         if (engineState.getCameraMode()) {
             inputManager.processInput(window, deltaTime);
-            editor.update(deltaTime, *renderer.debugShader);
+
+            // editor update
+            {
+                ScopedTimer t(frameTimers, "Editor");
+                editor.update(deltaTime, *renderer.debugShader);
+            }
         }
 
         // physics step
-        if (!engineState.isPaused() or engineState.getAdvanceStep()) 
+        if (!engineState.isPaused() or engineState.getAdvanceStep())
         {
             const int   kMaxStepsPerFrame = 8;
             const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
             accumulator = std::min(accumulator + deltaTime, kMaxAccum);
 
+            // single step advance
             if (engineState.getAdvanceStep()) {
                 accumulator = fixedTimeStep;
             }
 
+            // stepping loop
             int steps = 0;
-            while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
+            while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame)
             {
                 for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
                 {
@@ -264,19 +271,26 @@ int main()
             }
         }
 
+        // single step advance flag reset
         if (engineState.getAdvanceStep()) {
             engineState.setAdvanceStep(false);
         }
 
+        // object rain
         if (!engineState.isPaused()) {
             if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
             else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
         }
 
-        frameTimers.endFrame();  
-        imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
-        imguiManager.selectedObjectUI(editor.selectedObject);
-        imguiManager.render();
+        // ImGui rendering
+        {
+            ScopedTimer a(frameTimers, "ImGui");
+            imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
+            imguiManager.selectedObjectUI(editor.selectedObject);
+            imguiManager.render();
+        }
+
+        frameTimers.endFrame();
 
         // swap buffers
         glfwSwapBuffers(window);

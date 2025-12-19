@@ -49,11 +49,12 @@ void Light::setupMesh() {
     glEnableVertexAttribArray(0);
 }
 
-void Light::render(const Shader& shader) const
+void Light::render(Shader& shader) const
 {
     glm::mat4 model = glm::translate(glm::mat4(1.0f), position);
     model = glm::scale(model, this->scale); 
 
+    shader.use();
     shader.setMat4("model", model);
     shader.setBool("useTexture", false);
     shader.setBool("useUniformColor", true);

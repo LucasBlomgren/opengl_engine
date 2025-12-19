@@ -1,9 +1,12 @@
 #include "pch.h"
 #include "imgui_manager.h"
 
-void ImGuiManager::init(GLFWwindow* window, EngineState& es, SceneBuilder& sb) {
+void ImGuiManager::init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm) {
     this->engineState = &es;
     this->sceneBuilder = &sb;
+    this->meshManager = &mm;
+    this->renderer = &r;
+    this->textureManager = &tm;
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -41,6 +44,9 @@ void ImGuiManager::shutdown() {
     ImGui::DestroyContext();
 }
 
+//--------------------------------
+//           Main UI
+// -------------------------------
 void ImGuiManager::mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpuT, size_t amountObjects) {
     ImGui::Begin("Engine", nullptr, ImGuiWindowFlags_NoTitleBar);
 
@@ -55,6 +61,9 @@ void ImGuiManager::mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& 
     ImGui::End();
 }
 
+//--------------------------------
+//          Settings UI
+// -------------------------------
 void ImGuiManager::settingsUI() {
     ImGui::SeparatorText("Objects");
     ImGui::Spacing();
@@ -123,6 +132,9 @@ void ImGuiManager::settingsUI() {
     //ImGui::SliderFloat3("Position", (float*)&pos, -10.0f, 10.0f);
 }
 
+//--------------------------------
+//         Performance UI
+// -------------------------------
 void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpuT, size_t amountObjects)
 {
     // Ringbuffer för frametime i ms
@@ -155,8 +167,10 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
     static float dt_ui = 0.0f;
     static float framerate_ui = 0.0f;
 
-    static float phys_ui = 0.0f;
     static float renderSub_ui = 0.0f;
+    static float editor_ui = 0.0f;  
+    static float imgui_ui = 0.0f;   
+    static float phys_ui = 0.0f;
 
     static float cpu_total_ms = 0.0f;
     static float gpu_total_ms = 0.0f;
@@ -182,15 +196,16 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
         framerate_ui = io->Framerate;
         dt_ui = deltaTime * 1000.0f;
 
-        renderSub_ui = frameTimers.get("Render");
-        phys_ui = frameTimers.get("Physics");
-
-        cpu_total_ms = phys_ui + renderSub_ui;
         gpu_total_ms = gpuT.totalMs();
-
         gpuShadowMs_ui = gpuT.shadowMs;
         gpuMainMs_ui = gpuT.mainMs;
         gpuDebugMs_ui = gpuT.debugMs;
+
+        renderSub_ui = frameTimers.get("Render");
+        editor_ui = frameTimers.get("Editor");
+        imgui_ui = frameTimers.get("ImGui");
+        phys_ui = frameTimers.get("Physics");
+        cpu_total_ms = phys_ui + renderSub_ui + editor_ui + imgui_ui;
 
         preStep_ui = frameTimers.get("Pre step");
         bvhUpdate_ui = frameTimers.get("BVH update");
@@ -240,9 +255,6 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
 
     // ---- Header ----
     ImGui::Text("Frame %.2f ms | %.0f FPS", dt_ui, framerate_ui);
-    ImGui::SameLine();
-    ImGui::TextDisabled(" | Objects: %zu", amountObjects);
-
     // Tooltip för headern (CPU/GPU total)
     if (ImGui::IsItemHovered())
     {
@@ -251,6 +263,8 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
         ImGui::Text("GPU  %.2f ms", gpu_total_ms);
         ImGui::EndTooltip();
     }
+    ImGui::SameLine();
+    ImGui::TextDisabled(" | Objects: %zu", amountObjects);
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -284,7 +298,15 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
 
         // --- GPU group header ---
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::TextDisabled("GPU");
+        ImGui::TableNextColumn(); 
+        ImGui::TextDisabled("GPU");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("CPU  %.2f ms", cpu_total_ms);
+            ImGui::Text("GPU  %.2f ms", gpu_total_ms);
+            ImGui::EndTooltip();
+        }
         ImGui::TableNextColumn(); ImGui::TableNextColumn();
 
         Row("Shadow", gpuShadowMs_ui, gpu_total_ms);
@@ -293,11 +315,21 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
 
         // --- CPU group header ---
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::TextDisabled("CPU");
+        ImGui::TableNextColumn(); 
+        ImGui::TextDisabled("CPU");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("CPU  %.2f ms", cpu_total_ms);
+            ImGui::Text("GPU  %.2f ms", gpu_total_ms);
+            ImGui::EndTooltip();
+        }
         ImGui::TableNextColumn(); ImGui::TableNextColumn();
 
         // Render submit som vanlig rad (share av CPU total)
         Row("Render submit", renderSub_ui, cpu_total_ms);
+        Row("Editor", editor_ui, cpu_total_ms);
+        Row("ImGui", imgui_ui, cpu_total_ms);
 
         // === Physics (expanderbar) ===
         ImGui::TableNextRow();
@@ -327,10 +359,15 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
                 {"Post",     postStep_ui}
             };
 
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::Spacing();
+
+            //ImGui::TableNextRow(0, ImGui::GetTextLineHeightWithSpacing());
+            ImGui::TableNextRow();
+
             for (auto& s : subs)
             {
-                ImGui::TableNextRow();
-
                 ImGui::TableNextColumn();
                 ImGui::Indent(20.0f);
                 ImGui::TextUnformatted(s.name);   // TextUnformatted: för färdig sträng
@@ -352,9 +389,19 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
     ImGui::PopStyleVar();
 }
 
+//--------------------------------
+//       Selected object UI
+// -------------------------------
 void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 {
     ImGui::Begin("Selected Object", nullptr, ImGuiWindowFlags_NoTitleBar);
+
+    if (!ImGui::CollapsingHeader("Inspector",
+        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed))
+        return;
+
+    ImGui::Spacing();
+    ImGui::Spacing();
 
     if (!objPtr) {
         ImGui::TextDisabled("No object selected");
@@ -363,20 +410,298 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
     }
 
     GameObject& obj = *objPtr;
-    ImGui::Text("Position: (%.2f, %.2f, %.2f)", obj.position.x, obj.position.y, obj.position.z);
 
-    glm::vec3 scale = obj.scale;
-    if (ImGui::DragFloat3("Scale", &scale.x, 0.1f, 0.5f, 1000.f)) {
-        obj.scale = scale;
-    }
-    if (ImGui::IsItemDeactivatedAfterEdit()) {
-        obj.calculateInverseInertia();
+    ImGui::Text("Object ID: %d", obj.id);
+    ImGui::Spacing();
+
+    // --- Helpers for 2-col inspector layout ---
+    const ImGuiTableFlags tblFlags =
+        ImGuiTableFlags_SizingFixedFit |
+        ImGuiTableFlags_BordersInnerV |
+        ImGuiTableFlags_RowBg;
+
+    auto BeginSection = [&](const char* title) {
+        ImGui::Spacing();
+        ImGui::SeparatorText(title);
+        ImGui::Spacing();
+        ImGui::BeginTable(title, 2, tblFlags);
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 95.0f);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+        };
+
+    auto EndSection = [&]() {
+        ImGui::EndTable();
+        };
+
+    auto RowText = [&](const char* label, const char* value) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextUnformatted(value);
+        };
+
+    auto RowCheckbox = [&](const char* label, const char* id, bool& v) -> bool {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        return ImGui::Checkbox(id, &v);
+        };
+
+    auto RowDragFloat = [&](const char* label, const char* id, float& v,
+        float speed, float vmin, float vmax) -> bool
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(label);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            return ImGui::DragFloat(id, &v, speed, vmin, vmax);
+        };
+
+    auto RowDragFloat3 = [&](const char* label, const char* id, glm::vec3& v,
+        float speed, float vmin, float vmax) -> bool
+        {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(label);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            return ImGui::DragFloat3(id, &v.x, speed, vmin, vmax);
+        };
+
+    // -----------------
+    // Render section
+    // -----------------
+    BeginSection("Render");
+
+    // Mesh
+    {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Mesh");
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        static int currentItem = 0;
+        const char* items[] = { "Cube","Sphere","Teapot","Pylon","Tank" };
+
+        ImGui::TableSetColumnIndex(1);
+
+        float avail = ImGui::GetContentRegionAvail().x;
+        float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+        ImGui::SetNextItemWidth(avail - btnW - spacing);
+        ImGui::Combo("##mesh", &currentItem, items, IM_ARRAYSIZE(items));
+
+        ImGui::SameLine();
+        if (ImGui::Button("Load##mesh"))
+        {
+            Mesh* mesh = nullptr;
+            switch (currentItem) {
+            case 0: mesh = meshManager->getMesh("cube"); break;
+            case 1: mesh = meshManager->getMesh("sphere"); break;
+            case 2: mesh = meshManager->getMesh("teapot"); break;
+            case 3: mesh = meshManager->getMesh("pylon"); break;
+            //case 4: mesh = meshManager->getMesh("girl"); break;
+            case 4: mesh = meshManager->getMesh("tank"); break;
+            }
+            if (mesh) {
+                obj.mesh = mesh;
+                obj.initMesh();
+                obj.initCollider();
+                renderer->removeObjectFromBatch(&obj);
+                renderer->addObjectToBatch(&obj);
+            }
+        }
     }
 
-    glm::vec3 uiEulerDeg = glm::degrees(glm::eulerAngles(obj.orientation));
-    if (ImGui::DragFloat3("Rotation (deg)", &uiEulerDeg.x, 0.5f, -180.f, 180.f)) {
-        obj.orientation = glm::quat(glm::radians(uiEulerDeg));
+    // Texture
+    {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Texture");
+
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        static int currentItem = 0;
+        const char* items[] = { "Plain", "Crate", "UVmap", "Terrain"};
+
+        ImGui::TableSetColumnIndex(1);
+
+        float avail = ImGui::GetContentRegionAvail().x;
+        float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+        ImGui::SetNextItemWidth(avail - btnW - spacing);
+        ImGui::Combo("##texture", &currentItem, items, IM_ARRAYSIZE(items));
+
+        ImGui::SameLine();
+        if (ImGui::Button("Load##texture"))
+        {
+            int texId = -1;
+            switch (currentItem) {
+            case 0: texId = 999; break;
+            case 1: texId = textureManager->getTexture("crate"); break;
+            case 2: texId = textureManager->getTexture("uvmap"); break;
+            case 3: texId = textureManager->getTexture("terrain2"); break;
+            }
+            if (texId != -1) {
+                obj.textureId = texId;
+                renderer->removeObjectFromBatch(&obj);
+                renderer->addObjectToBatch(&obj);
+            }
+        }
     }
+
+    // Color
+    {
+        glm::vec3 color = obj.color * 255.f;
+        if (RowDragFloat3("Color", "##color", color, 1.0f, 0.f, 255.f)) {
+            obj.color = color;
+            obj.color /= 255.0f;
+        }
+    }
+
+    EndSection();
+
+    // -----------------
+    // Transform section
+    // -----------------
+    BeginSection("Transform");
+
+    // Position
+    {
+        glm::vec3 pos = obj.position;
+        if (RowDragFloat3("Position", "##pos", pos, 0.1f, -1000.f, 1000.f)) {
+            obj.position = pos;
+            obj.modelMatrixDirty = true;
+            obj.aabbDirty = true;
+            obj.setModelMatrix();
+            obj.updateAABB();
+            obj.updateCollider();
+        }
+    }
+
+    // Scale
+    {
+        glm::vec3 scale = obj.scale;
+        if (RowDragFloat3("Scale", "##scale", scale, 0.1f, 0.5f, 1000.f)) {
+            obj.scale = scale;
+            obj.modelMatrixDirty = true;
+        }
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            obj.calculateInverseInertia();
+        }
+    }
+
+    // Rotation (stored UI state)
+    {
+        static bool init = false;
+        static glm::vec3 uiDeg;
+        static glm::vec3 lastUiDeg;
+
+        if (!init) {
+            uiDeg = glm::degrees(glm::eulerAngles(obj.orientation));
+            lastUiDeg = uiDeg;
+            init = true;
+        }
+
+        if (RowDragFloat3("Rotation", "##rot", uiDeg, 0.5f, -720.f, 720.f)) {
+            glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
+
+            glm::quat dq =
+                glm::angleAxis(deltaRad.x, glm::vec3(1, 0, 0)) *
+                glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
+                glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
+
+            obj.orientation = glm::normalize(obj.orientation * dq);
+            obj.modelMatrixDirty = true;
+
+            lastUiDeg = uiDeg;
+        }
+    }
+
+    EndSection();
+
+    // --------------
+    // Physics section
+    // --------------
+    BeginSection("Physics");
+
+    // Static checkbox
+    {
+        bool isStatic = obj.isStatic;
+        if (RowCheckbox("Static", "##static", isStatic)) {      // får dubbel gravitation för den hamnar i både statisk och dynamisk bvh 
+            obj.isStatic = isStatic;
+            if (isStatic) {
+                obj.mass = 0.0f;
+                obj.invMass = 0.0f;
+                obj.linearVelocity = glm::vec3(0.0f);
+                obj.angularVelocity = glm::vec3(0.0f);
+                obj.allowGravity = false;
+                obj.asleep = false;
+            }
+            else {
+                obj.mass = 1.0f;
+                obj.invMass = 1.0f / obj.mass;
+                obj.allowGravity = true;
+                obj.linearVelocity = glm::vec3(0.0f);
+                obj.angularVelocity = glm::vec3(0.0f);
+
+                obj.allowSleep = false; // // hack for static object made dynamic (because cant move from static bvh to dynamic/asleep bvh)
+                obj.sleepCounterThreshold = FLT_MAX;
+            }
+        }
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            obj.calculateInverseInertia();
+        }
+    }
+
+    // Mass
+    {
+        float mass = obj.mass;
+        if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.f)) {
+            if (!obj.isStatic) {
+                obj.mass = mass;
+                obj.invMass = 1.0f / mass;
+            }
+        }
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            obj.calculateInverseInertia();
+        }
+    }
+
+    // Linear velocity
+    {
+        glm::vec3 vel = obj.linearVelocity;
+        if (RowDragFloat3("Linear vel", "##linvel", vel, 0.1f, -1000.f, 1000.f)) {
+            obj.linearVelocity = vel;
+        }
+    }
+
+    // Angular velocity
+    {
+        glm::vec3 angVel = obj.angularVelocity;
+        if (RowDragFloat3("Angular vel", "##angvel", angVel, 0.1f, -1000.f, 1000.f)) {
+            obj.angularVelocity = angVel;
+        }
+    }
+
+    EndSection();
 
     ImGui::End();
 }

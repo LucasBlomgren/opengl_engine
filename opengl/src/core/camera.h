@@ -52,8 +52,8 @@ public:
     {
         position = pos;
         worldUp = up;
-        yaw = yaw;
-        pitch = pitch;
+        this->yaw = yaw;
+        this->pitch = pitch;
         updateCameraVectors();
     }
 

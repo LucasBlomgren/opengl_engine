@@ -98,7 +98,7 @@ void SceneBuilder::testFloorScene() {
                 float x = -15.0f + i * (cubeSize + spacing);
                 float y = 0.5f + j * (cubeSize + spacing);
                 float z = -15.0f + k * (cubeSize + spacing);
-                createObject("crate", "cube", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(cubeSize), 1, 0, glm::quat(1, 0, 0, 0), 0.75, 1);
+                createObject("crate", "cube", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(cubeSize), 1, 0, glm::quat(1, 0, 0, 0), 1.0, 1);
             }
         }
     }
@@ -657,14 +657,12 @@ void SceneBuilder::mainScene() {
     createBrickWall(glm::vec3(10, 0, 195), 1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
 
 
-    orientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    createObject("plain", "girl", ColliderType::CUBOID, glm::vec3(-20, 0, 0), glm::vec3(0.0135), 1, 0, orientation, 3.5f, 0, glm::vec3(-1,-1,-1));
-    GameObject& girlObj = dynamicObjects.back();
-    girlObj.useRandomColor = true;
+    //orientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    //createObject("plain", "girl", ColliderType::CUBOID, glm::vec3(-20, 0, 0), glm::vec3(0.0135), 1, 0, orientation, 3.5f, 0, glm::vec3(-1,-1,-1));
+    //GameObject& girlObj = dynamicObjects.back();
+    //girlObj.useRandomColor = true;
 
     createObject("plain", "tank", ColliderType::CUBOID, glm::vec3(-20, 0, 0), glm::vec3(1), 1, 0, orientation, 3.5f, 0, glm::vec3(-1,-1,-1));
     GameObject& tankObj = dynamicObjects.back();
     tankObj.useRandomColor = true;
-
-    createObject("plain", "cube", ColliderType::CUBOID, glm::vec3(-20, 0, 0), glm::vec3(1.58, 2.32, 0.42), 1, 0, orientation, 3.5f, 0, glm::vec3(-1, -1, -1));
 }

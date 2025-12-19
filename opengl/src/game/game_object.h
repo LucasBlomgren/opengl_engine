@@ -47,23 +47,15 @@ struct CircBuffer {
 
 class GameObject {
 public:
-    // player variables
-    bool player = false;
-    glm::vec3 playerMoveImpulse{ 0.0f };
-    float playerJumpImpulse = 0.0f;
-    bool onGround = false;
-    bool hasJumped = false;
-
-   // mesh variables
+    // general
     int id;
     glm::vec3 position;
     std::vector<glm::vec3> verticesPositions;
 
-    bool isInsideShadowFrustum = true;
-
     glm::mat4 modelMatrix;
     bool modelMatrixDirty = true;
     bool seeThrough = false;
+    bool isInsideShadowFrustum = true;
 
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
@@ -71,13 +63,16 @@ public:
     glm::mat3 invRotationMatrix;
     bool helperMatricesDirty = true;
 
+    // render
     Shader* shader = nullptr;
     Mesh* mesh = nullptr;
     GLuint textureId;
     glm::vec3 color;
     bool useRandomColor = false;
+    int batchIdx = -1;
+    int batchInstanceIdx = -1;
 
-    // physics variables
+    // physics
     glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
     glm::mat3 inverseInertia;
     glm::mat3 inverseInertiaWorld;
@@ -101,7 +96,7 @@ public:
     float radius;
     float invRadius;
 
-    // sleep variables
+    // sleep
     bool asleep = false;
     bool allowSleep = true;
     float sleepCounter = 0;
@@ -114,24 +109,31 @@ public:
     float lastAvg = 0.0f;
     CircBuffer collisionHistory;
 
-    // collision variables
+    // collision
     AABB aabb;
     bool aabbDirty = true;
     Collider collider;
     ColliderType colliderType;
     OOBBRenderer oobbRenderer;
 
+    // BVH
     int bvhLeafIdx       = -1;
     int dynamicObjectIdx = -1;
     int awakeListIdx     = -1;
     int asleepListIdx    = -1;
     int staticListIdx    = -1;
 
-    // editor variables
+    // editor
     bool selectedByEditor = false;
     glm::vec3 lastPosition;
-    glm::vec3 pushCorrection;
-    
+
+    // player variables
+    bool player = false;
+    glm::vec3 playerMoveImpulse{ 0.0f };
+    float playerJumpImpulse = 0.0f;
+    bool onGround = false;
+    bool hasJumped = false;
+
     // constructor
     GameObject(
         int id,
@@ -180,42 +182,15 @@ public:
         }
 
         // plain color
-        if (textureId == 999 && color.x != -1)      // color.x for random color shader hack
-           this->color = color / 255.0f;
+        //if (textureId == 999 && color.x != -1)      // color.x for random color shader hack
+        this->color = color / 255.0f;
 
-        for (const Vertex& vertex : mesh->vertices) {
-            verticesPositions.push_back(vertex.position);
-        }
-
-        setModelMatrix();
-
-        // render mesh
-        //setupMesh();
-
-        // AABB 
-        aabb.Init(verticesPositions);
-        aabb.update(modelMatrix, position, scale, isRotated);
-
-        // Collider
-        if (colliderType == ColliderType::CUBOID) {
-            OOBB box(verticesPositions, modelMatrix, scale);
-            collider.shape = box;
-
-            calculateInverseInertia();
-
-            oobbRenderer.setupWireframeBox();
-            oobbRenderer.setupNormals();
-        }
-        else if (colliderType == ColliderType::SPHERE) {
-            Sphere sphere(modelMatrix, scale.x);
-            collider.shape = sphere; 
-
-            calculateInverseInertia();
-        }
-
-        inverseInertiaWorld = inverseInertia; 
+        initMesh();
+        initCollider();
     }
 
+    void initMesh();
+    void initCollider();
     void resetDirtyFlags();
     void setModelMatrix();
     void setHelperMatrices();

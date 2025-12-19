@@ -139,6 +139,41 @@ void GameObject::updateCollider() {
     }, collider.shape);
 }
 
+void GameObject::initMesh() {
+    verticesPositions.clear();
+    for (const Vertex& vertex : mesh->vertices) {
+        verticesPositions.push_back(vertex.position);
+    }
+
+    modelMatrixDirty = true;
+    setModelMatrix();
+}
+
+void GameObject::initCollider() {
+    // AABB 
+    aabb.Init(verticesPositions);
+    aabb.update(modelMatrix, position, scale, isRotated);
+
+    // Collider
+    if (colliderType == ColliderType::CUBOID) {
+        OOBB box(verticesPositions, modelMatrix, scale);
+        collider.shape = box;
+
+        calculateInverseInertia();
+
+        oobbRenderer.setupWireframeBox();
+        oobbRenderer.setupNormals();
+    }
+    else if (colliderType == ColliderType::SPHERE) {
+        Sphere sphere(modelMatrix, scale.x);
+        collider.shape = sphere;
+
+        calculateInverseInertia();
+    }
+
+    inverseInertiaWorld = inverseInertia;
+}
+
 void GameObject::updatePos(const float& dt) {
     if (selectedByEditor)
         return;

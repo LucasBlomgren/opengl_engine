@@ -2,8 +2,6 @@
 #include "editor.h"
 
 void Editor::setPointers(
-    const unsigned int SCR_WIDTH,
-    const unsigned int SCR_HEIGHT,
     GLFWwindow* window,
     InputManager* inputManager,
     EngineState* engineState,
@@ -12,8 +10,6 @@ void Editor::setPointers(
     Camera* camera,
     SkyboxManager* skyboxManager) 
 {
-    this->SCR_HEIGHT = SCR_HEIGHT;
-    this->SCR_WIDTH = SCR_WIDTH;
     this->window = window;
     this->inputManager = inputManager;
     this->engineState = engineState;
@@ -51,8 +47,11 @@ void Editor::cameraMode() {
 }
 
 void Editor::update(float& deltaTime, Shader& shader) {
+
+    // update selected object
     updateSelectedObject(deltaTime);
 
+    // toggle debug info
     if (engineState->GetPressedKey() == "6") {
         sceneBuilder->toggleLightsState();
     }
@@ -66,28 +65,34 @@ void Editor::update(float& deltaTime, Shader& shader) {
         this->objectRainSpheres = !this->objectRainSpheres;
     }
 
-    if (engineState->GetPressedKey() == "j") {
-        GameObject* obj = &sceneBuilder->getDynamicObjects()[1];
-        physicsEngine->queueAdd(obj);
+    // place/select/drop object
+    if (engineState->isPlayerMode()) {
+        if (engineState->GetPressedKey() == "M1_PRESS")
+            selectObject();
+        if (engineState->GetPressedKey() == "M1_RELEASE")
+            dropObject();
+        if (engineState->GetPressedKey() == "M2_PRESS")
+            placeObject();
     }
-    if (engineState->GetPressedKey() == "k") {
-        GameObject* obj = &sceneBuilder->getDynamicObjects()[1];
-        physicsEngine->queueRemove(obj);
+    else {
+        if (engineState->GetPressedKey() == "M1_PRESS") {
+            if (selectedObject == nullptr) {
+                selectObject();
+            } else {
+                dropObject();
+            }
+        }
+        if (engineState->GetPressedKey() == "M2_PRESS")
+            placeObject();
     }
-
-    if (engineState->GetPressedKey() == "M1_PRESS") 
-        placeObject();
-    if (engineState->GetPressedKey() == "M2_PRESS")
-        selectObject();
-    if (engineState->GetPressedKey() == "M2_RELEASE")
-        dropObject();
-
+    // shoot crate
     if (engineState->GetPressedKey() == "M3_PRESS") {
         GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-        newObject.linearVelocity = camera->front * 150.0f;
+        newObject.linearVelocity = camera->front * 100.0f;
         newObject.asleep = false;
     }
 
+    // load scenes
     if (engineState->GetPressedKey() == "F1") {
         sceneBuilder->createScene(0);
         selectedObject = nullptr;
@@ -116,6 +121,8 @@ void Editor::update(float& deltaTime, Shader& shader) {
         sceneBuilder->createScene(6);
         selectedObject = nullptr;
     }
+
+    // loading scene: create player object in player mode if not exists
     if (engineState->GetPressedKey() == "F1" || 
         engineState->GetPressedKey() == "F2" || 
         engineState->GetPressedKey() == "F3" || 
@@ -135,11 +142,13 @@ void Editor::update(float& deltaTime, Shader& shader) {
         }
     }
 
+    // toggle day/night
     if (engineState->GetPressedKey() == "F9") {
         skyboxManager->toggleTexture();
         sceneBuilder->toggleDayNight();
     }
 
+    // sleep/awaken all objects
     if (engineState->GetPressedKey() == "F10") {
         physicsEngine->sleepAllObjects();
     }
@@ -147,6 +156,7 @@ void Editor::update(float& deltaTime, Shader& shader) {
         physicsEngine->awakenAllObjects();
     }
 
+    // toggle player mode
     if (engineState->GetPressedKey() == "q") {
         engineState->setPlayerMode(!engineState->isPlayerMode());
 
@@ -215,7 +225,7 @@ void Editor::placeObject() {
     glm::vec3 size{ OBJ_PLACE_SIZE };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 0.5f, 1);
+    GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
     newObject.linearVelocity = glm::vec3(0.0f);
 }
 
@@ -248,6 +258,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
         std::vector<GameObject*> collisions;
+        collisions.reserve(100); 
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
         if (collisions.size() == 0) {
@@ -299,9 +310,11 @@ void Editor::dropObject() {
         GameObject* obj = selectedObject;
         physicsEngine->queueAdd(obj);
 
-        selectedObject->sleepCounterThreshold = 0.5f;
+        if (selectedObject->sleepCounterThreshold > 1000.0f) // hack for static object made dynamic (because cant move from static bvh to dynamic/asleep bvh)
+            selectedObject->sleepCounterThreshold = 1.5f;
+
         selectedObject->sleepCounter = 0.0f;
-        selectedObject->angularVelocity = glm::vec3(0.0f);
+        //selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
         return;
     }
@@ -311,17 +324,17 @@ void Editor::selectObject() {
     if (selectedObject)
         return;
 
-    RaycastHit hitData = rayCast(5000);
+    RaycastHit& hitData = lastHitData;
 
     // no hit return
     if (hitData.object == nullptr) {
         return;
     }
     selectedObject = hitData.object;
-    if (selectedObject->isStatic) {
-        selectedObject = nullptr;
-        return;
-    }
+    //if (selectedObject->isStatic) {
+    //    selectedObject = nullptr;
+    //    return;
+    //}
 
     selectedObject->selectedByEditor = true;
     selectedObject->asleep = false;
@@ -330,7 +343,7 @@ void Editor::selectObject() {
     GameObject* obj = selectedObject;
     physicsEngine->queueAdd(obj);
 
-    selectedObject->sleepCounterThreshold = 1000000.0f;
+    selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
     selectedObject->lastPosition = selectedObject->position;
 
     selectedObject->linearVelocity = glm::vec3(0.0f);
@@ -344,7 +357,7 @@ void Editor::selectObject() {
 }
 
 void Editor::updateSelectedObject(float fixedTimeStep) {
-    if (!selectedObject) 
+    if (!selectedObject or selectedObject->isStatic) 
         return; 
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
@@ -352,10 +365,20 @@ void Editor::updateSelectedObject(float fixedTimeStep) {
     // position
     glm::vec3 newPos = camera->position + worldOffset;
     selectedObject->position = newPos;
+
+
     // velocity
-    selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
+    if (engineState->isPlayerMode())
+        selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
 
     selectedObject->lastPosition = newPos;
+
+
+    selectedObject->modelMatrixDirty = true;
+    selectedObject->aabbDirty = true;   
+    selectedObject->setModelMatrix();
+    selectedObject->updateAABB();
+    selectedObject->updateCollider();
 }
 
 RaycastHit Editor::rayCast(float length) {

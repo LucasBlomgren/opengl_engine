@@ -45,6 +45,9 @@ public:
     bool IsKeyDown(int key) const;
     void SetKeyState(int key, bool down);
 
+    bool heldM1 = false;
+    bool heldM2 = false;
+
 private:
     bool cameraMode = true; // true = mouse camera mode, false = free mouse
     bool playerMode = false;
