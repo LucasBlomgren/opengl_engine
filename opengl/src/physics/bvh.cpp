@@ -243,7 +243,7 @@ void BVHTree<E>::removeLeaf(int leafIdx)
 //------------------------------
 template<typename E>
 void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements) {
-    if (numRefits > rebuildThreshold or numIterationsSinceRebuild >= updateInterval) {
+    if (numRefits > rebuildThreshold /* or numIterationsSinceRebuild >= updateInterval*/) {
         // för många refits, bygg om trädet
         build(elements, indexes, useAllElements);
         numRefits = 0; 

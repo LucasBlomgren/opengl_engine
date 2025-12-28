@@ -9,11 +9,12 @@
 #include "scene_builder.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/textures/texture_manager.h"
+#include "graphics/skybox/skybox_manager.h"
 #include "timer.h"
 
 class ImGuiManager {
 public:
-    void init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm);
+    void init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm, SkyboxManager& sm);
     void newFrame();
     void setInputMode(bool cameraMode);
     void render();
@@ -31,6 +32,7 @@ private:
     MeshManager* meshManager = nullptr;
     Renderer* renderer = nullptr;   
     TextureManager* textureManager = nullptr;
+    SkyboxManager* skyboxManager = nullptr;
     ImGuiIO* io = nullptr;
 
     float uiTimer = 0.0f;

@@ -135,6 +135,7 @@ public:
     float randomRange(float start, float end);
 
     int playerObjectId = -1;
+    int lightsState = 0;
 
 private:
     PhysicsEngine& physicsEngine;
@@ -149,7 +150,7 @@ private:
     std::vector<GameObject> dynamicObjects;
     std::vector<GameObject> staticObjects;
 
-    int lightsState = 0;
+    //int lightsState = 0;
     int dayNightCycle = 0;
 
     float lastTime = 0.0f;

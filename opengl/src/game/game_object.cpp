@@ -109,6 +109,8 @@ void GameObject::calculateInverseInertia() {
     else if (colliderType == ColliderType::SPHERE) {
         inertiaSphere();
     }
+
+	inverseInertiaWorld = inverseInertia;   
 }
 
 void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
@@ -159,19 +161,15 @@ void GameObject::initCollider() {
         OOBB box(verticesPositions, modelMatrix, scale);
         collider.shape = box;
 
-        calculateInverseInertia();
-
         oobbRenderer.setupWireframeBox();
         oobbRenderer.setupNormals();
     }
     else if (colliderType == ColliderType::SPHERE) {
         Sphere sphere(modelMatrix, scale.x);
         collider.shape = sphere;
-
-        calculateInverseInertia();
     }
 
-    inverseInertiaWorld = inverseInertia;
+    calculateInverseInertia();
 }
 
 void GameObject::updatePos(const float& dt) {

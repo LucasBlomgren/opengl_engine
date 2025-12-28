@@ -3,24 +3,16 @@
 class ShaderManager {
 public:
     ShaderManager() {
-        Shader defaultShader("src/graphics/shaders/default.vert", "src/graphics/shaders/default.frag");
-        Shader defaultInstancedShader("src/graphics/shaders/default_instanced.vert", "src/graphics/shaders/default.frag");
+        shaders["default"]					= Shader("src/graphics/shaders/default.vert", "src/graphics/shaders/default.frag");
+		shaders["default_instanced"]		= Shader("src/graphics/shaders/default_instanced.vert", "src/graphics/shaders/default.frag");
+		shaders["default"].instancedVariant = &shaders["default_instanced"];
 
-        Shader shadowShader("src/graphics/shaders/shadow.vert", "src/graphics/shaders/shadow.frag");
-        Shader shadowInstancedShader("src/graphics/shaders/shadow_instanced.vert", "src/graphics/shaders/shadow.frag");
+		shaders["shadow"]					= Shader("src/graphics/shaders/shadow.vert", "src/graphics/shaders/shadow.frag");
+		shaders["shadow_instanced"]			= Shader("src/graphics/shaders/shadow_instanced.vert", "src/graphics/shaders/shadow.frag");
+        shaders["shadow"].instancedVariant	= &shaders["shadow_instanced"];
 
-        Shader debugShader("src/graphics/shaders/debug.vert", "src/graphics/shaders/debug.frag");
-        Shader skyboxShader("src/graphics/shaders/skybox.vert", "src/graphics/shaders/skybox.frag");
-
-        shaders["default"] = defaultShader;
-        shaders["default_instanced"] = defaultInstancedShader;
-        shaders["shadow"] = shadowShader;
-        shaders["shadow_instanced"] = shadowInstancedShader;
-        shaders["debug"]   = debugShader;
-        shaders["skybox"]  = skyboxShader;
-
-        shaders["default"].instancedVariant = &shaders["default_instanced"];
-        shaders["shadow"].instancedVariant = &shaders["shadow_instanced"];
+		shaders["debug"]					= Shader("src/graphics/shaders/debug.vert", "src/graphics/shaders/debug.frag");
+		shaders["skybox"]					= Shader("src/graphics/shaders/skybox.vert", "src/graphics/shaders/skybox.frag");
     };
 
     Shader* getShader(const std::string& name);

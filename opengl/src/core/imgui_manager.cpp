@@ -1,12 +1,21 @@
 #include "pch.h"
 #include "imgui_manager.h"
 
-void ImGuiManager::init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm) {
+void ImGuiManager::init(
+    GLFWwindow* window, 
+    EngineState& es, 
+    SceneBuilder& sb, 
+    MeshManager& mm, 
+    Renderer& r, 
+    TextureManager& tm,
+    SkyboxManager& sm) 
+{
     this->engineState = &es;
     this->sceneBuilder = &sb;
     this->meshManager = &mm;
     this->renderer = &r;
     this->textureManager = &tm;
+    this->skyboxManager = &sm;
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -48,7 +57,21 @@ void ImGuiManager::shutdown() {
 //           Main UI
 // -------------------------------
 void ImGuiManager::mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpuT, size_t amountObjects) {
-    ImGui::Begin("Engine", nullptr, ImGuiWindowFlags_NoTitleBar);
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImVec2 pos = vp->WorkPos;    // tar hänsyn till ev. menu bar/dockspace
+    ImVec2 size = vp->WorkSize;  // “arbetsytan” i viewporten
+
+    const float w = 310.0f;      // din fasta bredd, ändra som du vill
+
+    ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(w, size.y), ImGuiCond_Always);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::Begin("Engine", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |          // rekommenderas när du styr size själv
+        ImGuiWindowFlags_NoMove);            // rekommenderas när du styr pos själv
 
     if (ImGui::CollapsingHeader("Performance", ImGuiTreeNodeFlags_DefaultOpen))
         performanceUI(deltaTime, frameTimers, gpuT, amountObjects);
@@ -59,6 +82,7 @@ void ImGuiManager::mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& 
         settingsUI();
 
     ImGui::End();
+	ImGui::PopStyleVar(2);
 }
 
 //--------------------------------
@@ -107,6 +131,18 @@ void ImGuiManager::settingsUI() {
     ImGui::NewLine();
     ImGui::SeparatorText("Scene");
     ImGui::Spacing();
+
+
+    if (ImGui::Button("Toggle Skybox")) {
+        skyboxManager->toggleTexture();
+    }
+    if (ImGui::Button("Toggle Day/Night")) {
+        sceneBuilder->toggleDayNight();
+    }
+    if (ImGui::Button("Toggle Lightsources")) {
+        sceneBuilder->toggleLightsState();
+    }
+
     static int currentItem = 0;
     const char* items[] = { "Test", "Empty", "Main", "Terrain", "Tall structure", "Tumbler", "Castle", "Invisible container", "Pile shape"};
 
@@ -394,11 +430,31 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
 // -------------------------------
 void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 {
-    ImGui::Begin("Selected Object", nullptr, ImGuiWindowFlags_NoTitleBar);
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImVec2 workPos = vp->WorkPos;
+    ImVec2 workSize = vp->WorkSize;
 
-    if (!ImGui::CollapsingHeader("Inspector",
-        ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed))
+    const float w = 310.0f;
+
+    const float pad = 0.0f;
+    ImVec2 rightPos(workPos.x + workSize.x - w - pad, workPos.y + pad);
+    ImGui::SetNextWindowSize(ImVec2(w, workSize.y - 2 * pad), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(rightPos, ImGuiCond_Always);
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::Begin("Selected Object", nullptr,
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove
+        // | ImGuiWindowFlags_NoSavedSettings  // (valfritt) om du inte vill att imgui.ini påverkar
+    );
+
+    if (!ImGui::CollapsingHeader("Inspector", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed)) {
+        ImGui::End();
+        ImGui::PopStyleVar(2);
         return;
+    }
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -406,6 +462,7 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
     if (!objPtr) {
         ImGui::TextDisabled("No object selected");
         ImGui::End();
+        ImGui::PopStyleVar(2);
         return;
     }
 
@@ -704,4 +761,5 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
     EndSection();
 
     ImGui::End();
+    ImGui::PopStyleVar(2);
 }

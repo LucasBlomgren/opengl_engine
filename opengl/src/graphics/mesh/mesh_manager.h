@@ -15,6 +15,7 @@ public:
 
         std::vector<Vertex> teapotVerts         = loadVerticesFromTxt("src/assets/teapot_vertices.txt");
         std::vector<unsigned int> teapotIndices = loadIndicesFromTxt("src/assets/teapot_indices.txt");
+		recenterVertices(teapotVerts);
 
         std::vector<Vertex> pylonVerts          = loadVerticesFromTxt("src/assets/pylon_vertices.txt");
         std::vector<unsigned int> pylonIndices  = loadIndicesFromTxt("src/assets/pylon_indices.txt");

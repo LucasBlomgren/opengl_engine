@@ -134,7 +134,7 @@ int main()
     editor.setPointers(window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
 
     // ImGui setup
-    imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager);
+    imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager, skyboxManager);
 
     // main loop
     while (true) {
@@ -258,6 +258,7 @@ int main()
 
                         // --- 4) Uppdatera render/collider ---
                         obj.modelMatrixDirty = true;
+						obj.helperMatricesDirty = true;
                         obj.setModelMatrix();
                         obj.setHelperMatrices();
                         obj.updateAABB();
