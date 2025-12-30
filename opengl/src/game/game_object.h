@@ -125,6 +125,7 @@ public:
 
     // editor
     bool selectedByEditor = false;
+    bool selectedByPlayer = false;
     glm::vec3 lastPosition;
 
     // player variables

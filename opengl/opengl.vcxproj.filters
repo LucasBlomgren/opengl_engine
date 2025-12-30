@@ -6,7 +6,6 @@
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\core\engine_state.cpp" />
-    <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\physics\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
     <ClCompile Include="src\physics\sat.cpp" />
@@ -49,6 +48,9 @@
     <ClCompile Include="Linking\include\imgui\imgui.cpp" />
     <ClCompile Include="src\core\imgui_manager.cpp" />
     <ClCompile Include="src\core\timer.cpp" />
+    <ClCompile Include="src\game\player.cpp" />
+    <ClCompile Include="src\core\camera.cpp" />
+    <ClCompile Include="src\core\input_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -83,7 +85,7 @@
     <ClInclude Include="src\core\camera.h" />
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
-    <ClInclude Include="src\core\input_manager.h" />
+    <ClInclude Include="src\core\input.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\sat.h" />
@@ -120,6 +122,8 @@
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\core\timer.h" />
+    <ClInclude Include="src\game\player.h" />
+    <ClInclude Include="src\core\input_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

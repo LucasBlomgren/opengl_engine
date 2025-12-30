@@ -12,6 +12,7 @@ void Renderer::init(
     unsigned int width, 
     unsigned int height, 
     Editor& editor,
+    Player& player,
     EngineState& engineState, 
     LightManager& lightManager, 
     ShaderManager& shaderManager,
@@ -22,6 +23,7 @@ void Renderer::init(
     screenHeight = (float)height;
 
     this->editor        = &editor;
+    this->player        = &player;
     this->engineState   = &engineState;
     this->lightManager  = &lightManager;
     this->shadowManager = &shadowManager;
@@ -628,22 +630,34 @@ void Renderer::renderLights() const {
 //     Render Raycast Hit
 //----------------------------
 void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
-    RaycastHit& hitData = editor->getLastRayHit();
-    if (hitData.object == nullptr) {
-        return;
-    }
-    GameObject& obj = *hitData.object;
+    GameObject* obj = nullptr;
 
+    // get hit object from player or editor
+    if (engineState->isPlayerMode()) {
+        RaycastHit& hitData = player->getLastRayHit();
+        if (hitData.object == nullptr) {
+            return;
+        }
+        obj = hitData.object;
+    }
+    else {
+        RaycastHit& hitData = editor->getLastRayHit();
+        if (hitData.object == nullptr) {
+            return;
+        }
+        obj = hitData.object;
+    }
+    
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 
-    if (obj.colliderType == ColliderType::CUBOID) {
-        OOBB& box = std::get<OOBB>(obj.collider.shape);
-        obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, true);
+    if (obj->colliderType == ColliderType::CUBOID) {
+        OOBB& box = std::get<OOBB>(obj->collider.shape);
+        obj->oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, true);
     }
-    else if (obj.colliderType == ColliderType::SPHERE) {
-        Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, true);
+    else if (obj->colliderType == ColliderType::SPHERE) {
+        Sphere& sphere = std::get<Sphere>(obj->collider.shape);
+        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, true);
     }
 }
 

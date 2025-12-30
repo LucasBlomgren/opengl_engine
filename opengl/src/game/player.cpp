@@ -1,86 +1,91 @@
-﻿#include "pch.h"
-#include "editor.h"
+#include "pch.h"
+#include "player.h"
 
-#include "scene_builder.h"
-#include "physics.h"
-#include "game_object.h"
-#include "aabb.h"
-#include "shaders/shader.h"
-#include "physics/raycast.h"
-
-void Editor::addInputRouter(InputRouter& router) {
+void Player::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c) {
-    if (ctx.isPlayerMode) return;
+void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c) {
+    if (!ctx.isPlayerMode) return;
+
+    moveInput = glm::vec3(0.0f);
 
     if (!c.mouse) {
-        if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-            if (selectedObject == nullptr) {
-                selectObject();
-            }
-            else {
-                dropObject();
-            }
-            c.mouse = true;
-        }
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_3]) {
-            placeObject();
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_1])  { selectObject(); c.mouse = true; }
+        if (in.mouseReleased[GLFW_MOUSE_BUTTON_1]) { dropObject();   c.mouse = true; }
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
+
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
+            GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
+            newObject.linearVelocity = camera->front * 100.0f;
+            newObject.asleep = false;
             c.mouse = true;
         }
     }
 
     if (!c.keyboard) {
-        if (in.keyPressed[GLFW_KEY_1]) {
-            drawPlacementAABB = !drawPlacementAABB;
-            c.keyboard = true;
-        }
+        if (in.keyDown[GLFW_KEY_W]) { moveInput += camera->front; c.keyboard = true; }
+        if (in.keyDown[GLFW_KEY_S]) { moveInput -= camera->front; c.keyboard = true; }
+        if (in.keyDown[GLFW_KEY_D]) { moveInput += camera->right; c.keyboard = true; }
+        if (in.keyDown[GLFW_KEY_A]) { moveInput -= camera->right; c.keyboard = true; }
+        moveInput.y = 0.0f;
 
-        if (in.keyPressed[GLFW_KEY_2]) {
-            this->objectRainBlocks = !this->objectRainBlocks;
-            c.keyboard = true;
-        }
-
-        if (in.keyPressed[GLFW_KEY_3]) {
-            this->objectRainSpheres = !this->objectRainSpheres;
-            c.keyboard = true;
-        }
-
-        if (in.keyPressed[GLFW_KEY_4]) {
-            physicsEngine->sleepAllObjects();
-            c.keyboard = true;
-        }
-        if (in.keyPressed[GLFW_KEY_5]) {
-            physicsEngine->awakenAllObjects();
-            c.keyboard = true;
+        if (in.keyDown[GLFW_KEY_SPACE]) {
+            if (playerObject->onGround && !playerObject->hasJumped) {
+                playerObject->playerJumpImpulse += 10.5f;
+                playerObject->onGround = false;
+                playerObject->hasJumped = true;
+                c.keyboard = true;
+            }
         }
     }
 }
 
-void Editor::setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera) {
+void Player::setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera) {
     this->sceneBuilder = sceneBuilder;
     this->physicsEngine = physicsEngine;
     this->camera = camera;
 }
 
-void Editor::activate() {
-
+void Player::activate() {
+    createPlayerObject();
 }
 
-void Editor::deactivate() {
+void Player::deactivate() {
+    destroyPlayerObject();
     dropObject();
-    lastHitData = {};
 }
 
-void Editor::fixedUpdate(float fixedTimeStep) {
-    // update selected object
+void Player::createPlayerObject() {
+    sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+    GameObject& player = sceneBuilder->getDynamicObjects().back();
+    sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
+
+    player.player = true;
+    player.allowSleep = false;
+    player.seeThrough = true;
+
+    playerObject = &player;
+}
+
+void Player::destroyPlayerObject() {
+    GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
+    physicsEngine->queueRemove(&player);
+    //sceneBuilder->getDynamicObjects().erase(sceneBuilder->getDynamicObjects().begin() + sceneBuilder->playerObjectId);
+    sceneBuilder->playerObjectId = -1;
+
+    playerObject = nullptr;
+}
+
+void Player::fixedUpdate(float fixedTimeStep) {
     updateSelectedObject(fixedTimeStep);
 }
 
-void Editor::update(Shader& shader) {
-    // raycast and draw placement AABB
-    if (EDITOR_RAYCAST_ENABLED) {
+void Player::update(Shader& shader) {
+    // update player movement
+    updatePlayerMovement();
+
+    if (PLAYER_RAYCAST_ENABLED) {
         if (selectedObject == nullptr) {
             createPlaceObjectAABB(shader);
             RaycastHit hitData = rayCast(5000);
@@ -88,8 +93,47 @@ void Editor::update(Shader& shader) {
     }
 }
 
-// select object
-void Editor::selectObject() {
+// Update player movement based on input
+void Player::updatePlayerMovement() {
+    //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+    camera->position = playerObject->position + glm::vec3(0, 0.76f, 0);
+
+    // Undvik diag-fartbonus
+    if (glm::length2(moveInput) > 0.0f) {
+        moveInput = glm::normalize(moveInput);
+    }
+
+    const float moveSpeed = 8.f; // meter per sekund
+    playerObject->playerMoveImpulse = moveInput * moveSpeed;
+}
+
+// Update position of selected object to follow camera + offset
+void Player::updateSelectedObject(float dt) {
+    if (!selectedObject or selectedObject->isStatic)
+        return;
+
+    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
+
+    // position
+    glm::vec3 newPos = camera->position + worldOffset;
+    selectedObject->position = newPos;
+
+    // velocity
+    selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / dt;
+    selectedObject->angularVelocity = glm::vec3(0.0f);
+    selectedObject->lastPosition = newPos;
+
+    selectedObject->modelMatrixDirty = true;
+    selectedObject->aabbDirty = true;
+    selectedObject->setModelMatrix();
+    selectedObject->updateAABB();
+    selectedObject->updateCollider();
+
+
+}
+
+// Select object under crosshair
+void Player::selectObject() {
     if (selectedObject)
         return;
 
@@ -99,13 +143,14 @@ void Editor::selectObject() {
     if (hitData.object == nullptr) {
         return;
     }
-    selectedObject = hitData.object;
-    //if (selectedObject->isStatic) {
-    //    selectedObject = nullptr;
-    //    return;
-    //}
 
-    selectedObject->selectedByEditor = true;
+    selectedObject = hitData.object;
+    if (selectedObject->isStatic) {
+        selectedObject = nullptr;
+        return;
+    }
+
+    selectedObject->selectedByPlayer = true;
     selectedObject->asleep = false;
 
     // avoid nullptr dereference in physics engine
@@ -119,39 +164,15 @@ void Editor::selectObject() {
     selectedObject->angularVelocity = glm::vec3(0.0f);
 
     glm::vec3 worldOffset = selectedObject->position - camera->position;
-    // Projicera worldOffset på kamerans lokala axlar:
+    // Projicera worldOffset p� kamerans lokala axlar:
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 }
 
-// update selected object position based on camera and offset
-void Editor::updateSelectedObject(float fixedTimeStep) {
-    if (!selectedObject or selectedObject->isStatic)
-        return;
-
-    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
-
-    // position
-    glm::vec3 newPos = camera->position + worldOffset;
-    selectedObject->position = newPos;
-
-    // velocity
-    //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
-
-    selectedObject->lastPosition = newPos;
-
-    selectedObject->modelMatrixDirty = true;
-    selectedObject->aabbDirty = true;
-    selectedObject->setModelMatrix();
-    selectedObject->updateAABB();
-    selectedObject->updateCollider();
-}
-
-// drop selected object
-void Editor::dropObject() {
+void Player::dropObject() {
     if (selectedObject) {
-        selectedObject->selectedByEditor = false;
+        selectedObject->selectedByPlayer = false;
         selectedObject->asleep = false;
 
         // avoid nullptr dereference in physics engine
@@ -162,17 +183,14 @@ void Editor::dropObject() {
             selectedObject->sleepCounterThreshold = 1.5f;
 
         selectedObject->sleepCounter = 0.0f;
-        selectedObject->linearVelocity = glm::vec3(0.0f);
         selectedObject->angularVelocity = glm::vec3(0.0f);
-        selectedObject = nullptr;
 
-        lastHitData.object = nullptr;
+        selectedObject = nullptr;
     }
 }
 
-// place object at placement AABB position
-void Editor::placeObject() {
-    if (placementObstructed) 
+void Player::placeObject() {
+    if (placementObstructed)
         return;
 
     glm::vec3 size{ OBJ_PLACE_SIZE };
@@ -182,8 +200,7 @@ void Editor::placeObject() {
     newObject.linearVelocity = glm::vec3(0.0f);
 }
 
-// create placement AABB in front of camera, adjusted for collisions
-void Editor::createPlaceObjectAABB(Shader& shader) {
+void Player::createPlaceObjectAABB(Shader& shader) {
     float placeDist = 150.0f;
     glm::vec3 size{ OBJ_PLACE_SIZE };
 
@@ -212,7 +229,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
         std::vector<GameObject*> collisions;
-        collisions.reserve(100); 
+        collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
         if (collisions.size() == 0) {
@@ -245,7 +262,8 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     if (iter >= maxIter) {
         this->placementObstructed = true;
         color = glm::vec3{ 1,0,0 };
-    } else {
+    }
+    else {
         this->placementObstructed = false;
         aabbToPlace = aabb;
         color = glm::vec3{ 0.9f, 0.7f, 0.2f };
@@ -255,7 +273,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
         drawAABB(aabb, shader, color);
 }
 
-RaycastHit Editor::rayCast(float length) {
+RaycastHit Player::rayCast(float length) {
     float rLength = length;
     Ray r(camera->position, camera->front, rLength);
     RaycastHit hitData = physicsEngine->performRaycast(r);
@@ -264,11 +282,12 @@ RaycastHit Editor::rayCast(float length) {
     return hitData;
 }
 
-RaycastHit& Editor::getLastRayHit() {
+RaycastHit& Player::getLastRayHit() {
     return lastHitData;
 }
 
-void Editor::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
+
+void Player::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
     glm::vec3 min = aabb.wMin;
     glm::vec3 max = aabb.wMax;
 
@@ -301,7 +320,7 @@ void Editor::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
     shader.setMat4("model", glm::mat4(1.0f));
     shader.setBool("debug.useUniformColor", true);
     shader.setVec3("debug.uColor", color);
-  
+
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf.data(), GL_DYNAMIC_DRAW);

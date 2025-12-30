@@ -27,6 +27,7 @@
     <ClCompile Include="Linking\include\imgui\imgui_tables.cpp" />
     <ClCompile Include="Linking\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
+    <ClCompile Include="src\core\camera.cpp" />
     <ClCompile Include="src\core\engine_state.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -35,15 +36,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\core\input_manager.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClCompile>
+    <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\core\timer.cpp" />
+    <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\game\editor.cpp">
@@ -286,8 +281,10 @@
     <ClInclude Include="src\core\camera.h" />
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
+    <ClInclude Include="src\core\input.h" />
     <ClInclude Include="src\core\input_manager.h" />
     <ClInclude Include="src\core\timer.h" />
+    <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
     <ClInclude Include="src\game\editor.h" />

@@ -1,5 +1,4 @@
-﻿
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "init_opengl.h"
 #include "timer.h"
@@ -21,15 +20,16 @@
 #include "lighting/light_manager.h"
 #include "lighting/shadow_manager.h"
 #include "editor.h"
+#include "player.h"
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
-    os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
-    return os;
+	os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+	return os;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    glViewport(0, 0, width, height);
+	glViewport(0, 0, width, height);
 }
 
 // settings
@@ -42,259 +42,316 @@ const unsigned int SHADOW_HEIGHT = 4096;
 float deltaTime = 0.0f;	
 float lastFrame = 0.0f;
 
-int main()
-{
-    // initialize and configure OpenGL
-    GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+const float fixedTimeStep = 1.0f / 60.0f;
+float accumulator = 0.0f;
 
-    // GPU logging
-    static constexpr int NQ = 4;          // ringbuffer (4–8 är lagom)
-    GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
-    int writeIdx = 0;                     // var vi börjar nya queries
-    int readIdx = (writeIdx + 1) % NQ;    // var vi försöker läsa från
-    glGenQueries(NQ, qShadow);
-    glGenQueries(NQ, qMain);
-    glGenQueries(NQ, qDebug);
-    GpuTimers gpu;
+int main() {
+	// initialize and configure OpenGL
+	GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
-    // setup rng
-    std::mt19937 rng(std::random_device{}());
+	// GPU logging
+	static constexpr int NQ = 4;          // ringbuffer (4–8 är lagom)
+	GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
+	int writeIdx = 0;                     // var vi börjar nya queries
+	int readIdx = (writeIdx + 1) % NQ;    // var vi försöker läsa från
+	glGenQueries(NQ, qShadow);
+	glGenQueries(NQ, qMain);
+	glGenQueries(NQ, qDebug);
+	GpuTimers gpu;
 
-    // systems
-    EngineState engineState;
-    FrameTimers frameTimers;
-    PhysicsEngine physicsEngine(&frameTimers);
-    Renderer renderer;
+	// setup rng
+	std::mt19937 rng(std::random_device{}());
 
-    // managers
-    ImGuiManager imguiManager;
-    InputManager inputManager;
-    TextureManager textureManager;
-    MeshManager meshManager;
-    ShaderManager shaderManager;
-    SkyboxManager skyboxManager; 
-    LightManager lightManager;
-    ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
+	// systems
+	EngineState engineState;
+	FrameTimers frameTimers;
+	PhysicsEngine physicsEngine(&frameTimers);
+	Renderer renderer;
 
-    // view
-    Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
-    // set initial rotation
-    camera.yaw = 35.0f;
-    camera.pitch = -20.0f;
-    camera.ProcessMouseMovement(0.0f, 0.0f);
+	// managers
+	ImGuiManager imguiManager;
+	InputManager inputManager;
 
-    // editor
-    Editor editor;
-    SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
+	TextureManager textureManager;
+	MeshManager meshManager;
+	ShaderManager shaderManager;
+	SkyboxManager skyboxManager; 
+	LightManager lightManager;
+	ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
-    // fixed timestep
-    const float fixedTimeStep = 1.0f / 60.0f;
-    float accumulator = 0.0f;
+	// editor
+	Editor editor;
 
-    // setup input
-    inputManager.setPointers(&engineState, &camera);
-    inputManager.init(window);
+	// player
+	Player player;
 
-    // setup rendering
-    renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
+	// view
+	Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
+	// set initial rotation
+	camera.yaw = 35.0f;
+	camera.pitch = -20.0f;
+	camera.ProcessMouseMovement(0.0f, 0.0f);
 
-    // load textures
-    textureManager.loadTexture("crate", "src/assets/crate.jpg");
-    textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
-    //textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
-    textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
+    // scene builder
+	SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
-    std::vector<std::string> skyBoxFaces {
-        std::string("src/assets/skyboxes/learnopengl/right.jpg"),
-        std::string("src/assets/skyboxes/learnopengl/left.jpg"),
-        std::string("src/assets/skyboxes/learnopengl/top.jpg"),
-        std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
-        std::string("src/assets/skyboxes/learnopengl/front.jpg"),
-        std::string("src/assets/skyboxes/learnopengl/back.jpg")
-    };
-    textureManager.loadCubemap("skybox_default", skyBoxFaces);
+	// setup input
+	inputManager.setPointers(&engineState, &camera);
+	inputManager.init(window);
 
-    skyBoxFaces = {
-        std::string("src/assets/skyboxes/milkyway/right.png"),
-        std::string("src/assets/skyboxes/milkyway/left.png"),
-        std::string("src/assets/skyboxes/milkyway/top.png"),
-        std::string("src/assets/skyboxes/milkyway/bottom.png"),
-        std::string("src/assets/skyboxes/milkyway/front.png"),
-        std::string("src/assets/skyboxes/milkyway/back.png")
-    };
-    textureManager.loadCubemap("skybox_night", skyBoxFaces);
+	// setup rendering
+	renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
 
-    // setup skybox
-    skyboxManager.init(); 
+	// load textures
+	textureManager.loadTexture("crate", "src/assets/crate.jpg");
+	textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
+	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
+	textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
-    // setup scene 
-    sceneBuilder.createScene(6);
+	std::vector<std::string> skyBoxFaces {
+		std::string("src/assets/skyboxes/learnopengl/right.jpg"),
+		std::string("src/assets/skyboxes/learnopengl/left.jpg"),
+		std::string("src/assets/skyboxes/learnopengl/top.jpg"),
+		std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
+		std::string("src/assets/skyboxes/learnopengl/front.jpg"),
+		std::string("src/assets/skyboxes/learnopengl/back.jpg")
+	};
+	textureManager.loadCubemap("skybox_default", skyBoxFaces);
 
-    // setup editor
-    editor.setPointers(window, &inputManager, &engineState, &sceneBuilder, &physicsEngine, &camera, &skyboxManager);
+	skyBoxFaces = {
+		std::string("src/assets/skyboxes/milkyway/right.png"),
+		std::string("src/assets/skyboxes/milkyway/left.png"),
+		std::string("src/assets/skyboxes/milkyway/top.png"),
+		std::string("src/assets/skyboxes/milkyway/bottom.png"),
+		std::string("src/assets/skyboxes/milkyway/front.png"),
+		std::string("src/assets/skyboxes/milkyway/back.png")
+	};
+	textureManager.loadCubemap("skybox_night", skyBoxFaces);
 
-    // ImGui setup
-    imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager, skyboxManager);
+	// setup skybox
+	skyboxManager.init(); 
 
-    // main loop
-    while (true) {
+	// create scene 
+	sceneBuilder.createScene(6);
 
-        // timing
-        frameTimers.beginFrame();
-        float currentFrame = static_cast<float>(glfwGetTime());
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+	// setup editor
+	editor.setPointers(&sceneBuilder, &physicsEngine, &camera);
 
-        // events
-        glfwPollEvents();
+    // setup player
+    player.setPointers(&sceneBuilder, &physicsEngine, &camera);
 
-        // exit condition
-        if (glfwWindowShouldClose(window)) {
-            break;
-        }
+	// ImGui setup
+	imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager, skyboxManager);
 
-        // start ImGui frame
-        imguiManager.newFrame();
-        imguiManager.setInputMode(engineState.getCameraMode());
+    // add input routers
+    imguiManager.addInputRouter(inputManager.router);
+    editor.addInputRouter(inputManager.router);
+    player.addInputRouter(inputManager.router);
+    camera.addInputRouter(inputManager.router);
 
-        // read GPU timers from previous frames
-        GLuint avail = 0;
-        // SHADOW
-        glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
-            gpu.shadowMs = ns / 1e6;
-        }
-        // MAIN
-        glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
-            gpu.mainMs = ns / 1e6;
-        }
-        // DEBUG
-        glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-        if (avail) {
-            GLuint64 ns = 0;
-            glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
-            gpu.debugMs = ns / 1e6;
-        }
-        // Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
-        // bumpa readIdx så vi läser nästa nästa gång
-        if (avail) {
-            readIdx = (readIdx + 1) % NQ;
-        }
+	// main loop
+	while (true) {
+		// timing
+		frameTimers.beginFrame();
+		float currentFrame = static_cast<float>(glfwGetTime());
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 
+        // update camera
+        camera.updateDeltaTime(deltaTime);
 
-        // rendering
-        {
-            ScopedTimer t(frameTimers, "Render");
-            renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
-            sceneBuilder.sceneDirty = false;
-            writeIdx = (writeIdx + 1) % NQ;
-        }
+		// events
+		inputManager.beginFrame();
+		glfwPollEvents();
 
-        editor.cameraMode();
-        // input & editor update
-        if (engineState.getCameraMode()) {
-            inputManager.processInput(window, deltaTime);
+		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+			glfwSetWindowShouldClose(window, true);
 
-            // editor update
-            {
-                ScopedTimer t(frameTimers, "Editor");
-                editor.update(deltaTime, *renderer.debugShader);
+		// exit condition
+		if (glfwWindowShouldClose(window)) {
+			break;
+		}
+
+		// start ImGui frame
+		imguiManager.newFrame();
+
+		// read GPU timers from previous frames
+		GLuint avail = 0;
+		// SHADOW
+		glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+		if (avail) {
+			GLuint64 ns = 0;
+			glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
+			gpu.shadowMs = ns / 1e6;
+		}
+		// MAIN
+		glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+		if (avail) {
+			GLuint64 ns = 0;
+			glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
+			gpu.mainMs = ns / 1e6;
+		}
+		// DEBUG
+		glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+		if (avail) {
+			GLuint64 ns = 0;
+			glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
+			gpu.debugMs = ns / 1e6;
+		}
+		// Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
+		// bumpa readIdx så vi läser nästa nästa gång
+		if (avail) {
+			readIdx = (readIdx + 1) % NQ;
+		}
+
+		// rendering
+		{
+			ScopedTimer t(frameTimers, "Render");
+			renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
+			sceneBuilder.sceneDirty = false;
+			writeIdx = (writeIdx + 1) % NQ;
+		}
+
+		// ImGui
+		if (!engineState.isPlayerMode()) {
+			ScopedTimer a(frameTimers, "ImGui");
+			imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
+			imguiManager.selectedObjectUI(editor.selectedObject);
+			imguiManager.render();
+		}
+		else {
+            // reset io to avoid input conflicts
+            ImGui::GetIO().WantCaptureMouse = false;
+            ImGui::GetIO().WantCaptureKeyboard = false;
+		}
+
+		inputManager.setCurrentContext(ImGui::GetIO().WantCaptureMouse, ImGui::GetIO().WantCaptureKeyboard);
+		inputManager.route();
+
+        // input [V]: toggle editor/player mode
+		if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
+            engineState.setPlayerMode(!engineState.isPlayerMode());
+
+            if (engineState.isPlayerMode()) {
+                player.activate();
+                editor.deactivate();
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                inputManager.resetFirstMouse();
             }
+			else {
+				player.deactivate();
+                editor.activate();
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                inputManager.resetFirstMouse();
+			}
         }
 
-        // physics step
-        if (!engineState.isPaused() or engineState.getAdvanceStep())
-        {
-            const int   kMaxStepsPerFrame = 8;
-            const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
-            accumulator = std::min(accumulator + deltaTime, kMaxAccum);
+		// editor/player update
+		if (!engineState.isPlayerMode()) {
+			ScopedTimer t(frameTimers, "Editor");
+			editor.update(*renderer.debugShader);
+		}
+		else {
+			ScopedTimer t(frameTimers, "Player");
+			player.update(*renderer.debugShader);
+		}
 
-            // single step advance
-            if (engineState.getAdvanceStep()) {
-                accumulator = fixedTimeStep;
-            }
+        // pause toggle [G]
+		if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
+			engineState.setPaused(!engineState.isPaused());
+        }
 
-            // stepping loop
-            int steps = 0;
-            while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame)
-            {
-                for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
-                {
-                    // per-frame rotation (du har redan denna)
-                    glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
+		// physics step
+		if (!engineState.isPaused() or engineState.getAdvanceStep())
+		{
+			const int   kMaxStepsPerFrame = 8;
+			const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
+			accumulator = std::min(accumulator + deltaTime, kMaxAccum);
 
-                    for (int i = 0; i < halo.indices.size(); i++) {
-                        GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
+			// single step advance
+			if (engineState.getAdvanceStep()) {
+				accumulator = fixedTimeStep;
+			}
 
-                        // --- 1) Spara föregående pose ---
-                        glm::vec3 prevPos = obj.position;
-                        glm::quat prevOri = obj.orientation;
+			// stepping loop
+			int steps = 0;
+			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
+			{
+                // --- Kinematisk uppdatering av halo-objekt ---
+				for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
+				{
+					// per-frame rotation (du har redan denna)
+					glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
 
-                        // --- 2) Sätt ny pose kinematiskt (din kod) ---
-                        glm::vec3 relativePos = obj.position - halo.center;
-                        glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+					for (int i = 0; i < halo.indices.size(); i++) {
+						GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
 
-                        obj.position = halo.center + rotatedRelPos;
-                        obj.orientation = perFrameRot * obj.orientation;
+						// --- 1) Spara föregående pose ---
+						glm::vec3 prevPos = obj.position;
+						glm::quat prevOri = obj.orientation;
 
-                        // --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
-                        // Linjär hastighet: differens
-                        obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
+						// --- 2) Sätt ny pose kinematiskt (din kod) ---
+						glm::vec3 relativePos = obj.position - halo.center;
+						glm::vec3 rotatedRelPos = perFrameRot * relativePos;
 
-                        // Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
-                        glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
-                        dq = glm::normalize(dq);
-                        float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
-                        float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
-                        float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
-                        glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
-                            : glm::vec3(0, 0, 1);           // fallback
-                        obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
+						obj.position = halo.center + rotatedRelPos;
+						obj.orientation = perFrameRot * obj.orientation;
 
-                        // --- 4) Uppdatera render/collider ---
-                        obj.modelMatrixDirty = true;
+						// --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
+						// Linjär hastighet: differens
+						obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
+
+						// Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
+						glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
+						dq = glm::normalize(dq);
+						float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
+						float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
+						float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
+						glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
+							: glm::vec3(0, 0, 1);           // fallback
+						obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
+
+						// --- 4) Uppdatera render/collider ---
+						obj.modelMatrixDirty = true;
 						obj.helperMatricesDirty = true;
-                        obj.setModelMatrix();
-                        obj.setHelperMatrices();
-                        obj.updateAABB();
-                        obj.updateCollider();
-                    }
+						obj.setModelMatrix();
+						obj.setHelperMatrices();
+						obj.updateAABB();
+						obj.updateCollider();
+					}
+				}
+
+                // physics step
+				physicsEngine.step(fixedTimeStep, rng);
+				
+                // editor/player fixed update
+				if (!engineState.isPlayerMode()) {
+					editor.fixedUpdate(fixedTimeStep);
+				} else {
+					player.fixedUpdate(fixedTimeStep);
                 }
-                physicsEngine.step(fixedTimeStep, rng);
 
-                steps++;
-                accumulator -= fixedTimeStep;
-            }
-        }
 
-        // single step advance flag reset
-        if (engineState.getAdvanceStep()) {
-            engineState.setAdvanceStep(false);
-        }
+				accumulator -= fixedTimeStep;
+				steps++;
+			}
+		}
 
-        // object rain
-        if (!engineState.isPaused()) {
-            if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
-            else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
-        }
+		// single step advance flag reset
+		if (engineState.getAdvanceStep()) {
+			engineState.setAdvanceStep(false);
+		}
 
-        // ImGui rendering
-        {
-            ScopedTimer a(frameTimers, "ImGui");
-            imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
-            imguiManager.selectedObjectUI(editor.selectedObject);
-            imguiManager.render();
-        }
+		// object rain
+		if (!engineState.isPaused()) {
+			if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
+			else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
+		}
 
-        frameTimers.endFrame();
+		frameTimers.endFrame();
 
-        // swap buffers
-        glfwSwapBuffers(window);
+		// swap buffers
+		glfwSwapBuffers(window);
    }
 
    imguiManager.shutdown();

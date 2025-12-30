@@ -1,32 +1,31 @@
 #pragma once
 
-#include "input.h"
-#include "aabb.h"
-#include "physics/raycast.h"
+#include <vector>
 
-struct GLFWwindow;
-class InputManager;
-class EngineState;
-class SceneBuilder;
-class PhysicsEngine;
-class Camera;
-class SkyboxManager;
-class Shader;
+#include "scene_builder.h"
+#include "physics.h"
+#include "game_object.h"
+#include "camera.h"
 
-class Editor : public IInputReceiver {
+class Player : IInputReceiver {
 public:
+    GameObject* playerObject = nullptr;
+
     void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed);
 
     void setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera);
 
-    // activate/deactivate editor mode
+    // activate/deactivate player mode
     void activate();
     void deactivate();
+    void createPlayerObject();
+    void destroyPlayerObject();
 
     // update
     void fixedUpdate(float fixedTimeStep);
     void update(Shader& shader);
+    void updatePlayerMovement();
 
     // select object
     GameObject* selectedObject = nullptr;
@@ -44,9 +43,6 @@ public:
     void createPlaceObjectAABB(Shader& shader);
     void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
 
-    bool objectRainBlocks = false;
-    bool objectRainSpheres = false;
-
 private:
     SceneBuilder* sceneBuilder = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
@@ -57,5 +53,5 @@ private:
     RaycastHit lastHitData;
     bool drawPlacementAABB = false;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static bool EDITOR_RAYCAST_ENABLED = true;
+    constexpr static bool PLAYER_RAYCAST_ENABLED = true;
 };

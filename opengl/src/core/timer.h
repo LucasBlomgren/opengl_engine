@@ -18,10 +18,11 @@ public:
 
     void update(float ms, float alpha = 0.2f) {
         lastMs = ms;
-        if (smoothedMs == 0.0f)
+        if (smoothedMs == 0.0f) {
             smoothedMs = ms;
-        else
+        } else {
             smoothedMs = smoothedMs + alpha * (ms - smoothedMs);
+        }
     }
 };
 

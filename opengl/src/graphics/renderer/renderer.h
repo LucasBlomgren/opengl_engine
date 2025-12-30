@@ -17,14 +17,16 @@
 #include "bvh.h"
 #include "scene_builder.h"
 #include "editor.h"
+#include "player.h"
 #include "raycast.h"
 
 class Renderer {
 public:
     void init(
-        unsigned int width, 
-        unsigned int height, 
+        unsigned int width,
+        unsigned int height,
         Editor& editor,
+        Player& player,
         EngineState& engineState, 
         LightManager& lightManager, 
         ShaderManager& shaderManager,
@@ -89,6 +91,7 @@ private:
     float screenHeight;
 
     Editor* editor = nullptr;
+    Player* player = nullptr;
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;
     ShaderManager* shaderManager = nullptr;

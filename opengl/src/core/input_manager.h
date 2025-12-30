@@ -1,29 +1,35 @@
 #pragma once
-
-#include <GLFW/glfw3.h>
-
+#include "input.h"
 #include "engine_state.h"
 #include "camera.h"
 
-class InputManager 
-{
+class InputManager {
 public:
-    static void init(GLFWwindow* window);
+    InputFrame currentFrame;
+    InputContext currentContext;
+    InputRouter router;
+
+    void route() {
+        Consumed consumed{};
+        router.route(currentFrame, currentContext, consumed);
+    }
+
+    void init(GLFWwindow* window);
     void setPointers(EngineState* state, Camera* camera);
 
-    static void processInput(GLFWwindow* window, float deltaTime);
+    void beginFrame();
+    void setCurrentContext(bool uiWantsMouse, bool uiWantsKeyboard);
+    void resetFirstMouse();
+
     static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void mouseMovementCallback(GLFWwindow* window, double xpos, double ypos);
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-    void resetFirstMouse();
-
 private:
-    static EngineState* engineState;
-
-    static Camera* camera;
-    static bool firstMouse;
-    static float lastX;
-    static float lastY;
+    EngineState* engineState = nullptr;
+    Camera* camera = nullptr;
+    bool firstMouse = true;
+    float lastX = 0;
+    float lastY = 0;
 };

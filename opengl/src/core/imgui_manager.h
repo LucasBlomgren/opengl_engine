@@ -12,11 +12,13 @@
 #include "graphics/skybox/skybox_manager.h"
 #include "timer.h"
 
-class ImGuiManager {
+class ImGuiManager : IInputReceiver {
 public:
+    void addInputRouter(InputRouter& router);
+    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed);
+
     void init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm, SkyboxManager& sm);
     void newFrame();
-    void setInputMode(bool cameraMode);
     void render();
     void shutdown();
     

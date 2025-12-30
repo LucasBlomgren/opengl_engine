@@ -6,8 +6,6 @@
 
 class EngineState {
 public:
-
-    void toggleCameraMode();
     void setAdvanceStep(bool);
     void setPaused(bool);
     void togglePause();
@@ -22,10 +20,6 @@ public:
     void toggleShowBVH_static();
     void toggleShowBVH_terrain();
 
-    void setPressedKey(const std::string& key);
-    void clearPressedKey();
-
-    bool getCameraMode() const;
     bool isPaused() const;
     bool getAdvanceStep() const;
     bool getShowFPS() const;
@@ -38,18 +32,10 @@ public:
     bool getShowBVH_asleep() const;
     bool getShowBVH_static() const;
     bool getShowBVH_terrain() const;
-    std::string GetPressedKey() const;
     void setPlayerMode(bool);
     bool isPlayerMode() const;
 
-    bool IsKeyDown(int key) const;
-    void SetKeyState(int key, bool down);
-
-    bool heldM1 = false;
-    bool heldM2 = false;
-
 private:
-    bool cameraMode = true; // true = mouse camera mode, false = free mouse
     bool playerMode = false;
     bool advanceStep = false;
     bool paused = false;
@@ -63,7 +49,4 @@ private:
     bool showBVH_asleep = false;
     bool showBVH_static = false;
     bool showBVH_terrain = false;
-    std::string pressedKey;
-
-    std::array<bool, GLFW_KEY_LAST + 1> keyStates{};
 };
