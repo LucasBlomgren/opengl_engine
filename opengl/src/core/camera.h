@@ -65,7 +65,7 @@ public:
     // add this input receiver to the input router
     void addInputRouter(InputRouter& router);
     // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c);
+    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants);
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     glm::mat4 GetViewMatrix();

@@ -12,7 +12,7 @@ void Editor::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c) {
+void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
     if (ctx.isPlayerMode) return;
 
     if (!c.mouse) {
@@ -21,14 +21,37 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
                 selectObject();
             }
             else {
-                dropObject();
+                RaycastHit hitData = rayCast(SELECT_RANGE);
+                if (hitData.object == nullptr) {
+                    dropObject();
+                } 
+                else if (hitData.object != selectedObject) {
+                    dropObject();
+                    selectObject();
+                }
+                else {
+                    syncSelectionOffset(); // klick på samma objekt: resync offset så det inte hoppar
+                }
             }
             c.mouse = true;
         }
+
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] and !in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
+            updateSelectedObject(1.0f/60.0f); // hardcoded timestep for smoother movement
+            c.mouse = true;
+        }
+
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_2]) {
+            wants.cameraLook = true;
+            wants.captureMouse = true;
+            c.mouse = true;
+        }
+
         if (in.mouseDown[GLFW_MOUSE_BUTTON_3]) {
             placeObject();
             c.mouse = true;
         }
+
     }
 
     if (!c.keyboard) {
@@ -39,11 +62,12 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
         if (in.keyPressed[GLFW_KEY_2]) {
             this->objectRainBlocks = !this->objectRainBlocks;
+            objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
             c.keyboard = true;
         }
-
         if (in.keyPressed[GLFW_KEY_3]) {
             this->objectRainSpheres = !this->objectRainSpheres;
+            objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
             c.keyboard = true;
         }
 
@@ -75,17 +99,26 @@ void Editor::deactivate() {
 
 void Editor::fixedUpdate(float fixedTimeStep) {
     // update selected object
-    updateSelectedObject(fixedTimeStep);
+    //updateSelectedObject(fixedTimeStep);
 }
 
 void Editor::update(Shader& shader) {
     // raycast and draw placement AABB
-    if (EDITOR_RAYCAST_ENABLED) {
-        if (selectedObject == nullptr) {
-            createPlaceObjectAABB(shader);
-            RaycastHit hitData = rayCast(5000);
-        }
+    if (selectedObject == nullptr) {
+        createPlaceObjectAABB(shader);
+        RaycastHit hitData = rayCast(SELECT_RANGE);
     }
+}
+
+void Editor::syncSelectionOffset() {
+    if (!selectedObject) return;
+
+    glm::vec3 worldOffset = selectedObject->position - camera->position;
+    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+
+    selectedObject->lastPosition = selectedObject->position;
 }
 
 // select object
@@ -100,10 +133,6 @@ void Editor::selectObject() {
         return;
     }
     selectedObject = hitData.object;
-    //if (selectedObject->isStatic) {
-    //    selectedObject = nullptr;
-    //    return;
-    //}
 
     selectedObject->selectedByEditor = true;
     selectedObject->asleep = false;
@@ -165,8 +194,6 @@ void Editor::dropObject() {
         selectedObject->linearVelocity = glm::vec3(0.0f);
         selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
-
-        lastHitData.object = nullptr;
     }
 }
 
@@ -184,14 +211,13 @@ void Editor::placeObject() {
 
 // create placement AABB in front of camera, adjusted for collisions
 void Editor::createPlaceObjectAABB(Shader& shader) {
-    float placeDist = 150.0f;
     glm::vec3 size{ OBJ_PLACE_SIZE };
 
     AABB aabb;
-    aabb.centroid = camera->position + camera->front * placeDist;
+    aabb.centroid = camera->position + camera->front * OBJ_PLACE_DISTANCE;
     aabb.halfExtents = glm::vec3(size / 2.0f);
 
-    RaycastHit hitData = rayCast(placeDist);
+    RaycastHit hitData = rayCast(OBJ_PLACE_DISTANCE);
     glm::vec3 normal = hitData.normal;
     if (hitData.object != nullptr) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)

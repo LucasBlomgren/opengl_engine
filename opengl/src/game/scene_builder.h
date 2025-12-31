@@ -19,7 +19,7 @@ public:
     {}
 
     bool sceneDirty = true; 
-    void objectRain(float& current_time, int mode);
+    void objectRain(float& current_time, glm::vec3& pos, int mode);
 
     void createScene(int sceneID);
     void mainScene();
@@ -43,7 +43,8 @@ public:
         const glm::quat& orientation = glm::quat(1, 0, 0, 0),
         float sleepCounterThreshold = 1.0f,
         bool asleep = 0,
-        const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f)
+        const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f),
+        const bool seeThrough = false
     );
     int objectsAddedThisFrame = 0;
 

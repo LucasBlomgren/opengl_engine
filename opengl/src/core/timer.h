@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 
+// Structure to hold GPU timing results
 struct GpuTimers {
     double shadowMs = 0.0;
     double mainMs = 0.0;
@@ -11,6 +12,7 @@ struct GpuTimers {
     double totalMs() const { return shadowMs + mainMs + debugMs; }
 };
 
+// Structure to hold CPU timing statistics
 class TimerStats {
 public:
     float lastMs = 0.0f;
@@ -26,6 +28,7 @@ public:
     }
 };
 
+// Class to manage frame-based timing measurements
 class FrameTimers {
 public:
     void beginFrame();
@@ -43,6 +46,7 @@ private:
     std::unordered_map<std::string, TimerStats> timers;
 };
 
+// RAII class for scoped timing measurements 
 class ScopedTimer {
 public:
     ScopedTimer(FrameTimers& ft, const char* name);

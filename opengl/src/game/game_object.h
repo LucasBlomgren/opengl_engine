@@ -54,9 +54,6 @@ public:
 
     glm::mat4 modelMatrix;
     bool modelMatrixDirty = true;
-    bool seeThrough = false;
-    bool isInsideShadowFrustum = true;
-
     glm::mat4 invModelMatrix;
     glm::mat3 rotationMatrix;
     glm::vec3 translationVector;
@@ -69,6 +66,8 @@ public:
     GLuint textureId;
     glm::vec3 color;
     bool useRandomColor = false;
+    bool seeThrough = false;
+    bool isInsideShadowFrustum = true;
     int batchIdx = -1;
     int batchInstanceIdx = -1;
 
@@ -148,7 +147,8 @@ public:
         glm::quat orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
         float sleepCounterThreshold = 1.0f,
         bool asleep = false,
-        glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f)
+        glm::vec3 color = glm::vec3(255.0f, 255.0f, 255.0f),
+        bool seeThrough = false
     )
         : id(id),
         mesh(mesh),
@@ -164,7 +164,8 @@ public:
         asleep(asleep),
         color(color),
         colliderType(colliderType),
-        collider(this)
+        collider(this),
+        seeThrough(seeThrough)
     {
         // physics stuff
         //setRotatedFlag();

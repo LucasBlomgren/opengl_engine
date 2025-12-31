@@ -40,7 +40,7 @@ const unsigned int SHADOW_HEIGHT = 4096;
 
 // timing
 float deltaTime = 0.0f;	
-float lastFrame = 0.0f;
+float timeLastFrame = 0.0f;
 
 const float fixedTimeStep = 1.0f / 60.0f;
 float accumulator = 0.0f;
@@ -92,11 +92,10 @@ int main() {
 	camera.pitch = -20.0f;
 	camera.ProcessMouseMovement(0.0f, 0.0f);
 
-    // scene builder
+	// scene builder
 	SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
 	// setup input
-	inputManager.setPointers(&engineState, &camera);
 	inputManager.init(window);
 
 	// setup rendering
@@ -137,28 +136,28 @@ int main() {
 	// setup editor
 	editor.setPointers(&sceneBuilder, &physicsEngine, &camera);
 
-    // setup player
-    player.setPointers(&sceneBuilder, &physicsEngine, &camera);
+	// setup player
+	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
 
 	// ImGui setup
 	imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager, skyboxManager);
 
-    // add input routers
-    imguiManager.addInputRouter(inputManager.router);
-    editor.addInputRouter(inputManager.router);
-    player.addInputRouter(inputManager.router);
-    camera.addInputRouter(inputManager.router);
+	// add input routers
+	imguiManager.addInputRouter(inputManager.router);
+	editor.addInputRouter(inputManager.router);
+	player.addInputRouter(inputManager.router);
+	camera.addInputRouter(inputManager.router);
 
 	// main loop
 	while (true) {
 		// timing
 		frameTimers.beginFrame();
-		float currentFrame = static_cast<float>(glfwGetTime());
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
+		float timeNow = (float)glfwGetTime();
+		deltaTime = timeNow - timeLastFrame;
+		timeLastFrame = timeNow;
 
-        // update camera
-        camera.updateDeltaTime(deltaTime);
+		// update camera
+		camera.updateDeltaTime(deltaTime);
 
 		// events
 		inputManager.beginFrame();
@@ -217,34 +216,33 @@ int main() {
 			ScopedTimer a(frameTimers, "ImGui");
 			imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
 			imguiManager.selectedObjectUI(editor.selectedObject);
-			imguiManager.render();
 		}
-		else {
-            // reset io to avoid input conflicts
-            ImGui::GetIO().WantCaptureMouse = false;
-            ImGui::GetIO().WantCaptureKeyboard = false;
-		}
+		imguiManager.render();
 
-		inputManager.setCurrentContext(ImGui::GetIO().WantCaptureMouse, ImGui::GetIO().WantCaptureKeyboard);
-		inputManager.route();
+		inputManager.setCurrentContext(
+			ImGui::GetIO().WantCaptureMouse, 
+			ImGui::GetIO().WantCaptureKeyboard, 
+			engineState.isPlayerMode());
 
-        // input [V]: toggle editor/player mode
+		inputManager.route(window);
+
+		// input [V]: toggle editor/player mode
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
-            engineState.setPlayerMode(!engineState.isPlayerMode());
+			engineState.setPlayerMode(!engineState.isPlayerMode());
 
-            if (engineState.isPlayerMode()) {
-                player.activate();
-                editor.deactivate();
+			if (engineState.isPlayerMode()) {
+				player.activate();
+				editor.deactivate();
 				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                inputManager.resetFirstMouse();
-            }
+				inputManager.resetFirstMouse();
+			}
 			else {
 				player.deactivate();
-                editor.activate();
+				editor.activate();
 				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                inputManager.resetFirstMouse();
+				inputManager.resetFirstMouse();
 			}
-        }
+		}
 
 		// editor/player update
 		if (!engineState.isPlayerMode()) {
@@ -256,10 +254,14 @@ int main() {
 			player.update(*renderer.debugShader);
 		}
 
-        // pause toggle [G]
+		// pause toggle [G]
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
 			engineState.setPaused(!engineState.isPaused());
-        }
+		}
+		// advance step [F]
+		if (inputManager.currentFrame.keyPressed[GLFW_KEY_F]) {
+			engineState.setAdvanceStep(true);
+		}
 
 		// physics step
 		if (!engineState.isPaused() or engineState.getAdvanceStep())
@@ -277,7 +279,7 @@ int main() {
 			int steps = 0;
 			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
 			{
-                // --- Kinematisk uppdatering av halo-objekt ---
+				// --- Kinematisk uppdatering av halo-objekt ---
 				for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
 				{
 					// per-frame rotation (du har redan denna)
@@ -321,16 +323,15 @@ int main() {
 					}
 				}
 
-                // physics step
+				// physics step
 				physicsEngine.step(fixedTimeStep, rng);
 				
-                // editor/player fixed update
+				// editor/player fixed update
 				if (!engineState.isPlayerMode()) {
-					editor.fixedUpdate(fixedTimeStep);
+					//editor.fixedUpdate(fixedTimeStep);
 				} else {
 					player.fixedUpdate(fixedTimeStep);
-                }
-
+				}
 
 				accumulator -= fixedTimeStep;
 				steps++;
@@ -344,8 +345,8 @@ int main() {
 
 		// object rain
 		if (!engineState.isPaused()) {
-			if (editor.objectRainBlocks) sceneBuilder.objectRain(currentFrame, 0);
-			else if (editor.objectRainSpheres) sceneBuilder.objectRain(currentFrame, 1);
+			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
+			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
 		}
 
 		frameTimers.endFrame();

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "input_manager.h"
 
+// Static callback wrappers
 void InputManager::init(GLFWwindow* window) {
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallback);
@@ -18,11 +19,7 @@ void InputManager::init(GLFWwindow* window) {
     firstMouse = true;
 }
 
-void InputManager::setPointers(EngineState* state, Camera* camera) {
-    this->engineState = state;
-    this->camera = camera;
-}
-
+// Call at the start of each frame to reset transient input states
 void InputManager::beginFrame() {
     currentFrame.mouseDelta = { 0,0 };
     currentFrame.scrollDelta = 0.0f;
@@ -34,16 +31,29 @@ void InputManager::beginFrame() {
     std::fill(std::begin(currentFrame.mouseReleased), std::end(currentFrame.mouseReleased), false);
 }
 
-void InputManager::setCurrentContext(bool uiWantsMouse, bool uiWantsKeyboard) {
+// Set the current input context
+void InputManager::setCurrentContext(bool uiWantsMouse, bool uiWantsKeyboard, bool isPlayerMode) {
     currentContext.uiWantsMouse = uiWantsMouse;
     currentContext.uiWantsKeyboard = uiWantsKeyboard;
-    currentContext.isPlayerMode = engineState->isPlayerMode();
+    currentContext.isPlayerMode = isPlayerMode;
 }
 
+// Apply mouse capture based on frame wants from input receivers
+void InputManager::applyMouseCapture(GLFWwindow* window, FrameWants& wants) {
+    if (wants.captureMouse) {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+    else {
+        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    }
+}
+
+// Reset mouse tracking (e.g., when switching to player mode)
 void InputManager::resetFirstMouse() {
     firstMouse = true;
 }
 
+// --- GLFW Callbacks ---
 void InputManager::mouseMovementCallback(GLFWwindow* window, double xposIn, double yposIn) {
     auto* self = static_cast<InputManager*>(glfwGetWindowUserPointer(window));
 

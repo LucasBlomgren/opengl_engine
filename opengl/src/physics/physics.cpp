@@ -508,10 +508,10 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
 
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*objA, *objB);
             // editor-freeze bara om motparten INTE är statisk
-            bool editorFreezeA = objA->selectedByEditor && !objB->isStatic;
-            bool editorFreezeB = objB->selectedByEditor && !objA->isStatic;
-            contact.freezeA = editorFreezeA || (objA->asleep && !wakeInfo.A);
-            contact.freezeB = editorFreezeB || (objB->asleep && !wakeInfo.B);
+            bool editorFreezeA = (objA->selectedByEditor or objA->selectedByPlayer) and !objB->isStatic;
+            bool editorFreezeB = (objB->selectedByEditor or objB->selectedByPlayer) and !objA->isStatic;
+            contact.freezeA = editorFreezeA || (objA->asleep and !wakeInfo.A);
+            contact.freezeB = editorFreezeB || (objB->asleep and !wakeInfo.B);
 
             collisionManifold->boxBox(contact, contactCache, satResult);
         }

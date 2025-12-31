@@ -12,7 +12,7 @@ public:
     GameObject* playerObject = nullptr;
 
     void addInputRouter(InputRouter& router);
-    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed);
+    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
     void setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera);
 
@@ -52,6 +52,10 @@ private:
 
     RaycastHit lastHitData;
     bool drawPlacementAABB = false;
+    constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static bool PLAYER_RAYCAST_ENABLED = true;
+    constexpr static float SELECT_RANGE = 5000.0f;
+
+    constexpr static bool JUMP_HEIGHT = 10.5f;
+    constexpr static float SHOOT_VELOCITY = 100.0f;
 };

@@ -5,10 +5,11 @@ void Player::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c) {
+void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
     if (!ctx.isPlayerMode) return;
 
-    moveInput = glm::vec3(0.0f);
+    wants.cameraLook = true;
+    wants.captureMouse = true;
 
     if (!c.mouse) {
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1])  { selectObject(); c.mouse = true; }
@@ -17,12 +18,13 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
             GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-            newObject.linearVelocity = camera->front * 100.0f;
+            newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
             newObject.asleep = false;
             c.mouse = true;
         }
     }
 
+    moveInput = glm::vec3(0.0f);
     if (!c.keyboard) {
         if (in.keyDown[GLFW_KEY_W]) { moveInput += camera->front; c.keyboard = true; }
         if (in.keyDown[GLFW_KEY_S]) { moveInput -= camera->front; c.keyboard = true; }
@@ -32,7 +34,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
         if (in.keyDown[GLFW_KEY_SPACE]) {
             if (playerObject->onGround && !playerObject->hasJumped) {
-                playerObject->playerJumpImpulse += 10.5f;
+                playerObject->playerJumpImpulse += JUMP_HEIGHT;
                 playerObject->onGround = false;
                 playerObject->hasJumped = true;
                 c.keyboard = true;
@@ -57,7 +59,7 @@ void Player::deactivate() {
 }
 
 void Player::createPlayerObject() {
-    sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1);
+    sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1, 0, glm::vec3{255}, 1);
     GameObject& player = sceneBuilder->getDynamicObjects().back();
     sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
 
@@ -85,11 +87,9 @@ void Player::update(Shader& shader) {
     // update player movement
     updatePlayerMovement();
 
-    if (PLAYER_RAYCAST_ENABLED) {
-        if (selectedObject == nullptr) {
-            createPlaceObjectAABB(shader);
-            RaycastHit hitData = rayCast(5000);
-        }
+    if (selectedObject == nullptr) {
+        createPlaceObjectAABB(shader);
+        RaycastHit hitData = rayCast(SELECT_RANGE);
     }
 }
 
@@ -201,7 +201,7 @@ void Player::placeObject() {
 }
 
 void Player::createPlaceObjectAABB(Shader& shader) {
-    float placeDist = 150.0f;
+    float placeDist = OBJ_PLACE_DISTANCE;
     glm::vec3 size{ OBJ_PLACE_SIZE };
 
     AABB aabb;

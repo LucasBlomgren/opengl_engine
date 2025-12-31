@@ -13,16 +13,14 @@ void Camera::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c) {
-
+void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
     // --- keyboard ---
     if (!c.keyboard and !ctx.isPlayerMode) 
     {
         // movement speed
-        if (in.keyDown[GLFW_KEY_LEFT_SHIFT] || in.keyDown[GLFW_KEY_RIGHT_SHIFT]) {
+        if (in.keyDown[GLFW_KEY_LEFT_SHIFT]) {
             movementSpeed = fastSpeed;
-        }
-        else {
+        } else {
             movementSpeed = standardSpeed;
         }
 
@@ -39,14 +37,7 @@ void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     }
 
     // --- mouse ---
-    if (c.mouse) return;
-
-    const bool rmbDown = in.mouseDown[GLFW_MOUSE_BUTTON_2]; // RMB
-    const bool shouldLook =
-        ctx.isPlayerMode ? true : rmbDown; // player: alltid, editor: bara RMB
-
-    if (!shouldLook) {
-        // Låt musen vara okonsumerad så editor/ImGui kan använda den
+    if (!wants.cameraLook) {
         return;
     }
 

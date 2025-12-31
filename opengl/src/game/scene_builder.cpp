@@ -132,7 +132,8 @@ GameObject& SceneBuilder::createObject(
     const glm::quat& orientation,
     float sleepCounterThreshold,
     bool asleep,
-    const glm::vec3& color) 
+    const glm::vec3& color,
+    const bool seeThrough) 
 {
     unsigned int textureId;
     if (textureName == "plain") {
@@ -143,14 +144,17 @@ GameObject& SceneBuilder::createObject(
 
     Mesh* mesh = meshManager.getMesh(meshName);
 
-    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color);
+    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
 
     GameObject& newObject = dynamicObjects.back();
     newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
     newObject.shader = shaderManager.getShader("default");
 
     physicsEngine.queueAdd(&dynamicObjects.back());
-    renderer.addObjectToBatch(&newObject);
+
+    if (!seeThrough) {
+        renderer.addObjectToBatch(&newObject);
+    }
 
     objectId++;
     return dynamicObjects.back();
@@ -318,7 +322,7 @@ void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smo
 //----------------------------------
 //         Object rain
 //----------------------------------
-void SceneBuilder::objectRain(float& current_time, int mode) {
+void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
     constexpr float interval = 1.0f / 15.0f;
     if (current_time - lastTime < interval)
         return;
@@ -328,7 +332,7 @@ void SceneBuilder::objectRain(float& current_time, int mode) {
     for (int i = 0; i < 10; i++) 
     {
         // position
-        constexpr glm::vec3 spawnPoint = glm::vec3(170, 135, 170);
+        glm::vec3& spawnPoint = pos;
         // constexpr glm::vec3 spawnPoint = glm::vec3(25, 275, 25);
         float varianceRange = 20.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);

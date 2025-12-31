@@ -15,7 +15,7 @@
 class ImGuiManager : IInputReceiver {
 public:
     void addInputRouter(InputRouter& router);
-    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed);
+    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
     void init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm, SkyboxManager& sm);
     void newFrame();
