@@ -12,7 +12,8 @@ public:
         float radius, 
         const bool asleep, 
         const bool isStatic, 
-        const bool raycastHit
+        const bool selected,
+        const bool hovered
     );
 
 private:

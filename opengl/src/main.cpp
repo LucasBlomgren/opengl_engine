@@ -134,7 +134,7 @@ int main() {
 	sceneBuilder.createScene(6);
 
 	// setup editor
-	editor.setPointers(&sceneBuilder, &physicsEngine, &camera);
+	editor.init(SCR_WIDTH, SCR_HEIGHT, &engineState, &sceneBuilder, &physicsEngine, &inputManager, &camera, window);
 
 	// setup player
 	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
@@ -155,6 +155,7 @@ int main() {
 		float timeNow = (float)glfwGetTime();
 		deltaTime = timeNow - timeLastFrame;
 		timeLastFrame = timeNow;
+		engineState.deltaTime = deltaTime;
 
 		// update camera
 		camera.updateDeltaTime(deltaTime);

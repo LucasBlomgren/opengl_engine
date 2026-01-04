@@ -97,7 +97,8 @@ public:
         glm::vec3 pos,
         int segments,
         glm::vec3 color,
-        bool createsShadows
+        bool createsShadows,
+        bool seeThrough
     );
 
     // halos

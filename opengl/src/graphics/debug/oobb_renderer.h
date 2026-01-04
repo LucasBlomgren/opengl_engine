@@ -11,7 +11,8 @@ public:
         const OOBB& box,
         const bool asleep, 
         const bool isStatic, 
-        const bool raycastHit
+        const bool selected,
+        const bool hovered
     );
 
     void setupNormals();

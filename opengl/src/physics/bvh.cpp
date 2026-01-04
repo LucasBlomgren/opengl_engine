@@ -10,46 +10,28 @@ template class BVHTree<Tri>;
 //        Single Query
 //------------------------------
 template<typename E>
-void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
+void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) const {
+    if (nodes.empty()) return;
 
-    if (nodes.size() == 0) {
-        return;
-    }
-
-    // 1) Pre-allocate the output vector once per call
-    constexpr int MaxExpected = BVHTree<E>::MaxCollisionBuf;
     out.clear();
-    out.reserve(MaxExpected);
+    out.reserve(BVHTree<E>::MaxCollisionBuf);
 
-    // 2) Fast, stack-allocated traversal stack
     constexpr int MaxDepth = 256;
-    Node* stack[MaxDepth];
-    int   sp = 0;
+    const Node* stack[MaxDepth];
+    int sp = 0;
     stack[sp++] = &nodes[rootIdx];
 
-    // 3) Traverse without any heap-allocations
     while (sp) {
-        Node* n = stack[--sp];
+        const Node* n = stack[--sp];
 
         if (!n->isLeaf) {
-            if (!qBox.intersects(n->fatBox))
-                continue;
+            if (!qBox.intersects(n->fatBox)) continue;
 
-
-            if (n->childAIdx != -1) {
-                Node* node = &nodes[n->childAIdx];
-                stack[sp++] = node;
-            }
-            if (n->childBIdx != -1) { 
-                Node* node = &nodes[n->childBIdx];
-                stack[sp++] = node;
-            }
+            if (n->childAIdx != -1) stack[sp++] = &nodes[n->childAIdx];
+            if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
         }
         else {
-            if (qBox.intersects(n->tightBox)) {
-                // bara en enkel branch + push_back (ingen omallokering pga reserve)
-                out.push_back(n->element);
-            }
+            if (qBox.intersects(n->tightBox)) out.push_back(n->element);
         }
     }
 }
@@ -58,35 +40,35 @@ void BVHTree<E>::singleQuery(const AABB& qBox, std::vector<E*>& out) {
 //        Insert Leaf
 //------------------------------
 template<typename E>
-void BVHTree<E>::insertLeaf(E* e) 
+int BVHTree<E>::insertLeaf(E* e) 
 {
-    if (e->bvhLeafIdx != -1) {
+    if (e->broadphaseHandle.leafIdx != -1) {
         // already in tree
-        return;
+        return -1;
     }
 
     // create leaf node
     Node* leaf = createLeaf(e);
 
     // if tree is empty, set rootIdx. Leaf becomes root.
-    if (rootIdx == -1) { 
-        rootIdx = leaf->selfIdx; 
-        return;
-    } 
+    if (rootIdx == -1) {
+        rootIdx = leaf->selfIdx;
+        return leaf->selfIdx;
+    }
 
     // find best sibling
     Node* sibling = findBestSibling(leaf->fatBox);
 
     // create new parent node
-    Node* parent = &nodes.emplace_back(); 
+    Node* parent = &nodes.emplace_back();
 
-    parent->selfIdx = nodes.size() - 1; 
+    parent->selfIdx = nodes.size() - 1;
     parent->childAIdx = sibling->selfIdx;
     parent->childBIdx = leaf->selfIdx;
 
     int oldParentIdx = sibling->parentIdx;
     sibling->parentIdx = parent->selfIdx;
-    leaf->parentIdx = parent->selfIdx; 
+    leaf->parentIdx = parent->selfIdx;
 
     // sibling was root, parent becomes new root
     if (oldParentIdx == -1) {
@@ -99,7 +81,8 @@ void BVHTree<E>::insertLeaf(E* e)
         bool siblingIsLeft = (sibling->selfIdx == oldParent->childAIdx);
         if (siblingIsLeft) {
             oldParent->childAIdx = parent->selfIdx;
-        } else {
+        }
+        else {
             oldParent->childBIdx = parent->selfIdx;
         }
         parent->parentIdx = oldParent->selfIdx;
@@ -108,6 +91,7 @@ void BVHTree<E>::insertLeaf(E* e)
     // refit all parents
     refitParents(leaf->parentIdx);
 
+    return leaf->selfIdx;
 }
 
 //------------------------------
@@ -135,7 +119,7 @@ void BVHTree<E>::refitParents(int parentIdx) {
 //      Find Best Sibling
 //------------------------------
 template<typename E>
-typename BVHTree<E>::Node* BVHTree<E>::findBestSibling(AABB& box) 
+typename BVHTree<E>::Node* BVHTree<E>::findBestSibling(AABB& box)
 {
     Node* n = &nodes[rootIdx];
 
@@ -147,8 +131,8 @@ typename BVHTree<E>::Node* BVHTree<E>::findBestSibling(AABB& box)
         float mergedSurfaceA = box.getMergedSurfaceArea(A->fatBox, box);
         float mergedSurfaceB = box.getMergedSurfaceArea(B->fatBox, box);
 
-        A->fatBox.setSurfaceArea(); 
-        B->fatBox.setSurfaceArea(); 
+        A->fatBox.setSurfaceArea();
+        B->fatBox.setSurfaceArea();
 
         float incA = mergedSurfaceA - A->fatBox.surfaceArea;
         float incB = mergedSurfaceB - B->fatBox.surfaceArea;
@@ -163,13 +147,13 @@ typename BVHTree<E>::Node* BVHTree<E>::findBestSibling(AABB& box)
 //        Create Leaf
 //------------------------------
 template<typename E>
-typename BVHTree<E>::Node* BVHTree<E>::createLeaf(E* e) 
+typename BVHTree<E>::Node* BVHTree<E>::createLeaf(E* e)
 {
     Node* leaf = &nodes.emplace_back();
     leaf->selfIdx = nodes.size() - 1;
     leaf->isLeaf = true;
     leaf->element = e;
-    leaf->element->bvhLeafIdx = leaf->selfIdx;
+    leaf->element->broadphaseHandle.leafIdx = leaf->selfIdx;
     leaf->tightBox = e->getAABB();
     leaf->fatBox = leaf->tightBox;
     leaf->fatBox.grow(fatBoxMargin);
@@ -183,7 +167,7 @@ typename BVHTree<E>::Node* BVHTree<E>::createLeaf(E* e)
 //          Remove Leaf
 //------------------------------
 template<typename E>
-void BVHTree<E>::removeLeaf(int leafIdx) 
+void BVHTree<E>::removeLeaf(int leafIdx)
 {
     if (leafIdx == -1) {
         return;
@@ -195,7 +179,7 @@ void BVHTree<E>::removeLeaf(int leafIdx)
         // root is leaf, clear tree
         leaf.alive = false;
         leaf.parentIdx = -1;
-        leaf.element->bvhLeafIdx = -1;
+        leaf.element->broadphaseHandle.leafIdx = -1;
         leaf.element = nullptr;
         rootIdx = -1;
         nodes.clear();
@@ -210,7 +194,7 @@ void BVHTree<E>::removeLeaf(int leafIdx)
         // parent is root, replace root with sibling
         rootIdx = sibling.selfIdx;
         sibling.parentIdx = -1;
-    } 
+    }
     else {
         // replace parent with sibling
         sibling.parentIdx = parent.parentIdx;
@@ -218,7 +202,8 @@ void BVHTree<E>::removeLeaf(int leafIdx)
 
         if (grandParent.childAIdx == parent.selfIdx) {
             grandParent.childAIdx = sibling.selfIdx;
-        } else {
+        }
+        else {
             grandParent.childBIdx = sibling.selfIdx;
         }
 
@@ -229,8 +214,8 @@ void BVHTree<E>::removeLeaf(int leafIdx)
     // remove parent and leaf
     leaf.alive = false;
     leaf.parentIdx = -1;
-    leaf.element->bvhLeafIdx = -1;
-    leaf.element = nullptr; 
+    leaf.element->broadphaseHandle.leafIdx = -1;
+    leaf.element = nullptr;
 
     parent.alive = false;
     parent.parentIdx = -1;
@@ -246,8 +231,8 @@ void BVHTree<E>::update(std::vector<E>& elements, std::vector<int>& indexes, boo
     if (numRefits > rebuildThreshold /* or numIterationsSinceRebuild >= updateInterval*/) {
         // för många refits, bygg om trädet
         build(elements, indexes, useAllElements);
-        numRefits = 0; 
-        numIterationsSinceRebuild = 0; 
+        numRefits = 0;
+        numIterationsSinceRebuild = 0;
         numRebuilds++;
         return;
     }
@@ -371,7 +356,8 @@ void BVHTree<E>::build(std::vector<E>& elements, std::vector<int>& indexes, bool
             n.fatBox.grow(fatBoxMargin);
 
             updateRenderData(n);
-        } else {
+        }
+        else {
             n.dirty = true;
         }
     }
@@ -389,7 +375,7 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& id
         prims.reserve(elements.size());
         for (int i = 0; i < elements.size(); i++) {
             E& elem = elements[i];
-            elem.bvhLeafIdx = -1; // reset
+            elem.broadphaseHandle.leafIdx = -1; // reset
             BVHPrimitive prim;
             AABB Ebox = elem.getAABB();
             prim.min = Ebox.wMin;
@@ -398,11 +384,12 @@ void BVHTree<E>::createPrimitives(std::vector<E>& elements, std::vector<int>& id
             prim.element = &elem;
             prims.push_back(prim);
         }
-    } else {
+    }
+    else {
         prims.reserve(idx.size());
         for (int i = 0; i < idx.size(); i++) {
             E& elem = elements[idx[i]];
-            elem.bvhLeafIdx = -1;
+            elem.broadphaseHandle.leafIdx = -1;
             BVHPrimitive prim;
             AABB Ebox = elem.getAABB();
             prim.min = Ebox.wMin;
@@ -494,7 +481,7 @@ void BVHTree<E>::makeLeaf(int nodeIdx) {
     leaf.selfIdx = nodeIdx;
     leaf.isLeaf = true;
     leaf.element = prims[leaf.start].element;
-    leaf.element->bvhLeafIdx = leaf.selfIdx;
+    leaf.element->broadphaseHandle.leafIdx = leaf.selfIdx;
     leaf.tightBox = leaf.element->getAABB(); 
     leaf.fatBox = leaf.tightBox;
 }

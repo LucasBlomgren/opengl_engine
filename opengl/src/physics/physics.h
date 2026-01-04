@@ -8,6 +8,8 @@
 #include "raycast.h"
 #include "game_object.h"
 #include "bvh.h"
+#include "broadphase_manager.h"
+#include "broadphase_pairs.h"
 
 #include "tri.h"
 
@@ -28,18 +30,19 @@ public:
     void sleepAllObjects();
     void awakenAllObjects();
 
-    void queueAdd(GameObject* obj);
+    void queueAdd(GameObject* obj, BroadphaseBucket& target);
     void queueRemove(GameObject* obj);
+    void queueMove(GameObject* obj, BroadphaseBucket& target);
 
     RaycastHit performRaycast(Ray& ray);
 
     //------------------------
     //        Getters
     //------------------------
-    BVHTree<GameObject>& getDynamicAwakeBvh();
-    BVHTree<GameObject>& getDynamicAsleepBvh();
-    BVHTree<GameObject>& getStaticBvh();
-    BVHTree<Tri>& getTerrainBvh();
+    const BVHTree<GameObject>& getDynamicAwakeBvh();
+    const BVHTree<GameObject>& getDynamicAsleepBvh();
+    const BVHTree<GameObject>& getStaticBvh();
+    const BVHTree<Tri>& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
 private:
@@ -47,34 +50,21 @@ private:
     FrameTimers* frameTimers;
 
     //------------------------
-    //      Add/Remove
+    //    Add/Remove/Move
     //------------------------
-    struct PhysCmd { 
-        enum Type { Add, Remove } type; 
-        GameObject* obj; 
+    struct PhysCmd {
+        enum class Type { Add, Remove, Move } type;
+        GameObject* obj = nullptr;
+        BroadphaseBucket dst = BroadphaseBucket::None;
     };
     std::vector<PhysCmd> pending;
-    void insertPendingObjects();
-    void moveToStatic(GameObject& obj);
-    bool staticBvhDirty = false;    
+    void flushBroadphaseCommands();
 
     //------------------------
     //     Game objects
     //------------------------
     std::vector<GameObject>* dynamicObjects;
     std::vector<Tri>* terrainTriangles;
-
-    std::vector<int> awake_DynamicObjects;   // indices in dynamicObjects
-    std::vector<int> asleep_DynamicObjects;
-    std::vector<int> static_Objects;         
-
-    //------------------------
-    //      BVH Trees
-    //------------------------
-    BVHTree<GameObject> dynamicAwakeBvh;
-    BVHTree<GameObject> dynamicAsleepBvh;
-    BVHTree<GameObject> staticBvh;
-    BVHTree<Tri> terrainBvh;
 
     //------------------------
     //    Update functions
@@ -85,19 +75,10 @@ private:
     //------------------------
     //  Collision detection 
     //------------------------
-    struct TerrainHit {
-        GameObject* obj;
-        std::vector<Tri*> tris;                                // original bvh query
-    };
-
-    struct DynamicHit {
-        GameObject* A;
-        GameObject* B;
-    };
+    BroadphaseManager broadphaseManager;
 
     void detectAndSolveCollisions();
-    void broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
-    void narrowPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits);
+    void narrowPhase(const std::vector<TerrainPair>& tHits, const std::vector<DynamicPair>& dHits);
     void collectActiveContacts();
 
     //------------------------
@@ -111,7 +92,6 @@ private:
     //  Collision Resolution
     //------------------------
     void resolveCollisions();
-
     void pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d);
 
     //------------------------
@@ -119,11 +99,8 @@ private:
     //------------------------
     std::vector<int> toWake;
     std::vector<int> toSleep;
-    void moveToAwake(GameObject& obj);
-    void moveToAsleep(GameObject& obj);
     void decideSleep();
     void updateSleepThresholds();
-    bool asleepBvhDirty = false;
 
     struct WakeUpInfo { bool A, B; };
     WakeUpInfo wakeUpCheck(GameObject& A, GameObject& B);

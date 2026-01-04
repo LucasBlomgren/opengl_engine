@@ -150,7 +150,7 @@ GameObject& SceneBuilder::createObject(
     newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
     newObject.shader = shaderManager.getShader("default");
 
-    physicsEngine.queueAdd(&dynamicObjects.back());
+    physicsEngine.queueAdd(&newObject, newObject.broadphaseHandle.bucket);
 
     if (!seeThrough) {
         renderer.addObjectToBatch(&newObject);
@@ -566,13 +566,14 @@ void SceneBuilder::createHalo(
     glm::vec3 pos,
     int segments,
     glm::vec3 color,
-    bool createsShadows) 
+    bool createsShadows,
+    bool seeThrough)
 {
     float baseRotAng = 90.0f;
     glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);
     float halfDepth = length * 0.5f;
-    glm::vec3 desiredCenter = glm::vec3(125, 0, 125);
-    glm::vec3 lastPos = glm::vec3(500, 500, 500);
+    glm::vec3 desiredCenter = glm::vec3(0, 5, 0);
+    glm::vec3 lastPos = glm::vec3(0,0,0);
     float lastAngle = 45.0f;
     glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
 
@@ -590,7 +591,7 @@ void SceneBuilder::createHalo(
         glm::vec3 newPos = baseRot * newPosLocal;
         glm::quat newOrient = baseRot * newOrientLocal;
 
-        createObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color);
+        createObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color, seeThrough);
         GameObject& obj = dynamicObjects.back();
         obj.isInsideShadowFrustum = createsShadows;
 

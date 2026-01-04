@@ -12,6 +12,7 @@
 #include "colliders/sphere.h"
 #include "debug/oobb_renderer.h"
 #include "debug/aabb_renderer.h"
+#include "broadphase_types.h"
 
 #include <glm/gtc/quaternion.hpp>    // defines glm::quat
 #include <glm/gtx/quaternion.hpp>    // extra helpers om du behöver
@@ -116,6 +117,7 @@ public:
     OOBBRenderer oobbRenderer;
 
     // BVH
+    BroadphaseHandle broadphaseHandle;  
     int bvhLeafIdx       = -1;
     int dynamicObjectIdx = -1;
     int awakeListIdx     = -1;
@@ -123,6 +125,7 @@ public:
     int staticListIdx    = -1;
 
     // editor
+    bool hoveredByEditor = false;
     bool selectedByEditor = false;
     bool selectedByPlayer = false;
     glm::vec3 lastPosition;
@@ -174,13 +177,21 @@ public:
         // dynamic
         if (!isStatic) {
             invMass = 1.0f / mass;
-            asleep = false;
         }
         // static
         else {
             mass = 0;
             invMass = 0;
             asleep = false;
+        }
+
+        // broadphase bucket
+        if (asleep) {
+            broadphaseHandle.bucket = BroadphaseBucket::Asleep;
+        } else if (isStatic) {
+            broadphaseHandle.bucket = BroadphaseBucket::Static;
+        } else {
+            broadphaseHandle.bucket = BroadphaseBucket::Awake;
         }
 
         // plain color
@@ -207,6 +218,7 @@ public:
     void updatePos(const float& dt);
     void setAsleep();
     void setAwake();
+    void setStatic();
 
     void applyImpulseLinear(const glm::vec3& j);
     void applyImpulseAngular(const glm::vec3& j);

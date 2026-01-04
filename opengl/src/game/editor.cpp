@@ -1,12 +1,15 @@
 ﻿#include "pch.h"
 #include "editor.h"
 
+#include "input_manager.h"
 #include "scene_builder.h"
 #include "physics.h"
 #include "game_object.h"
 #include "aabb.h"
 #include "shaders/shader.h"
 #include "physics/raycast.h"
+
+#include <glm/gtc/random.hpp>
 
 void Editor::addInputRouter(InputRouter& router) {
     router.add(this);
@@ -18,6 +21,7 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     if (!c.mouse) {
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (selectedObject == nullptr) {
+                rayCast(SELECT_RANGE);
                 selectObject();
             }
             else {
@@ -27,6 +31,7 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
                 } 
                 else if (hitData.object != selectedObject) {
                     dropObject();
+                    rayCast(SELECT_RANGE);
                     selectObject();
                 }
                 else {
@@ -36,7 +41,7 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
             c.mouse = true;
         }
 
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] and !in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
             updateSelectedObject(1.0f/60.0f); // hardcoded timestep for smoother movement
             c.mouse = true;
         }
@@ -47,9 +52,29 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
             c.mouse = true;
         }
 
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_3]) {
-            placeObject();
-            c.mouse = true;
+
+        static float shootCd = 0.0f;
+        shootCd -= engineState->deltaTime;
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_3] and shootCd <= 0.0f) {
+            shootCd = 0.001f;
+
+            static int shot = 0;
+            int i = shot++ % 10;
+            int x = i % 5, y = i / 5;
+
+            glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
+            float spread = 2.0f;
+            float jitter = 1.4f;
+            glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
+                + right * (glm::linearRand(-jitter, jitter))
+                + camera->up * (glm::linearRand(-jitter, jitter));
+
+            auto& newObject = sceneBuilder->createObject(
+                "crate", "sphere", ColliderType::SPHERE,
+                camera->position + camera->front * 5.0f + offset,
+                glm::vec3(1), 1, 0
+            );
+            newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
         }
 
     }
@@ -82,10 +107,15 @@ void Editor::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     }
 }
 
-void Editor::setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera) {
+void Editor::init(float SCR_WIDTH, float SCR_HEIGHT, EngineState* engineState, SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, InputManager* inputManager, Camera* camera, GLFWwindow* window) {
+    this->SCR_WIDTH = SCR_WIDTH;
+    this->SCR_HEIGHT = SCR_HEIGHT;
+    this->engineState = engineState;
     this->sceneBuilder = sceneBuilder;
     this->physicsEngine = physicsEngine;
+    this->inputManager = inputManager;
     this->camera = camera;
+    this->window = window;
 }
 
 void Editor::activate() {
@@ -104,9 +134,18 @@ void Editor::fixedUpdate(float fixedTimeStep) {
 
 void Editor::update(Shader& shader) {
     // raycast and draw placement AABB
-    if (selectedObject == nullptr) {
-        createPlaceObjectAABB(shader);
-        RaycastHit hitData = rayCast(SELECT_RANGE);
+    createPlaceObjectAABB(shader);
+
+    hoveredObject = nullptr;
+
+    if (lastHitData.object != nullptr)
+        lastHitData.object->hoveredByEditor = false;
+
+    rayCast(SELECT_RANGE);
+
+    if (lastHitData.object != nullptr) {
+        lastHitData.object->hoveredByEditor = true;
+        hoveredObject = lastHitData.object;
     }
 }
 
@@ -123,8 +162,7 @@ void Editor::syncSelectionOffset() {
 
 // select object
 void Editor::selectObject() {
-    if (selectedObject)
-        return;
+    if (selectedObject) return;
 
     RaycastHit& hitData = lastHitData;
 
@@ -135,13 +173,7 @@ void Editor::selectObject() {
     selectedObject = hitData.object;
 
     selectedObject->selectedByEditor = true;
-    selectedObject->asleep = false;
-
-    // avoid nullptr dereference in physics engine
-    GameObject* obj = selectedObject;
-    physicsEngine->queueAdd(obj);
-
-    selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
+    selectedObject->hoveredByEditor = false;
     selectedObject->lastPosition = selectedObject->position;
 
     selectedObject->linearVelocity = glm::vec3(0.0f);
@@ -181,20 +213,28 @@ void Editor::updateSelectedObject(float fixedTimeStep) {
 void Editor::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByEditor = false;
-        selectedObject->asleep = false;
 
         // avoid nullptr dereference in physics engine
         GameObject* obj = selectedObject;
-        physicsEngine->queueAdd(obj);
 
-        if (selectedObject->sleepCounterThreshold > 1000.0f) // hack for static object made dynamic (because cant move from static bvh to dynamic/asleep bvh)
-            selectedObject->sleepCounterThreshold = 1.5f;
+        if (selectedObject->isStatic) {
+            BroadphaseBucket target = BroadphaseBucket::Static;
+            physicsEngine->queueMove(obj, target);
+        } else {
+            BroadphaseBucket target = BroadphaseBucket::Awake;
+            physicsEngine->queueMove(obj, target);
+        }
 
         selectedObject->sleepCounter = 0.0f;
-        selectedObject->linearVelocity = glm::vec3(0.0f);
-        selectedObject->angularVelocity = glm::vec3(0.0f);
+        selectedObject->sleepCounterThreshold = 1.5f;
+        //selectedObject->linearVelocity = glm::vec3(0.0f);
+        //selectedObject->angularVelocity = glm::vec3(0.0f);
         selectedObject = nullptr;
+        hoveredObject = nullptr;
     }
+
+    selectedObject = nullptr;
+    hoveredObject = nullptr;
 }
 
 // place object at placement AABB position
@@ -233,7 +273,7 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
+    const BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
@@ -281,9 +321,31 @@ void Editor::createPlaceObjectAABB(Shader& shader) {
         drawAABB(aabb, shader, color);
 }
 
-RaycastHit Editor::rayCast(float length) {
+RaycastHit Editor::rayCast(float length) 
+{
+    float mouseX = inputManager->lastX;
+    float mouseY = inputManager->lastY;
+    float x = (2.0f * mouseX) / SCR_WIDTH - 1.0f;
+    float y = 1.0f - (2.0f * mouseY) / SCR_HEIGHT; // viktigt: invert Y
+    // NDC: z = -1 för near plane i OpenGL clip-space
+    glm::vec4 rayClip(x, y, -1.0f, 1.0f);
+
+    // 2) Clip → Eye(inverse projection)
+    glm::mat4 projection = glm::perspective(glm::radians(camera->zoom), SCR_WIDTH / SCR_HEIGHT, 0.1f, 10000.0f);
+    glm::mat4 view = camera->GetViewMatrix();
+    glm::vec4 rayEye = glm::inverse(projection) * rayClip;
+    // Vi vill ha en riktning, inte en punkt:
+    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+
+    // 3) Eye → World(inverse view) och normalisera
+    glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
+
+    // 4) Bygg rayen
+    glm::vec3 origin = camera->position;
+    glm::vec3 dir = rayWorld;
+
     float rLength = length;
-    Ray r(camera->position, camera->front, rLength);
+    Ray r(camera->position, rayWorld, SELECT_RANGE);
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
     lastHitData = hitData;

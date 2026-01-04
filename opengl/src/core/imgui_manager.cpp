@@ -673,15 +673,8 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 
 	// Rotation (stored UI state)
 	{
-		static bool init = false;
-		static glm::vec3 uiDeg;
-		static glm::vec3 lastUiDeg;
-
-		if (!init) {
-			uiDeg = glm::degrees(glm::eulerAngles(obj.orientation));
-			lastUiDeg = uiDeg;
-			init = true;
-		}
+		glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(obj.orientation));
+		glm::vec3 lastUiDeg = uiDeg;
 
 		if (RowDragFloat3("Rotation", "##rot", uiDeg, 0.5f, -720.f, 720.f)) {
 			glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
@@ -708,7 +701,7 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 	// Static checkbox
 	{
 		bool isStatic = obj.isStatic;
-		if (RowCheckbox("Static", "##static", isStatic)) {      // får dubbel gravitation för den hamnar i både statisk och dynamisk bvh 
+		if (RowCheckbox("Static", "##static", isStatic)) {
 			obj.isStatic = isStatic;
 			if (isStatic) {
 				obj.mass = 0.0f;
@@ -716,7 +709,7 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 				obj.linearVelocity = glm::vec3(0.0f);
 				obj.angularVelocity = glm::vec3(0.0f);
 				obj.allowGravity = false;
-				obj.asleep = false;
+				obj.allowSleep = false;
 			}
 			else {
 				obj.mass = 1.0f;
@@ -725,8 +718,8 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 				obj.linearVelocity = glm::vec3(0.0f);
 				obj.angularVelocity = glm::vec3(0.0f);
 
-				obj.allowSleep = false; // // hack for static object made dynamic (because cant move from static bvh to dynamic/asleep bvh)
-				obj.sleepCounterThreshold = FLT_MAX;
+				obj.allowSleep = true;
+				obj.sleepCounterThreshold = 1.5f;
 			}
 		}
 		if (ImGui::IsItemDeactivatedAfterEdit()) {

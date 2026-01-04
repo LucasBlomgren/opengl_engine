@@ -51,6 +51,7 @@
     <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\core\camera.cpp" />
     <ClCompile Include="src\core\input_manager.cpp" />
+    <ClCompile Include="src\physics\broadphase_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -124,6 +125,9 @@
     <ClInclude Include="src\core\timer.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\core\input_manager.h" />
+    <ClInclude Include="src\physics\broadphase_manager.h" />
+    <ClInclude Include="src\physics\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase_pairs.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -18,7 +18,7 @@ public:
     void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
-    void setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera);
+    void init(float SCR_WIDTH, float SCR_HEIGHT, EngineState* engineState, SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, InputManager* inputManager, Camera* camera, GLFWwindow* window);
 
     // activate/deactivate editor mode
     void activate();
@@ -30,6 +30,8 @@ public:
 
     // select object
     GameObject* selectedObject = nullptr;
+    GameObject* hoveredObject = nullptr;
+
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void syncSelectionOffset();
     void selectObject();
@@ -50,15 +52,20 @@ public:
     bool objectRainSpheres = false;
 
 private:
+    float SCR_WIDTH;
+    float SCR_HEIGHT;
+    EngineState* engineState = nullptr;
     SceneBuilder* sceneBuilder = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
+    InputManager* inputManager = nullptr;
     Camera* camera = nullptr;
+    GLFWwindow* window = nullptr;
 
-    glm::vec3 moveInput{ 0.0f, 0.0f, 0.0f };
-
+    // selection and placement
     RaycastHit lastHitData;
     bool drawPlacementAABB = false;
     constexpr static float SELECT_RANGE = 5000.0f;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
+    constexpr static float SHOOT_VELOCITY = 100.0f;
 };

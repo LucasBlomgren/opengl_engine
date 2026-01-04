@@ -19,7 +19,6 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
             GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
             newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
-            newObject.asleep = false;
             c.mouse = true;
         }
     }
@@ -33,7 +32,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         moveInput.y = 0.0f;
 
         if (in.keyDown[GLFW_KEY_SPACE]) {
-            if (playerObject->onGround && !playerObject->hasJumped) {
+            if (playerObject->onGround and !playerObject->hasJumped) {
                 playerObject->playerJumpImpulse += JUMP_HEIGHT;
                 playerObject->onGround = false;
                 playerObject->hasJumped = true;
@@ -65,7 +64,6 @@ void Player::createPlayerObject() {
 
     player.player = true;
     player.allowSleep = false;
-    player.seeThrough = true;
 
     playerObject = &player;
 }
@@ -89,7 +87,7 @@ void Player::update(Shader& shader) {
 
     if (selectedObject == nullptr) {
         createPlaceObjectAABB(shader);
-        RaycastHit hitData = rayCast(SELECT_RANGE);
+        rayCast(SELECT_RANGE);
     }
 }
 
@@ -155,7 +153,9 @@ void Player::selectObject() {
 
     // avoid nullptr dereference in physics engine
     GameObject* obj = selectedObject;
-    physicsEngine->queueAdd(obj);
+    BroadphaseBucket bpBucket;
+    bpBucket = BroadphaseBucket::Awake;
+    physicsEngine->queueAdd(obj, bpBucket);
 
     selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
     selectedObject->lastPosition = selectedObject->position;
@@ -173,18 +173,21 @@ void Player::selectObject() {
 void Player::dropObject() {
     if (selectedObject) {
         selectedObject->selectedByPlayer = false;
-        selectedObject->asleep = false;
 
         // avoid nullptr dereference in physics engine
         GameObject* obj = selectedObject;
-        physicsEngine->queueAdd(obj);
 
-        if (selectedObject->sleepCounterThreshold > 1000.0f) // hack for static object made dynamic (because cant move from static bvh to dynamic/asleep bvh)
-            selectedObject->sleepCounterThreshold = 1.5f;
+        if (selectedObject->isStatic) {
+            BroadphaseBucket target = BroadphaseBucket::Static;
+            physicsEngine->queueMove(obj, target);
+        } else {
+            BroadphaseBucket target = BroadphaseBucket::Awake;
+            physicsEngine->queueMove(obj, target);
+        }
 
         selectedObject->sleepCounter = 0.0f;
+        selectedObject->sleepCounterThreshold = 1.5f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
-
         selectedObject = nullptr;
     }
 }
@@ -224,7 +227,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
+    const BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {

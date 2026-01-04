@@ -35,6 +35,8 @@ public:
     void setPlayerMode(bool);
     bool isPlayerMode() const;
 
+    float deltaTime = 0.0f;
+
 private:
     bool playerMode = false;
     bool advanceStep = false;

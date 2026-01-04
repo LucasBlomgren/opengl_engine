@@ -2,8 +2,8 @@
 #include "renderer.h"
 #include "debug/draw_line.h"
 
-template void Renderer::renderBVH(BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
-template void Renderer::renderBVH(BVHTree<Tri>&, glm::vec3& , glm::vec3&);
+template void Renderer::renderBVH(const BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
+template void Renderer::renderBVH(const BVHTree<Tri>&, glm::vec3& , glm::vec3&);
 
 //-----------------------------
 //           Init
@@ -226,7 +226,13 @@ void Renderer::render(
     renderScene(*defaultShader, builder);
     glEndQuery(GL_TIME_ELAPSED);
 
-    renderRayCastHit(camera, builder);
+    // render raycast hit for player/editor
+    if (engineState->isPlayerMode()) {
+        renderRayCastHit(player->selectedObject, camera, builder);
+    } else {
+        renderRayCastHit(editor->selectedObject, camera, builder);
+        renderRayCastHit(editor->hoveredObject, camera, builder);
+    }
 
     glDepthFunc(GL_LEQUAL);
     skyboxManager->render(*skyboxShader); 
@@ -429,36 +435,41 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     }
 
     static glm::mat4 model = glm::mat4(1.0f);
-    shader.use();
-    shader.setMat4("model", model);
-
-    shader.setBool("useTexture", true);
-    shader.setBool("useRandomColor", false);
-    shader.setVec3("uColor", glm::vec3(0, 1, 0));
-
-    glBindTexture(GL_TEXTURE_2D, 4);
     glBindVertexArray(VAO);
 
-    // --- Fyllning ---
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+    constexpr bool renderTextured = true;
+    constexpr bool renderWireframe = false;
 
-    // --- Wireframe ---
-    
-    //debugShader->use();
-    //debugShader->setMat4("model", model);
-    //debugShader->setInt("debug.objectType", 0);
-    //debugShader->setVec3("debug.uColor", glm::vec3{ 0.2 });
-    // 
-    //glDisable(GL_CULL_FACE); // ta bort cull face
-    //glEnable(GL_POLYGON_OFFSET_LINE); 
-    //// Skjuter ut linjerna en aning så att de inte z-fightar med fyllningen
-    //glPolygonOffset(-1.0f, -1.0f); 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); 
-    //glLineWidth(3.f); 
-    //glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr); 
-    //glDisable(GL_POLYGON_OFFSET_LINE); 
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    //glEnable(GL_CULL_FACE); // återställ cull face
+    if (renderTextured) {
+        shader.use();
+        shader.setMat4("model", model);
+        shader.setBool("useTexture", true);
+        shader.setBool("useRandomColor", false);
+        shader.setVec3("uColor", glm::vec3(0, 1, 0));
+        glBindTexture(GL_TEXTURE_2D, 4);
+
+        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+    }
+    if (renderWireframe) {
+        debugShader->use();
+        debugShader->setMat4("model", model);
+        debugShader->setInt("debug.objectType", 0);
+        debugShader->setVec3("debug.uColor", glm::vec3(0.3f));
+        debugShader->setBool("debug.useUniformColor", true);
+
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0f, -1.0f);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glLineWidth(3.f);
+
+        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+
+        // restore
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+        glEnable(GL_CULL_FACE);
+    }
 }
 
 //-----------------------------------
@@ -629,35 +640,27 @@ void Renderer::renderLights() const {
 //----------------------------
 //     Render Raycast Hit
 //----------------------------
-void Renderer::renderRayCastHit(Camera& camera, SceneBuilder& builder) {
-    GameObject* obj = nullptr;
+void Renderer::renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder) {
+    if (obj == nullptr) {
+        return;
+    }
 
-    // get hit object from player or editor
-    if (engineState->isPlayerMode()) {
-        RaycastHit& hitData = player->getLastRayHit();
-        if (hitData.object == nullptr) {
-            return;
-        }
-        obj = hitData.object;
-    }
-    else {
-        RaycastHit& hitData = editor->getLastRayHit();
-        if (hitData.object == nullptr) {
-            return;
-        }
-        obj = hitData.object;
-    }
-    
+    // #TODO: fix logic for selected vs hovered
+
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 
+    bool selected;
+    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; } 
+    else if (obj->hoveredByEditor) { selected = false; } 
+
     if (obj->colliderType == ColliderType::CUBOID) {
         OOBB& box = std::get<OOBB>(obj->collider.shape);
-        obj->oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, true);
+        obj->oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
     }
     else if (obj->colliderType == ColliderType::SPHERE) {
         Sphere& sphere = std::get<Sphere>(obj->collider.shape);
-        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, true);
+        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
     }
 }
 
@@ -691,11 +694,11 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
             if (obj.colliderType == ColliderType::CUBOID) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false);
+                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false, false);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
                 Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, false);
+                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, false, false);
             }
         }
     }
@@ -746,7 +749,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 //       Render BVH
 //-------------------------
 template<typename E>
-void Renderer::renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
+void Renderer::renderBVH(const BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 

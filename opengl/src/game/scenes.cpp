@@ -12,9 +12,30 @@ void SceneBuilder::emptyFloorScene() {
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-            createObject("uvmap", "cube", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation);
+            createObject("uvmap", "cube", ColliderType::CUBOID, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation, 0, 0, {}, true);
         }
     }
+
+    // roof
+    glm::vec3 pos = glm::vec3(0, 20, 0);
+    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    createObject("uvmap", "cube", ColliderType::CUBOID, pos, glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation, 0, 0, {}, true);
+
+    createHalo(
+        /*width*/          40.0f,
+        /*height*/         3.0f,
+        /*length*/         2.0f,
+        /*baseRotation*/   glm::vec3(0, 0, 1),
+        /*rotDir*/         glm::vec3(0, 1, 0),
+        /*rotSpeed*/       0.0f,
+        /*pos*/            glm::vec3(125, 0, 125),
+        /*segments*/       72,
+        /*color*/          glm::vec3(255, 215, 0), // 0–255 färg
+        /*createsShadows*/ true,
+        /*seeThrough*/     true
+    );
+
+    createObject("plain", "cube", ColliderType::CUBOID, glm::vec3(0,10,0), glm::vec3(50.0, 30.0, 5.0), 0, 1, {});
 }
 
 void SceneBuilder::testFloorScene() {
@@ -133,7 +154,7 @@ void SceneBuilder::terrainScene() {
 void SceneBuilder::containerScene() {
 
     int floorWidth = 2;
-    int floorHeight = 3;
+    int floorHeight = 2;
 
     const float baseX = 0.0f;
     const float baseZ = -30.0f;
@@ -144,9 +165,7 @@ void SceneBuilder::containerScene() {
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-            createObject("uvmap", "cube", ColliderType::CUBOID, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation);
-            GameObject& floorTile = dynamicObjects.back();
-            floorTile.seeThrough = true;
+            createObject("uvmap", "cube", ColliderType::CUBOID, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation, 99, 0, {}, 1);
         }
     }
 
@@ -175,30 +194,22 @@ void SceneBuilder::containerScene() {
     // syd (zMin)
     createObject("plain", "cube", ColliderType::CUBOID,
         glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
-        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& southWall = dynamicObjects.back();
-    southWall.seeThrough = true;
+        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255), 1);
 
     // nord (zMax)
     createObject("plain", "cube", ColliderType::CUBOID,
         glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
-        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& northWall = dynamicObjects.back();
-    northWall.seeThrough = true;
+        glm::vec3(lenX, wallH, thick), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255), 1);
 
     // väst (xMin)
     createObject("plain", "cube", ColliderType::CUBOID,
         glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
-        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& westWall = dynamicObjects.back();
-    westWall.seeThrough = true;
+        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255), 1);
 
     // öst (xMax)
     createObject("plain", "cube", ColliderType::CUBOID,
         glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
-        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255));
-    GameObject& eastWall = dynamicObjects.back();
-    eastWall.seeThrough = true;
+        glm::vec3(thick, wallH, lenZ), 0, 1, wallOri, 0, 0, glm::vec3(190, 255, 255), 1);
 
     //// top floor
     //for (int i = 0; i < floorWidth; i++) {
@@ -390,7 +401,7 @@ void SceneBuilder::tallStructureScene() {
 //       Tumbler Scene
 //---------------------------
 void SceneBuilder::tumblerScene() {
-    createHalo(500.0f, 1.0f, 5.0f, glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 90.f, glm::vec3(125, 0, 125), 72, glm::vec3(255, 255, 255), true);
+    createHalo(500.0f, 1.0f, 5.0f, glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), 90.f, glm::vec3(125, 0, 125), 72, glm::vec3(255, 255, 255), true, false);
 
     createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -30.0f, 165.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);
     //createBlockPyramid("plain", glm::vec3(-1, -1, -1), glm::vec3(120.0f, -50.0f, 105.0f), 12, 10, 1.0f, 1.0f, 1.0f, 0.0f, 1, false);

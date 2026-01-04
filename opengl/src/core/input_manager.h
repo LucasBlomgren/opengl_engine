@@ -34,9 +34,10 @@ public:
     static void mouseMovementCallback(GLFWwindow* window, double xpos, double ypos);
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
+    float lastX = 0;
+    float lastY = 0;
+
 private:
     // Mouse tracking
     bool firstMouse = true;
-    float lastX = 0;
-    float lastY = 0;
 };

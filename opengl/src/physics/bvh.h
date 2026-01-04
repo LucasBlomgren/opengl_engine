@@ -59,9 +59,9 @@ public:
 
     void build(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements);
     void update(std::vector<E>& elements, std::vector<int>& indexes, bool useAllElements);
-    void singleQuery(const AABB& qBox, std::vector<E*>& out); 
+    void singleQuery(const AABB& qBox, std::vector<E*>& out) const;
 
-    void insertLeaf(E* e);
+    int insertLeaf(E* e);
     typename BVHTree<E>::Node* findBestSibling(AABB& box);
     typename BVHTree<E>::Node* createLeaf(E* e);
 
@@ -84,9 +84,6 @@ private:
     void updateLeaves();
     void refitNode(int nodeIdx);
     void updateRenderData(Node& n);
-
-    // single query
-    std::vector<Node*> queryStack;
 };
 
 template<typename Ea, typename Eb>

@@ -176,7 +176,7 @@ void GameObject::updatePos(const float& dt) {
 	if (selectedByEditor or selectedByPlayer)
 		return;
 
-	if (allowGravity and !player)
+	if (allowGravity and !player and !isStatic)
 		linearVelocity += g * dt;
 
 	float aLin;
@@ -292,4 +292,10 @@ void GameObject::setAwake() {
 
 	asleep = false;
 	sleepCounter = 0.0f;
+}
+
+void GameObject::setStatic() {
+	isStatic = true;
+	mass = 0.0f;
+	invMass = 0.0f;
 }

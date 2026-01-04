@@ -25,4 +25,4 @@ struct RaycastHit {
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, BVHTree<GameObject>& tree);
+RaycastHit raycast(Ray& ray, const BVHTree<GameObject>& tree);

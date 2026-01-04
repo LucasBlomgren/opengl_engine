@@ -1,12 +1,12 @@
 #pragma once
 #include <glm/vec3.hpp>
-
+#include "broadphase_types.h"
 #include "aabb.h"
 
 class Tri {
 public:
     int id;
-    int bvhLeafIdx;
+    BroadphaseHandle broadphaseHandle;
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec3> edgeDirs;
     std::vector<glm::vec3> edgePoints;

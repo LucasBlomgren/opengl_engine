@@ -1,14 +1,15 @@
 #include "pch.h"
 #include "oobb_renderer.h"
 
-void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool raycastHit) {
+void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) {
 
     glm::mat4 model(1.0f);
     makeOOBBModelMatrix(model, box);
 
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
-    if (raycastHit) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
+    if (selected) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
+    else if (hovered) { shader.setVec3("debug.uColor", glm::vec3(1.0f, 0.65f, 0.0f)); }
     else if (isStatic) { shader.setVec3("debug.uColor", glm::vec3(0.30f, 0.95f, 0.50f)); }
     else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
     else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
@@ -18,6 +19,7 @@ void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep,
     glDrawArrays(GL_LINES, 0, 24);
 }
 
+// #TODO: optimize by passing model matrix directly to shader
 void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) {
     M[0] = glm::vec4(box.wAxes[0] * (box.lHalfExtents.x * 2.0f * box.scale.x), 0.0f);
     M[1] = glm::vec4(box.wAxes[1] * (box.lHalfExtents.y * 2.0f * box.scale.y), 0.0f);

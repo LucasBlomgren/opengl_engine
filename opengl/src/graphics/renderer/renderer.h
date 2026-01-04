@@ -63,11 +63,11 @@ public:
     void renderGameObjectsShadow();
     void renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty);
     void renderLights() const; 
-    void renderRayCastHit(Camera& camera, SceneBuilder& builder); 
+    void renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder);
 
     // debug
     template<typename E>
-    void renderBVH(BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor);  
+    void renderBVH(const BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor);
     void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
     void renderFrustum(const glm::mat4& viewProj);
 

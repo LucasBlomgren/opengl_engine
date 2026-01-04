@@ -11,33 +11,9 @@ template class BVHTree<GameObject>;
 void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
 
-    awake_DynamicObjects.clear();
-    awake_DynamicObjects.reserve(5000000);
-    asleep_DynamicObjects.clear();
-    asleep_DynamicObjects.reserve(5000000);
-    static_Objects.clear();
-    static_Objects.reserve(5000000);
+    broadphaseManager.init(dynamicObjects, terrainTris);
 
-    dynamicAwakeBvh.nodes.reserve(5000000);
-    dynamicAwakeBvh.rootIdx = -1;
-    dynamicAwakeBvh.nodes.clear();
-
-    dynamicAsleepBvh.nodes.reserve(5000000);
-    dynamicAsleepBvh.rootIdx = -1;
-    dynamicAsleepBvh.nodes.clear();
-
-    staticBvh.nodes.reserve(5000000);
-    staticBvh.rootIdx = -1;
-    staticBvh.nodes.clear();
-
-    insertPendingObjects();
-    dynamicAwakeBvh.build(*gameObjects, awake_DynamicObjects, false);
-    dynamicAsleepBvh.build(*gameObjects, asleep_DynamicObjects, false);
-    staticBvh.build(*gameObjects, static_Objects, false);
-
-    this->terrainTriangles = terrainTris;
-    std::vector<int> placeholder;
-    terrainBvh.build(*terrainTris, placeholder, true);
+    flushBroadphaseCommands();
 
     toWake.reserve(dynamicObjects->size());
     toSleep.reserve(dynamicObjects->size());
@@ -54,29 +30,19 @@ void PhysicsEngine::clearPhysicsData() {
 }
 
 //-----------------------------
-//     Add/Remove commands
-//-----------------------------
-void PhysicsEngine::queueAdd(GameObject* o) { 
-    pending.push_back({ PhysCmd::Add, o }); 
-}
-void PhysicsEngine::queueRemove(GameObject* o) { 
-    pending.push_back({ PhysCmd::Remove, o }); 
-}
-
-//-----------------------------
 //          Getters
 //-----------------------------
-BVHTree<GameObject>& PhysicsEngine::getDynamicAwakeBvh() {
-    return dynamicAwakeBvh;
+const BVHTree<GameObject>& PhysicsEngine::getDynamicAwakeBvh() {
+    return broadphaseManager.getAwakeBVH();
 }
-BVHTree<GameObject>& PhysicsEngine::getDynamicAsleepBvh() {
-    return dynamicAsleepBvh;
+const BVHTree<GameObject>& PhysicsEngine::getDynamicAsleepBvh() {
+    return broadphaseManager.getAsleepBVH();
 }
-BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
-    return staticBvh;
+const BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
+    return broadphaseManager.getStaticBVH();
 }
-BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
-    return terrainBvh;
+const BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
+    return broadphaseManager.getTerrainBVH();
 }
 const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
     return contactCache;
@@ -86,9 +52,9 @@ const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() cons
 //           Raycast
 //-----------------------------
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
-    RaycastHit a = raycast(r, this->dynamicAwakeBvh);
-    RaycastHit b = raycast(r, this->dynamicAsleepBvh);
-    RaycastHit c = raycast(r, this->staticBvh);
+    RaycastHit a = raycast(r, broadphaseManager.getAwakeBVH());
+    RaycastHit b = raycast(r, broadphaseManager.getAsleepBVH());
+    RaycastHit c = raycast(r, broadphaseManager.getStaticBVH());
 
     RaycastHit bestHit = a;
     if (b.object != nullptr) {
@@ -109,7 +75,11 @@ RaycastHit PhysicsEngine::performRaycast(Ray& r) {
 //-----------------------------
 void PhysicsEngine::sleepAllObjects() {
     for (GameObject& obj : *dynamicObjects) {
-        moveToAsleep(obj);
+        if (obj.asleep) continue;
+        if (obj.isStatic) continue;
+        if (obj.player) continue;
+        if (obj.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
+        broadphaseManager.moveToAsleep(obj);
     }
 }
 
@@ -118,8 +88,54 @@ void PhysicsEngine::sleepAllObjects() {
 //-----------------------------
 void PhysicsEngine::awakenAllObjects() {
     for (GameObject& obj : *dynamicObjects) {
-        moveToAwake(obj);
+        if (!obj.asleep) continue;
+        if (obj.isStatic) continue;
+        if (obj.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
+        broadphaseManager.moveToAwake(obj);
     }
+}
+
+//-----------------------------
+//     Add/Remove commands
+//-----------------------------
+void PhysicsEngine::queueAdd(GameObject* obj, BroadphaseBucket& target) {
+    pending.push_back({ PhysCmd::Type::Add, obj, target });
+}
+void PhysicsEngine::queueRemove(GameObject* obj) {
+    std::cout << "Queue remove object " << obj->id << " from broadphase\n";
+    pending.push_back({ PhysCmd::Type::Remove, obj, BroadphaseBucket::None });
+}
+void PhysicsEngine::queueMove(GameObject* obj, BroadphaseBucket& target) {
+    pending.push_back({ PhysCmd::Type::Move, obj, target });
+}
+
+//-------------------------------
+//     Insert pending objects
+//-------------------------------
+void PhysicsEngine::flushBroadphaseCommands() {
+    for (auto& cmd : pending) {
+        if (!cmd.obj) continue;
+
+        switch (cmd.type) {
+        case PhysCmd::Type::Add:
+            broadphaseManager.add(*cmd.obj, cmd.dst);
+            break;
+
+        case PhysCmd::Type::Remove:
+            broadphaseManager.remove(*cmd.obj);
+            break;
+
+        case PhysCmd::Type::Move:
+            switch (cmd.dst) {
+            case BroadphaseBucket::Awake:  broadphaseManager.moveToAwake(*cmd.obj);  break;
+            case BroadphaseBucket::Asleep: broadphaseManager.moveToAsleep(*cmd.obj); break;
+            case BroadphaseBucket::Static: broadphaseManager.moveToStatic(*cmd.obj); break;
+            default: break;
+            }
+            break;
+        }
+    }
+    pending.clear();
 }
 
 //-----------------------------
@@ -140,7 +156,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         toSleep.clear();
 
         // add/remove objects to the BVH trees
-        insertPendingObjects();
+        flushBroadphaseCommands();
 
         // Reset contact points for the current frame
         for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
@@ -157,10 +173,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     // Update BVH trees
     {
         ScopedTimer t(*frameTimers, "BVH update");
-        /*if (dynamicAwakeBvh.dirty)*/ dynamicAwakeBvh.update(*dynamicObjects, awake_DynamicObjects, false);
-        if (dynamicAsleepBvh.dirty) dynamicAsleepBvh.update(*dynamicObjects, asleep_DynamicObjects, false);
-        /*if (staticBvh.dirty)*/ staticBvh.update(*dynamicObjects, static_Objects, false);
-
+        broadphaseManager.updateBVHs();
     }
 
     // Collision detection and resolution
@@ -182,7 +195,17 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //       Update methods
 //-----------------------------
 void PhysicsEngine::updateStates() {
-    for (int idx : awake_DynamicObjects) {
+    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    for (int idx : awakeIds) {
+        GameObject& obj = (*dynamicObjects)[idx];
+        obj.resetDirtyFlags();
+        obj.updatePos(this->dt);
+        obj.updateAABB();
+        obj.updateCollider();
+    }
+
+    const std::vector<int>& staticIds = broadphaseManager.staticList();
+    for (int idx : staticIds) {
         GameObject& obj = (*dynamicObjects)[idx];
         obj.resetDirtyFlags();
         obj.updatePos(this->dt);
@@ -191,206 +214,28 @@ void PhysicsEngine::updateStates() {
     }
 }
 
-//-------------------------------
-//     Insert pending objects
-//-------------------------------
-void PhysicsEngine::insertPendingObjects() {
-    // add/remove objects to the BVH trees
-    for (auto& c : pending) {
-        if (c.obj->isStatic) {
-            moveToStatic(*c.obj);
-        } else if (c.obj->asleep) {
-            moveToAsleep(*c.obj);
-        } else {
-            moveToAwake(*c.obj);
-        }
-    }
-    pending.clear();
-}
-
-//-----------------------------
-//       Move to awake
-//-----------------------------
-inline void PhysicsEngine::moveToAwake(GameObject& obj) {
-    if (obj.isStatic) return;
-    if (obj.awakeListIdx != -1) { obj.setAwake(); return; } // redan där
-
-    if (obj.asleepListIdx != -1) { // ta ur asleep
-        int last = (int)asleep_DynamicObjects.size() - 1;
-        if (obj.asleepListIdx != last) {
-            GameObject& lastObj = (*dynamicObjects)[asleep_DynamicObjects[last]];
-            lastObj.asleepListIdx = obj.asleepListIdx;
-            asleep_DynamicObjects[obj.asleepListIdx] = lastObj.dynamicObjectIdx;
-        }
-        asleep_DynamicObjects.pop_back();
-        obj.asleepListIdx = -1;
-        dynamicAsleepBvh.removeLeaf(obj.bvhLeafIdx);
-        dynamicAsleepBvh.dirty = true;
-    }
-    obj.setAwake(); // <- synka state
-    awake_DynamicObjects.push_back(obj.dynamicObjectIdx);
-    obj.awakeListIdx = (int)awake_DynamicObjects.size() - 1;
-    dynamicAwakeBvh.insertLeaf(&obj);
-}
-
-//-----------------------------
-//       Move to asleep
-//-----------------------------
-inline void PhysicsEngine::moveToAsleep(GameObject& obj) {
-    if (obj.isStatic) return;
-    if (obj.asleepListIdx != -1) { obj.setAsleep(); return; } // redan där
-
-    if (obj.awakeListIdx != -1) { // ta ur awake
-        int last = (int)awake_DynamicObjects.size() - 1;
-        if (obj.awakeListIdx != last) {
-            GameObject& lastObj = (*dynamicObjects)[awake_DynamicObjects[last]];
-            lastObj.awakeListIdx = obj.awakeListIdx;
-            awake_DynamicObjects[obj.awakeListIdx] = lastObj.dynamicObjectIdx;
-        }
-        awake_DynamicObjects.pop_back();
-        obj.awakeListIdx = -1;
-        dynamicAwakeBvh.removeLeaf(obj.bvhLeafIdx);
-    }
-    obj.setAsleep(); // <- synka state
-    asleep_DynamicObjects.push_back(obj.dynamicObjectIdx);
-    obj.asleepListIdx = (int)asleep_DynamicObjects.size() - 1;
-    dynamicAsleepBvh.insertLeaf(&obj);
-    dynamicAsleepBvh.dirty = true;
-}
-
-//-----------------------------
-//       Move to static
-//-----------------------------
-inline void PhysicsEngine::moveToStatic(GameObject& obj) {
-    if (!obj.isStatic) return;
-    if (obj.staticListIdx != -1) { return; } // redan där
-
-    obj.awakeListIdx = -1;
-    obj.asleepListIdx = -1;
-
-    static_Objects.push_back(obj.dynamicObjectIdx);
-    obj.staticListIdx = (int)static_Objects.size() - 1;
-    staticBvh.insertLeaf(&obj);
-
-    staticBvh.dirty = true;
-}
-
 //---------------------------------------------
 //      Collision detection & resolution
 //---------------------------------------------
-void PhysicsEngine::detectAndSolveCollisions() {
-    static std::vector<TerrainHit> tHits; 
-    static std::vector<DynamicHit> dHits; 
+void PhysicsEngine::detectAndSolveCollisions() 
+{
+    broadphaseManager.computePairs();
+    const auto& terrainPairs = broadphaseManager.getTerrainPairs();
+    const auto& dynamicPairs = broadphaseManager.getDynamicPairs();
 
-    tHits.reserve(BVHTree<Tri>::MaxCollisionBuf); 
-    dHits.reserve(BVHTree<GameObject>::MaxCollisionBuf); 
-
-    broadPhase(tHits, dHits);       // hashmap kanske långsam? 
-    narrowPhase(tHits, dHits);      // SAT + collisionManifold
+    narrowPhase(terrainPairs, dynamicPairs);      // SAT + collisionManifold
     collectActiveContacts();        // collect contacts to solve
     resolveCollisions();            // PGS + Baumgarte stabilization
 }
 
 //---------------------------------------------
-//                Broadphase
-//---------------------------------------------
-void PhysicsEngine::broadPhase(std::vector<TerrainHit>& tHits, std::vector<DynamicHit>& dHits) {
-    ScopedTimer t(*frameTimers, "Broadphase");
-
-    // ----- dynamic vs terrain -----
-    if (terrainBvh.rootIdx != -1) {
-        static std::vector<std::pair<GameObject*, Tri*>> hitsBufTerrain;         // hits buffer
-        hitsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
-        hitsBufTerrain.clear();
-        treeVsTreeQuery(dynamicAwakeBvh, terrainBvh, hitsBufTerrain);          // query terrain vs dynamic objects
-
-        // Sort terrain hits by GameObject to avoid duplicates 
-        std::unordered_map<GameObject*, std::vector<Tri*>> temp;
-        temp.reserve(hitsBufTerrain.size());
-        if (temp.bucket_count() < hitsBufTerrain.size())
-            temp.reserve(hitsBufTerrain.size());
-
-        for (int i = 0; i < hitsBufTerrain.size(); i++) {
-            auto [obj, tri] = hitsBufTerrain[i];
-            temp[obj].push_back(tri);
-        }
-
-        // Finalize terrain hits
-        tHits.clear();
-        int cap = static_cast<int>(temp.size());
-        tHits.resize(cap);
-        int sp = 0;
-
-        for (auto& [obj, trisVec] : temp) {
-            tHits[sp++] = TerrainHit{ obj, std::move(trisVec) };
-        }
-        tHits.resize(sp);
-    }
-
-    static std::vector<std::pair<GameObject*, GameObject*>> hitsBufDynamic; // hits buffer
-    dHits.clear();
-
-    // ----- dynamic vs dynamic -----
-    if (dynamicAwakeBvh.rootIdx != -1) {
-        hitsBufDynamic.clear();
-        treeVsTreeQuery(dynamicAwakeBvh, dynamicAwakeBvh, hitsBufDynamic);
-
-        int cap = static_cast<int>(hitsBufDynamic.size());
-        dHits.resize(cap);
-        int sp = 0;
-
-        for (auto& hp : hitsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dHits[sp++] = DynamicHit{ A,B };
-        }
-        dHits.resize(sp);
-    }
-
-    // ----- dynamic vs asleep -----
-    if (dynamicAsleepBvh.rootIdx != -1) {
-        hitsBufDynamic.clear();
-        treeVsTreeQuery(dynamicAwakeBvh, dynamicAsleepBvh, hitsBufDynamic);
-
-        int cap = static_cast<int>(hitsBufDynamic.size());
-        dHits.reserve(dHits.size() + cap);
-        int sp = 0;
-
-        for (auto& hp : hitsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dHits.emplace_back(DynamicHit{ A,B });
-        }
-    }
-
-    // ----- dynamic vs static -----
-    if (staticBvh.rootIdx != -1) {
-        hitsBufDynamic.clear();
-        treeVsTreeQuery(dynamicAwakeBvh, staticBvh, hitsBufDynamic);
-
-        int cap = static_cast<int>(hitsBufDynamic.size());
-        dHits.reserve(dHits.size() + cap);
-        int sp = 0;
-
-        for (auto& hp : hitsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dHits.emplace_back(DynamicHit{ A,B });
-        }
-    }
-}
-
-//---------------------------------------------
 //               Narrow phase
 //---------------------------------------------
-void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vector<DynamicHit>& dynamicHits) {
+void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
     ScopedTimer t(*frameTimers, "Narrowphase");
 
     // ----- Terrain vs dynamic ----- 
-    for (TerrainHit& th : terrainHits) {
+    for (const TerrainPair& th : terrainHits) {
         if (th.obj->asleep) {
             continue;
         }
@@ -470,7 +315,7 @@ void PhysicsEngine::narrowPhase(std::vector<TerrainHit>& terrainHits, std::vecto
     }
 
     // ----- Dynamic vs dynamic -----
-    for (DynamicHit& dh : dynamicHits) {
+    for (const DynamicPair& dh : dynamicHits) {
         if (dh.A->isStatic and dh.B->isStatic) {
             continue;
         }
@@ -953,7 +798,8 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
 //       Sleep Thresholds
 //-----------------------------
 void PhysicsEngine::updateSleepThresholds() {
-    for (int idx : awake_DynamicObjects) {
+    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    for (int idx : awakeIds) {
         GameObject& obj = (*dynamicObjects)[idx];
 
         if (obj.isStatic or obj.asleep or !obj.allowSleep)
@@ -989,7 +835,8 @@ void PhysicsEngine::updateSleepThresholds() {
 //-------------------------------
 void PhysicsEngine::decideSleep() 
 {
-    for (int idx : awake_DynamicObjects) {
+    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    for (int idx : awakeIds) {
         GameObject& obj = (*dynamicObjects)[idx];
         if (obj.isStatic) continue;
         if (!obj.allowSleep) continue;
@@ -1010,12 +857,12 @@ void PhysicsEngine::decideSleep()
     }
 
     for (int idx : toSleep) {
-        moveToAsleep((*dynamicObjects)[idx]);
+        broadphaseManager.moveToAsleep((*dynamicObjects)[idx]);
     }
 
     for (int idx : toWake) {
         GameObject& obj = (*dynamicObjects)[idx];
-        moveToAwake(obj);
+        broadphaseManager.moveToAwake(obj);
         obj.inSleepTransition = false;
     }
 }

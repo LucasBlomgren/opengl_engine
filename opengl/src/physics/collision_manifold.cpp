@@ -622,8 +622,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     glm::vec3& referenceFaceNormal = contact.referenceFaceNormal;
     std::vector<glm::vec3>& referenceFace = contact.referenceFace;
 
-    // -------------- behöver ändras till att vara en faktor av objektens storlekar -------------
-    const float threshold = 0.005f;
+    const float threshold = 0.005f; // #TODO: behöver ändras till att vara en faktor av objektens storlekar
 
     // iterera över alla nya contact points och se om någon är nära en existerande
     glm::mat3 M3; 
