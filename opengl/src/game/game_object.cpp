@@ -121,7 +121,7 @@ void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angu
 
 void GameObject::updateAABB() {
 	setModelMatrix();
-	aabb.update(modelMatrix, position, scale, isRotated);
+	aabb.update(modelMatrix, position, scale, true);
 }
 
 void GameObject::updateCollider() {
@@ -154,7 +154,7 @@ void GameObject::initMesh() {
 void GameObject::initCollider() {
 	// AABB 
 	aabb.Init(verticesPositions);
-	aabb.update(modelMatrix, position, scale, isRotated);
+	aabb.update(modelMatrix, position, scale, true);
 
 	// Collider
 	if (colliderType == ColliderType::CUBOID) {

@@ -3,6 +3,8 @@
 #include "input.h"
 #include "aabb.h"
 #include "physics/raycast.h"
+#include "viewport_fbo.h"
+#include "panel_manager.h"
 
 struct GLFWwindow;
 class InputManager;
@@ -13,12 +15,32 @@ class Camera;
 class SkyboxManager;
 class Shader;
 
-class Editor : public IInputReceiver {
+namespace Editor 
+{
+class EditorMain : public IInputReceiver {
 public:
+    ViewportFBO viewportFBO{ 800, 600 };
+    std::unique_ptr<PanelManager> panelManager;
+
     void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
-    void init(float SCR_WIDTH, float SCR_HEIGHT, EngineState* engineState, SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, InputManager* inputManager, Camera* camera, GLFWwindow* window);
+    void init(
+        float SCR_WIDTH,
+        float SCR_HEIGHT,
+        EngineState* engineState,
+        SceneBuilder* sceneBuilder,
+        PhysicsEngine* physicsEngine,
+        InputManager* inputManager,
+        Camera* camera,
+        GLFWwindow* window,
+        ImGuiManager* imguiManager,
+        Renderer* renderer,
+        FrameTimers* frameTimers,
+        GpuTimers* gpuTimers
+    );
+
+    void drawUI();
 
     // activate/deactivate editor mode
     void activate();
@@ -60,6 +82,10 @@ private:
     InputManager* inputManager = nullptr;
     Camera* camera = nullptr;
     GLFWwindow* window = nullptr;
+    ImGuiManager* imguiManager = nullptr;
+    Renderer* renderer = nullptr;
+    FrameTimers* frameTimers = nullptr;
+    GpuTimers* gpuTimers = nullptr;
 
     // selection and placement
     RaycastHit lastHitData;
@@ -69,3 +95,4 @@ private:
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
     constexpr static float SHOOT_VELOCITY = 100.0f;
 };
+}

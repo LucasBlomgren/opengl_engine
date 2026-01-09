@@ -19,7 +19,7 @@
 #include "lighting/light.h"
 #include "lighting/light_manager.h"
 #include "lighting/shadow_manager.h"
-#include "editor.h"
+#include "editor/editor_main.h"
 #include "player.h"
 
 // overload operator<< for glm::vec3 
@@ -80,7 +80,7 @@ int main() {
 	ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
 
 	// editor
-	Editor editor;
+	Editor::EditorMain editor;
 
 	// player
 	Player player;
@@ -134,7 +134,7 @@ int main() {
 	sceneBuilder.createScene(6);
 
 	// setup editor
-	editor.init(SCR_WIDTH, SCR_HEIGHT, &engineState, &sceneBuilder, &physicsEngine, &inputManager, &camera, window);
+	editor.init(SCR_WIDTH, SCR_HEIGHT, &engineState, &sceneBuilder, &physicsEngine, &inputManager, &camera, window, &imguiManager, &renderer, &frameTimers, &gpu);
 
 	// setup player
 	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
@@ -204,27 +204,13 @@ int main() {
 			readIdx = (readIdx + 1) % NQ;
 		}
 
-		// rendering
-		{
-			ScopedTimer t(frameTimers, "Render");
-			renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx);
-			sceneBuilder.sceneDirty = false;
-			writeIdx = (writeIdx + 1) % NQ;
-		}
-
-		// ImGui
-		if (!engineState.isPlayerMode()) {
-			ScopedTimer a(frameTimers, "ImGui");
-			imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
-			imguiManager.selectedObjectUI(editor.selectedObject);
-		}
-		imguiManager.render();
-
+		// setup input context
 		inputManager.setCurrentContext(
-			ImGui::GetIO().WantCaptureMouse, 
-			ImGui::GetIO().WantCaptureKeyboard, 
+			ImGui::GetIO().WantCaptureMouse,
+			ImGui::GetIO().WantCaptureKeyboard,
 			engineState.isPlayerMode());
 
+		// route input
 		inputManager.route(window);
 
 		// input [V]: toggle editor/player mode
@@ -244,6 +230,30 @@ int main() {
 				inputManager.resetFirstMouse();
 			}
 		}
+
+		// rendering
+		{
+			ScopedTimer t(frameTimers, "Render");
+
+			// render to screen or editor viewport
+			if (engineState.isPlayerMode()) {
+				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
+			} else {
+				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
+			}
+			sceneBuilder.sceneDirty = false;
+			writeIdx = (writeIdx + 1) % NQ;
+		}
+
+		// ImGui
+		if (!engineState.isPlayerMode()) {
+			ScopedTimer a(frameTimers, "ImGui");
+			imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
+			imguiManager.selectedObjectUI(editor.selectedObject);
+
+			editor.drawUI();
+		}
+		imguiManager.render();
 
 		// editor/player update
 		if (!engineState.isPlayerMode()) {

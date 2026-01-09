@@ -110,7 +110,7 @@ void PhysicsEngine::queueMove(GameObject* obj, BroadphaseBucket& target) {
 }
 
 //-------------------------------
-//     Insert pending objects
+//     Flush pending commands
 //-------------------------------
 void PhysicsEngine::flushBroadphaseCommands() {
     for (auto& cmd : pending) {
@@ -195,7 +195,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //       Update methods
 //-----------------------------
 void PhysicsEngine::updateStates() {
-    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    const std::vector<int>& awakeIds = broadphaseManager.getAwakeList();
     for (int idx : awakeIds) {
         GameObject& obj = (*dynamicObjects)[idx];
         obj.resetDirtyFlags();
@@ -204,7 +204,7 @@ void PhysicsEngine::updateStates() {
         obj.updateCollider();
     }
 
-    const std::vector<int>& staticIds = broadphaseManager.staticList();
+    const std::vector<int>& staticIds = broadphaseManager.getStaticList();
     for (int idx : staticIds) {
         GameObject& obj = (*dynamicObjects)[idx];
         obj.resetDirtyFlags();
@@ -798,7 +798,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(GameObject& A, GameObject& 
 //       Sleep Thresholds
 //-----------------------------
 void PhysicsEngine::updateSleepThresholds() {
-    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    const std::vector<int>& awakeIds = broadphaseManager.getAwakeList();
     for (int idx : awakeIds) {
         GameObject& obj = (*dynamicObjects)[idx];
 
@@ -835,12 +835,11 @@ void PhysicsEngine::updateSleepThresholds() {
 //-------------------------------
 void PhysicsEngine::decideSleep() 
 {
-    const std::vector<int>& awakeIds = broadphaseManager.awakeList();
+    const std::vector<int>& awakeIds = broadphaseManager.getAwakeList();
     for (int idx : awakeIds) {
         GameObject& obj = (*dynamicObjects)[idx];
-        if (obj.isStatic) continue;
         if (!obj.allowSleep) continue;
-        //if (obj.inSleepTransition) continue;
+        if (obj.inSleepTransition) continue;
 
         // sleep counter
         if (glm::length(obj.linearVelocity) < obj.velocityThreshold and 

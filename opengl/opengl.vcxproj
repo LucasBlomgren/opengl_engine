@@ -19,13 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_glfw.cpp" />
-    <ClCompile Include="Linking\include\imgui\backends\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="Linking\include\imgui\imgui.cpp" />
-    <ClCompile Include="Linking\include\imgui\imgui_demo.cpp" />
-    <ClCompile Include="Linking\include\imgui\imgui_draw.cpp" />
-    <ClCompile Include="Linking\include\imgui\imgui_tables.cpp" />
-    <ClCompile Include="Linking\include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_demo.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_draw.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_tables.cpp" />
+    <ClCompile Include="Linking\include\imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="src\core\camera.cpp" />
     <ClCompile Include="src\core\engine_state.cpp">
@@ -38,10 +38,12 @@
     </ClCompile>
     <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\core\timer.cpp" />
+    <ClCompile Include="src\editor\panels\performance_panel.cpp" />
+    <ClCompile Include="src\editor\panel_manager.cpp" />
     <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
-    <ClCompile Include="src\game\editor.cpp">
+    <ClCompile Include="src\editor\editor_main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
@@ -285,10 +287,14 @@
     <ClInclude Include="src\core\input.h" />
     <ClInclude Include="src\core\input_manager.h" />
     <ClInclude Include="src\core\timer.h" />
+    <ClInclude Include="src\editor\panel.h" />
+    <ClInclude Include="src\editor\panel_manager.h" />
+    <ClInclude Include="src\editor\panels\performance_panel.h" />
     <ClInclude Include="src\game\player.h" />
+    <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
-    <ClInclude Include="src\game\editor.h" />
+    <ClInclude Include="src\editor\editor_main.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\game\scene_builder.h" />
@@ -436,7 +442,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui;$(ProjectDir)Linking\include\imgui\backends;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -466,7 +472,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui;$(ProjectDir)Linking\include\imgui\backends;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>

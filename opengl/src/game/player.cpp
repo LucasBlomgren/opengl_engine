@@ -155,7 +155,7 @@ void Player::selectObject() {
     GameObject* obj = selectedObject;
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueAdd(obj, bpBucket);
+    physicsEngine->queueMove(obj, bpBucket);
 
     selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
     selectedObject->lastPosition = selectedObject->position;

@@ -9,9 +9,9 @@ template void Renderer::renderBVH(const BVHTree<Tri>&, glm::vec3& , glm::vec3&);
 //           Init
 //-----------------------------
 void Renderer::init(
-    unsigned int width, 
-    unsigned int height, 
-    Editor& editor,
+    unsigned int width,
+    unsigned int height,
+    Editor::EditorMain &editor,
     Player& player,
     EngineState& engineState, 
     LightManager& lightManager, 
@@ -44,10 +44,12 @@ void Renderer::init(
     this->VAO_contactPoint = setupContactPoint();
 }
 
+// set viewport
 void Renderer::setViewPort(unsigned int w, unsigned int h) {
     glViewport(0, 0, w, h);
 }
 
+// clear render batches
 void Renderer::clearRenderBatches() {
     batches.clear();
 }
@@ -200,8 +202,11 @@ void Renderer::render(
     GLuint qShadow[],
     GLuint qMain[],
     GLuint qDebug[],
-    int writeIdx)
+    int writeIdx,
+    const Editor::ViewportFBO* viewportFBO
+)
 {
+    // update scene bounds if dirty
     if (builder.sceneDirty) {
         computeSceneBounds(builder);
     }
@@ -215,6 +220,15 @@ void Renderer::render(
     renderGameObjectsShadow();
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
+
+    // bind viewport FBO if provided
+    if (viewportFBO) {
+        viewportFBO->bind();
+    }
+    else {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, screenWidth, screenHeight);
+    }
 
     // default render
     glBeginQuery(GL_TIME_ELAPSED, qMain[writeIdx]);
@@ -264,6 +278,10 @@ void Renderer::render(
         static glm::vec3 c2{ 0.70f, 0.50f, 0.25f }; // Terrain leaves (ljusare brun/ockra)
         renderBVH(physics.getTerrainBvh(), c, c2);
     }
+
+    if (viewportFBO) {
+    viewportFBO->unbind(screenWidth, screenHeight);
+}
 
     glEndQuery(GL_TIME_ELAPSED);
 }

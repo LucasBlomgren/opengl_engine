@@ -1,8 +1,8 @@
 #pragma once
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "imgui-docking/imgui.h"
+#include "imgui-docking/imgui_impl_glfw.h"
+#include "imgui-docking/imgui_impl_opengl3.h"
 
 #include "engine_state.h"
 #include "graphics/mesh/mesh_manager.h"
@@ -24,8 +24,6 @@ public:
     
     void mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpu, size_t amountObjects);
     void settingsUI();
-    void performanceUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpu, size_t amountObjects);
-
     void selectedObjectUI(GameObject* obj);
 
 private:

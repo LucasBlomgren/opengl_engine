@@ -16,7 +16,7 @@
 
 #include "bvh.h"
 #include "scene_builder.h"
-#include "editor.h"
+#include "editor/editor_main.h"
 #include "player.h"
 #include "raycast.h"
 
@@ -25,7 +25,7 @@ public:
     void init(
         unsigned int width,
         unsigned int height,
-        Editor& editor,
+        Editor::EditorMain& editor,
         Player& player,
         EngineState& engineState, 
         LightManager& lightManager, 
@@ -41,7 +41,8 @@ public:
         GLuint qShadow[],
         GLuint qMain[],
         GLuint qDebug[],
-        int writeIdx
+        int writeIdx,
+        const Editor::ViewportFBO* viewportFBO
     );
 
     void computeSceneBounds(SceneBuilder& builder);
@@ -90,7 +91,7 @@ private:
     float screenWidth;
     float screenHeight;
 
-    Editor* editor = nullptr;
+    Editor::EditorMain* editor = nullptr;
     Player* player = nullptr;
     EngineState* engineState = nullptr;
     LightManager* lightManager = nullptr;

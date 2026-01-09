@@ -48,10 +48,15 @@ struct CircBuffer {
 
 class GameObject {
 public:
-    // general
     int id;
+
     glm::vec3 position;
-    std::vector<glm::vec3> verticesPositions;
+    glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
+    glm::vec3 linearVelocity{ 0.0f };
+    glm::vec3 angularVelocity{ 0.0f };
+    glm::mat3 inverseInertiaWorld;
+    float invMass;
+    glm::mat3 inverseInertia;
 
     glm::mat4 modelMatrix;
     bool modelMatrixDirty = true;
@@ -61,40 +66,36 @@ public:
     glm::mat3 invRotationMatrix;
     bool helperMatricesDirty = true;
 
-    // render
-    Shader* shader = nullptr;
-    Mesh* mesh = nullptr;
-    GLuint textureId;
-    glm::vec3 color;
-    bool useRandomColor = false;
-    bool seeThrough = false;
-    bool isInsideShadowFrustum = true;
-    int batchIdx = -1;
-    int batchInstanceIdx = -1;
-
     // physics
-    glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
-    glm::mat3 inverseInertia;
-    glm::mat3 inverseInertiaWorld;
     glm::vec3 scale;
-    glm::vec3 linearVelocity{ 0.0f };
-    glm::vec3 angularVelocity{ 0.0f };
     glm::vec3 biasLinearVelocity;
     glm::vec3 biasAngularVelocity;
     float linearVelocityLen = 0.0f;
     float angularVelocityLen = 0.0f;
 
     float mass;
-    float invMass;
-    float invInertia;
     bool allowGravity;
     bool isStatic;
-    bool shouldRotate;
     bool isRotated = true;
     bool canMoveLinearly = true;
     glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
     float radius;
     float invRadius;
+
+    // collision
+    AABB aabb;
+    bool aabbDirty = true;
+    Collider collider;
+    ColliderType colliderType;
+    OOBBRenderer oobbRenderer;
+
+    // BVH
+    BroadphaseHandle broadphaseHandle;
+    int bvhLeafIdx = -1;
+    int dynamicObjectIdx = -1;
+    int awakeListIdx = -1;
+    int asleepListIdx = -1;
+    int staticListIdx = -1;
 
     // sleep
     bool asleep = false;
@@ -109,20 +110,16 @@ public:
     float lastAvg = 0.0f;
     CircBuffer collisionHistory;
 
-    // collision
-    AABB aabb;
-    bool aabbDirty = true;
-    Collider collider;
-    ColliderType colliderType;
-    OOBBRenderer oobbRenderer;
-
-    // BVH
-    BroadphaseHandle broadphaseHandle;  
-    int bvhLeafIdx       = -1;
-    int dynamicObjectIdx = -1;
-    int awakeListIdx     = -1;
-    int asleepListIdx    = -1;
-    int staticListIdx    = -1;
+    // render
+    Shader* shader = nullptr;
+    Mesh* mesh = nullptr;
+    GLuint textureId;
+    glm::vec3 color;
+    bool useRandomColor = false;
+    bool seeThrough = false;
+    bool isInsideShadowFrustum = true;
+    int batchIdx = -1;
+    int batchInstanceIdx = -1;
 
     // editor
     bool hoveredByEditor = false;
@@ -136,6 +133,8 @@ public:
     float playerJumpImpulse = 0.0f;
     bool onGround = false;
     bool hasJumped = false;
+
+    std::vector<glm::vec3> verticesPositions;
 
     // constructor
     GameObject(
@@ -156,7 +155,6 @@ public:
         : id(id),
         mesh(mesh),
         position(position),
-        shouldRotate(true),
         scale(scale),
         allowGravity(true),
         isStatic(isStatic),

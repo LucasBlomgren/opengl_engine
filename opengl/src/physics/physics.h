@@ -49,9 +49,9 @@ private:
     float dt;
     FrameTimers* frameTimers;
 
-    //------------------------
-    //    Add/Remove/Move
-    //------------------------
+    //-----------------------------
+    //  Broadphase Add/Remove/Move
+    //-----------------------------
     struct PhysCmd {
         enum class Type { Add, Remove, Move } type;
         GameObject* obj = nullptr;

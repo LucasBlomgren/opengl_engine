@@ -19,12 +19,6 @@ uniform mat4 lightSpaceMatrix;
 
 // color control
 uniform vec3 uColor; 
-uniform bool useRandomColor;
-
-// simple hash function to generate pseudo-random numbers
-float hash(float n) {
-	return fract(sin(n) * 33249.5453123);
-}
 
 void main() 
 {
@@ -33,19 +27,6 @@ void main()
 	vPosLightSpace = lightSpaceMatrix * vec4(vWorldPos, 1.0);
 	gl_Position = projection * view * model * vec4(aPos, 1.0f);
 
-	// Slå fram en färg baserat på gl_VertexID
-	float id = float(gl_VertexID);
-	vec3 randomColor = vec3(
-		hash(id + 0.1),
-		hash(id + 13.7),
-		hash(id + 91.3)
-	);
-
-	// toggla mellan uniform-färg och random-färg:
-	if (useRandomColor)
-		vColor = randomColor;
-	else
-		vColor = uColor;
-
+	vColor = uColor;
 	vTexCoord = aTexCoord;
 }

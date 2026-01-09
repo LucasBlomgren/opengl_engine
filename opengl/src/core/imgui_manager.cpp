@@ -40,6 +40,8 @@ void ImGuiManager::init(
 	// init backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
+
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 }
 
 void ImGuiManager::newFrame() {
@@ -63,38 +65,19 @@ void ImGuiManager::shutdown() {
 //           Main UI
 // -------------------------------
 void ImGuiManager::mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpuT, size_t amountObjects) {
-	ImGuiViewport* vp = ImGui::GetMainViewport();
-	ImVec2 pos = vp->WorkPos;    // tar hänsyn till ev. menu bar/dockspace
-	ImVec2 size = vp->WorkSize;  // “arbetsytan” i viewporten
 
-	const float w = 310.0f;      // din fasta bredd, ändra som du vill
+	ImGui::DockSpaceOverViewport();
 
-	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(w, size.y), ImGuiCond_Always);
+	settingsUI();
 
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::Begin("Engine", nullptr,
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoResize |          // rekommenderas när du styr size själv
-		ImGuiWindowFlags_NoMove);            // rekommenderas när du styr pos själv
-
-	if (ImGui::CollapsingHeader("Performance", ImGuiTreeNodeFlags_DefaultOpen))
-		performanceUI(deltaTime, frameTimers, gpuT, amountObjects);
-
-	ImGui::NewLine();
-
-	if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen))
-		settingsUI();
-
-	ImGui::End();
-	ImGui::PopStyleVar(2);
 }
 
 //--------------------------------
 //          Settings UI
 // -------------------------------
 void ImGuiManager::settingsUI() {
+	ImGui::Begin("Settings");
+
 	ImGui::SeparatorText("Objects");
 	ImGui::Spacing();
 	bool showNormals = engineState->getShowNormals();
@@ -137,8 +120,6 @@ void ImGuiManager::settingsUI() {
 	ImGui::NewLine();
 	ImGui::SeparatorText("Scene");
 	ImGui::Spacing();
-
-
 	if (ImGui::Button("Toggle Skybox")) {
 		skyboxManager->toggleTexture();
 	}
@@ -170,265 +151,7 @@ void ImGuiManager::settingsUI() {
 		}
 	}
 
-	//static glm::vec3 pos{ 0.0f, 1.0f, 2.0f };
-	//ImGui::SliderFloat3("Position", (float*)&pos, -10.0f, 10.0f);
-}
-
-//--------------------------------
-//         Performance UI
-// -------------------------------
-void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpuT, size_t amountObjects)
-{
-	// Ringbuffer för frametime i ms
-	static float ft_ms[400] = {};
-	static int   ft_i = 0;
-
-	static float sampleAcc = 0.0f;
-	static float lastDtMs = 0.0f;
-
-	const float sampleHz = 60.0f;
-	const float sampleDt = 1.0f / sampleHz;
-
-	sampleAcc += deltaTime;
-	lastDtMs = deltaTime * 1000.0f;
-
-	int ticks = (int)(sampleAcc / sampleDt);
-	if (ticks > 0)
-	{
-		sampleAcc -= ticks * sampleDt;
-		ticks = std::min(ticks, 100);
-
-		for (int i = 0; i < ticks; ++i)
-		{
-			ft_ms[ft_i] = lastDtMs; // håll senaste värdet
-			ft_i = (ft_i + 1) % IM_ARRAYSIZE(ft_ms);
-		}
-	}
-
-	// UI-smoothade värden
-	static float dt_ui = 0.0f;
-	static float framerate_ui = 0.0f;
-
-	static float renderSub_ui = 0.0f;
-	static float editor_ui = 0.0f;  
-	static float imgui_ui = 0.0f;   
-	static float phys_ui = 0.0f;
-
-	static float cpu_total_ms = 0.0f;
-	static float gpu_total_ms = 0.0f;
-
-	static float gpuShadowMs_ui = 0.0f;
-	static float gpuMainMs_ui = 0.0f;
-	static float gpuDebugMs_ui = 0.0f;
-
-	static float preStep_ui = 0.0f; 
-	static float bvhUpdate_ui = 0.0f;
-	static float broadphase_ui = 0.0f;
-	static float narrowphase_ui = 0.0f;
-	static float contactCollect_ui = 0.0f;
-	static float collisionResolve_ui = 0.0f;
-	static float postStep_ui = 0.0f;
-
-	// --- update 20 Hz ---
-	uiTimer += deltaTime;
-	if (uiTimer >= 0.2f)
-	{
-		uiTimer = 0.0f;
-
-		framerate_ui = io->Framerate;
-		dt_ui = deltaTime * 1000.0f;
-
-		gpu_total_ms = gpuT.totalMs();
-		gpuShadowMs_ui = gpuT.shadowMs;
-		gpuMainMs_ui = gpuT.mainMs;
-		gpuDebugMs_ui = gpuT.debugMs;
-
-		renderSub_ui = frameTimers.get("Render");
-		editor_ui = frameTimers.get("Editor");
-		imgui_ui = frameTimers.get("ImGui");
-		phys_ui = frameTimers.get("Physics");
-		cpu_total_ms = phys_ui + renderSub_ui + editor_ui + imgui_ui;
-
-		preStep_ui = frameTimers.get("Pre step");
-		bvhUpdate_ui = frameTimers.get("BVH update");
-		broadphase_ui = frameTimers.get("Broadphase");
-		narrowphase_ui = frameTimers.get("Narrowphase");
-		contactCollect_ui = frameTimers.get("Contact collection");
-		collisionResolve_ui = frameTimers.get("Collision resolution");
-		postStep_ui = frameTimers.get("Post step");
-	}
-
-	// --- helpers ---
-	auto BarCell = [&](float ms, float denom_ms)
-		{
-			float rawPct = (denom_ms > 0.f) ? (ms / denom_ms) : 0.f;
-			float barPct = std::clamp(rawPct, 0.0f, 1.0f);
-
-			float wFull = ImGui::GetContentRegionAvail().x;
-			float barW = wFull * 0.8f;
-			float barH = 12.0f;
-
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.75f);
-			ImGui::ProgressBar(barPct, ImVec2(barW, barH), "");
-			ImGui::PopStyleVar();
-
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::BeginTooltip();
-				ImGui::Text("Time:  %.2f ms", ms);
-				ImGui::Text("Share: %.1f%%", rawPct * 100.0f);
-				ImGui::EndTooltip();
-			}
-		};
-
-	auto Row = [&](const char* name, float ms, float denom_ms)
-		{
-			ImGui::TableNextRow();
-
-			ImGui::TableNextColumn();
-			ImGui::TextUnformatted(name);
-
-			ImGui::TableNextColumn();
-			ImGui::Text("%.2f ms", ms);
-
-			ImGui::TableNextColumn();
-			BarCell(ms, denom_ms);
-		};
-
-	// ---- Header ----
-	ImGui::Text("Frame %.2f ms | %.0f FPS", dt_ui, framerate_ui);
-	// Tooltip för headern (CPU/GPU total)
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-		ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-		ImGui::EndTooltip();
-	}
-	ImGui::SameLine();
-	ImGui::TextDisabled(" | Objects: %zu", amountObjects);
-
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Spacing();
-
-	// ---- Plot ----
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-
-	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, 0.0f, 16.6f, ImVec2(-1, 100));
-
-	ImGui::PopStyleColor(2);
-	ImGui::PopStyleVar();
-
-	ImGui::Separator();
-
-	// ---- Table ----
-	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(6, 3));
-	ImGuiTableFlags tflags =
-		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_SizingFixedFit |
-		ImGuiTableFlags_NoBordersInBody;
-
-	if (ImGui::BeginTable("perf_tbl", 3, tflags))
-	{
-		ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 110.0f);
-		ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 72.0f);
-		ImGui::TableSetupColumn("Share", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableHeadersRow();
-
-		// --- GPU group header ---
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn(); 
-		ImGui::TextDisabled("GPU");
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::BeginTooltip();
-			ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-			ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-			ImGui::EndTooltip();
-		}
-		ImGui::TableNextColumn(); ImGui::TableNextColumn();
-
-		Row("Shadow", gpuShadowMs_ui, gpu_total_ms);
-		Row("Main", gpuMainMs_ui, gpu_total_ms);
-		Row("Debug", gpuDebugMs_ui, gpu_total_ms);
-
-		// --- CPU group header ---
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn(); 
-		ImGui::TextDisabled("CPU");
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::BeginTooltip();
-			ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-			ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-			ImGui::EndTooltip();
-		}
-		ImGui::TableNextColumn(); ImGui::TableNextColumn();
-
-		// Render submit som vanlig rad (share av CPU total)
-		Row("Render submit", renderSub_ui, cpu_total_ms);
-		Row("Editor", editor_ui, cpu_total_ms);
-		Row("ImGui", imgui_ui, cpu_total_ms);
-
-		// === Physics (expanderbar) ===
-		ImGui::TableNextRow();
-
-		ImGui::TableNextColumn();
-		bool physicsOpen = ImGui::TreeNodeEx("Physics",
-			ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_FramePadding,
-			"Physics");
-
-		ImGui::TableNextColumn();
-		ImGui::Text("%.2f ms", phys_ui);
-
-		ImGui::TableNextColumn();
-		BarCell(phys_ui, cpu_total_ms);
-
-		if (physicsOpen)
-		{
-			// Hämta subtimers (byt keys till dina riktiga)
-			struct Sub { const char* name; float ms; };
-			Sub subs[] = {
-				{"Pre",      preStep_ui},   
-				{"BVH",      bvhUpdate_ui},
-				{"Broad",    broadphase_ui},
-				{"Narrow",   narrowphase_ui},
-				{"Contacts", contactCollect_ui},
-				{"Solver",   collisionResolve_ui},
-				{"Post",     postStep_ui}
-			};
-
-			ImGui::Spacing();
-			ImGui::Spacing();
-			ImGui::Spacing();
-
-			//ImGui::TableNextRow(0, ImGui::GetTextLineHeightWithSpacing());
-			ImGui::TableNextRow();
-
-			for (auto& s : subs)
-			{
-				ImGui::TableNextColumn();
-				ImGui::Indent(20.0f);
-				ImGui::TextUnformatted(s.name);   // TextUnformatted: för färdig sträng
-				ImGui::Unindent(20.0f);
-
-				ImGui::TableNextColumn();
-				ImGui::Text("%.2f ms", s.ms);
-
-				ImGui::TableNextColumn();
-				BarCell(s.ms, phys_ui); // share inom Physics
-			}
-
-			ImGui::TreePop();
-		}
-
-		ImGui::EndTable();
-	}
-
-	ImGui::PopStyleVar();
+	ImGui::End();
 }
 
 //--------------------------------
@@ -436,31 +159,10 @@ void ImGuiManager::performanceUI(float deltaTime, FrameTimers& frameTimers, GpuT
 // -------------------------------
 void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 {
-	ImGuiViewport* vp = ImGui::GetMainViewport();
-	ImVec2 workPos = vp->WorkPos;
-	ImVec2 workSize = vp->WorkSize;
-
-	const float w = 310.0f;
-
-	const float pad = 0.0f;
-	ImVec2 rightPos(workPos.x + workSize.x - w - pad, workPos.y + pad);
-	ImGui::SetNextWindowSize(ImVec2(w, workSize.y - 2 * pad), ImGuiCond_Always);
-	ImGui::SetNextWindowPos(rightPos, ImGuiCond_Always);
-
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::Begin("Selected Object", nullptr,
-		ImGuiWindowFlags_NoTitleBar |
-		ImGuiWindowFlags_NoResize |
-		ImGuiWindowFlags_NoMove
-		// | ImGuiWindowFlags_NoSavedSettings  // (valfritt) om du inte vill att imgui.ini påverkar
-	);
 
-	if (!ImGui::CollapsingHeader("Inspector", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed)) {
-		ImGui::End();
-		ImGui::PopStyleVar(2);
-		return;
-	}
+	ImGui::Begin("Inspector", nullptr);
 
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -600,7 +302,23 @@ void ImGuiManager::selectedObjectUI(GameObject* objPtr)
 
 		ImGui::TableSetColumnIndex(1);
 		ImGui::SetNextItemWidth(-FLT_MIN);
+
+		// Determine current item based on textureId
 		static int currentItem = 0;
+		if (obj.textureId == textureManager->getTexture("crate")) {
+			currentItem = 1;
+		}
+		else if (obj.textureId == textureManager->getTexture("uvmap")) {
+			currentItem = 2;
+		}
+		else if (obj.textureId == textureManager->getTexture("terrain2")) {
+			currentItem = 3;
+		}
+		else {
+			currentItem = 0; // Plain
+		}
+
+		// Options
 		const char* items[] = { "Plain", "Crate", "UVmap", "Terrain"};
 
 		ImGui::TableSetColumnIndex(1);
