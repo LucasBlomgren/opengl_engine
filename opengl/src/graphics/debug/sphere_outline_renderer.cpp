@@ -54,3 +54,16 @@ void SphereOutlineRenderer::render(
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINE_LOOP, 0, unitCircle.size());
 }
+
+void SphereOutlineRenderer::destroy() {
+    if (VBO) {
+        glDeleteBuffers(1, &VBO);
+        VBO = 0;
+        glcount::decVBO();
+    }
+    if (VAO) {
+        glDeleteVertexArrays(1, &VAO);
+        VAO = 0;
+        glcount::decVAO();
+    }
+}

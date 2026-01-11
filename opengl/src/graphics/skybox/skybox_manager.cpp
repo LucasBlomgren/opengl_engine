@@ -4,8 +4,8 @@
 #include "graphics/textures/texture_manager.h"
 
 void SkyboxManager::init() {
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
+    glGenVertexArrays(1, &skyboxVAO); glcount::incVAO();
+    glGenBuffers(1, &skyboxVBO); glcount::incVBO();
     glBindVertexArray(skyboxVAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, skyboxVertices.size() * sizeof(float), skyboxVertices.data(), GL_STATIC_DRAW);

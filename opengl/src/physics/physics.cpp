@@ -751,7 +751,7 @@ void PhysicsEngine::resolveCollisions() {
     //std::cout << "PGS iterations: " << iterCount << "\n";
 
 
-    //loat residual = std::sqrt(lastResidualSq);
+    //float residual = std::sqrt(lastResidualSq);
     //std::cout << "Residual impulse: " << residual << "\n";
 }
 

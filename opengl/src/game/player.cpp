@@ -311,8 +311,8 @@ void Player::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
 
     static GLuint vao = 0, vbo = 0;
     if (vao == 0) {
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
+        glGenVertexArrays(1, &vao); glcount::incVAO();
+        glGenBuffers(1, &vbo); glcount::incVBO();
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);

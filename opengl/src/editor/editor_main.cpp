@@ -26,6 +26,9 @@ void Editor::EditorMain::init(
     GLFWwindow* window,
     ImGuiManager* imguiManager,
     Renderer* renderer,
+    SkyboxManager* skyboxManager,
+    MeshManager* meshManager,
+    TextureManager* textureManager,
     FrameTimers* frameTimers,
     GpuTimers* gpuTimers
 ) {
@@ -35,32 +38,81 @@ void Editor::EditorMain::init(
     this->sceneBuilder = sceneBuilder;
     this->physicsEngine = physicsEngine;
     this->inputManager = inputManager;
+    this->skyboxManager = skyboxManager;
+    this->imguiManager = imguiManager;
+    this->meshManager = meshManager;
+    this->textureManager = textureManager;
     this->camera = camera;
     this->window = window;
 
     panelManager = std::make_unique<Editor::PanelManager>(
         imguiManager,
         engineState,
-        renderer,
+        renderer,  
         sceneBuilder,
+        skyboxManager,
+        meshManager,
+        textureManager,
         frameTimers,
         gpuTimers
     );
     panelManager->init();
 }
 
+
+// activate/deactivate editor mode
+void Editor::EditorMain::activate() {
+
+}
+void Editor::EditorMain::deactivate() {
+    dropObject();
+    lastHitData = {};
+}
+
 void Editor::EditorMain::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
+// -----------------------------------
+//        Input handling
+// -----------------------------------
+void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants) {
     if (ctx.isPlayerMode) return;
 
-    if (!c.mouse) {
+    // LMB/RMB drag capture only if started in viewport
+    if (!viewportCapturedLMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_1])
+        viewportCapturedLMB = true;
+    if (viewportCapturedLMB and !in.mouseDown[GLFW_MOUSE_BUTTON_1])
+        viewportCapturedLMB = false;
+
+    if (!viewportCapturedRMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_2])
+        viewportCapturedRMB = true;
+    if (viewportCapturedRMB and !in.mouseDown[GLFW_MOUSE_BUTTON_2])
+        viewportCapturedRMB = false;
+
+    // handle non-viewport input capture
+    ImGuiIO* io = &ImGui::GetIO();
+    if (io->WantCaptureMouse and !(viewportCapturedLMB or viewportCapturedRMB)) {
+        wants.cameraLook = false;
+        wants.captureMouse = false;
+        consumed.mouse = true;
+    }
+    if (io->WantCaptureKeyboard and !ctx.viewportFocused) {
+        consumed.keyboard = true;
+    }
+
+    // handle viewport RMB camera look
+    if (viewportCapturedRMB) {
+        wants.cameraLook = true;
+        wants.captureMouse = true;
+    }
+
+    // handle editor input
+    if (!consumed.mouse) {
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (selectedObject == nullptr) {
                 rayCast(SELECT_RANGE);
-                selectObject();
+                selectObject(ctx);
             }
             else {
                 RaycastHit hitData = rayCast(SELECT_RANGE);
@@ -70,24 +122,24 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 else if (hitData.object != selectedObject) {
                     dropObject();
                     rayCast(SELECT_RANGE);
-                    selectObject();
+                    selectObject(ctx);
                 }
                 else {
                     syncSelectionOffset(); // klick på samma objekt: resync offset så det inte hoppar
                 }
             }
-            c.mouse = true;
+            consumed.mouse = true;
         }
 
         if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
             updateSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
-            c.mouse = true;
+            consumed.mouse = true;
         }
 
         if (in.mouseDown[GLFW_MOUSE_BUTTON_2]) {
             wants.cameraLook = true;
             wants.captureMouse = true;
-            c.mouse = true;
+            consumed.mouse = true;
         }
 
 
@@ -110,37 +162,37 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             auto& newObject = sceneBuilder->createObject(
                 "crate", "cube", ColliderType::CUBOID,
                 camera->position + camera->front * 5.0f + offset,
-                glm::vec3(1), 1, 0
+                glm::vec3(1), 100, 0
             );
             newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
         }
 
     }
 
-    if (!c.keyboard) {
+    if (!consumed.keyboard) {
         if (in.keyPressed[GLFW_KEY_1]) {
             drawPlacementAABB = !drawPlacementAABB;
-            c.keyboard = true;
+            consumed.keyboard = true;
         }
 
         if (in.keyPressed[GLFW_KEY_2]) {
             this->objectRainBlocks = !this->objectRainBlocks;
             objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-            c.keyboard = true;
+            consumed.keyboard = true;
         }
         if (in.keyPressed[GLFW_KEY_3]) {
             this->objectRainSpheres = !this->objectRainSpheres;
             objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-            c.keyboard = true;
+            consumed.keyboard = true;
         }
 
         if (in.keyPressed[GLFW_KEY_4]) {
             physicsEngine->sleepAllObjects();
-            c.keyboard = true;
+            consumed.keyboard = true;
         }
         if (in.keyPressed[GLFW_KEY_5]) {
             physicsEngine->awakenAllObjects();
-            c.keyboard = true;
+            consumed.keyboard = true;
         }
     }
 }
@@ -148,45 +200,71 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 // -----------------------------------
 //        UI rendering
 // -----------------------------------
-void Editor::EditorMain::drawUI()
+void Editor::EditorMain::drawUI(InputContext& ctx)
 {
-    if (panelManager)
-        panelManager->renderPanels();
+    panelManager->renderPanels();
 
+    // top toolbar
     ImGui::Begin("Toolbar1");
     ImGui::End();
 
+    // bottom toolbar
     ImGui::Begin("Toolbar2");
     ImGui::End();
 
-    ImGui::Begin("Scene");
+    // Viewport panel
+    ImGui::Begin("Scene", nullptr);
 
-    ImVec2 size = ImGui::GetContentRegionAvail();
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* c = style.Colors;
+    c[ImGuiCol_Tab] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
+    c[ImGuiCol_TabHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.0f);
+    c[ImGuiCol_TabActive] = ImVec4(0.20f, 0.20f, 0.20f, 1.0f);
+    c[ImGuiCol_TabUnfocused] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
+    c[ImGuiCol_TabUnfocusedActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.0f);
+    c[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
+    c[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
+    c[ImGuiCol_TitleBgCollapsed] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
 
-    if (size.x > 8 && size.y > 8) {
-        viewportFBO.resizeIfNeeded((int)size.x, (int)size.y);
+    style.TabRounding = 0.0f; // tab corners
+    style.WindowRounding = 0.0f; // fönster corners
+    style.FrameRounding = 0.0f; // knappar/sliders etc
+    style.ChildRounding = 0.0f; // child windows
+    style.PopupRounding = 0.0f; // popups
 
-        // Visa texturen i ImGui
-        ImGui::Image(
-            (ImTextureID)(intptr_t)viewportFBO.colorTex,
-            size,
-            ImVec2(0, 1),
-            ImVec2(1, 0)
-        );
-    }
+    ImVec2 avail = ImGui::GetContentRegionAvail();
+    int w = std::max(1, (int)std::round(avail.x));
+    int h = std::max(1, (int)std::round(avail.y));
+    viewportFBO.resizeIfNeeded(w, h);
+
+    ImGui::Image((ImTextureID)(intptr_t)viewportFBO.colorTex, ImVec2((float)w, (float)h), ImVec2(0, 1), ImVec2(1, 0));
+
+    // 1) Hämta position och storlek på bilden i fönstret
+    ImVec2 image_pos = ImGui::GetItemRectMin(); // top-left på imagen
+    ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right
+    ImVec2 image_size = ImVec2(image_max.x - image_pos.x, image_max.y - image_pos.y);
+
+    // 2) Hämta muspositionen i skärmens koordinater
+    ImVec2 mouse = ImGui::GetMousePos();
+
+    // 3) Mus relativt bilden
+    ImVec2 mouse_in_image = ImVec2(mouse.x - image_pos.x, mouse.y - image_pos.y);
+
+    // 4) insideImage = musen ligger inom bildens rektangel
+    bool insideImage =
+        mouse_in_image.x >= 0.0f and mouse_in_image.y >= 0.0f and
+        mouse_in_image.x < image_size.x and mouse_in_image.y < image_size.y;
+
+    ctx.viewportHovered = insideImage;
+    ctx.viewportFocused = ImGui::IsWindowFocused();
+
+    // spara lokala coords för raycast
+    viewportMouseX = mouse_in_image.x;
+    viewportMouseY = mouse_in_image.y;
+    viewportDisplayW = std::max(image_size.x, 1.0f);
+    viewportDisplayH = std::max(image_size.y, 1.0f);
 
     ImGui::End();
-
-    // andra panels: Inspector, Hierarchy, osv
-}
-
-// activate/deactivate editor mode
-void Editor::EditorMain::activate() {
-
-}
-void Editor::EditorMain::deactivate() {
-    dropObject();
-    lastHitData = {};
 }
 
 // -----------------------------------
@@ -231,7 +309,7 @@ void Editor::EditorMain::syncSelectionOffset() {
 }
 
 // select object
-void Editor::EditorMain::selectObject() {
+void Editor::EditorMain::selectObject(const InputContext& ctx) {
     if (selectedObject) return;
 
     RaycastHit& hitData = lastHitData;
@@ -254,6 +332,8 @@ void Editor::EditorMain::selectObject() {
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+
+    panelManager->ctx.selectedObject = selectedObject;
 }
 
 // update selected object position based on camera and offset
@@ -306,6 +386,7 @@ void Editor::EditorMain::dropObject() {
 
     selectedObject = nullptr;
     hoveredObject = nullptr;
+    panelManager->ctx.selectedObject = nullptr;
 }
 
 // place object at placement AABB position
@@ -318,6 +399,49 @@ void Editor::EditorMain::placeObject() {
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
     GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
     newObject.linearVelocity = glm::vec3(0.0f);
+}
+
+// get raycast
+RaycastHit& Editor::EditorMain::getLastRayHit() {
+    return lastHitData;
+}
+// Raycast from camera through mouse cursor into world
+RaycastHit Editor::EditorMain::rayCast(float length)
+{
+    // 0) Normalisera musen i viewport-bilden (display space)
+    float u = viewportMouseX / viewportDisplayW;
+    float v = viewportMouseY / viewportDisplayH;
+
+    // clamp för säkerhet
+    u = std::clamp(u, 0.0f, 1.0f);
+    v = std::clamp(v, 0.0f, 1.0f);
+
+    // 1) u,v -> NDC
+    float x = u * 2.0f - 1.0f;
+    float y = 1.0f - v * 2.0f; // invert Y (top-left -> bottom-left)
+    glm::vec4 rayClip(x, y, -1.0f, 1.0f);
+
+    // 2) Clip → Eye(inverse projection)
+    float aspect = (float)viewportFBO.width / (float)viewportFBO.height;
+    glm::mat4 projection = glm::perspective(glm::radians(camera->zoom), aspect, 0.1f, 10000.0f);
+    glm::mat4 view = camera->GetViewMatrix();
+    glm::vec4 rayEye = glm::inverse(projection) * rayClip;
+    // Vi vill ha en riktning, inte en punkt:
+    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+
+    // 3) Eye → World(inverse view) och normalisera
+    glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
+
+    // 4) Bygg rayen
+    glm::vec3 origin = camera->position;
+    glm::vec3 dir = rayWorld;
+
+    float rLength = length;
+    Ray r(camera->position, rayWorld, SELECT_RANGE);
+    RaycastHit hitData = physicsEngine->performRaycast(r);
+
+    lastHitData = hitData;
+    return hitData;
 }
 
 // create placement AABB in front of camera, adjusted for collisions
@@ -393,42 +517,6 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
         drawAABB(aabb, shader, color);
 }
 
-// get raycast
-RaycastHit& Editor::EditorMain::getLastRayHit() {
-    return lastHitData;
-}
-// Raycast from camera through mouse cursor into world
-RaycastHit Editor::EditorMain::rayCast(float length)
-{
-    float mouseX = inputManager->lastX;
-    float mouseY = inputManager->lastY;
-    float x = (2.0f * mouseX) / SCR_WIDTH - 1.0f;
-    float y = 1.0f - (2.0f * mouseY) / SCR_HEIGHT; // viktigt: invert Y
-    // NDC: z = -1 för near plane i OpenGL clip-space
-    glm::vec4 rayClip(x, y, -1.0f, 1.0f);
-
-    // 2) Clip → Eye(inverse projection)
-    glm::mat4 projection = glm::perspective(glm::radians(camera->zoom), SCR_WIDTH / SCR_HEIGHT, 0.1f, 10000.0f);
-    glm::mat4 view = camera->GetViewMatrix();
-    glm::vec4 rayEye = glm::inverse(projection) * rayClip;
-    // Vi vill ha en riktning, inte en punkt:
-    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
-
-    // 3) Eye → World(inverse view) och normalisera
-    glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
-
-    // 4) Bygg rayen
-    glm::vec3 origin = camera->position;
-    glm::vec3 dir = rayWorld;
-
-    float rLength = length;
-    Ray r(camera->position, rayWorld, SELECT_RANGE);
-    RaycastHit hitData = physicsEngine->performRaycast(r);
-
-    lastHitData = hitData;
-    return hitData;
-}
-
 // draw selection/placement AABB
 void Editor::EditorMain::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
     glm::vec3 min = aabb.wMin;
@@ -451,8 +539,8 @@ void Editor::EditorMain::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 co
 
     static GLuint vao = 0, vbo = 0;
     if (vao == 0) {
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
+        glGenVertexArrays(1, &vao); glcount::incVAO();
+        glGenBuffers(1, &vbo); glcount::incVBO();
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);

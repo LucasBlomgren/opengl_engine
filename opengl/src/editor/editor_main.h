@@ -14,12 +14,16 @@ class PhysicsEngine;
 class Camera;
 class SkyboxManager;
 class Shader;
+class Renderer;
+class ImGuiManager;
+class MeshManager;
+class TextureManager;
 
 namespace Editor 
 {
 class EditorMain : public IInputReceiver {
 public:
-    ViewportFBO viewportFBO{ 800, 600 };
+    ViewportFBO viewportFBO{ 1920, 1080 };
     std::unique_ptr<PanelManager> panelManager;
 
     void addInputRouter(InputRouter& router);
@@ -36,11 +40,14 @@ public:
         GLFWwindow* window,
         ImGuiManager* imguiManager,
         Renderer* renderer,
+        SkyboxManager* skyboxManager,
+        MeshManager* meshManager,
+        TextureManager* textureManager, 
         FrameTimers* frameTimers,
         GpuTimers* gpuTimers
     );
 
-    void drawUI();
+    void drawUI(InputContext& ctx);
 
     // activate/deactivate editor mode
     void activate();
@@ -56,7 +63,7 @@ public:
 
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void syncSelectionOffset();
-    void selectObject();
+    void selectObject(const InputContext& ctx);
     void dropObject();
     void updateSelectedObject(float fixedTimeStep);
 
@@ -84,8 +91,18 @@ private:
     GLFWwindow* window = nullptr;
     ImGuiManager* imguiManager = nullptr;
     Renderer* renderer = nullptr;
+    SkyboxManager* skyboxManager = nullptr;
+    MeshManager* meshManager = nullptr;
+    TextureManager* textureManager = nullptr;
     FrameTimers* frameTimers = nullptr;
     GpuTimers* gpuTimers = nullptr;
+
+    bool viewportCapturedRMB = false;
+    bool viewportCapturedLMB = false;
+    float viewportMouseX = 0.0f;
+    float viewportMouseY = 0.0f;
+    float viewportDisplayW = 0.0f;
+    float viewportDisplayH = 0.0f;
 
     // selection and placement
     RaycastHit lastHitData;

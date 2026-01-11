@@ -87,7 +87,6 @@ public:
     bool aabbDirty = true;
     Collider collider;
     ColliderType colliderType;
-    OOBBRenderer oobbRenderer;
 
     // BVH
     BroadphaseHandle broadphaseHandle;

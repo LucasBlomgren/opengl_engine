@@ -48,12 +48,12 @@ public:
     void computeSceneBounds(SceneBuilder& builder);
     glm::mat4 computeLightSpaceMatrix();
     void setViewPort(unsigned int w, unsigned int h);
-    void setViewProjection(Camera& camera);
+    void setViewProjection(Camera& camera, float aspect);
 
     void setShadowRender(glm::mat4& lightSpaceMatrix);
     void cleanupShadowRender();
 
-    void setDefaultRender(glm::mat4& lightSpaceMatrix);
+    void setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int targetH);
     void uploadLightsToShader(); 
     void uploadDirectionalLight(); 
 
@@ -100,6 +100,7 @@ private:
     SkyboxManager* skyboxManager = nullptr;
 
     AABBRenderer aabbRenderer;
+    OOBBRenderer oobbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;
 
     float maxViewDistance = 10000000000000.0f;

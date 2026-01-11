@@ -160,9 +160,6 @@ void GameObject::initCollider() {
 	if (colliderType == ColliderType::CUBOID) {
 		OOBB box(verticesPositions, modelMatrix, scale);
 		collider.shape = box;
-
-		oobbRenderer.setupWireframeBox();
-		oobbRenderer.setupNormals();
 	}
 	else if (colliderType == ColliderType::SPHERE) {
 		Sphere sphere(modelMatrix, scale.x);

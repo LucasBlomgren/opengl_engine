@@ -7,6 +7,8 @@
 
 void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 {
+	ImGui::Begin("Performance");
+
 	// Ringbuffer för frametime i ms
 	static float ft_ms[400] = {};
 	static int   ft_i = 0;
@@ -261,4 +263,5 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	}
 
 	ImGui::PopStyleVar();
+	ImGui::End();
 }

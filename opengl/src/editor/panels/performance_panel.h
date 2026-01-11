@@ -1,10 +1,14 @@
 #pragma once
 #include "editor/panel.h"
 
+class GameObject;
 class ImGuiManager;
 class EngineState;
 class Renderer;
 class SceneBuilder;
+class SkyboxManager;
+class MeshManager;
+class TextureManager;
 class FrameTimers;
 class GpuTimers;
 

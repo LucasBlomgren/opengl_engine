@@ -16,6 +16,8 @@ public:
         const bool hovered
     );
 
+    void destroy();
+
 private:
     unsigned int VAO, VBO;
     std::vector<glm::vec3> unitCircle;

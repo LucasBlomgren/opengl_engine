@@ -22,7 +22,7 @@ GLFWwindow* initOpenGL(int width, int height, const std::string& title) {
     glfwSetWindowPos(window, 0, 0); // Placera längst upp till vänster 
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 
     // Load GLAD
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {

@@ -29,7 +29,8 @@ void Renderer::init(
     this->shadowManager = &shadowManager;
     this->skyboxManager = &skyboxManager;
 
-    aabbRenderer.InitShared();
+    aabbRenderer.initShared();
+    oobbRenderer.initShared();
     sphereOutlineRenderer.init();
 
     defaultShader = shaderManager.getShader("default");
@@ -114,9 +115,8 @@ void Renderer::removeObjectFromBatch(GameObject* obj) {
 //-----------------------------
 //       View Projection
 //-----------------------------
-void Renderer::setViewProjection(Camera& camera) {
-    // projection matrix 
-    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), screenWidth / screenHeight, 0.1f, maxViewDistance);
+void Renderer::setViewProjection(Camera& camera, float aspect) {
+    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), aspect, 0.1f, maxViewDistance);
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
 
@@ -173,8 +173,8 @@ void Renderer::cleanupShadowRender() {
 //-----------------------------
 //      Set Default Render
 //-----------------------------
-void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
-    setViewPort(screenWidth, screenHeight);
+void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int targetH) {
+    setViewPort(targetW, targetH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
@@ -182,10 +182,10 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix) {
     defaultShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
     defaultShader->setInt("shadowMap", 1);
 
-    Shader* defaultInstancedShader = defaultShader->instancedVariant;
-    defaultInstancedShader->use();
-    defaultInstancedShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    defaultInstancedShader->setInt("shadowMap", 1);
+    Shader* inst = defaultShader->instancedVariant;
+    inst->use();
+    inst->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    inst->setInt("shadowMap", 1);
 
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadowManager->depthMap);
@@ -222,18 +222,22 @@ void Renderer::render(
     glEndQuery(GL_TIME_ELAPSED);
 
     // bind viewport FBO if provided
+    int targetW = (int)screenWidth;
+    int targetH = (int)screenHeight;
+
     if (viewportFBO) {
         viewportFBO->bind();
-    }
-    else {
+        targetW = viewportFBO->width;
+        targetH = viewportFBO->height;
+    } else {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, screenWidth, screenHeight);
     }
+    float aspect = (float)targetW / (float)targetH;
 
     // default render
     glBeginQuery(GL_TIME_ELAPSED, qMain[writeIdx]);
-    setDefaultRender(lightSpaceMatrix);
-    setViewProjection(camera);
+    setDefaultRender(lightSpaceMatrix, targetW, targetH);
+    setViewProjection(camera, aspect);
     uploadDirectionalLight();
     uploadLightsToShader();
     renderLights();
@@ -426,15 +430,15 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
 
     // --- Wireframe setup: skapas bara en gång ----
     if (VAO == 0) {
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBO);
+        glGenVertexArrays(1, &VAO); glcount::incVAO();
+        glGenBuffers(1, &VBO); glcount::incVBO();
 
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 
 
-        glGenBuffers(1, &EBO);
+        glGenBuffers(1, &EBO); glcount::incEBO();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
 
@@ -464,7 +468,7 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
         shader.setBool("useTexture", true);
         shader.setBool("useRandomColor", false);
         shader.setVec3("uColor", glm::vec3(0, 1, 0));
-        glBindTexture(GL_TEXTURE_2D, 4);
+        glBindTexture(GL_TEXTURE_2D, 5);
 
         glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
     }
@@ -674,7 +678,7 @@ void Renderer::renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& b
 
     if (obj->colliderType == ColliderType::CUBOID) {
         OOBB& box = std::get<OOBB>(obj->collider.shape);
-        obj->oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
+        oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
     }
     else if (obj->colliderType == ColliderType::SPHERE) {
         Sphere& sphere = std::get<Sphere>(obj->collider.shape);
@@ -712,7 +716,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
             if (obj.colliderType == ColliderType::CUBOID) {
                 OOBB& box = std::get<OOBB>(obj.collider.shape);
-                obj.oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false, false);
+                oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false, false);
             }
             else if (obj.colliderType == ColliderType::SPHERE) {
                 Sphere& sphere = std::get<Sphere>(obj.collider.shape);
@@ -723,12 +727,12 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
     if (engineState->getShowNormals()) {
         glLineWidth(4.0f); 
-        glBindVertexArray(objects[0].oobbRenderer.VAO_normals);
+        glBindVertexArray(oobbRenderer.sVAO_normals);
         debugShader->setInt("debug.objectType", 0);
         debugShader->setBool("debug.useUniformColor", false);
 
         for (GameObject& obj : objects) {
-            obj.oobbRenderer.renderNormals(*debugShader, obj.modelMatrix);
+            oobbRenderer.renderNormals(*debugShader, obj.modelMatrix);
         }
     }
 
@@ -829,8 +833,8 @@ void Renderer::renderFrustum(const glm::mat4& viewProj)
     // 5) Skapa/VISA en VAO/VBO EN gång, uppdatera data och rita
     static GLuint vao = 0, vbo = 0;
     if (!vao) {
-        glGenVertexArrays(1, &vao);
-        glGenBuffers(1, &vbo);
+        glGenVertexArrays(1, &vao); glcount::incVAO();
+        glGenBuffers(1, &vbo); glcount::incVBO();
         glBindVertexArray(vao);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(lines), lines, GL_DYNAMIC_DRAW);

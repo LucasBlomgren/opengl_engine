@@ -5,7 +5,7 @@ unsigned int AABBRenderer::sVAO = 0;
 unsigned int AABBRenderer::sVBO = 0;
 bool         AABBRenderer::sInitialized = false;
 
-void AABBRenderer::InitShared() {
+void AABBRenderer::initShared() {
     if (sInitialized) return;
     sInitialized = true;
 
@@ -27,8 +27,8 @@ void AABBRenderer::InitShared() {
         -0.5f, -0.5f,  0.5f, -0.5f, 0.5f,  0.5f
     };
 
-    glGenVertexArrays(1, &sVAO);
-    glGenBuffers(1, &sVBO);
+    glGenVertexArrays(1, &sVAO); glcount::incVAO();
+    glGenBuffers(1, &sVBO); glcount::incVBO();
 
     glBindVertexArray(sVAO);
     glBindBuffer(GL_ARRAY_BUFFER, sVBO);
@@ -62,4 +62,17 @@ void AABBRenderer::updateModel(const AABB& box, const bool asleep) {
     model =
         glm::translate(glm::mat4(1.0f), box.centroid) * 
         glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
+}
+
+void AABBRenderer::destroy() {
+    if (sVBO) { 
+        glDeleteBuffers(1, &sVBO); 
+        sVBO = 0; 
+        glcount::decVBO();
+    }
+    if (sVAO) { 
+        glDeleteVertexArrays(1, &sVAO); 
+        sVAO = 0; 
+        glcount::decVAO();
+    }
 }

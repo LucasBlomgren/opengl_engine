@@ -13,9 +13,9 @@ void Camera::addInputRouter(InputRouter& router) {
     router.add(this);
 }
 
-void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
+void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants) {
     // --- keyboard ---
-    if (!c.keyboard and !ctx.isPlayerMode) 
+    if (!consumed.keyboard and !ctx.isPlayerMode)
     {
         // movement speed
         if (in.keyDown[GLFW_KEY_LEFT_SHIFT]) {
@@ -33,7 +33,7 @@ void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         if (in.keyDown[GLFW_KEY_E]) ProcessKeyboard(UP, velocity);
         if (in.keyDown[GLFW_KEY_Q]) ProcessKeyboard(DOWN, velocity);
 
-        c.keyboard = true;
+        consumed.keyboard = true;
     }
 
     // --- mouse ---
@@ -43,7 +43,7 @@ void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
     ProcessMouseMovement(in.mouseDelta.x, in.mouseDelta.y);
     ProcessMouseScroll(in.scrollDelta);
-    c.mouse = true;
+    consumed.mouse = true;
 }
 
 // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)

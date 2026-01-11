@@ -13,7 +13,11 @@ struct FrameWants {
 struct InputContext {
     bool uiWantsMouse = false;
     bool uiWantsKeyboard = false;
+    bool viewportHovered = false;
+    bool viewportFocused = false;
     bool isPlayerMode = false;
+    float viewportMouseX = 0.0f;
+    float viewportMouseY = 0.0f;
 };
 
 // Input state for the current frame

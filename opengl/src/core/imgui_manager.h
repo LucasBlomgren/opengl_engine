@@ -17,23 +17,8 @@ public:
     void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
-    void init(GLFWwindow* window, EngineState& es, SceneBuilder& sb, MeshManager& mm, Renderer& r, TextureManager& tm, SkyboxManager& sm);
+    void init(GLFWwindow* windo);
     void newFrame();
     void render();
     void shutdown();
-    
-    void mainUI(float deltaTime, FrameTimers& frameTimers, GpuTimers& gpu, size_t amountObjects);
-    void settingsUI();
-    void selectedObjectUI(GameObject* obj);
-
-private:
-    EngineState* engineState = nullptr;
-    SceneBuilder* sceneBuilder = nullptr;
-    MeshManager* meshManager = nullptr;
-    Renderer* renderer = nullptr;   
-    TextureManager* textureManager = nullptr;
-    SkyboxManager* skyboxManager = nullptr;
-    ImGuiIO* io = nullptr;
-
-    float uiTimer = 0.0f;
 };

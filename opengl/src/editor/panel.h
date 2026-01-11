@@ -1,8 +1,13 @@
 #pragma once
 
+class GameObject;
+class EngineState;
 class Renderer;
 class SceneBuilder;
 class ImGuiManager;
+class SkyboxManager;
+class MeshManager;
+class TextureManager;
 class FrameTimers;
 class GpuTimers;
 
@@ -13,10 +18,15 @@ struct PanelContext {
 	float deltaTime = 0.0f;
 	float fps = 0.0f;
 	size_t amountObjects = 0;
+	GameObject* selectedObject = nullptr;
 
+	::EngineState* engineState = nullptr;
 	::Renderer* renderer = nullptr;
 	::SceneBuilder* sceneBuilder = nullptr;
 	::ImGuiManager* imguiManager = nullptr;
+	::SkyboxManager* skyboxManager = nullptr;
+	::MeshManager* meshManager = nullptr;
+	::TextureManager* textureManager = nullptr;
 	::FrameTimers* frameTimers = nullptr;
 	::GpuTimers* gpuTimers = nullptr;
 };

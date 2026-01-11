@@ -8,6 +8,9 @@ class EngineState;
 class SceneBuilder;
 class Renderer;
 class ImGuiManager;
+class SkyboxManager;
+class MeshManager;
+class TextureManager;
 class FrameTimers;
 class GpuTimers;
 
@@ -20,17 +23,25 @@ public:
 		::EngineState* engineState,
 		::Renderer* renderer,
 		::SceneBuilder* sceneBuilder,
+		::SkyboxManager* skyboxManager,
+		::MeshManager* meshManager,
+		::TextureManager* textureManager,
 		::FrameTimers* frameTimers,
 		::GpuTimers* gpuTimers)
 		: imguiManager(imguiManager)
 		, engineState(engineState)
 		, renderer(renderer)
 		, sceneBuilder(sceneBuilder)
+		, skyboxManager(skyboxManager)
+		, meshManager(meshManager)
+		, textureManager(textureManager)
 		, frameTimers(frameTimers)
 		, gpuTimers(gpuTimers) {
+		ctx.engineState = engineState;
 		ctx.renderer = renderer;
 		ctx.sceneBuilder = sceneBuilder;
 		ctx.imguiManager = imguiManager;
+		ctx.skyboxManager = skyboxManager;
 		ctx.frameTimers = frameTimers;
 		ctx.gpuTimers = gpuTimers;
 	}
@@ -53,6 +64,9 @@ private:
 	::EngineState* engineState;
 	::Renderer* renderer;
 	::SceneBuilder* sceneBuilder;
+	::SkyboxManager* skyboxManager;
+	::MeshManager* meshManager;
+	::TextureManager* textureManager;
 	::FrameTimers* frameTimers;
 	::GpuTimers* gpuTimers;
 };

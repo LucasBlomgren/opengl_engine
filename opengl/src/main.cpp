@@ -134,13 +134,28 @@ int main() {
 	sceneBuilder.createScene(6);
 
 	// setup editor
-	editor.init(SCR_WIDTH, SCR_HEIGHT, &engineState, &sceneBuilder, &physicsEngine, &inputManager, &camera, window, &imguiManager, &renderer, &frameTimers, &gpu);
+	editor.init(
+		SCR_WIDTH, 
+		SCR_HEIGHT, 
+		&engineState, 
+		&sceneBuilder, 
+		&physicsEngine, 
+		&inputManager, 
+		&camera, 
+		window, 
+		&imguiManager,
+		&renderer, 
+		&skyboxManager, 
+		&meshManager,
+		&textureManager,
+		&frameTimers, 
+		&gpu);
 
 	// setup player
 	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
 
 	// ImGui setup
-	imguiManager.init(window, engineState, sceneBuilder, meshManager, renderer, textureManager, skyboxManager);
+	imguiManager.init(window);
 
 	// add input routers
 	imguiManager.addInputRouter(inputManager.router);
@@ -204,6 +219,28 @@ int main() {
 			readIdx = (readIdx + 1) % NQ;
 		}
 
+		// rendering
+		{
+			ScopedTimer t(frameTimers, "Render");
+
+			// render to screen or editor viewport
+			if (engineState.isPlayerMode()) {
+				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
+			} else {
+				ImGui::DockSpaceOverViewport();
+				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
+			}
+			sceneBuilder.sceneDirty = false;
+			writeIdx = (writeIdx + 1) % NQ;
+		}
+
+		// ImGui
+		if (!engineState.isPlayerMode()) {
+			ScopedTimer a(frameTimers, "ImGui");
+			editor.drawUI(inputManager.currentContext);
+		}
+		imguiManager.render();
+
 		// setup input context
 		inputManager.setCurrentContext(
 			ImGui::GetIO().WantCaptureMouse,
@@ -230,30 +267,6 @@ int main() {
 				inputManager.resetFirstMouse();
 			}
 		}
-
-		// rendering
-		{
-			ScopedTimer t(frameTimers, "Render");
-
-			// render to screen or editor viewport
-			if (engineState.isPlayerMode()) {
-				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-			} else {
-				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
-			}
-			sceneBuilder.sceneDirty = false;
-			writeIdx = (writeIdx + 1) % NQ;
-		}
-
-		// ImGui
-		if (!engineState.isPlayerMode()) {
-			ScopedTimer a(frameTimers, "ImGui");
-			imguiManager.mainUI(deltaTime, frameTimers, gpu, sceneBuilder.getDynamicObjects().size());
-			imguiManager.selectedObjectUI(editor.selectedObject);
-
-			editor.drawUI();
-		}
-		imguiManager.render();
 
 		// editor/player update
 		if (!engineState.isPlayerMode()) {
