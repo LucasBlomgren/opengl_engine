@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+class PhysicsEngine;
 class ImGuiManager;
 class EngineState;
 class SceneBuilder;
@@ -19,6 +20,7 @@ namespace Editor
 class PanelManager {
 public:
 	PanelManager(
+		::PhysicsEngine* physicsEngine,
 		::ImGuiManager* imguiManager,
 		::EngineState* engineState,
 		::Renderer* renderer,
@@ -28,7 +30,8 @@ public:
 		::TextureManager* textureManager,
 		::FrameTimers* frameTimers,
 		::GpuTimers* gpuTimers)
-		: imguiManager(imguiManager)
+		: physicsEngine(physicsEngine)
+		, imguiManager(imguiManager)
 		, engineState(engineState)
 		, renderer(renderer)
 		, sceneBuilder(sceneBuilder)
@@ -60,6 +63,7 @@ private:
 	std::vector<std::shared_ptr<Editor::IPanel>> panels;
 
 	// dependencies
+	::PhysicsEngine* physicsEngine;
 	::ImGuiManager* imguiManager;
 	::EngineState* engineState;
 	::Renderer* renderer;

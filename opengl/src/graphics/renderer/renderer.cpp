@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "renderer.h"
 #include "debug/draw_line.h"
+#include "mesh/mesh_manager.h"
 
 template void Renderer::renderBVH(const BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
 template void Renderer::renderBVH(const BVHTree<Tri>&, glm::vec3& , glm::vec3&);
@@ -17,7 +18,8 @@ void Renderer::init(
     LightManager& lightManager, 
     ShaderManager& shaderManager,
     ShadowManager& shadowManager, 
-    SkyboxManager& skyboxManager) 
+    SkyboxManager& skyboxManager,
+    MeshManager& meshManager) 
 {
     screenWidth  = (float)width;
     screenHeight = (float)height;
@@ -28,6 +30,8 @@ void Renderer::init(
     this->lightManager  = &lightManager;
     this->shadowManager = &shadowManager;
     this->skyboxManager = &skyboxManager;
+    this->shaderManager = &shaderManager;
+    this->meshManager   = &meshManager;
 
     aabbRenderer.initShared();
     oobbRenderer.initShared();
@@ -43,6 +47,8 @@ void Renderer::init(
     this->VAO_line = setupLine();
     this->VAO_xyz = setup_xyzObject();
     this->VAO_contactPoint = setupContactPoint();
+
+    this->arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
 }
 
 // set viewport
@@ -116,7 +122,7 @@ void Renderer::removeObjectFromBatch(GameObject* obj) {
 //       View Projection
 //-----------------------------
 void Renderer::setViewProjection(Camera& camera, float aspect) {
-    glm::mat4 projection = glm::perspective(glm::radians(camera.zoom), aspect, 0.1f, maxViewDistance);
+    glm::mat4 projection = glm::perspective(glm::radians(80.0f), aspect, 0.1f, maxViewDistance);
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
 
@@ -192,6 +198,50 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int ta
     glActiveTexture(GL_TEXTURE0);
 }
 
+//-------------------------------------------
+//     Debug Meshes
+//-------------------------------------------
+void Renderer::fillDebugMeshes(PhysicsEngine* physicsEngine) {
+    debugMeshes.clear();
+
+    // contact normals
+    for (Contact* c : physicsEngine->contactsToSolve) {
+        debugMeshes.push_back({
+            arrowRenderer.mesh,
+            arrowRenderer.getModelMatrix(c->objA_ptr->position, c->normal, glm::vec3(0.2f)),
+            glm::vec3(1, 0, 1),
+            false
+            });
+    }
+}
+void Renderer::renderDebugMeshesDefault() {
+    defaultShader->use();
+    defaultShader->setBool("useTexture", false);
+
+    glDisable(GL_DEPTH_TEST);
+    for (const DebugMesh& dm : debugMeshes) {
+        glBindVertexArray(dm.mesh->VAO);
+
+        defaultShader->setVec3("uColor", dm.color);
+        defaultShader->setMat4("model", dm.model);
+
+        dm.mesh->draw();
+    }
+    glEnable(GL_DEPTH_TEST);
+}
+void Renderer::renderDebugMeshesShadow() {
+    shadowShader->use();
+
+    for (const DebugMesh& dm : debugMeshes) {
+        if (!dm.castsShadow)
+            continue;
+
+        glBindVertexArray(dm.mesh->VAO);
+        shadowShader->setMat4("model", dm.model);
+        dm.mesh->draw();
+    }
+}
+
 //-----------------------------
 //        Main render
 //-----------------------------
@@ -212,19 +262,22 @@ void Renderer::render(
     }
 
     fillBatchInstances();
+    fillDebugMeshes(&physics);
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
     renderGameObjectsShadow();
+    renderDebugMeshesShadow();
+    renderTerrain(builder.getTerrainData(), builder.sceneDirty, true);
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
 
     // bind viewport FBO if provided
     int targetW = (int)screenWidth;
     int targetH = (int)screenHeight;
-
+    // viewport render
     if (viewportFBO) {
         viewportFBO->bind();
         targetW = viewportFBO->width;
@@ -240,8 +293,15 @@ void Renderer::render(
     setViewProjection(camera, aspect);
     uploadDirectionalLight();
     uploadLightsToShader();
+
+    // draw sky quad
+    DirectionalLight& light = lightManager->getDirectionalLight();
+    light.direction.y -= 0.0001f;
+    quadRenderer.draw(shaderManager->getShader("SkyShader"), &camera, light.direction, targetW, targetH);
+
     renderLights();
-    renderScene(*defaultShader, builder);
+    renderScene(builder);
+    renderDebugMeshesDefault();
     glEndQuery(GL_TIME_ELAPSED);
 
     // render raycast hit for player/editor
@@ -253,7 +313,7 @@ void Renderer::render(
     }
 
     glDepthFunc(GL_LEQUAL);
-    skyboxManager->render(*skyboxShader); 
+    //skyboxManager->render(*skyboxShader); 
     glDepthFunc(GL_LESS); 
 
     // debug
@@ -312,7 +372,7 @@ void Renderer::renderGameObjectsShadow() {
         Mesh* mesh = batch.mesh;
         glBindVertexArray(mesh->VAO);
 
-        // without instancing
+        // no instancing
         if (instances.size() < INSTANCING_THRESHOLD) {
             shader = shadowShader;
             shader->use();
@@ -321,8 +381,8 @@ void Renderer::renderGameObjectsShadow() {
                 mesh->draw();
             }
         }
+        // instancing
         else {
-            // with instancing
             shader = shadowShader->instancedVariant;
             shader->use();
 
@@ -336,9 +396,9 @@ void Renderer::renderGameObjectsShadow() {
 //-----------------------------
 //       Render scene
 //-----------------------------
-void Renderer::renderScene(Shader& shader, SceneBuilder& builder) {
+void Renderer::renderScene(SceneBuilder& builder) {
     renderGameObjects(builder.getDynamicObjects());
-    renderTerrain(shader, builder.getTerrainData(), builder.sceneDirty);
+    renderTerrain(builder.getTerrainData(), builder.sceneDirty, false);
 }
 
 //---------------------------
@@ -354,7 +414,7 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
         glBindVertexArray(mesh->VAO);
         glBindTexture(GL_TEXTURE_2D, texId);
 
-        // without instancing
+        // no instancing
         if (instances.size() < INSTANCING_THRESHOLD) {
             shader = bucket.shader;
             shader->use();
@@ -378,7 +438,7 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
                 mesh->draw();
             }
         }
-        // with instancing
+        // instancing
         else {
             shader = bucket.shader->instancedVariant;
             shader->use();
@@ -402,7 +462,7 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
 //-----------------------------
 //       Render terrain
 //-----------------------------
-void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty) {
+void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, bool shadowPass) {
     if (data.triangles.size() == 0) {
         return;
     }
@@ -462,35 +522,46 @@ void Renderer::renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bo
     constexpr bool renderTextured = true;
     constexpr bool renderWireframe = false;
 
+    if (shadowPass) {
+        shadowShader->use();
+        shadowShader->setMat4("model", model);
+    }
+
     if (renderTextured) {
-        shader.use();
-        shader.setMat4("model", model);
-        shader.setBool("useTexture", true);
-        shader.setBool("useRandomColor", false);
-        shader.setVec3("uColor", glm::vec3(0, 1, 0));
-        glBindTexture(GL_TEXTURE_2D, 5);
+        if (!shadowPass) {
+            defaultShader->use();
+            defaultShader->setMat4("model", model);
+            defaultShader->setBool("useTexture", true);
+            defaultShader->setBool("useRandomColor", false);
+            defaultShader->setVec3("uColor", glm::vec3(0, 1, 0));
+            glBindTexture(GL_TEXTURE_2D, 5);
+        }
 
         glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
     }
     if (renderWireframe) {
-        debugShader->use();
-        debugShader->setMat4("model", model);
-        debugShader->setInt("debug.objectType", 0);
-        debugShader->setVec3("debug.uColor", glm::vec3(0.3f));
-        debugShader->setBool("debug.useUniformColor", true);
+        if (!shadowPass) {
+            debugShader->use();
+            debugShader->setMat4("model", model);
+            debugShader->setInt("debug.objectType", 0);
+            debugShader->setVec3("debug.uColor", glm::vec3(0.3f));
+            debugShader->setBool("debug.useUniformColor", true);
 
-        glDisable(GL_CULL_FACE);
-        glEnable(GL_POLYGON_OFFSET_LINE);
-        glPolygonOffset(-1.0f, -1.0f);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glLineWidth(3.f);
+            glDisable(GL_CULL_FACE);
+            glEnable(GL_POLYGON_OFFSET_LINE);
+            glPolygonOffset(-1.0f, -1.0f);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glLineWidth(3.f);
+        }
 
         glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
 
-        // restore
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDisable(GL_POLYGON_OFFSET_LINE);
-        glEnable(GL_CULL_FACE);
+        if (!shadowPass) {
+            // restore
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glDisable(GL_POLYGON_OFFSET_LINE);
+            glEnable(GL_CULL_FACE);
+        }
     }
 }
 
@@ -605,7 +676,6 @@ void Renderer::uploadLightsToShader() {
         defaultShader->setFloat(base + ".linear", light.linear);
         defaultShader->setFloat(base + ".quadratic", light.quadratic);
     }
-
     defaultShader->setInt("numPointLights", static_cast<int>(lights.size()));
 
     // Instanced shader
@@ -627,7 +697,6 @@ void Renderer::uploadLightsToShader() {
         defaultInstancedShader->setFloat(base + ".linear", light.linear);
         defaultInstancedShader->setFloat(base + ".quadratic", light.quadratic);
     }
-
     defaultInstancedShader->setInt("numPointLights", static_cast<int>(lights.size()));
 
 }
@@ -690,6 +759,9 @@ void Renderer::renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& b
 //     Render debug info
 //----------------------------
 void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
+
+    // #TODO: fixa instancing för debug-rendering
+
     if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowNormals() || engineState->getShowContactPoints())) {
         return;
     }
@@ -761,7 +833,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
                 renderContactPoint(*debugShader, VAO_contactPoint, contact.points[i].globalCoord);
             }
         }
-        glEnable(GL_DEPTH_TEST); // återställ depth test
+        glEnable(GL_DEPTH_TEST);
     }
 
     render_xyzObject(*debugShader, VAO_xyz);

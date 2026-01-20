@@ -268,10 +268,16 @@ void CollisionManifold::selectCollisionFace(GameObject& obj, const glm::vec3& no
 }
 
 void CollisionManifold::createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal) {
+    // #TODO: Använda FaceCenter för point on plane i stället för face[i]. Pga precision.
+    // T.ex: float depth = dot(n, contactPoint - planePoint); (depth per contact point)
+    // Face center är mer stabilt än ett hörn för det swappar inte mellan frames.
+    // Face center kommer också vara on average närmare fler antal contact points än ett hörn.
+    // Detta minskar risken för jitter vid kontaktpunkter nära plan.
+
     this->clippingPlanes = {};
     this->clippingPlanes.resize(face.size());
     // create clipping planes
-    for (int i = 0; i < face.size(); i++) {
+    for (int i = 0; i < face.size(); i++) {             
         glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
         glm::vec3 planeNormal = glm::cross(faceNormal, edge);
 
@@ -566,6 +572,14 @@ size_t CollisionManifold::generateKey(int idA, int idB) {
 }
 
 void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
+
+    // #TODO: FaceCenter kan användas för att sortera contact points om:
+    // 1. nya kontaktpunkter skapades
+    // 2. antal ändrades
+    // 3. cache-matchning var osäker
+    // Ordningen av kontaktpunkter ska vara stabil mellan frames för att undvika jitter.
+
+
     auto it = contactCache.find(contact.hashKey);
 
     contact.wasUsedThisFrame = true;

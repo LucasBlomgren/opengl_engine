@@ -1,22 +1,6 @@
 #include "pch.h"
 #include "imgui_manager.h"
 
-void ImGuiManager::addInputRouter(InputRouter& router) {
-	router.add(this);
-}
-
-void ImGuiManager::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
-	//ImGuiIO* io = &ImGui::GetIO();
-	//if (!c.mouse and io->WantCaptureMouse) {
-	//	c.mouse = true;
-	//	wants.cameraLook = false;
-	//	wants.captureMouse = false;
-	//}
-	//if (!c.keyboard and io->WantCaptureKeyboard) {
-	//	c.keyboard = true;
-	//}
-}
-
 void ImGuiManager::init(GLFWwindow* window) {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();

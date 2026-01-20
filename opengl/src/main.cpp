@@ -35,8 +35,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 4096;
-const unsigned int SHADOW_HEIGHT = 4096;
+const unsigned int SHADOW_WIDTH = 16384;
+const unsigned int SHADOW_HEIGHT = 16384;
 
 // timing
 float deltaTime = 0.0f;	
@@ -99,7 +99,7 @@ int main() {
 	inputManager.init(window);
 
 	// setup rendering
-	renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager);
+	renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
 
 	// load textures
 	textureManager.loadTexture("crate", "src/assets/crate.jpg");
@@ -149,7 +149,8 @@ int main() {
 		&meshManager,
 		&textureManager,
 		&frameTimers, 
-		&gpu);
+		&gpu
+	);
 
 	// setup player
 	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
@@ -158,7 +159,6 @@ int main() {
 	imguiManager.init(window);
 
 	// add input routers
-	imguiManager.addInputRouter(inputManager.router);
 	editor.addInputRouter(inputManager.router);
 	player.addInputRouter(inputManager.router);
 	camera.addInputRouter(inputManager.router);

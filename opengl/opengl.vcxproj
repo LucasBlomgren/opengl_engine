@@ -43,6 +43,7 @@
     <ClCompile Include="src\editor\panels\settings_panel.cpp" />
     <ClCompile Include="src\editor\panel_manager.cpp" />
     <ClCompile Include="src\game\player.cpp" />
+    <ClCompile Include="src\graphics\debug\arrow_renderer.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\editor\editor_main.cpp">
@@ -281,6 +282,8 @@
     <None Include="src\graphics\shaders\shadow_instanced.vert" />
     <None Include="src\graphics\shaders\skybox.frag" />
     <None Include="src\graphics\shaders\skybox.vert" />
+    <None Include="src\graphics\shaders\SkyShader.frag" />
+    <None Include="src\graphics\shaders\SkyShader.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\camera.h" />
@@ -296,6 +299,7 @@
     <ClInclude Include="src\editor\panels\performance_panel.h" />
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
+    <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
     <ClInclude Include="src\editor\editor_main.h" />
@@ -318,6 +322,7 @@
     <ClInclude Include="src\graphics\shaders\shader_manager.h" />
     <ClInclude Include="src\graphics\lighting\shadow_manager.h" />
     <ClInclude Include="src\graphics\skybox\skybox_manager.h" />
+    <ClInclude Include="src\graphics\debug\quad_renderer.h" />
     <ClInclude Include="src\graphics\textures\texture_manager.h" />
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />

@@ -10,6 +10,7 @@ template class BVHTree<GameObject>;
 //-----------------------------
 void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
+    this->terrainTriangles = terrainTris;
 
     broadphaseManager.init(dynamicObjects, terrainTris);
 
@@ -17,6 +18,15 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
 
     toWake.reserve(dynamicObjects->size());
     toSleep.reserve(dynamicObjects->size());
+}
+
+const ObjAmountData PhysicsEngine::getObjectAmounts() const {
+    ObjAmountData data;
+    data.totalAwake = broadphaseManager.getAwakeList().size();
+    data.totalAsleep = broadphaseManager.getAsleepList().size();
+    data.totalStatic = broadphaseManager.getStaticList().size();
+    data.totalTerrainTris = terrainTriangles->size();
+    return data;
 }
 
 //-----------------------------
@@ -219,13 +229,16 @@ void PhysicsEngine::updateStates() {
 //---------------------------------------------
 void PhysicsEngine::detectAndSolveCollisions() 
 {
-    broadphaseManager.computePairs();
+    {
+        ScopedTimer t(*frameTimers, "Broadphase");
+        broadphaseManager.computePairs();
+    }
     const auto& terrainPairs = broadphaseManager.getTerrainPairs();
     const auto& dynamicPairs = broadphaseManager.getDynamicPairs();
 
-    narrowPhase(terrainPairs, dynamicPairs);      // SAT + collisionManifold
-    collectActiveContacts();        // collect contacts to solve
-    resolveCollisions();            // PGS + Baumgarte stabilization
+    narrowPhase(terrainPairs, dynamicPairs);    // SAT + collisionManifold
+    collectActiveContacts();                    // collect contacts to solve
+    resolveCollisions();                        // PGS + Baumgarte stabilization
 }
 
 //---------------------------------------------

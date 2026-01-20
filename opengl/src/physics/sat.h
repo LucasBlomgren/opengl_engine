@@ -11,6 +11,8 @@ namespace SAT {
         float depth = std::numeric_limits<float>::infinity();
         glm::vec3 normal;
         AxisType axisType;
+
+        // #TODO: fixa så att faceIndex och edgeIndex används i SAT
         int faceIndex;
         int edgeIndexA;
         int edgeIndexB;

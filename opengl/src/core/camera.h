@@ -19,7 +19,7 @@ const float YAW = 40.0f;
 const float PITCH = -30.0f;
 const float SPEED = 30.0f;
 const float SENSITIVITY = 0.05f;
-const float ZOOM = 45.0f;
+const float ZOOM = 80.0f;
 
 class Camera : public IInputReceiver {
 public:

@@ -18,6 +18,10 @@ struct PanelContext {
 	float deltaTime = 0.0f;
 	float fps = 0.0f;
 	size_t amountObjects = 0;
+	size_t amountAwakeObjects = 0;
+	size_t amountAsleepObjects = 0;
+	size_t amountStaticObjects = 0;
+	size_t amountTerrainTris = 0;
 	GameObject* selectedObject = nullptr;
 
 	::EngineState* engineState = nullptr;

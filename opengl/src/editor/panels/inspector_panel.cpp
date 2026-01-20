@@ -4,6 +4,12 @@
 #include "imgui.h"
 #include "imgui_manager.h"
 #include "time.h"
+#include "core/engine_state.h"
+#include "game/game_object.h"
+#include "graphics/mesh/mesh_manager.h"
+#include "graphics/renderer/renderer.h"
+#include "graphics/textures/texture_manager.h"
+
 
 void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 {

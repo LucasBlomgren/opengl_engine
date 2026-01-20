@@ -41,14 +41,14 @@ void main()
 	}
 
 	// sphere
-	if (debug.objectType == 1) {
+	else if (debug.objectType == 1) {
 		vec3 worldPos = debug.uCenter + aPos.x * debug.uU + aPos.y * debug.uV;
 		gl_Position = projection * view * vec4(worldPos, 1.0);
 
 	}
 
 	// contact point
-	if (debug.objectType == 2) {
+	else if (debug.objectType == 2) {
 		vec3 transformedPos = aPos + debug.contactPointOffset;
 		gl_Position = projection * view * vec4(transformedPos, 1.0f);
 	} 

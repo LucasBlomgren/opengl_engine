@@ -4,6 +4,9 @@
 #include "imgui.h"
 #include "imgui_manager.h"
 #include "time.h"
+#include "core/engine_state.h"
+#include "scene_builder.h"
+#include "skybox/skybox_manager.h"
 
 void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 {

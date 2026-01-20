@@ -3,7 +3,8 @@
 #include "editor/panel.h"
 #include "imgui.h"
 #include "imgui_manager.h"
-#include "time.h"
+#include "core/timer.h"
+#include "core/engine_state.h"
 
 void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 {
@@ -141,6 +142,10 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	}
 	//ImGui::SameLine();
 	ImGui::TextDisabled("Objects: %zu", ctx.amountObjects);
+	ImGui::TextDisabled("Awake: %zu", ctx.amountAwakeObjects);
+	ImGui::TextDisabled("Asleep: %zu", ctx.amountAsleepObjects);
+	ImGui::TextDisabled("Static: %zu", ctx.amountStaticObjects);
+	ImGui::TextDisabled("Terrain: %zu", ctx.amountTerrainTris);
 
 	ImGui::Spacing();
 	ImGui::Separator();
@@ -151,7 +156,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
 	ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
-	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, 0.0f, 16.6f, ImVec2(-1, 100));
+	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, 0.0f, 75.0f, ImVec2(-1, 100));
 
 	ImGui::PopStyleColor(2);
 	ImGui::PopStyleVar();

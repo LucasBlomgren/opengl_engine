@@ -46,6 +46,7 @@ void Editor::EditorMain::init(
     this->window = window;
 
     panelManager = std::make_unique<Editor::PanelManager>(
+        physicsEngine,
         imguiManager,
         engineState,
         renderer,  
@@ -143,30 +144,53 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         }
 
 
-        static float shootCd = 0.0f;
-        shootCd -= engineState->deltaTime;
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_3] and shootCd <= 0.0f) {
-            shootCd = 0.001f;
+        static bool wasDown = false;
+        static float shootTimer = 0.0f;
 
-            static int shot = 0;
-            int i = shot++ % 10;
-            int x = i % 5, y = i / 5;
+        const float fireInterval = 0.001f; // 1000/s
 
-            glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
-            float spread = 2.0f;
-            float jitter = 1.4f;
-            glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
-                + right * (glm::linearRand(-jitter, jitter))
-                + camera->up * (glm::linearRand(-jitter, jitter));
+        bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
 
-            auto& newObject = sceneBuilder->createObject(
-                "crate", "cube", ColliderType::CUBOID,
-                camera->position + camera->front * 5.0f + offset,
-                glm::vec3(1), 100, 0
-            );
-            newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
+        if (down && !wasDown) {
+            // Första pressen: starta “nu” utan att försöka hinna ikapp något gammalt
+            shootTimer = fireInterval;
         }
 
+        if (down) {
+            shootTimer -= engineState->deltaTime;
+
+            int spawnedThisFrame = 0;
+            const int maxPerFrame = 50; // säkerhetscap
+
+            while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
+                shootTimer += fireInterval; // håll konstant takt
+                spawnedThisFrame++;
+
+                // spawn
+                static int shot = 0;
+                int i = shot++ % 10;
+                int x = i % 5, y = i / 5;
+
+                glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
+                float spread = 2.0f;
+                float jitter = 1.4f;
+                glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
+                    + right * (glm::linearRand(-jitter, jitter))
+                    + camera->up * (glm::linearRand(-jitter, jitter));
+
+                auto& newObject = sceneBuilder->createObject(
+                    "uvmap", "sphere", ColliderType::SPHERE,
+                    camera->position + camera->front * 5.0f + offset,
+                    glm::vec3(1), 1, 0
+                );
+                newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
+            }
+        }
+        else {
+            shootTimer = 0.0f;
+        }
+
+        wasDown = down;
     }
 
     if (!consumed.keyboard) {

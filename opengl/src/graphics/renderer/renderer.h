@@ -13,12 +13,15 @@
 #include "debug/render_contact_points.h"
 #include "debug/xyz_object.h"
 #include "debug/sphere_outline_renderer.h"
+#include "debug/quad_renderer.h"
+#include "debug/arrow_renderer.h"
 
 #include "bvh.h"
 #include "scene_builder.h"
 #include "editor/editor_main.h"
 #include "player.h"
 #include "raycast.h"
+
 
 class Renderer {
 public:
@@ -31,7 +34,8 @@ public:
         LightManager& lightManager, 
         ShaderManager& shaderManager,
         ShadowManager& shadowManager, 
-        SkyboxManager& skyboxManager
+        SkyboxManager& skyboxManager,
+        MeshManager& meshManager
     );
 
     void render(
@@ -57,12 +61,12 @@ public:
     void uploadLightsToShader(); 
     void uploadDirectionalLight(); 
 
-    void renderScene(Shader& shader, SceneBuilder& builder);
+    void renderScene(SceneBuilder& builder);
 
     void fillBatchInstances();
     void renderGameObjects(std::vector<GameObject>& objects);
     void renderGameObjectsShadow();
-    void renderTerrain(Shader& shader, SceneBuilder::TerrainData& data, bool sceneDirty);
+    void renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, bool shadowPass);
     void renderLights() const; 
     void renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder);
 
@@ -71,6 +75,17 @@ public:
     void renderBVH(const BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor);
     void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
     void renderFrustum(const glm::mat4& viewProj);
+
+    struct DebugMesh {
+        Mesh* mesh;
+        glm::mat4 model;
+        glm::vec3 color;
+        bool castsShadow;
+    };
+    std::vector<DebugMesh> debugMeshes;
+    void fillDebugMeshes(PhysicsEngine* physicsEngine); 
+    void renderDebugMeshesShadow();
+    void renderDebugMeshesDefault();
 
     Shader* defaultShader;
     Shader* debugShader;
@@ -98,10 +113,13 @@ private:
     ShaderManager* shaderManager = nullptr;
     ShadowManager* shadowManager = nullptr;
     SkyboxManager* skyboxManager = nullptr;
+    MeshManager* meshManager = nullptr;
 
     AABBRenderer aabbRenderer;
     OOBBRenderer oobbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;
+    QuadRenderer quadRenderer;
+    ArrowRenderer arrowRenderer;
 
     float maxViewDistance = 10000000000000.0f;
 

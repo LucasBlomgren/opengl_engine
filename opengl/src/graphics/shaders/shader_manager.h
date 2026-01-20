@@ -13,6 +13,8 @@ public:
 
 		shaders["debug"]					= Shader("src/graphics/shaders/debug.vert", "src/graphics/shaders/debug.frag");
 		shaders["skybox"]					= Shader("src/graphics/shaders/skybox.vert", "src/graphics/shaders/skybox.frag");
+
+		shaders["SkyShader"]				= Shader("src/graphics/shaders/SkyShader.vert", "src/graphics/shaders/SkyShader.frag");
 	};
 
 	Shader* getShader(const std::string& name);

@@ -41,13 +41,6 @@ void AABBRenderer::initShared() {
     glBindVertexArray(0);
 }
 
-void AABBRenderer::CleanupShared() {
-    if (!sInitialized) return;
-    glDeleteBuffers(1, &sVBO);
-    glDeleteVertexArrays(1, &sVAO);
-    sInitialized = false;
-}
-
 void AABBRenderer::render(const glm::vec3& color, Shader& shader) const {
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);

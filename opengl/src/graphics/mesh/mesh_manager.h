@@ -28,12 +28,16 @@ public:
 		std::vector<unsigned int> tankIndices   = loadIndicesFromTxt("src/assets/tank_indices.txt");
 		recenterVertices(tankVerts);
 
+		std::vector<Vertex> debugArrowVerts			= loadVerticesFromTxt("src/assets/debugarrow_vertices.txt");
+		std::vector<unsigned int> debugArrowIndices	= loadIndicesFromTxt("src/assets/debugarrow_indices.txt");
+
 		meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
 		meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
 		meshes.emplace("teapot", Mesh(teapotVerts, teapotIndices));
 		meshes.emplace("pylon", Mesh(pylonVerts, pylonIndices));
 		meshes.emplace("girl", Mesh(girlVerts, girlIndices));
 		meshes.emplace("tank", Mesh(tankVerts, tankIndices));
+		meshes.emplace("debug_arrow", Mesh(debugArrowVerts, debugArrowIndices));
 	};
 
 	Mesh* getMesh(const std::string& name);

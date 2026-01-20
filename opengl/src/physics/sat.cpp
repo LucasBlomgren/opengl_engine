@@ -78,6 +78,35 @@ bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
     OOBB& boxB = std::get<OOBB>(B.shape);
 
     return intersectPolygons(boxA.wVertices, boxB.wVertices, boxA.wAxes, boxB.wAxes, out);
+
+    // #TODO: Korrekt hantering av face vs edge-edge för BoxBox
+    // 
+    // ---- Välja face-face:
+    // 
+    // float s = dot(A.axis[k], normal);
+    // int faceSign = (s >= 0.0f) ? +1 : -1;   // +1 = plus-face, -1 = minus-face
+    // vec3 faceCenter = A.center + faceSign * A.axis[k] * A.halfExtents[k];
+    // vec3 faceNormal = faceSign * A.axis[k];
+    // 
+    // Sen använda faceCenter och faceNormal för att välja rätt face för clipping
+    //
+    // ---- Välja edge-edge:
+    // 
+    //// inputs: center C, axes U[3], half extents he[3], edge axis i, contact normal n (A->B)
+    //int a0 = (i + 1) % 3;
+    //int a1 = (i + 2) % 3;
+
+    //float s0 = (dot(n, U[a0]) >= 0.0f) ? 1.0f : -1.0f;
+    //float s1 = (dot(n, U[a1]) >= 0.0f) ? 1.0f : -1.0f;
+
+    //// base point on the "side" of the box (fixed a0/a1 signs)
+    //glm::vec3 base = C
+    //    + s0 * U[a0] * he[a0]
+    //    + s1 * U[a1] * he[a1];
+
+    //// edge endpoints (vary along i)
+    //glm::vec3 e0 = base + U[i] * he[i];
+    //glm::vec3 e1 = base - U[i] * he[i];
 }
 
 bool SAT::boxSphere(Collider& A, Collider& B, Result& out) {
@@ -289,7 +318,7 @@ bool SAT::intersectPolygons(
             glm::vec3 axis = glm::cross(A, B);
 
             if (glm::length2(axis) < 1e-6f)
-                continue; // Skip degenerate axis
+                continue; // Skip parallel axes
 
             axis = glm::normalize(axis);
 
