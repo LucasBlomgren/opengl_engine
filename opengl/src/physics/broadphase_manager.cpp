@@ -55,6 +55,10 @@ void BroadphaseManager::updateBVHs() {
         staticBvh.update(*dynamicObjects, staticIds, false);
         //staticBvh.dirty = false;
     //}
+
+    std::cout << awakeBvh.nodes.size() << " awake nodes, "
+              << asleepBvh.nodes.size() << " asleep nodes, "
+        << staticBvh.nodes.size() << " static nodes.\n";
 }   
 
 // Compute pairs for this frame

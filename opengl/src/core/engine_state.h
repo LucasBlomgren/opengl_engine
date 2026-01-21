@@ -13,8 +13,8 @@ public:
     void toggleShowAABB();
     void toggleShowColliders();
     void toggleShowContactPoints();
-    void toggleShowCollisionNormal();
-    void toggleShowNormals();
+    void toggleShowCollisionNormals();
+    void toggleShowObjectLocalNormals();
     void toggleShowBVH_awake();
     void toggleShowBVH_asleep();
     void toggleShowBVH_static();
@@ -23,11 +23,11 @@ public:
     bool isPaused() const;
     bool getAdvanceStep() const;
     bool getShowFPS() const;
-    bool getShowNormals() const;
+    bool getShowObjectLocalNormals() const;
+    bool getShowCollisionNormals() const;
     bool getShowAABB() const;
     bool getShowColliders() const;
     bool getShowContactPoints() const;
-    bool getShowCollisionNormal() const;
     bool getShowBVH_awake() const;
     bool getShowBVH_asleep() const;
     bool getShowBVH_static() const;
@@ -45,8 +45,8 @@ private:
     bool showAABB = false;
     bool showColliders = false;
     bool showContactPoints = false;
-    bool showCollisionNormal = false;
-    bool showNormals = false;
+    bool showCollisionNormals = false;
+    bool showObjectLocalNormals = false;
     bool showBVH_awake = false;
     bool showBVH_asleep = false;
     bool showBVH_static = false;

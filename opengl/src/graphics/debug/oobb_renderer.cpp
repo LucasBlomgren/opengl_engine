@@ -10,7 +10,6 @@ unsigned int OOBBRenderer::sVBO_normals = 0;
 bool         OOBBRenderer::sInitialized_normals = false;
 
 void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) {
-
     glm::mat4 model(1.0f);
     makeOOBBModelMatrix(model, box);
 

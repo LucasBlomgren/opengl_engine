@@ -8,8 +8,8 @@ void EngineState::toggleShowFPS() { showFPS = !showFPS; }
 void EngineState::toggleShowAABB() { showAABB = !showAABB; }
 void EngineState::toggleShowColliders() { showColliders = !showColliders; }
 void EngineState::toggleShowContactPoints() { showContactPoints = !showContactPoints; }
-void EngineState::toggleShowNormals() { showNormals = !showNormals; }
-void EngineState::toggleShowCollisionNormal() { showCollisionNormal = !showCollisionNormal; }
+void EngineState::toggleShowObjectLocalNormals() { showObjectLocalNormals = !showObjectLocalNormals; }
+void EngineState::toggleShowCollisionNormals() { showCollisionNormals = !showCollisionNormals; }
 void EngineState::toggleShowBVH_awake() { showBVH_awake = !showBVH_awake; }
 void EngineState::toggleShowBVH_asleep() { showBVH_asleep = !showBVH_asleep; }
 void EngineState::toggleShowBVH_static() { showBVH_static = !showBVH_static; }
@@ -21,8 +21,8 @@ bool EngineState::getShowFPS() const { return showFPS; }
 bool EngineState::getShowAABB() const { return showAABB; }
 bool EngineState::getShowColliders() const { return showColliders; }
 bool EngineState::getShowContactPoints() const { return showContactPoints; }
-bool EngineState::getShowNormals() const { return showNormals; }
-bool EngineState::getShowCollisionNormal() const { return showCollisionNormal; }
+bool EngineState::getShowObjectLocalNormals() const { return showObjectLocalNormals; }
+bool EngineState::getShowCollisionNormals() const { return showCollisionNormals; }
 bool EngineState::getShowBVH_awake() const { return showBVH_awake; }
 bool EngineState::getShowBVH_asleep() const { return showBVH_asleep; }
 bool EngineState::getShowBVH_static() const { return showBVH_static; }

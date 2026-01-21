@@ -6,7 +6,7 @@
 #include "imgui.h"
 #include "panel_manager.h"
 #include "scene_builder.h"
-#include "physics/physics.h" // <-- Fix for E0020: ObjAmountData definition
+#include "physics/physics.h"
 
 // Initialize panels
 void Editor::PanelManager::init() {
@@ -16,9 +16,9 @@ void Editor::PanelManager::init() {
 }
 
 // Render all panels
-void Editor::PanelManager::renderPanels() {
+void Editor::PanelManager::renderPanels(float deltaTime) {
 	auto& io = ImGui::GetIO();
-	ctx.deltaTime = io.DeltaTime;
+	ctx.deltaTime = deltaTime;
 	ctx.fps = io.Framerate;
 	ctx.amountObjects = sceneBuilder->getDynamicObjects().size();
 

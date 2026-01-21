@@ -182,7 +182,7 @@ void BVHTree<E>::removeLeaf(int leafIdx)
         leaf.element->broadphaseHandle.leafIdx = -1;
         leaf.element = nullptr;
         rootIdx = -1;
-        nodes.clear();
+        nodes.clear();              // #TODO: Fixa så att noder återanvänds. Det är bara här som noder tas bort annars.
         prims.clear();
         return;
     }

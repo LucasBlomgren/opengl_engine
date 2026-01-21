@@ -53,7 +53,7 @@ public:
 	void init();
 
 	// render all panels
-	void renderPanels();
+	void renderPanels(float deltaTime);
 
 	// context passed to panels
 	Editor::PanelContext ctx;

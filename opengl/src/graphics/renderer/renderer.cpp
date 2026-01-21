@@ -36,6 +36,8 @@ void Renderer::init(
     aabbRenderer.initShared();
     oobbRenderer.initShared();
     sphereOutlineRenderer.init();
+    this->arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
+    this->normalsRenderer.init();
 
     defaultShader = shaderManager.getShader("default");
     debugShader   = shaderManager.getShader("debug");
@@ -48,7 +50,7 @@ void Renderer::init(
     this->VAO_xyz = setup_xyzObject();
     this->VAO_contactPoint = setupContactPoint();
 
-    this->arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
+    batches.reserve(100000);
 }
 
 // set viewport
@@ -201,24 +203,68 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int ta
 //-------------------------------------------
 //     Debug Meshes
 //-------------------------------------------
-void Renderer::fillDebugMeshes(PhysicsEngine* physicsEngine) {
+void Renderer::fillDebugMeshes(PhysicsEngine* physicsEngine, std::vector<GameObject>& objects) {
     debugMeshes.clear();
 
     // contact normals
-    for (Contact* c : physicsEngine->contactsToSolve) {
-        debugMeshes.push_back({
-            arrowRenderer.mesh,
-            arrowRenderer.getModelMatrix(c->objA_ptr->position, c->normal, glm::vec3(0.2f)),
-            glm::vec3(1, 0, 1),
-            false
-            });
+    if (engineState->getShowCollisionNormals()) {
+        for (Contact* c : physicsEngine->contactsToSolve) {
+            debugMeshes.push_back({
+                arrowRenderer.mesh,
+                arrowRenderer.getModelMatrix(c->objA_ptr->position, c->normal, glm::vec3(0.2f)),
+                glm::vec3(1, 0, 1),
+                false
+                });
+        }
+    }
+
+    // object local normals
+    if (engineState->getShowObjectLocalNormals()) {
+        for (GameObject& obj : objects) {
+            Mesh* m = arrowRenderer.mesh;
+
+            // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
+            glm::vec3 pos = glm::vec3(obj.modelMatrix[3]);
+
+            glm::mat3 R = glm::mat3(obj.modelMatrix);
+            R[0] = glm::normalize(R[0]);
+            R[1] = glm::normalize(R[1]);
+            R[2] = glm::normalize(R[2]);
+
+            glm::mat4 baseTR(1.0f);
+            baseTR[0] = glm::vec4(R[0], 0.0f);
+            baseTR[1] = glm::vec4(R[1], 0.0f);
+            baseTR[2] = glm::vec4(R[2], 0.0f);
+            baseTR[3] = glm::vec4(pos, 1.0f);
+
+            // valfri debug-skala (konstant i world)
+            glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
+
+            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
+            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
+            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
+        }
+    }
+
+    // XYZ axes at world origin
+    if (engineState->getShowObjectLocalNormals() or engineState->getShowCollisionNormals()) {
+        Mesh* m = arrowRenderer.mesh;
+
+        const float axisLength = 1.0f;
+        const glm::vec3 offset = glm::vec3(-50.0f, 0.0f, -50.0f);
+        const glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(axisLength));
+        const glm::mat4 T = glm::translate(glm::mat4(1.0f), offset);
+        const glm::mat4 TailToOrigin = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.77f, 0.0f));
+
+        debugMeshes.push_back({ m, T * normalsRenderer.modelX * TailToOrigin * S, glm::vec3(1,0,0), false });
+        debugMeshes.push_back({ m, T * normalsRenderer.modelY * TailToOrigin * S, glm::vec3(0,1,0), false });
+        debugMeshes.push_back({ m, T * normalsRenderer.modelZ * TailToOrigin * S, glm::vec3(0,0,1), false });
     }
 }
 void Renderer::renderDebugMeshesDefault() {
     defaultShader->use();
     defaultShader->setBool("useTexture", false);
 
-    glDisable(GL_DEPTH_TEST);
     for (const DebugMesh& dm : debugMeshes) {
         glBindVertexArray(dm.mesh->VAO);
 
@@ -227,7 +273,6 @@ void Renderer::renderDebugMeshesDefault() {
 
         dm.mesh->draw();
     }
-    glEnable(GL_DEPTH_TEST);
 }
 void Renderer::renderDebugMeshesShadow() {
     shadowShader->use();
@@ -242,9 +287,9 @@ void Renderer::renderDebugMeshesShadow() {
     }
 }
 
-//-----------------------------
+//-------------------------------------
 //        Main render
-//-----------------------------
+//-------------------------------------
 void Renderer::render(
     Camera& camera,
     SceneBuilder& builder,
@@ -262,7 +307,7 @@ void Renderer::render(
     }
 
     fillBatchInstances();
-    fillDebugMeshes(&physics);
+    fillDebugMeshes(&physics, builder.getDynamicObjects());
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -301,7 +346,6 @@ void Renderer::render(
 
     renderLights();
     renderScene(builder);
-    renderDebugMeshesDefault();
     glEndQuery(GL_TIME_ELAPSED);
 
     // render raycast hit for player/editor
@@ -343,11 +387,13 @@ void Renderer::render(
         renderBVH(physics.getTerrainBvh(), c, c2);
     }
 
-    if (viewportFBO) {
-    viewportFBO->unbind(screenWidth, screenHeight);
-}
-
+    glClear(GL_DEPTH_BUFFER_BIT);
+    renderDebugMeshesDefault();
     glEndQuery(GL_TIME_ELAPSED);
+
+    if (viewportFBO) {
+        viewportFBO->unbind(screenWidth, screenHeight);
+    }
 }
 
 //-----------------------------
@@ -762,7 +808,7 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 
     // #TODO: fixa instancing för debug-rendering
 
-    if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowNormals() || engineState->getShowContactPoints())) {
+    if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowContactPoints())) {
         return;
     }
 
@@ -797,17 +843,6 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         }
     }
 
-    if (engineState->getShowNormals()) {
-        glLineWidth(4.0f); 
-        glBindVertexArray(oobbRenderer.sVAO_normals);
-        debugShader->setInt("debug.objectType", 0);
-        debugShader->setBool("debug.useUniformColor", false);
-
-        for (GameObject& obj : objects) {
-            oobbRenderer.renderNormals(*debugShader, obj.modelMatrix);
-        }
-    }
-
     if (engineState->getShowContactPoints()) {
         debugShader->setInt("debug.objectType", 2);
         debugShader->setBool("debug.useUniformColor", true);
@@ -835,8 +870,6 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
         }
         glEnable(GL_DEPTH_TEST);
     }
-
-    render_xyzObject(*debugShader, VAO_xyz);
 }
 
 //-------------------------

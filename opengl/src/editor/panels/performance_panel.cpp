@@ -100,7 +100,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 			float barPct = std::clamp(rawPct, 0.0f, 1.0f);
 
 			float wFull = ImGui::GetContentRegionAvail().x;
-			float barW = wFull * 0.8f;
+			float barW = wFull;
 			float barH = 12.0f;
 
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.75f);
@@ -156,7 +156,11 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
 	ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
-	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, 0.0f, 75.0f, ImVec2(-1, 100));
+	const float fpsBottom = 144.0f;                 // “max FPS” som ska hamna längst ner i grafen
+	const float fpsTop = 30.0f;                  // ska hamna längst upp
+	const float msMin = 1000.0f / fpsBottom;        // nederkant i grafen
+	const float msMax = 1000.0f / fpsTop;           // överkant i grafen (~33.33 ms)
+	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, msMin, msMax, ImVec2(-1, 100));
 
 	ImGui::PopStyleColor(2);
 	ImGui::PopStyleVar();
@@ -167,14 +171,14 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(6, 3));
 	ImGuiTableFlags tflags =
 		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_SizingFixedFit |
+		ImGuiTableFlags_SizingStretchProp |
 		ImGuiTableFlags_NoBordersInBody;
 
 	if (ImGui::BeginTable("perf_tbl", 3, tflags))
 	{
-		ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 110.0f);
-		ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 72.0f);
-		ImGui::TableSetupColumn("Share", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 85.0f);
+		ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 65.0f);
+		ImGui::TableSetupColumn("Share", ImGuiTableColumnFlags_WidthFixed, 85.0f);
 		ImGui::TableHeadersRow();
 
 		// --- GPU group header ---
@@ -208,7 +212,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 		ImGui::TableNextColumn(); ImGui::TableNextColumn();
 
 		// Render submit som vanlig rad (share av CPU total)
-		Row("Render submit", renderSub_ui, cpu_total_ms);
+		Row("Render", renderSub_ui, cpu_total_ms);
 		Row("Editor", editor_ui, cpu_total_ms);
 		Row("ImGui", imgui_ui, cpu_total_ms);
 
@@ -235,8 +239,8 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 				{"BVH",      bvhUpdate_ui},
 				{"Broad",    broadphase_ui},
 				{"Narrow",   narrowphase_ui},
-				{"Contacts", contactCollect_ui},
-				{"Solver",   collisionResolve_ui},
+				{"Sort",	 contactCollect_ui},
+				{"Solve",   collisionResolve_ui},
 				{"Post",     postStep_ui}
 			};
 
@@ -250,9 +254,9 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 			for (auto& s : subs)
 			{
 				ImGui::TableNextColumn();
-				ImGui::Indent(20.0f);
+				ImGui::Indent(10.0f);
 				ImGui::TextUnformatted(s.name);   // TextUnformatted: för färdig sträng
-				ImGui::Unindent(20.0f);
+				ImGui::Unindent(10.0f);
 
 				ImGui::TableNextColumn();
 				ImGui::Text("%.2f ms", s.ms);

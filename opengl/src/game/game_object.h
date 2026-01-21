@@ -199,6 +199,7 @@ public:
         initCollider();
     }
 
+    ~GameObject() {}
     void initMesh();
     void initCollider();
     void resetDirtyFlags();
@@ -221,7 +222,4 @@ public:
     void applyImpulseAngular(const glm::vec3& j);
 
     AABB getAABB() const;
-
-private:
-
 };

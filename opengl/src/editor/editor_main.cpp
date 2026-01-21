@@ -5,6 +5,7 @@
 #include "input_manager.h"
 #include "scene_builder.h"
 #include "physics.h"
+#include "graphics/renderer/renderer.h"
 #include "game_object.h"
 #include "aabb.h"
 #include "shaders/shader.h"
@@ -37,6 +38,7 @@ void Editor::EditorMain::init(
     this->engineState = engineState;
     this->sceneBuilder = sceneBuilder;
     this->physicsEngine = physicsEngine;
+    this->renderer = renderer;
     this->inputManager = inputManager;
     this->skyboxManager = skyboxManager;
     this->imguiManager = imguiManager;
@@ -224,9 +226,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 // -----------------------------------
 //        UI rendering
 // -----------------------------------
-void Editor::EditorMain::drawUI(InputContext& ctx)
+void Editor::EditorMain::drawUI(InputContext& ctx, float deltaTime)
 {
-    panelManager->renderPanels();
+    panelManager->renderPanels(deltaTime);
 
     // top toolbar
     ImGui::Begin("Toolbar1");
@@ -316,6 +318,18 @@ void Editor::EditorMain::update(Shader& shader) {
         lastHitData.object->hoveredByEditor = true;
         hoveredObject = lastHitData.object;
     }
+
+
+    // #TODO: to remove object, change from referencing object by pointer to referencing by ID
+    //GameObject* obj = &sceneBuilder->getDynamicObjects().back();
+    //if (obj) {
+    //    if (obj == selectedObject)
+    //        dropObject();
+
+    //    physicsEngine->queueRemove(obj);
+    //    renderer->removeObjectFromBatch(obj);   
+    //    sceneBuilder->getDynamicObjects().pop_back();
+    //}
 }
 
 // -----------------------------------

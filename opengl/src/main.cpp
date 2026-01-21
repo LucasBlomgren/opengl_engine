@@ -237,7 +237,7 @@ int main() {
 		// ImGui
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer a(frameTimers, "ImGui");
-			editor.drawUI(inputManager.currentContext);
+			editor.drawUI(inputManager.currentContext, deltaTime);
 		}
 		imguiManager.render();
 

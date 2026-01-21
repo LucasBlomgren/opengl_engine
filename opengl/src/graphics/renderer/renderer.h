@@ -15,6 +15,7 @@
 #include "debug/sphere_outline_renderer.h"
 #include "debug/quad_renderer.h"
 #include "debug/arrow_renderer.h"
+#include "debug/normals_renderer.h"
 
 #include "bvh.h"
 #include "scene_builder.h"
@@ -83,7 +84,7 @@ public:
         bool castsShadow;
     };
     std::vector<DebugMesh> debugMeshes;
-    void fillDebugMeshes(PhysicsEngine* physicsEngine); 
+    void fillDebugMeshes(PhysicsEngine* physicsEngine, std::vector<GameObject>& objects);
     void renderDebugMeshesShadow();
     void renderDebugMeshesDefault();
 
@@ -120,6 +121,7 @@ private:
     SphereOutlineRenderer sphereOutlineRenderer;
     QuadRenderer quadRenderer;
     ArrowRenderer arrowRenderer;
+    NormalsRenderer normalsRenderer;
 
     float maxViewDistance = 10000000000000.0f;
 

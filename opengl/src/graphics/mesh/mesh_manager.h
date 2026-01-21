@@ -30,6 +30,7 @@ public:
 
 		std::vector<Vertex> debugArrowVerts			= loadVerticesFromTxt("src/assets/debugarrow_vertices.txt");
 		std::vector<unsigned int> debugArrowIndices	= loadIndicesFromTxt("src/assets/debugarrow_indices.txt");
+        recenterVertices(debugArrowVerts);
 
 		meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
 		meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));

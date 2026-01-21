@@ -47,7 +47,7 @@ public:
         GpuTimers* gpuTimers
     );
 
-    void drawUI(InputContext& ctx);
+    void drawUI(InputContext& ctx, float deltaTime);
 
     // activate/deactivate editor mode
     void activate();

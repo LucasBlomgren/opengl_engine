@@ -14,9 +14,13 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
 	ImGui::SeparatorText("Objects");
 	ImGui::Spacing();
-	bool showNormals = ctx.engineState->getShowNormals();
-	if (ImGui::Checkbox("Normals", &showNormals)) {
-		ctx.engineState->toggleShowNormals();
+	bool showCollisionNormals = ctx.engineState->getShowCollisionNormals();
+	if (ImGui::Checkbox("Collision normals", &showCollisionNormals)) {
+		ctx.engineState->toggleShowCollisionNormals();
+	}
+	bool showObjectLocalNormals = ctx.engineState->getShowObjectLocalNormals();
+	if (ImGui::Checkbox("Local normals", &showObjectLocalNormals)) {
+		ctx.engineState->toggleShowObjectLocalNormals();
 	}
 	bool showAABB = ctx.engineState->getShowAABB();
 	if (ImGui::Checkbox("Bounding boxes", &showAABB)) {
