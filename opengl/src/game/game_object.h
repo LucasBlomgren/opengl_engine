@@ -4,6 +4,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include "world.h"
 #include "shaders/shader.h"
 #include "mesh/mesh.h"
 #include "colliders/collider.h"
@@ -49,6 +50,7 @@ struct CircBuffer {
 class GameObject {
 public:
     int id;
+    GameObjectHandle handle;
 
     glm::vec3 position;
     glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };

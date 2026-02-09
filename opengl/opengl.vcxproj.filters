@@ -58,6 +58,7 @@
     <ClCompile Include="src\editor\panels\inspector_panel.cpp" />
     <ClCompile Include="src\graphics\debug\arrow_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\normals_renderer.cpp" />
+    <ClCompile Include="src\game\world.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -143,6 +144,8 @@
     <ClInclude Include="src\graphics\debug\quad_renderer.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
+    <ClInclude Include="src\game\world.h" />
+    <ClInclude Include="src\core\slot_map.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

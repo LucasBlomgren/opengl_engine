@@ -208,10 +208,60 @@ void Renderer::fillDebugMeshes(PhysicsEngine* physicsEngine, std::vector<GameObj
 
     // contact normals
     if (engineState->getShowCollisionNormals()) {
-        for (Contact* c : physicsEngine->contactsToSolve) {
+        for (Contact* c : physicsEngine->contactsToSolve)
+        {
+            glm::vec3 pos;
+            GameObject* objA = c->objA_ptr;
+            GameObject* objB = c->objB_ptr;
+
+            if (objA == nullptr) {
+                pos = objB->position;
+            }
+            else if (objB == nullptr) {
+                pos = objA->position;
+            }
+
+            if (objA != nullptr && objB != nullptr) {
+
+                // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
+                if (!objA->isStatic && !objB->isStatic) {
+                    pos = 0.5f * (objA->position + objB->position);
+                }
+                else {
+                    // 2) hitta dynamiska objektet (det som INTE är static)
+                    GameObject* dyn = objA->isStatic ? objB : objA;
+
+                    // 3) välj d så att den pekar från dyn MOT den andra kroppen
+                    // antag: c->normal pekar från A -> B
+                    glm::vec3 d = (dyn == objB) ? (-c->normal) : (c->normal);   // om dyn är A: mot B = -n, om dyn är B: mot A = +n
+
+                    // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
+                    pos = dyn->position;
+
+                    float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
+
+                    AABB* aabb = &dyn->collider.getAABB(); // se till att denna är world-space halfExtents
+
+                    if (ax >= ay && ax >= az) {
+                        pos.x += (d.x >= 0 ? aabb->halfExtents.x : -aabb->halfExtents.x);
+                    }
+                    else if (ay >= ax && ay >= az) {
+                        pos.y += (d.y >= 0 ? aabb->halfExtents.y : -aabb->halfExtents.y);
+                    }
+                    else {
+                        pos.z += (d.z >= 0 ? aabb->halfExtents.z : -aabb->halfExtents.z);
+                    }
+
+                    // liten offset så pilen syns ovanpå ytan
+                    pos += c->normal * 0.01f;
+                }
+            }
+
+
+            // push arrow mesh with model matrix oriented along the contact normal
             debugMeshes.push_back({
                 arrowRenderer.mesh,
-                arrowRenderer.getModelMatrix(c->objA_ptr->position, c->normal, glm::vec3(0.2f)),
+                arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
                 glm::vec3(1, 0, 1),
                 false
                 });
@@ -341,7 +391,7 @@ void Renderer::render(
 
     // draw sky quad
     DirectionalLight& light = lightManager->getDirectionalLight();
-    light.direction.y -= 0.0001f;
+    //light.direction.y -= 0.0001f;
     quadRenderer.draw(shaderManager->getShader("SkyShader"), &camera, light.direction, targetW, targetH);
 
     renderLights();
