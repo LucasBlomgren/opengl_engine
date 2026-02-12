@@ -7,13 +7,11 @@
 #include "game_object.h"
 #include "camera.h"
 
-class Player : IInputReceiver {
+class Player : public IInputReceiver {
 public:
     GameObject* playerObject = nullptr;
 
-    void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
-
     void setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera);
 
     // activate/deactivate player mode
@@ -53,6 +51,8 @@ private:
     glm::vec3 moveInput{ 0.0f, 0.0f, 0.0f };
 
     // selection and placement
+    bool dragging = false;
+    bool pendingDrop = false;
     RaycastHit lastHitData;
     bool drawPlacementAABB = false;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;

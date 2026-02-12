@@ -22,11 +22,12 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	ctx.fps = io.Framerate;
 	ctx.amountObjects = sceneBuilder->getDynamicObjects().size();
 
-	const ObjAmountData objAmounts = physicsEngine->getObjectAmounts();
-	ctx.amountAwakeObjects = objAmounts.totalAwake;
-	ctx.amountAsleepObjects = objAmounts.totalAsleep;
-	ctx.amountStaticObjects = objAmounts.totalStatic;
-	ctx.amountTerrainTris = objAmounts.totalTerrainTris;
+	const DebugData data = physicsEngine->getDebugData();
+	ctx.amountAwakeObjects = data.awake;
+	ctx.amountAsleepObjects = data.asleep;
+	ctx.amountStaticObjects = data.Static;
+	ctx.amountTerrainTris = data.terrainTris;
+	ctx.amountCollisions = data.collisions;
 
 	for (const auto& panel : panels) {
 		panel->OnImGuiRender(ctx);

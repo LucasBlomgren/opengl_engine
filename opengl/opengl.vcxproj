@@ -205,7 +205,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="src\physics\bvh.cpp">
+    <ClCompile Include="src\physics\bvh\bvh.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
@@ -214,6 +214,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\physics\broadphase_manager.cpp" />
+    <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -332,10 +333,11 @@
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\physics\broadphase_types.h" />
-    <ClInclude Include="src\physics\bvh.h" />
+    <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase_manager.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
     <ClInclude Include="src\physics\broadphase_pairs.h" />
+    <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
     <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\colliders\sphere.h" />
@@ -344,6 +346,7 @@
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\physics\sat.h" />
+    <ClInclude Include="src\physics\bvh\treetree_query.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\assets\crate.jpg" />

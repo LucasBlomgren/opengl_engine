@@ -3,8 +3,6 @@
 #include "aabb.h"
 #include "sat.h"
 
-template class BVHTree<GameObject>;
-
 //-----------------------------
 //         Setup scene
 //-----------------------------
@@ -20,13 +18,13 @@ void PhysicsEngine::setupScene(std::vector<GameObject>* gameObjects, std::vector
     toSleep.reserve(dynamicObjects->size());
 }
 
-const ObjAmountData PhysicsEngine::getObjectAmounts() const {
-    ObjAmountData data;
-    data.totalAwake = broadphaseManager.getAwakeList().size();
-    data.totalAsleep = broadphaseManager.getAsleepList().size();
-    data.totalStatic = broadphaseManager.getStaticList().size();
-    data.totalTerrainTris = terrainTriangles->size();
-    return data;
+const DebugData PhysicsEngine::getDebugData() {
+    debugData.awake = broadphaseManager.getAwakeList().size();
+    debugData.asleep = broadphaseManager.getAsleepList().size();
+    debugData.Static = broadphaseManager.getStaticList().size();
+    debugData.terrainTris = terrainTriangles->size();
+    debugData.collisions = contactCache.size();
+    return debugData;
 }
 
 //-----------------------------
@@ -42,16 +40,16 @@ void PhysicsEngine::clearPhysicsData() {
 //-----------------------------
 //          Getters
 //-----------------------------
-const BVHTree<GameObject>& PhysicsEngine::getDynamicAwakeBvh() {
+const BVHTree& PhysicsEngine::getDynamicAwakeBvh() {
     return broadphaseManager.getAwakeBVH();
 }
-const BVHTree<GameObject>& PhysicsEngine::getDynamicAsleepBvh() {
+const BVHTree& PhysicsEngine::getDynamicAsleepBvh() {
     return broadphaseManager.getAsleepBVH();
 }
-const BVHTree<GameObject>& PhysicsEngine::getStaticBvh() {
+const BVHTree& PhysicsEngine::getStaticBvh() {
     return broadphaseManager.getStaticBVH();
 }
-const BVHTree<Tri>& PhysicsEngine::getTerrainBvh() {
+const TerrainBVH& PhysicsEngine::getTerrainBvh() {
     return broadphaseManager.getTerrainBVH();
 }
 const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
@@ -474,6 +472,8 @@ void PhysicsEngine::collectActiveContacts() {
             // tie-breaker for determinism:
             return a->hashKey < b->hashKey;
         });
+
+    debugData.collisions = contactsToSolve.size();
 }
 
 //---------------------------------------------

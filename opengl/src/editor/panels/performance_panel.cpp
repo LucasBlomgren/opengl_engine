@@ -146,6 +146,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::TextDisabled("Asleep: %zu", ctx.amountAsleepObjects);
 	ImGui::TextDisabled("Static: %zu", ctx.amountStaticObjects);
 	ImGui::TextDisabled("Terrain: %zu", ctx.amountTerrainTris);
+	ImGui::TextDisabled("Collisions: %zu", ctx.amountCollisions);
 
 	ImGui::Spacing();
 	ImGui::Separator();
@@ -157,10 +158,10 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
 	const float fpsBottom = 144.0f;                 // “max FPS” som ska hamna längst ner i grafen
-	const float fpsTop = 30.0f;                  // ska hamna längst upp
+	const float fpsTop = 30.0f;                     // ska hamna längst upp
 	const float msMin = 1000.0f / fpsBottom;        // nederkant i grafen
 	const float msMax = 1000.0f / fpsTop;           // överkant i grafen (~33.33 ms)
-	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, msMin, msMax, ImVec2(-1, 100));
+	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, msMin, msMax, ImVec2(-1, 60));
 
 	ImGui::PopStyleColor(2);
 	ImGui::PopStyleVar();

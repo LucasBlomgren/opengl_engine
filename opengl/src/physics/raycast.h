@@ -1,6 +1,6 @@
 #pragma once
   
-#include "bvh.h"
+#include "bvh/bvh.h"
 #include "game_object.h"
 
 struct Ray {
@@ -25,4 +25,4 @@ struct RaycastHit {
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, const BVHTree<GameObject>& tree);
+RaycastHit raycast(Ray& ray, const BVHTree& tree);

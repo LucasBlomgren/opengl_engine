@@ -18,73 +18,111 @@ public:
     static constexpr uint32_t INVALID = 0xFFFFFFFFu;
 
     bool alive(Id h) const {
-        return h.slot < slotGen_.size() && slotGen_[h.slot] == h.gen && slotToDense_[h.slot] != INVALID;
+        return h.slot < m_slotGen.size() && m_slotGen[h.slot] == h.gen && m_slotToDense[h.slot] != INVALID;
     }
 
     T* try_get(Id h) {
         if (!alive(h)) return nullptr;
-        return &dense_[slotToDense_[h.slot]];
+        return &m_dense[m_slotToDense[h.slot]];
     }
     const T* try_get(Id h) const {
         if (!alive(h)) return nullptr;
-        return &dense_[slotToDense_[h.slot]];
+        return &m_dense[m_slotToDense[h.slot]];
     }
 
     template<class... Args>
     Id create(Args&&... args) {
         uint32_t slot = alloc_slot_();
-        uint32_t di = (uint32_t)dense_.size();
+        uint32_t di = (uint32_t)m_dense.size();
 
-        dense_.emplace_back(std::forward<Args>(args)...);
+        m_dense.emplace_back(std::forward<Args>(args)...);
 
-        denseToSlot_.push_back(slot);
-        slotToDense_[slot] = di;
+        m_denseToSlot.push_back(slot);
+        m_slotToDense[slot] = di;
 
-        return Id{ slot, slotGen_[slot] };
+        return Id{ slot, m_slotGen[slot] };
     }
 
     void destroy(Id h) {
         if (!alive(h)) return;
 
-        uint32_t di = slotToDense_[h.slot];
-        uint32_t last = (uint32_t)dense_.size() - 1;
+        uint32_t di = m_slotToDense[h.slot];
+        uint32_t last = (uint32_t)m_dense.size() - 1;
 
         if (di != last) {
-            dense_[di] = std::move(dense_[last]);
+            m_dense[di] = std::move(m_dense[last]);
 
-            uint32_t movedSlot = denseToSlot_[last];
-            denseToSlot_[di] = movedSlot;
-            slotToDense_[movedSlot] = di;
+            uint32_t movedSlot = m_denseToSlot[last];
+            m_denseToSlot[di] = movedSlot;
+            m_slotToDense[movedSlot] = di;
         }
 
-        dense_.pop_back();
-        denseToSlot_.pop_back();
+        m_dense.pop_back();
+        m_denseToSlot.pop_back();
 
-        slotToDense_[h.slot] = INVALID;
-        slotGen_[h.slot]++;              // invalidate old handles (ABA-safe)
-        freeSlots_.push_back(h.slot);
+        m_slotToDense[h.slot] = INVALID;
+        m_slotGen[h.slot]++;              // invalidate old handles (ABA-safe)
+        m_freeSlots.push_back(h.slot);
     }
 
     // Dense iteration (hot paths: broadphase, solver, etc.)
-    std::vector<T>& dense() { return dense_; }
-    const std::vector<T>& dense() const { return dense_; }
+    std::vector<T>& dense() { return m_dense; }
+    const std::vector<T>& dense() const { return m_dense; }
 
 private:
     uint32_t alloc_slot_() {
-        if (!freeSlots_.empty()) {
-            uint32_t slot = freeSlots_.back();
-            freeSlots_.pop_back();
+        if (!m_freeSlots.empty()) {
+            uint32_t slot = m_freeSlots.back();
+            m_freeSlots.pop_back();
             return slot;
         }
-        uint32_t slot = (uint32_t)slotGen_.size();
-        slotGen_.push_back(0);
-        slotToDense_.push_back(INVALID);
+        uint32_t slot = (uint32_t)m_slotGen.size();
+        m_slotGen.push_back(0);
+        m_slotToDense.push_back(INVALID);
         return slot;
     }
 
-    std::vector<uint32_t> slotGen_;      // slot -> gen
-    std::vector<uint32_t> slotToDense_;  // slot -> dense index
-    std::vector<uint32_t> denseToSlot_;  // dense index -> slot (needed for swap-pop remap)
-    std::vector<uint32_t> freeSlots_;    // reusable slots
-    std::vector<T>        dense_;        // dense storage
+    std::vector<uint32_t> m_slotGen;      // slot -> gen
+    std::vector<uint32_t> m_slotToDense;  // slot -> dense index
+    std::vector<uint32_t> m_denseToSlot;  // dense index -> slot (needed for swap-pop remap)
+    std::vector<uint32_t> m_freeSlots;    // reusable slots
+    std::vector<T>        m_dense;        // dense storage
 };
+
+
+
+/*
+struct StepPtrCache {
+    SlotMap<GameObject, GameObjectHandle>* sm = nullptr;
+    std::vector<GameObject*> cache; // index = slot
+
+
+    void begin(SlotMap<GameObject, GameObjectHandle>& s) {
+        sm = &s;
+        cache.assign(s.slot_capacity(), nullptr); // du behöver ev. exponera slot_capacity()
+    }
+
+    GameObject* get(GameObjectHandle h) {
+        auto& slot = cache[h.slot];
+        if (slot) return slot;
+        slot = sm->try_get(h);      // gen-check en gång
+        return slot;
+    }
+};
+
+//Användning:
+
+StepPtrCache pc;
+pc.begin(world.getGameObjects());
+
+for (auto [hA, hB] : pairs) {
+    GameObject* A = pc.get(hA);
+    GameObject* B = pc.get(hB);
+    if (!A || !B) continue;
+
+
+    // narrowphase(A,B) + warmstart via handle-key
+}
+
+//Om du inte vill lägga till slot_capacity() kan du bara använda m_slotGen.size() och exponera en slot_count().
+*/

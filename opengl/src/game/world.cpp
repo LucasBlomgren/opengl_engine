@@ -41,9 +41,9 @@ GameObjectHandle World::createGameObject(
 
     //m_physicsEngine.queueAdd(handle);
 
-    if (!seeThrough) {
-        m_renderer.addObjectToBatch(&newObject);
-    }
+    //if (!seeThrough) {
+    //    m_renderer.addObjectToBatch(&newObject);
+    //}
 
     objectId++;
     return handle;

@@ -52,6 +52,7 @@ public:
     int id;
     GameObjectHandle handle;
 
+    // hot data
     glm::vec3 position;
     glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
     glm::vec3 linearVelocity{ 0.0f };

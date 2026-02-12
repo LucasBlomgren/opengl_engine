@@ -35,8 +35,8 @@ public:
     float pitch;
 
     // camera options
-    float standardSpeed = 40.0f;
-    float fastSpeed = 1000.0f;
+    float standardSpeed = 30.0f;
+    float fastSpeed = 150.0f;
 
     float movementSpeed = standardSpeed;
     float mouseSensitivity;
@@ -62,8 +62,6 @@ public:
     // update delta time
     void updateDeltaTime(float dt);
     
-    // add this input receiver to the input router
-    void addInputRouter(InputRouter& router);
     // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants);
 

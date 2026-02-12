@@ -1,7 +1,9 @@
 #pragma once
 #include <vector>
 
-#include "bvh.h"
+#include "bvh/bvh.h"
+#include "bvh/bvh_terrain.h"
+#include "bvh/treetree_query.h"
 #include "broadphase_types.h"
 #include "broadphase_pairs.h"
 
@@ -35,10 +37,10 @@ public:
     const std::vector<int>& getStaticList() const { return staticIds; }
 
     // get bvhs
-    const BVHTree<GameObject>& getAwakeBVH()  const { return awakeBvh; }
-    const BVHTree<GameObject>& getAsleepBVH() const { return asleepBvh; }
-    const BVHTree<GameObject>& getStaticBVH() const { return staticBvh; }
-    const BVHTree<Tri>& getTerrainBVH() const { return terrainBvh; }
+    const BVHTree& getAwakeBVH()  const { return awakeBvh; }
+    const BVHTree& getAsleepBVH() const { return asleepBvh; }
+    const BVHTree& getStaticBVH() const { return staticBvh; }
+    const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
 
 private:
     // reference to all game objects
@@ -51,10 +53,10 @@ private:
     std::vector<int> staticIds;
 
     // trees 
-    BVHTree<GameObject> awakeBvh;
-    BVHTree<GameObject> asleepBvh;
-    BVHTree<GameObject> staticBvh;
-    BVHTree<Tri> terrainBvh;
+    BVHTree awakeBvh;
+    BVHTree asleepBvh;
+    BVHTree staticBvh;
+    TerrainBVH terrainBvh;
 
     // computePairs results
     std::vector<TerrainPair> terrainPairs;
@@ -66,6 +68,6 @@ private:
 
     // helpers
     void swapAndPop(GameObject& obj, std::vector<int>& list);
-    BVHTree<GameObject>& bvhFor(BroadphaseBucket b);
+    BVHTree& bvhFor(BroadphaseBucket b);
     std::vector<int>& listFor(BroadphaseBucket b);
 };

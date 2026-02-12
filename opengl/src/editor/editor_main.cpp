@@ -72,15 +72,15 @@ void Editor::EditorMain::deactivate() {
     lastHitData = {};
 }
 
-void Editor::EditorMain::addInputRouter(InputRouter& router) {
-    router.add(this);
-}
-
 // -----------------------------------
 //        Input handling
 // -----------------------------------
 void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants) {
     if (ctx.isPlayerMode) return;
+
+    if (in.keyPressed[GLFW_KEY_F1]) {
+        flag_drawUI = !flag_drawUI;
+    }
 
     // LMB/RMB drag capture only if started in viewport
     if (!viewportCapturedLMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_1])
@@ -112,6 +112,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
     // handle editor input
     if (!consumed.mouse) {
+        mouseXLastFrame = in.mousePos.x;
+        mouseYLastFrame = in.mousePos.y;
+
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (selectedObject == nullptr) {
                 rayCast(SELECT_RANGE);
@@ -228,6 +231,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 // -----------------------------------
 void Editor::EditorMain::drawUI(InputContext& ctx, float deltaTime)
 {
+    if (!flag_drawUI) return;
+
     panelManager->renderPanels(deltaTime);
 
     // top toolbar
@@ -450,6 +455,12 @@ RaycastHit Editor::EditorMain::rayCast(float length)
     float u = viewportMouseX / viewportDisplayW;
     float v = viewportMouseY / viewportDisplayH;
 
+    if (!flag_drawUI) {
+        // om UI inte ritas, använd global musposition och skärmstorlek (screen space)
+        u = mouseXLastFrame / SCR_WIDTH;
+        v = mouseYLastFrame / SCR_HEIGHT;
+    }
+
     // clamp för säkerhet
     u = std::clamp(u, 0.0f, 1.0f);
     v = std::clamp(v, 0.0f, 1.0f);
@@ -475,7 +486,7 @@ RaycastHit Editor::EditorMain::rayCast(float length)
     glm::vec3 dir = rayWorld;
 
     float rLength = length;
-    Ray r(camera->position, rayWorld, SELECT_RANGE);
+    Ray r(camera->position, dir, SELECT_RANGE);
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
     lastHitData = hitData;
@@ -506,7 +517,7 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    const BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
+    const BVHTree& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {

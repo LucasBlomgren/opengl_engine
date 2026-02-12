@@ -26,7 +26,6 @@ public:
     ViewportFBO viewportFBO{ 1920, 1080 };
     std::unique_ptr<PanelManager> panelManager;
 
-    void addInputRouter(InputRouter& router);
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
     void init(
@@ -47,6 +46,7 @@ public:
         GpuTimers* gpuTimers
     );
 
+    bool flag_drawUI = true;
     void drawUI(InputContext& ctx, float deltaTime);
 
     // activate/deactivate editor mode
@@ -103,6 +103,9 @@ private:
     float viewportMouseY = 0.0f;
     float viewportDisplayW = 0.0f;
     float viewportDisplayH = 0.0f;
+
+    float mouseXLastFrame = 0.0f;
+    float mouseYLastFrame = 0.0f;
 
     // selection and placement
     RaycastHit lastHitData;

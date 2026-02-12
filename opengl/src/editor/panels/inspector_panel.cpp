@@ -281,22 +281,41 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 				obj.invMass = 0.0f;
 				obj.linearVelocity = glm::vec3(0.0f);
 				obj.angularVelocity = glm::vec3(0.0f);
-				obj.allowGravity = false;
-				obj.allowSleep = false;
 			}
 			else {
 				obj.mass = 1.0f;
 				obj.invMass = 1.0f / obj.mass;
-				obj.allowGravity = true;
-				obj.linearVelocity = glm::vec3(0.0f);
-				obj.angularVelocity = glm::vec3(0.0f);
-
-				obj.allowSleep = true;
-				obj.sleepCounterThreshold = 1.5f;
 			}
 		}
 		if (ImGui::IsItemDeactivatedAfterEdit()) {
 			obj.calculateInverseInertia();
+		}
+	}
+
+
+	// AllowSleep checkbox
+	{
+		bool allowSleep = obj.allowSleep;
+		if (RowCheckbox("Sleep", "##allowSleep", allowSleep)) {
+			obj.allowSleep = allowSleep;
+			if (allowSleep) {
+				obj.allowSleep = true;
+			} else {
+				obj.allowSleep = false;
+			}
+		}
+	}
+
+	// AllowGravity checkbox
+	{
+		bool allowGravity = obj.allowGravity;
+		if (RowCheckbox("Gravity", "##allowGravity", allowGravity)) {
+			obj.allowGravity = allowGravity;
+			if (allowGravity) {
+				obj.allowGravity = true;
+			} else {
+				obj.allowGravity = false;
+			}
 		}
 	}
 

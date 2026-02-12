@@ -22,6 +22,7 @@ struct PanelContext {
 	size_t amountAsleepObjects = 0;
 	size_t amountStaticObjects = 0;
 	size_t amountTerrainTris = 0;
+	size_t amountCollisions = 0;
 	GameObject* selectedObject = nullptr;
 
 	::EngineState* engineState = nullptr;

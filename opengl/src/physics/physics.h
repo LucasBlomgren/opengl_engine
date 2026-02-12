@@ -7,17 +7,20 @@
 #include "collision_manifold.h"
 #include "raycast.h"
 #include "game_object.h"
-#include "bvh.h"
+#include "bvh/bvh.h"
+#include "bvh/bvh_terrain.h"
+#include "bvh/treetree_query.h"
 #include "broadphase_manager.h"
 #include "broadphase_pairs.h"
 
 #include "tri.h"
 
-struct ObjAmountData {
-    size_t totalAwake = 0;
-    size_t totalAsleep = 0;
-    size_t totalStatic = 0;
-    size_t totalTerrainTris = 0;
+struct DebugData {
+    size_t awake = 0;
+    size_t asleep = 0;
+    size_t Static = 0;
+    size_t terrainTris = 0;
+    size_t collisions = 0;
 };
 
 class PhysicsEngine {
@@ -46,11 +49,11 @@ public:
     //------------------------
     //        Getters
     //------------------------
-    const ObjAmountData getObjectAmounts() const;
-    const BVHTree<GameObject>& getDynamicAwakeBvh();
-    const BVHTree<GameObject>& getDynamicAsleepBvh();
-    const BVHTree<GameObject>& getStaticBvh();
-    const BVHTree<Tri>& getTerrainBvh();
+    const DebugData getDebugData();
+    const BVHTree& getDynamicAwakeBvh();
+    const BVHTree& getDynamicAsleepBvh();
+    const BVHTree& getStaticBvh();
+    const TerrainBVH& getTerrainBvh();
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
     std::vector<Contact*> contactsToSolve;
@@ -58,6 +61,7 @@ public:
 private:
     float dt;
     FrameTimers* frameTimers;
+    DebugData debugData;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

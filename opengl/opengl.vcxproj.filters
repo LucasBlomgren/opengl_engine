@@ -23,7 +23,7 @@
     <ClCompile Include="src\physics\raycast.cpp" />
     <ClCompile Include="src\graphics\debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\aabb_renderer.cpp" />
-    <ClCompile Include="src\physics\bvh.cpp" />
+    <ClCompile Include="src\physics\bvh\bvh.cpp" />
     <ClCompile Include="src\physics\colliders\collider.cpp" />
     <ClCompile Include="src\physics\colliders\sphere.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp" />
@@ -59,6 +59,7 @@
     <ClCompile Include="src\graphics\debug\arrow_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\normals_renderer.cpp" />
     <ClCompile Include="src\game\world.cpp" />
+    <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -111,7 +112,7 @@
     <ClInclude Include="src\graphics\debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\debug\aabb_renderer.h" />
     <ClInclude Include="src\geometry\vertex.h" />
-    <ClInclude Include="src\physics\bvh.h" />
+    <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
     <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
@@ -146,6 +147,8 @@
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\core\slot_map.h" />
+    <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
+    <ClInclude Include="src\physics\bvh\treetree_query.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

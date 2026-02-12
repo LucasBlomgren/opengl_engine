@@ -17,7 +17,6 @@
 #include "debug/arrow_renderer.h"
 #include "debug/normals_renderer.h"
 
-#include "bvh.h"
 #include "scene_builder.h"
 #include "editor/editor_main.h"
 #include "player.h"
@@ -72,8 +71,8 @@ public:
     void renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder);
 
     // debug
-    template<typename E>
-    void renderBVH(const BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor);
+    template<class Tree>
+    void renderBVH(const Tree& tree, glm::vec3& nodeColor, glm::vec3& leafColor);
     void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
     void renderFrustum(const glm::mat4& viewProj);
 

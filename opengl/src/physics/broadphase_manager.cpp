@@ -9,6 +9,7 @@
 
 void BroadphaseManager::init(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
     this->dynamicObjects = gameObjects;
+    this->terrainTriangles = terrainTris;
 
     // #TODO: Skapa generell freelist struktur för att undvika massiva vektorer med tomma platser
     // och jobba med indexer istället för pekare överallt
@@ -32,40 +33,34 @@ void BroadphaseManager::init(std::vector<GameObject>* gameObjects, std::vector<T
     staticBvh.rootIdx = -1;
     staticBvh.nodes.clear();
 
-    awakeBvh.build(*dynamicObjects, awakeIds, false);
-    asleepBvh.build(*dynamicObjects, asleepIds, false);
-    staticBvh.build(*dynamicObjects, staticIds, false);
-
-    this->terrainTriangles = terrainTris;
-    std::vector<int> placeholder;
-    terrainBvh.build(*terrainTris, placeholder, true);
+    awakeBvh.build(*dynamicObjects, awakeIds);
+    asleepBvh.build(*dynamicObjects, asleepIds);
+    staticBvh.build(*dynamicObjects, staticIds);
+    terrainBvh.build(*terrainTris);
 }
 
 // Update BVHs if dirty
 void BroadphaseManager::updateBVHs() {
-    //if (awakeBvh.dirty) {
-        awakeBvh.update(*dynamicObjects, awakeIds, false);
-        //awakeBvh.dirty = false;
-    //}
+    awakeBvh.update(*dynamicObjects, awakeIds);
+
     if (asleepBvh.dirty) {
-        asleepBvh.update(*dynamicObjects, asleepIds, false);
+        asleepBvh.update(*dynamicObjects, asleepIds);
         asleepBvh.dirty = false;
     }
-    //if (staticBvh.dirty) {
-        staticBvh.update(*dynamicObjects, staticIds, false);
-        //staticBvh.dirty = false;
-    //}
 
-    std::cout << awakeBvh.nodes.size() << " awake nodes, "
-              << asleepBvh.nodes.size() << " asleep nodes, "
-        << staticBvh.nodes.size() << " static nodes.\n";
+    staticBvh.update(*dynamicObjects, staticIds);
+
+
+    //std::cout << awakeBvh.nodes.size() << " awake nodes, "
+    //          << asleepBvh.nodes.size() << " asleep nodes, "
+    //    << staticBvh.nodes.size() << " static nodes.\n";
 }   
 
 // Compute pairs for this frame
 void BroadphaseManager::computePairs() {
     // ----- dynamic vs terrain -----
     if (terrainBvh.rootIdx != -1) {
-        pairsBufTerrain.reserve(BVHTree<Tri>::MaxCollisionBuf);
+        pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
         pairsBufTerrain.clear();
         treeVsTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
@@ -167,10 +162,10 @@ void BroadphaseManager::remove(GameObject& obj) {
     auto& h = obj.broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
-    // remove från lista
+    // remove from list
     swapAndPop(obj, listFor(h.bucket));
 
-    // remove från BVH
+    // remove from BVH
     bvhFor(h.bucket).removeLeaf(h.leafIdx);
     bvhFor(h.bucket).dirty = true;
 
@@ -224,7 +219,7 @@ void BroadphaseManager::swapAndPop(GameObject& obj, std::vector<int>& list) {
 
     int lastPos = (int)list.size() - 1;
     if (i != lastPos) {
-        int movedObjIndex = list[lastPos];                 // index i dynamicObjects
+        int movedObjIndex = list[lastPos];   // index in dynamicObjects
         list[i] = movedObjIndex;
 
         GameObject& movedObj = (*dynamicObjects)[movedObjIndex];
@@ -236,7 +231,7 @@ void BroadphaseManager::swapAndPop(GameObject& obj, std::vector<int>& list) {
 }
 
 // Get BVH for bucket
-BVHTree<GameObject>& BroadphaseManager::bvhFor(BroadphaseBucket b) {
+BVHTree& BroadphaseManager::bvhFor(BroadphaseBucket b) {
     if (b == BroadphaseBucket::Awake)  return awakeBvh;
     if (b == BroadphaseBucket::Asleep) return asleepBvh;
     return staticBvh;

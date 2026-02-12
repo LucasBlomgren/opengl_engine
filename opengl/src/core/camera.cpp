@@ -9,10 +9,6 @@ void Camera::updateDeltaTime(float dt) {
     deltaTime = dt;
 }
 
-void Camera::addInputRouter(InputRouter& router) {
-    router.add(this);
-}
-
 void Camera::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants) {
     // --- keyboard ---
     if (!consumed.keyboard and !ctx.isPlayerMode)

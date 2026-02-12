@@ -1,10 +1,6 @@
 #include "pch.h"
 #include "player.h"
 
-void Player::addInputRouter(InputRouter& router) {
-    router.add(this);
-}
-
 void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
     if (!ctx.isPlayerMode) return;
 
@@ -12,13 +8,18 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     wants.captureMouse = true;
 
     if (!c.mouse) {
-        if (in.mousePressed[GLFW_MOUSE_BUTTON_1])  { selectObject(); c.mouse = true; }
-        if (in.mouseReleased[GLFW_MOUSE_BUTTON_1]) { dropObject();   c.mouse = true; }
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_1])  { selectObject(); }
+        if (in.mouseReleased[GLFW_MOUSE_BUTTON_1]) { pendingDrop = true; c.mouse = true; }
         if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
             GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
             newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
+            c.mouse = true;
+        }
+
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
+            updateSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
             c.mouse = true;
         }
     }
@@ -78,12 +79,17 @@ void Player::destroyPlayerObject() {
 }
 
 void Player::fixedUpdate(float fixedTimeStep) {
-    updateSelectedObject(fixedTimeStep);
+    //updateSelectedObject(fixedTimeStep);
 }
 
 void Player::update(Shader& shader) {
     // update player movement
     updatePlayerMovement();
+
+    if (pendingDrop) {
+        dropObject();
+        pendingDrop = false;
+    }
 
     if (selectedObject == nullptr) {
         createPlaceObjectAABB(shader);
@@ -103,6 +109,8 @@ void Player::updatePlayerMovement() {
 
     const float moveSpeed = 8.f; // meter per sekund
     playerObject->playerMoveImpulse = moveInput * moveSpeed;
+
+    updateSelectedObject(1.0f / 60.0f);
 }
 
 // Update position of selected object to follow camera + offset
@@ -118,6 +126,7 @@ void Player::updateSelectedObject(float dt) {
 
     // velocity
     selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / dt;
+    selectedObject->linearVelocity += playerObject->linearVelocity;
     selectedObject->angularVelocity = glm::vec3(0.0f);
     selectedObject->lastPosition = newPos;
 
@@ -126,8 +135,6 @@ void Player::updateSelectedObject(float dt) {
     selectedObject->setModelMatrix();
     selectedObject->updateAABB();
     selectedObject->updateCollider();
-
-
 }
 
 // Select object under crosshair
@@ -188,6 +195,7 @@ void Player::dropObject() {
         selectedObject->sleepCounter = 0.0f;
         selectedObject->sleepCounterThreshold = 1.5f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
+        //selectedObject->linearVelocity += playerObject->linearVelocity;
         selectedObject = nullptr;
     }
 }
@@ -227,7 +235,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     aabb.wMin = aabb.centroid - aabb.halfExtents;
     aabb.wMax = aabb.centroid + aabb.halfExtents;
 
-    const BVHTree<GameObject>& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
+    const BVHTree& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {

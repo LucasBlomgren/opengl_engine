@@ -3,9 +3,6 @@
 #include "debug/draw_line.h"
 #include "mesh/mesh_manager.h"
 
-template void Renderer::renderBVH(const BVHTree<GameObject>&, glm::vec3&, glm::vec3&);
-template void Renderer::renderBVH(const BVHTree<Tri>&, glm::vec3& , glm::vec3&);
-
 //-----------------------------
 //           Init
 //-----------------------------
@@ -925,8 +922,8 @@ void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::ve
 //-------------------------
 //       Render BVH
 //-------------------------
-template<typename E>
-void Renderer::renderBVH(const BVHTree<E>& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
+template<class Tree>
+void Renderer::renderBVH(const Tree& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 

@@ -94,6 +94,7 @@ int main() {
 
 	// scene builder
 	SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
+	World world(physicsEngine, renderer, textureManager, meshManager, shaderManager);
 
 	// setup input
 	inputManager.init(window);
@@ -159,9 +160,9 @@ int main() {
 	imguiManager.init(window);
 
 	// add input routers
-	editor.addInputRouter(inputManager.router);
-	player.addInputRouter(inputManager.router);
-	camera.addInputRouter(inputManager.router);
+	inputManager.router.add(&editor);
+	inputManager.router.add(&player);
+	inputManager.router.add(&camera);
 
 	// main loop
 	while (true) {
@@ -226,9 +227,14 @@ int main() {
 			// render to screen or editor viewport
 			if (engineState.isPlayerMode()) {
 				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-			} else {
-				ImGui::DockSpaceOverViewport();
-				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
+			} 
+			else {
+				if (editor.flag_drawUI) {
+					ImGui::DockSpaceOverViewport();
+					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
+				} else {
+					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
+				}
 			}
 			sceneBuilder.sceneDirty = false;
 			writeIdx = (writeIdx + 1) % NQ;

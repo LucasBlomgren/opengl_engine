@@ -55,7 +55,7 @@ public:
     void route(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& w) {
         for (auto* r : receivers) {
             r->handleInput(in, ctx, c, w);
-            if (c.all()) break;
+            //if (c.all()) break;
         }
     }
 private:
