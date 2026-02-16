@@ -3,11 +3,20 @@
 #include "game_object.h"
 #include "tri.h"
 
+#include "world.h"
+
+void BVHTree::init(SlotMap<GameObject, GameObjectHandle>* s) {
+    slotmap = s;
+
+    nodes.clear();
+    nodes.reserve(100000);
+    rootIdx = -1;
+}   
 
 //------------------------------
 //        Single Query
 //------------------------------
-void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObject*>& out) const {
+void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) const {
     if (nodes.empty()) return;
 
     out.clear();
@@ -33,18 +42,21 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObject*>& out) const
     }
 }
 
-//------------------------------
-//        Insert Leaf
-//------------------------------
-int BVHTree::insertLeaf(GameObject* obj)
+//------------------------------------------------------------------
+//      Insert Leaf
+//------------------------------------------------------------------
+int BVHTree::insertLeaf(GameObjectHandle objHandle)
 {
-    if (obj->broadphaseHandle.leafIdx != -1) {
+    GameObject* objPtr = slotmap->try_get(objHandle);
+    if (objPtr->broadphaseHandle.leafIdx != -1) {
         // already in tree
         return -1;
     }
 
+    // #TODO: Ändra till Node-index istället för Node-pointer, annars kan det bli problem när vectoren omallokeras.
+
     // create leaf node
-    Node* leaf = createLeaf(obj);
+    Node* leaf = createLeaf(objHandle, objPtr);
 
     // if tree is empty, set rootIdx. Leaf becomes root.
     if (rootIdx == -1) {
@@ -90,29 +102,23 @@ int BVHTree::insertLeaf(GameObject* obj)
     return leaf->selfIdx;
 }
 
-//------------------------------
-//      Refit Parents
-//------------------------------
-void BVHTree::refitParents(int parentIdx) {
-    for (int p = parentIdx; p != -1; p = nodes[p].parentIdx) {
-        Node& n = nodes[p];
+BVHTree::Node* BVHTree::createLeaf(GameObjectHandle handle, GameObject* objPtr)
+{
+    Node* leaf = &nodes.emplace_back();
+    leaf->selfIdx = nodes.size() - 1;
+    leaf->isLeaf = true;
+    leaf->element = handle;
+    leaf->tightBox = objPtr->getAABB();
+    leaf->fatBox = leaf->tightBox;
+    leaf->fatBox.grow(fatBoxMargin);
 
-        Node& nA = nodes[n.childAIdx];
-        Node& nB = nodes[n.childBIdx];
+    objPtr->broadphaseHandle.leafIdx = leaf->selfIdx;
 
-        const AABB* boxA = &nodes[n.childAIdx].fatBox;
-        const AABB* boxB = &nodes[n.childBIdx].fatBox;
+    updateRenderData(*leaf);
 
-        n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
-        n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
-
-        updateRenderData(n);
-    }
+    return leaf;
 }
 
-//------------------------------
-//      Find Best Sibling
-//------------------------------
 typename BVHTree::Node* BVHTree::findBestSibling(AABB& box)
 {
     Node* n = &nodes[rootIdx];
@@ -134,31 +140,29 @@ typename BVHTree::Node* BVHTree::findBestSibling(AABB& box)
         n = (incA < incB) ? A : B;
     }
 
-    return n; // löv
+    return n; // leaf
 }
 
-//------------------------------
-//        Create Leaf
-//------------------------------
-typename BVHTree::Node* BVHTree::createLeaf(GameObject* obj)
-{
-    Node* leaf = &nodes.emplace_back();
-    leaf->selfIdx = nodes.size() - 1;
-    leaf->isLeaf = true;
-    leaf->element = obj;
-    leaf->element->broadphaseHandle.leafIdx = leaf->selfIdx;
-    leaf->tightBox = obj->getAABB();
-    leaf->fatBox = leaf->tightBox;
-    leaf->fatBox.grow(fatBoxMargin);
+void BVHTree::refitParents(int parentIdx) {
+    for (int p = parentIdx; p != -1; p = nodes[p].parentIdx) {
+        Node& n = nodes[p];
 
-    updateRenderData(*leaf);
+        Node& nA = nodes[n.childAIdx];
+        Node& nB = nodes[n.childBIdx];
 
-    return leaf;
+        const AABB* boxA = &nodes[n.childAIdx].fatBox;
+        const AABB* boxB = &nodes[n.childBIdx].fatBox;
+
+        n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
+        n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
+
+        updateRenderData(n);
+    }
 }
 
-//------------------------------
-//          Remove Leaf
-//------------------------------
+//------------------------------------------------------------------
+//      Remove leaf
+//------------------------------------------------------------------
 void BVHTree::removeLeaf(int leafIdx)
 {
     if (leafIdx == -1) {
@@ -169,12 +173,11 @@ void BVHTree::removeLeaf(int leafIdx)
 
     if (leafIdx == rootIdx) {
         // root is leaf, clear tree
-        leaf.alive = false;
-        leaf.parentIdx = -1;
-        leaf.element->broadphaseHandle.leafIdx = -1;
-        leaf.element = nullptr;
+        GameObject* objPtr = slotmap->try_get(leaf.element);
+        objPtr->broadphaseHandle.leafIdx = -1;
+
         rootIdx = -1;
-        nodes.clear();              // #TODO: Fixa så att noder återanvänds. Det är bara här som noder tas bort annars.
+        nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
         prims.clear();
         return;
     }
@@ -206,8 +209,10 @@ void BVHTree::removeLeaf(int leafIdx)
     // remove parent and leaf
     leaf.alive = false;
     leaf.parentIdx = -1;
-    leaf.element->broadphaseHandle.leafIdx = -1;
-    leaf.element = nullptr;
+
+    GameObject* objPtr = slotmap->try_get(leaf.element);
+    objPtr->broadphaseHandle.leafIdx = -1;
+    leaf.element = GameObjectHandle{};
 
     parent.alive = false;
     parent.parentIdx = -1;
@@ -215,13 +220,13 @@ void BVHTree::removeLeaf(int leafIdx)
     parent.childBIdx = -1;
 }
 
-//------------------------------
-//          Update 
-//------------------------------
-void BVHTree::update(std::vector<GameObject>& objects, std::vector<int>& indexes) {
+//------------------------------------------------------------------
+//      Update
+//------------------------------------------------------------------
+void BVHTree::update(std::vector<GameObjectHandle>& handles) {
     if (numRefits > rebuildThreshold) {
         // för många refits, bygg om trädet
-        build(objects, indexes);
+        build(handles);
         numRefits = 0;
         return;
     }
@@ -234,9 +239,6 @@ void BVHTree::update(std::vector<GameObject>& objects, std::vector<int>& indexes
     this->dirty = false;
 }
 
-//------------------------------
-//       Update Leaves
-//------------------------------
 void BVHTree::updateLeaves() {
     for (int i = 0; i < (int)nodes.size(); ++i) {
         Node& n = nodes[i];
@@ -245,7 +247,8 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        n.tightBox = n.element->getAABB();
+        GameObject* objPtr = slotmap->try_get(n.element);
+        n.tightBox = objPtr->getAABB();
         if (n.fatBox.contains(n.tightBox)) {
             continue;
         }
@@ -264,9 +267,6 @@ void BVHTree::updateLeaves() {
     }
 }
 
-//------------------------------
-//          Refit Node
-//------------------------------
 void BVHTree::refitNode(int nodeIdx) {
     Node& node = nodes[nodeIdx];
 
@@ -296,14 +296,13 @@ void BVHTree::refitNode(int nodeIdx) {
     node.dirty = false;
 }
 
-//-------------------------
-//         Build 
-//-------------------------
-void BVHTree::build(std::vector<GameObject>& objects, std::vector<int>& indexes) {
-
+//------------------------------------------------------------------
+//      Build
+//------------------------------------------------------------------
+void BVHTree::build(std::vector<GameObjectHandle>& handles) {
     nodes.clear();
     // Fyll primitives
-    createPrimitives(objects, indexes);
+    createPrimitives(handles);
 
     if (prims.empty()) return;
 
@@ -346,29 +345,25 @@ void BVHTree::build(std::vector<GameObject>& objects, std::vector<int>& indexes)
     if (rootIdx != -1) refitNode(rootIdx);
 }
 
-//------------------------------
-//      Create Primitives
-//------------------------------
-void BVHTree::createPrimitives(std::vector<GameObject>& objects, std::vector<int>& idx) {
+void BVHTree::createPrimitives(std::vector<GameObjectHandle>& handles) {
     prims.clear();
+    prims.reserve(handles.size());
 
-    prims.reserve(idx.size());
-    for (int i = 0; i < idx.size(); i++) {
-        GameObject& obj = objects[idx[i]];
-        obj.broadphaseHandle.leafIdx = -1;
+    for (GameObjectHandle& handle : handles) {
+        GameObject* objPtr = slotmap->try_get(handle);
+
+        objPtr->broadphaseHandle.leafIdx = -1;
+        AABB box = objPtr->getAABB();
+
         BVHPrimitive prim;
-        AABB Ebox = obj.getAABB();
-        prim.min = Ebox.wMin;
-        prim.max = Ebox.wMax;
-        prim.centroid = Ebox.centroid;
-        prim.element = &obj;
+        prim.min = box.wMin;
+        prim.max = box.wMax;
+        prim.centroid = box.centroid;
+        prim.element = handle;
         prims.push_back(prim);
     }
 }
 
-//------------------------------
-//            Split
-//------------------------------
 void BVHTree::split(int parentIdx, int depth) {
     Node& parent = nodes[parentIdx];
     int start = parent.start;
@@ -410,9 +405,6 @@ void BVHTree::split(int parentIdx, int depth) {
     split(B->selfIdx, depth + 1);
 }
 
-//------------------------------
-//          Init Child
-//------------------------------
 void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end, int count) {
 
     Node& parent = nodes[parentIdx];
@@ -434,20 +426,22 @@ void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int
     }
 }
 
-//------------------------------
-//          Make Leaf
-//------------------------------
 void BVHTree::makeLeaf(int nodeIdx) {
     Node& leaf = nodes[nodeIdx];
 
     leaf.selfIdx = nodeIdx;
     leaf.isLeaf = true;
     leaf.element = prims[leaf.start].element;
-    leaf.element->broadphaseHandle.leafIdx = leaf.selfIdx;
-    leaf.tightBox = leaf.element->getAABB(); 
+
+    GameObject* objPtr = slotmap->try_get(leaf.element);
+    objPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
+    leaf.tightBox = objPtr->getAABB();
     leaf.fatBox = leaf.tightBox;
 }
 
+//------------------------------------------------------------------
+//      Update Render Data
+//------------------------------------------------------------------
 void BVHTree::updateRenderData(Node& n) {
     n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
     n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;

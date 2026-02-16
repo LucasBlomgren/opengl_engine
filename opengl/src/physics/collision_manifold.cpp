@@ -569,6 +569,9 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
 
 size_t CollisionManifold::generateKey(int idA, int idB) {
     return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
+
+    // #TODO: Nytt objekt med samma slot(id) i SlotMap som ett gammalt objekt i contact cache kan orsaka hash-kollision.
+    // Varar endast i 5 frames men behöver fixas. Kan orsaka jitter och/eller felaktiga kontaktpunkter.
 }
 
 void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {

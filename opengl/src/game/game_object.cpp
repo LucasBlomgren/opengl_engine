@@ -162,6 +162,7 @@ void GameObject::initCollider() {
 		collider.shape = box;
 	}
 	else if (colliderType == ColliderType::SPHERE) {
+		// #TODO: AABB är inte korrekt just nu för sfärer. Just nu så ändras storleken med rotation, eftersom ModelMatrix används.
 		Sphere sphere(modelMatrix, scale.x);
 		collider.shape = sphere;
 	}

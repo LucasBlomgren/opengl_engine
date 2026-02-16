@@ -35,27 +35,27 @@ GameObjectHandle World::createGameObject(
     GameObjectHandle handle = m_gameObjects.create(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
 
     GameObject& newObject = m_gameObjects.dense().back();
-    //newObject.dynamicObjectIdx = static_cast<int>(m_gameObjects.dense().size()) - 1;
     newObject.handle = handle;
     newObject.shader = m_shaderManager.getShader("default");
 
-    //m_physicsEngine.queueAdd(handle);
+    BroadphaseBucket targetBucket = asleep ? BroadphaseBucket::Asleep : (isStatic ? BroadphaseBucket::Static : BroadphaseBucket::Awake);
+    m_physicsEngine.queueAdd(handle, targetBucket);
 
-    //if (!seeThrough) {
-    //    m_renderer.addObjectToBatch(&newObject);
-    //}
+    if (!seeThrough) {
+        m_renderer.addObjectToBatch(handle);
+    }
 
     objectId++;
     return handle;
 }
 
 void World::removeGameObject(GameObjectHandle handle) {
-    GameObject* obj = m_gameObjects.try_get(handle);
-    if (obj) {
-        m_physicsEngine.queueRemove(obj);
-        if (!obj->seeThrough) {
-            m_renderer.removeObjectFromBatch(obj);
-        }
-        m_gameObjects.destroy(handle);
-    }
+    //GameObject* obj = m_gameObjects.try_get(handle);
+    //if (obj) {
+    //    m_physicsEngine.queueRemove(obj);
+    //    if (!obj->seeThrough) {
+    //        m_renderer.removeObjectFromBatch(obj);
+    //    }
+    //    m_gameObjects.destroy(handle);
+    //}
 }

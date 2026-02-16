@@ -6,6 +6,7 @@
 class PhysicsEngine;
 class ImGuiManager;
 class EngineState;
+class World;
 class SceneBuilder;
 class Renderer;
 class ImGuiManager;
@@ -24,6 +25,7 @@ public:
 		::ImGuiManager* imguiManager,
 		::EngineState* engineState,
 		::Renderer* renderer,
+		::World* world,
 		::SceneBuilder* sceneBuilder,
 		::SkyboxManager* skyboxManager,
 		::MeshManager* meshManager,
@@ -34,6 +36,7 @@ public:
 		, imguiManager(imguiManager)
 		, engineState(engineState)
 		, renderer(renderer)
+		, world(world)
 		, sceneBuilder(sceneBuilder)
 		, skyboxManager(skyboxManager)
 		, meshManager(meshManager)
@@ -42,6 +45,7 @@ public:
 		, gpuTimers(gpuTimers) {
 		ctx.engineState = engineState;
 		ctx.renderer = renderer;
+		ctx.world = world;
 		ctx.sceneBuilder = sceneBuilder;
 		ctx.imguiManager = imguiManager;
 		ctx.skyboxManager = skyboxManager;
@@ -67,6 +71,7 @@ private:
 	::ImGuiManager* imguiManager;
 	::EngineState* engineState;
 	::Renderer* renderer;
+	::World* world;
 	::SceneBuilder* sceneBuilder;
 	::SkyboxManager* skyboxManager;
 	::MeshManager* meshManager;

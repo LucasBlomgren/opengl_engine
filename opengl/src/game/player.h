@@ -9,10 +9,10 @@
 
 class Player : public IInputReceiver {
 public:
-    GameObject* playerObject = nullptr;
+    GameObjectHandle playerHandle;
 
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
-    void setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera);
+    void setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera);
 
     // activate/deactivate player mode
     void activate();
@@ -28,7 +28,8 @@ public:
     void updatePlayerMovement();
 
     // select object
-    GameObject* selectedObject = nullptr;
+    bool isObjectSelected = false;
+    GameObjectHandle selectedObjectHandle;
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void selectObject();
     void dropObject();
@@ -44,7 +45,7 @@ public:
     void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
 
 private:
-    SceneBuilder* sceneBuilder = nullptr;
+    World* world = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
     Camera* camera = nullptr;
 

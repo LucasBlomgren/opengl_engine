@@ -32,6 +32,7 @@ public:
         float SCR_WIDTH,
         float SCR_HEIGHT,
         EngineState* engineState,
+        World* world,
         SceneBuilder* sceneBuilder,
         PhysicsEngine* physicsEngine,
         InputManager* inputManager,
@@ -58,8 +59,10 @@ public:
     void update(Shader& shader);
 
     // select object
-    GameObject* selectedObject = nullptr;
-    GameObject* hoveredObject = nullptr;
+    bool objectIsSelected = false;
+    bool objectIsHovered = false;
+    GameObjectHandle selectedObjectHandle;
+    GameObjectHandle hoveredObjectHandle;
 
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void syncSelectionOffset();
@@ -84,6 +87,7 @@ private:
     float SCR_WIDTH;
     float SCR_HEIGHT;
     EngineState* engineState = nullptr;
+    World* world = nullptr;
     SceneBuilder* sceneBuilder = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
     InputManager* inputManager = nullptr;

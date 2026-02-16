@@ -12,7 +12,7 @@ struct Tri;
 
 class BroadphaseManager {
 public:
-    void init(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris);
+    void init(SlotMap<GameObject, GameObjectHandle>* s, std::vector<Tri>* terrainTris);
 
     // update BVHs if dirty
     void updateBVHs();
@@ -23,18 +23,18 @@ public:
     const std::vector<DynamicPair>& getDynamicPairs() const { return dynamicPairs; }
 
     // add/remove from current list
-    void add(GameObject& obj, BroadphaseBucket dst);
-    void remove(GameObject& obj);
+    void add(GameObjectHandle& handle, BroadphaseBucket dst);
+    void remove(GameObjectHandle& handle);
 
     // move between lists
-    void moveToAwake(GameObject& obj);
-    void moveToAsleep(GameObject& obj);
-    void moveToStatic(GameObject& obj);
+    void moveToAwake(GameObjectHandle& handle);
+    void moveToAsleep(GameObjectHandle& handle);
+    void moveToStatic(GameObjectHandle& handle);
 
     // get lists of indices
-    const std::vector<int>& getAwakeList()  const { return awakeIds; }
-    const std::vector<int>& getAsleepList() const { return asleepIds; }
-    const std::vector<int>& getStaticList() const { return staticIds; }
+    const std::vector<GameObjectHandle>& getAwakeList()  const { return awakeHandles; }
+    const std::vector<GameObjectHandle>& getAsleepList() const { return asleepHandles; }
+    const std::vector<GameObjectHandle>& getStaticList() const { return staticHandles; }
 
     // get bvhs
     const BVHTree& getAwakeBVH()  const { return awakeBvh; }
@@ -44,13 +44,13 @@ public:
 
 private:
     // reference to all game objects
-    std::vector<GameObject>* dynamicObjects = nullptr;
+    SlotMap<GameObject, GameObjectHandle>* slotMap = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects
-    std::vector<int> awakeIds;
-    std::vector<int> asleepIds;
-    std::vector<int> staticIds;
+    std::vector<GameObjectHandle> awakeHandles;
+    std::vector<GameObjectHandle> asleepHandles;
+    std::vector<GameObjectHandle> staticHandles;
 
     // trees 
     BVHTree awakeBvh;
@@ -63,11 +63,11 @@ private:
     std::vector<DynamicPair> dynamicPairs;
 
     // pairs buffers
-    std::vector<std::pair<GameObject*, Tri*>> pairsBufTerrain;
-    std::vector<std::pair<GameObject*, GameObject*>> pairsBufDynamic;
+    std::vector<std::pair<GameObjectHandle, Tri*>> pairsBufTerrain;
+    std::vector<std::pair<GameObjectHandle, GameObjectHandle>> pairsBufDynamic;
 
     // helpers
-    void swapAndPop(GameObject& obj, std::vector<int>& list);
+    void swapAndPop(GameObjectHandle& handle, std::vector<GameObjectHandle>& list);
     BVHTree& bvhFor(BroadphaseBucket b);
-    std::vector<int>& listFor(BroadphaseBucket b);
+    std::vector<GameObjectHandle>& listFor(BroadphaseBucket b);
 };

@@ -20,6 +20,7 @@ void Editor::EditorMain::init(
     float SCR_WIDTH,
     float SCR_HEIGHT,
     EngineState* engineState,
+    World* world,
     SceneBuilder* sceneBuilder,
     PhysicsEngine* physicsEngine,
     InputManager* inputManager,
@@ -36,6 +37,7 @@ void Editor::EditorMain::init(
     this->SCR_WIDTH = SCR_WIDTH;
     this->SCR_HEIGHT = SCR_HEIGHT;
     this->engineState = engineState;
+    this->world = world;
     this->sceneBuilder = sceneBuilder;
     this->physicsEngine = physicsEngine;
     this->renderer = renderer;
@@ -52,6 +54,7 @@ void Editor::EditorMain::init(
         imguiManager,
         engineState,
         renderer,  
+        world,
         sceneBuilder,
         skyboxManager,
         meshManager,
@@ -116,16 +119,16 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         mouseYLastFrame = in.mousePos.y;
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-            if (selectedObject == nullptr) {
+            if (objectIsSelected == false) {
                 rayCast(SELECT_RANGE);
                 selectObject(ctx);
             }
             else {
                 RaycastHit hitData = rayCast(SELECT_RANGE);
-                if (hitData.object == nullptr) {
+                if (hitData.hit == false) {
                     dropObject();
                 }
-                else if (hitData.object != selectedObject) {
+                else if (hitData.objectHandle.slot != selectedObjectHandle.slot) {
                     dropObject();
                     rayCast(SELECT_RANGE);
                     selectObject(ctx);
@@ -183,12 +186,13 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     + right * (glm::linearRand(-jitter, jitter))
                     + camera->up * (glm::linearRand(-jitter, jitter));
 
-                auto& newObject = sceneBuilder->createObject(
+                GameObjectHandle newObject = world->createGameObject(
                     "uvmap", "sphere", ColliderType::SPHERE,
                     camera->position + camera->front * 5.0f + offset,
                     glm::vec3(1), 1, 0
                 );
-                newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
+                GameObject* objPtr = world->getGameObjects().try_get(newObject);
+                objPtr->linearVelocity = camera->front * SHOOT_VELOCITY;
             }
         }
         else {
@@ -309,40 +313,33 @@ void Editor::EditorMain::update(Shader& shader) {
     // raycast and draw placement AABB
     createPlaceObjectAABB(shader);
 
-    hoveredObject = nullptr;
+    objectIsHovered = false;
 
     // clear previous hover state
-    if (lastHitData.object != nullptr)
-        lastHitData.object->hoveredByEditor = false;
+    if (lastHitData.hit == true) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(lastHitData.objectHandle);
+        hoveredObj->hoveredByEditor = false;
+    }
 
     // raycast for hover
     rayCast(SELECT_RANGE);
 
     // set new hover state
-    if (lastHitData.object != nullptr) {
-        lastHitData.object->hoveredByEditor = true;
-        hoveredObject = lastHitData.object;
+    if (lastHitData.hit == true) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(lastHitData.objectHandle);
+        hoveredObj->hoveredByEditor = true;
+        hoveredObjectHandle = lastHitData.objectHandle;
+        objectIsHovered = true;
     }
-
-
-    // #TODO: to remove object, change from referencing object by pointer to referencing by ID
-    //GameObject* obj = &sceneBuilder->getDynamicObjects().back();
-    //if (obj) {
-    //    if (obj == selectedObject)
-    //        dropObject();
-
-    //    physicsEngine->queueRemove(obj);
-    //    renderer->removeObjectFromBatch(obj);   
-    //    sceneBuilder->getDynamicObjects().pop_back();
-    //}
 }
 
 // -----------------------------------
 //      Selection 
 // -----------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
-    if (!selectedObject) return;
+    if (objectIsSelected == false) return;
 
+    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
     glm::vec3 worldOffset = selectedObject->position - camera->position;
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
@@ -353,16 +350,18 @@ void Editor::EditorMain::syncSelectionOffset() {
 
 // select object
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
-    if (selectedObject) return;
+    if (objectIsSelected) return;
 
     RaycastHit& hitData = lastHitData;
 
     // no hit return
-    if (hitData.object == nullptr) {
+    if (hitData.hit == false) {
         return;
     }
-    selectedObject = hitData.object;
 
+    selectedObjectHandle = hitData.objectHandle;
+
+    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
     selectedObject->selectedByEditor = true;
     selectedObject->hoveredByEditor = false;
     selectedObject->lastPosition = selectedObject->position;
@@ -376,13 +375,16 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    panelManager->ctx.selectedObject = selectedObject;
+    panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
+    panelManager->ctx.objectIsSelected = true;
 }
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-    if (!selectedObject or selectedObject->isStatic)
+    if (objectIsSelected == false)
         return;
+
+    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
@@ -404,32 +406,30 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
 
 // drop selected object
 void Editor::EditorMain::dropObject() {
-    if (selectedObject) {
+    if (objectIsSelected) {
+        GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
         selectedObject->selectedByEditor = false;
-
-        // avoid nullptr dereference in physics engine
-        GameObject* obj = selectedObject;
 
         if (selectedObject->isStatic) {
             BroadphaseBucket target = BroadphaseBucket::Static;
-            physicsEngine->queueMove(obj, target);
+            physicsEngine->queueMove(selectedObjectHandle, target);
         }
         else {
             BroadphaseBucket target = BroadphaseBucket::Awake;
-            physicsEngine->queueMove(obj, target);
+            physicsEngine->queueMove(selectedObjectHandle, target);
         }
 
         selectedObject->sleepCounter = 0.0f;
         selectedObject->sleepCounterThreshold = 1.5f;
         //selectedObject->linearVelocity = glm::vec3(0.0f);
         //selectedObject->angularVelocity = glm::vec3(0.0f);
-        selectedObject = nullptr;
-        hoveredObject = nullptr;
+        objectIsSelected = false;
+        objectIsHovered = false;
     }
 
-    selectedObject = nullptr;
-    hoveredObject = nullptr;
-    panelManager->ctx.selectedObject = nullptr;
+    selectedObjectHandle = {};
+    hoveredObjectHandle = {};
+    panelManager->ctx.objectIsSelected = false;
 }
 
 // place object at placement AABB position
@@ -440,8 +440,9 @@ void Editor::EditorMain::placeObject() {
     glm::vec3 size{ OBJ_PLACE_SIZE };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
-    newObject.linearVelocity = glm::vec3(0.0f);
+    GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
+    GameObject* newObject = world->getGameObjects().try_get(handle);
+    newObject->linearVelocity = glm::vec3(0.0f);
 }
 
 // get raycast
@@ -503,7 +504,7 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
 
     RaycastHit hitData = rayCast(OBJ_PLACE_DISTANCE);
     glm::vec3 normal = hitData.normal;
-    if (hitData.object != nullptr) {
+    if (hitData.hit) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)
             normal = -normal;
 
@@ -521,7 +522,7 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<GameObject*> collisions;
+        std::vector<GameObjectHandle> collisions;
         collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
@@ -532,13 +533,13 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
         // min depth collision
         float min = std::numeric_limits<float>::max();
         GameObject* minDepthObj = nullptr;
-        for (int j = 0; j < collisions.size(); j++) {
-            GameObject& objB = *collisions[j];
+        for (GameObjectHandle& handle : collisions) {
+            GameObject* objB = world->getGameObjects().try_get(handle);
 
-            float depth = aabb.getMinOverlapDepth(objB.aabb);
+            float depth = aabb.getMinOverlapDepth(objB->aabb);
             if (depth < min) {
                 min = depth;
-                minDepthObj = &objB;
+                minDepthObj = objB;
             }
         }
 

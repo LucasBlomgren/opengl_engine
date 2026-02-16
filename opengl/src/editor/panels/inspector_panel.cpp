@@ -26,16 +26,16 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 	ImGui::Spacing();
 	ImGui::Spacing();
 
-	if (!ctx.selectedObject) {
+	if (!ctx.objectIsSelected) {
 		ImGui::TextDisabled("No object selected");
 		ImGui::End();
 		ImGui::PopStyleVar(2);
 		return;
 	}
 
-	GameObject& obj = *ctx.selectedObject;
+	GameObject* obj = ctx.world->getGameObjects().try_get(ctx.selectedObjectHandle);
 
-	ImGui::Text("Object ID: %d", obj.id);
+	ImGui::Text("Object ID: %d", obj->id);
 	ImGui::Spacing();
 
 	// --- Helpers for 2-col inspector layout ---
@@ -144,11 +144,11 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 			case 4: mesh = ctx.meshManager->getMesh("tank"); break;
 			}
 			if (mesh) {
-				obj.mesh = mesh;
-				obj.initMesh();
-				obj.initCollider();
-				ctx.renderer->removeObjectFromBatch(&obj);
-				ctx.renderer->addObjectToBatch(&obj);
+				obj->mesh = mesh;
+				obj->initMesh();
+				obj->initCollider();
+				ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
+				ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
 			}
 		}
 	}
@@ -188,19 +188,19 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 			case 3: texId = ctx.textureManager->getTexture("terrain2"); break;
 			}
 			if (texId != -1) {
-				obj.textureId = texId;
-				ctx.renderer->removeObjectFromBatch(&obj);
-				ctx.renderer->addObjectToBatch(&obj);
+				obj->textureId = texId;
+				ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
+				ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
 			}
 		}
 	}
 
 	// Color
 	{
-		glm::vec3 color = obj.color * 255.f;
+		glm::vec3 color = obj->color * 255.f;
 		if (RowDragFloat3("Color", "##color", color, 1.0f, 0.f, 255.f, 0)) {
-			obj.color = color;
-			obj.color /= 255.0f;
+			obj->color = color;
+			obj->color /= 255.0f;
 		}
 	}
 
@@ -213,36 +213,36 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
 	// Position
 	{
-		glm::vec3 pos = obj.position;
+		glm::vec3 pos = obj->position;
 		if (RowDragFloat3("Position", "##pos", pos, 0.1f, -1000.f, 1000.f, 2)) {
-			obj.position = pos;
-			obj.modelMatrixDirty = true;
-			obj.aabbDirty = true;
-			obj.setModelMatrix();
-			obj.updateAABB();
-			obj.updateCollider();
+			obj->position = pos;
+			obj->modelMatrixDirty = true;
+			obj->aabbDirty = true;
+			obj->setModelMatrix();
+			obj->updateAABB();
+			obj->updateCollider();
 		}
 	}
 
 	// Scale
 	{
-		glm::vec3 scale = obj.scale;
+		glm::vec3 scale = obj->scale;
 		if (RowDragFloat3("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f, 1)) {
-			obj.scale = scale;
-			obj.modelMatrixDirty = true;
-			obj.aabbDirty = true;
-			obj.setModelMatrix();
-			obj.updateAABB();
-			obj.updateCollider();
+			obj->scale = scale;
+			obj->modelMatrixDirty = true;
+			obj->aabbDirty = true;
+			obj->setModelMatrix();
+			obj->updateAABB();
+			obj->updateCollider();
 		}
 		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj.calculateInverseInertia();
+			obj->calculateInverseInertia();
 		}
 	}
 
 	// Rotation (stored UI state)
 	{
-		glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(obj.orientation));
+		glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(obj->orientation));
 		glm::vec3 lastUiDeg = uiDeg;
 
 		if (RowDragFloat3("Rotation", "##rot", uiDeg, 0.5f, -720.f, 720.f, 2)) {
@@ -253,12 +253,12 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 				glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
 				glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
 
-			obj.orientation = glm::normalize(obj.orientation * dq);
-			obj.modelMatrixDirty = true;
-			obj.aabbDirty = true;
-			obj.setModelMatrix();
-			obj.updateAABB();
-			obj.updateCollider();
+			obj->orientation = glm::normalize(obj->orientation * dq);
+			obj->modelMatrixDirty = true;
+			obj->aabbDirty = true;
+			obj->setModelMatrix();
+			obj->updateAABB();
+			obj->updateCollider();
 
 			lastUiDeg = uiDeg;
 		}
@@ -273,79 +273,79 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
 	// Static checkbox
 	{
-		bool isStatic = obj.isStatic;
+		bool isStatic = obj->isStatic;
 		if (RowCheckbox("Static", "##static", isStatic)) {
-			obj.isStatic = isStatic;
+			obj->isStatic = isStatic;
 			if (isStatic) {
-				obj.mass = 0.0f;
-				obj.invMass = 0.0f;
-				obj.linearVelocity = glm::vec3(0.0f);
-				obj.angularVelocity = glm::vec3(0.0f);
+				obj->mass = 0.0f;
+				obj->invMass = 0.0f;
+				obj->linearVelocity = glm::vec3(0.0f);
+				obj->angularVelocity = glm::vec3(0.0f);
 			}
 			else {
-				obj.mass = 1.0f;
-				obj.invMass = 1.0f / obj.mass;
+				obj->mass = 1.0f;
+				obj->invMass = 1.0f / obj->mass;
 			}
 		}
 		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj.calculateInverseInertia();
+			obj->calculateInverseInertia();
 		}
 	}
 
 
 	// AllowSleep checkbox
 	{
-		bool allowSleep = obj.allowSleep;
+		bool allowSleep = obj->allowSleep;
 		if (RowCheckbox("Sleep", "##allowSleep", allowSleep)) {
-			obj.allowSleep = allowSleep;
+			obj->allowSleep = allowSleep;
 			if (allowSleep) {
-				obj.allowSleep = true;
+				obj->allowSleep = true;
 			} else {
-				obj.allowSleep = false;
+				obj->allowSleep = false;
 			}
 		}
 	}
 
 	// AllowGravity checkbox
 	{
-		bool allowGravity = obj.allowGravity;
+		bool allowGravity = obj->allowGravity;
 		if (RowCheckbox("Gravity", "##allowGravity", allowGravity)) {
-			obj.allowGravity = allowGravity;
+			obj->allowGravity = allowGravity;
 			if (allowGravity) {
-				obj.allowGravity = true;
+				obj->allowGravity = true;
 			} else {
-				obj.allowGravity = false;
+				obj->allowGravity = false;
 			}
 		}
 	}
 
 	// Mass
 	{
-		float mass = obj.mass;
+		float mass = obj->mass;
 		if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.f)) {
-			if (!obj.isStatic) {
-				obj.mass = mass;
-				obj.invMass = 1.0f / mass;
+			if (!obj->isStatic) {
+				obj->mass = mass;
+				obj->invMass = 1.0f / mass;
 			}
 		}
 		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj.calculateInverseInertia();
+			obj->calculateInverseInertia();
 		}
 	}
 
 	// Linear velocity
 	{
-		glm::vec3 vel = obj.linearVelocity;
+		glm::vec3 vel = obj->linearVelocity;
 		if (RowDragFloat3("Linear vel", "##linvel", vel, 0.1f, -1000.f, 1000.f, 1)) {
-			obj.linearVelocity = vel;
+			obj->linearVelocity = vel;
 		}
 	}
 
 	// Angular velocity
 	{
-		glm::vec3 angVel = obj.angularVelocity;
+		glm::vec3 angVel = obj->angularVelocity;
 		if (RowDragFloat3("Angular vel", "##angvel", angVel, 0.1f, -1000.f, 1000.f, 1)) {
-			obj.angularVelocity = angVel;
+			obj->angularVelocity = angVel;
 		}
 	}
 

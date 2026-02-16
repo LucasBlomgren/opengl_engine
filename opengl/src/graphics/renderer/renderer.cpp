@@ -9,7 +9,8 @@
 void Renderer::init(
     unsigned int width,
     unsigned int height,
-    Editor::EditorMain &editor,
+    World& world,
+    Editor::EditorMain& editor,
     Player& player,
     EngineState& engineState, 
     LightManager& lightManager, 
@@ -21,6 +22,7 @@ void Renderer::init(
     screenWidth  = (float)width;
     screenHeight = (float)height;
 
+    this->world         = &world;
     this->editor        = &editor;
     this->player        = &player;
     this->engineState   = &engineState;
@@ -63,14 +65,16 @@ void Renderer::clearRenderBatches() {
 //-----------------------------
 //    Add Object to Batch
 //----------------------------- 
-void Renderer::addObjectToBatch(GameObject* obj) {
+void Renderer::addObjectToBatch(GameObjectHandle handle) {
+    GameObject* obj = world->getGameObjects().try_get(handle);   
+
     // check existing buckets
     for (RenderBatch& bucket : batches) {
         if (bucket.mesh == obj->mesh &&
             bucket.shader == defaultShader &&
             bucket.textureId == obj->textureId)
         {
-            bucket.objects.push_back(obj);
+            bucket.objects.push_back(handle);
             bucket.instances.emplace_back(obj->modelMatrix, obj->color);
 
             obj->batchIdx = static_cast<int>(&bucket - &batches[0]);
@@ -84,7 +88,7 @@ void Renderer::addObjectToBatch(GameObject* obj) {
     newBatch.mesh = obj->mesh;
     newBatch.shader = defaultShader;
     newBatch.textureId = obj->textureId;
-    newBatch.objects.push_back(obj);
+    newBatch.objects.push_back(handle);
     newBatch.instances.emplace_back(obj->modelMatrix, obj->color);
 
     // new batch & instance
@@ -97,7 +101,9 @@ void Renderer::addObjectToBatch(GameObject* obj) {
 //-----------------------------
 //  Remove Object from Batch
 //----------------------------- 
-void Renderer::removeObjectFromBatch(GameObject* obj) {
+void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
+    GameObject* obj = world->getGameObjects().try_get(handle);
+
     if (obj->batchIdx == -1) return; // not in a batch
 
     RenderBatch& batch = batches[obj->batchIdx];
@@ -105,10 +111,12 @@ void Renderer::removeObjectFromBatch(GameObject* obj) {
 
     if (obj->batchInstanceIdx != lastIdx) {
         // swap with last object
-        GameObject* lastObj = batch.objects[lastIdx];
-        batch.objects[obj->batchInstanceIdx] = lastObj;
+        GameObjectHandle lastObjHandle = batch.objects[lastIdx];
+        GameObject* lastObjPtr = world->getGameObjects().try_get(lastObjHandle);
+
+        batch.objects[obj->batchInstanceIdx] = lastObjHandle;
         batch.instances[obj->batchInstanceIdx] = batch.instances[lastIdx];
-        lastObj->batchInstanceIdx = obj->batchInstanceIdx;
+        lastObjPtr->batchInstanceIdx = obj->batchInstanceIdx;
     }
 
     batch.objects.pop_back();
@@ -354,7 +362,7 @@ void Renderer::render(
     }
 
     fillBatchInstances();
-    fillDebugMeshes(&physics, builder.getDynamicObjects());
+    fillDebugMeshes(&physics, world->getGameObjects().dense());
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -397,10 +405,10 @@ void Renderer::render(
 
     // render raycast hit for player/editor
     if (engineState->isPlayerMode()) {
-        renderRayCastHit(player->selectedObject, camera, builder);
+        renderRayCastHit(player->selectedObjectHandle, camera, builder);
     } else {
-        renderRayCastHit(editor->selectedObject, camera, builder);
-        renderRayCastHit(editor->hoveredObject, camera, builder);
+        renderRayCastHit(editor->selectedObjectHandle, camera, builder);
+        renderRayCastHit(editor->hoveredObjectHandle, camera, builder);
     }
 
     glDepthFunc(GL_LEQUAL);
@@ -410,7 +418,7 @@ void Renderer::render(
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
-    renderDebug(physics, camera, builder.getDynamicObjects(), VAO_contactPoint, VAO_xyz);
+    renderDebug(physics, camera, world->getGameObjects().dense(), VAO_contactPoint, VAO_xyz);
     //renderFrustum(lightSpaceMatrix);
 
     if (engineState->getShowBVH_awake()) {
@@ -449,7 +457,8 @@ void Renderer::render(
 void Renderer::fillBatchInstances() {
     for (RenderBatch& bucket : batches) {
         bucket.instances.clear();
-        for (GameObject* obj : bucket.objects) {
+        for (GameObjectHandle& handle : bucket.objects) {
+            GameObject* obj = world->getGameObjects().try_get(handle);
             bucket.instances.emplace_back(obj->modelMatrix, obj->color);
         }
     }
@@ -490,7 +499,7 @@ void Renderer::renderGameObjectsShadow() {
 //       Render scene
 //-----------------------------
 void Renderer::renderScene(SceneBuilder& builder) {
-    renderGameObjects(builder.getDynamicObjects());
+    renderGameObjects(world->getGameObjects().dense());
     renderTerrain(builder.getTerrainData(), builder.sceneDirty, false);
 }
 
@@ -692,7 +701,7 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
     sceneCorners.clear();
 
     SceneBuilder::TerrainData& tData = builder.getTerrainData();
-    std::vector<GameObject>& dData = builder.getDynamicObjects(); 
+    std::vector<GameObject>& dData = world->getGameObjects().dense();
 
     //inf max variable
     float minY = std::numeric_limits<float>::max(); 
@@ -824,12 +833,10 @@ void Renderer::renderLights() const {
 //----------------------------
 //     Render Raycast Hit
 //----------------------------
-void Renderer::renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder) {
-    if (obj == nullptr) {
-        return;
-    }
-
+void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
     // #TODO: fix logic for selected vs hovered
+
+    GameObject* obj = world->getGameObjects().try_get(handle);
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);

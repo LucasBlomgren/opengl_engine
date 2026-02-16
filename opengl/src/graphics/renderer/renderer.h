@@ -28,6 +28,7 @@ public:
     void init(
         unsigned int width,
         unsigned int height,
+        World& world,
         Editor::EditorMain& editor,
         Player& player,
         EngineState& engineState, 
@@ -68,7 +69,7 @@ public:
     void renderGameObjectsShadow();
     void renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, bool shadowPass);
     void renderLights() const; 
-    void renderRayCastHit(GameObject* obj, Camera& camera, SceneBuilder& builder);
+    void renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder);
 
     // debug
     template<class Tree>
@@ -98,14 +99,15 @@ public:
         glm::mat4 model;
         glm::vec3 color;  // valfritt, om du vill ha per-instans-färg
     };
-    void addObjectToBatch(GameObject* obj);
-    void removeObjectFromBatch(GameObject* obj);
+    void addObjectToBatch(GameObjectHandle handle);
+    void removeObjectFromBatch(GameObjectHandle handle);
     void clearRenderBatches();
 
 private:
     float screenWidth;
     float screenHeight;
 
+    World* world = nullptr;
     Editor::EditorMain* editor = nullptr;
     Player* player = nullptr;
     EngineState* engineState = nullptr;
@@ -138,8 +140,8 @@ private:
         Shader* shader;
         GLuint  textureId;
 
-        std::vector<GameObject*> objects;      // vilka som använder detta
-        std::vector<InstanceData> instances;   // fylls varje frame
+        std::vector<GameObjectHandle> objects;  // vilka som använder detta
+        std::vector<InstanceData> instances;    // fylls varje frame
     };
     std::vector<RenderBatch> batches;
 

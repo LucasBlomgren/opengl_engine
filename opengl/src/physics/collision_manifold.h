@@ -39,6 +39,9 @@ struct Contact {
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
+    // #TODO: ska bara använda handles i contact, inte råa pekare.
+    GameObjectHandle handleA;
+    GameObjectHandle handleB;
     GameObject* objA_ptr;
     GameObject* objB_ptr;
     bool freezeA = false;

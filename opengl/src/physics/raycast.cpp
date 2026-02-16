@@ -2,25 +2,26 @@
 #include "raycast.h"
 #include "aabb.h"
 
-RaycastHit raycast(Ray& ray, const BVHTree& bvh)
+RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<GameObject, GameObjectHandle>* slotmap)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
     rayAABB.wMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
 
-    GameObject* bestObj = nullptr;
+    GameObjectHandle bestObjHandle;
     float bestT = std::numeric_limits<float>::max();
 
-    std::vector<GameObject*> collisions;
+    std::vector<GameObjectHandle> collisions;
     bvh.singleQuery(rayAABB, collisions);
 
-    for (int i = 0; i < collisions.size(); i++) {
-        GameObject& obj = *collisions[i];
+    bool noHit = true;
+    for (GameObjectHandle& handle : collisions) {
+        GameObject* objPtr = slotmap->try_get(handle);
 
-        if (obj.player) continue;
+        if (objPtr->player) continue;
 
-        glm::vec3 min = obj.aabb.wMin;
-        glm::vec3 max = obj.aabb.wMax;
+        glm::vec3 min = objPtr->aabb.wMin;
+        glm::vec3 max = objPtr->aabb.wMax;
 
         glm::vec3 tMin = (min - ray.start) / ray.direction;
         glm::vec3 tMax = (max - ray.start) / ray.direction;
@@ -34,26 +35,29 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh)
         if (!(tNear > tFar || tFar < 0.0f)) {
             if (tNear < bestT) {
                 bestT = tNear;
-                bestObj = &obj;
+                bestObjHandle = handle;
+                noHit = false;
             }
         }
     }
 
     // no hit
-    if (bestObj == nullptr) {
+    if (noHit) {
         RaycastHit emptyHit;
         return emptyHit;
     }
 
     // Create hit data
     RaycastHit hitData;
+    hitData.hit = true;
     hitData.point = ray.start + ray.direction * bestT;
-    hitData.object = bestObj;
+    hitData.objectHandle = bestObjHandle;
     hitData.t = bestT;
 
     // Åter­beräkna t1 per axel
-    glm::vec3 min = bestObj->aabb.wMin;
-    glm::vec3 max = bestObj->aabb.wMax;
+    GameObject* bestObjPtr = slotmap->try_get(bestObjHandle);   
+    glm::vec3 min = bestObjPtr->aabb.wMin;
+    glm::vec3 max = bestObjPtr->aabb.wMax;
     glm::vec3 tMin = (min - ray.start) / ray.direction;
     glm::vec3 tMax = (max - ray.start) / ray.direction;
     glm::vec3 t1 = glm::min(tMin, tMax);  // entry‐tider

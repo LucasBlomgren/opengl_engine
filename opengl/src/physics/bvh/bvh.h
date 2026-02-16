@@ -1,12 +1,15 @@
 ﻿#pragma once
 #include "colliders/aabb.h"
-#include <vector>
-
-class GameObject; 
+#include "slot_map.h"
+#include "world.h"
 
 class BVHTree {
 public:
-    using Element = GameObject*;
+    BVHTree() = default;
+
+    void init(SlotMap<GameObject, GameObjectHandle>* s);
+
+    using Element = GameObjectHandle;
     bool dirty = false;
     int rootIdx = -1;
 
@@ -34,24 +37,25 @@ public:
     static constexpr int MaxStackSize = 256;
     static constexpr int MaxCollisionBuf = 25000;
 
-    void build(std::vector<GameObject>& objects, std::vector<int>& indexes);
-    void update(std::vector<GameObject>& objects, std::vector<int>& indexes);
-    void singleQuery(const AABB& qBox, std::vector<GameObject*>& out) const;
+    void build(std::vector<GameObjectHandle>& objects);
+    void update(std::vector<GameObjectHandle>& objects);
+    void singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) const;
 
-    int insertLeaf(GameObject* e);
+    int insertLeaf(GameObjectHandle handle);
     Node* findBestSibling(AABB& box);
-    Node* createLeaf(GameObject* e);
+    Node* createLeaf(GameObjectHandle handle, GameObject* objPtr);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
 
 private:
-    int   leafThreshold              = 1;
-    int   numRefits                  = 0;
-    int   rebuildThreshold           = 0;        // räknas om i build()
-    int   minRebuildThreshold        = 5;        // min refits innan rebuild
-    float rebuildRatio               = 0.40f;    // % av lövkorrektioner innan rebuild
-    glm::vec3 fatBoxMargin { 0.2f };
+    SlotMap<GameObject, GameObjectHandle>* slotmap;
+    int   leafThreshold = 1;
+    int   numRefits = 0;
+    int   rebuildThreshold = 0;        // räknas om i build()
+    int   minRebuildThreshold = 5;        // min refits innan rebuild
+    float rebuildRatio = 0.40f;    // % av lövkorrektioner innan rebuild
+    glm::vec3 fatBoxMargin{ 0.2f };
 
     struct BVHPrimitive {
         glm::vec3 min;
@@ -62,7 +66,7 @@ private:
     std::vector<BVHPrimitive> prims;
 
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
-    void createPrimitives(std::vector<GameObject>& objects, std::vector<int>& indexes);
+    void createPrimitives(std::vector<GameObjectHandle>& objectHandles);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();

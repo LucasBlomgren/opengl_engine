@@ -38,6 +38,7 @@
     </ClCompile>
     <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\core\timer.cpp" />
+    <ClCompile Include="src\editor\editor_main.cpp" />
     <ClCompile Include="src\editor\panels\inspector_panel.cpp" />
     <ClCompile Include="src\editor\panels\performance_panel.cpp" />
     <ClCompile Include="src\editor\panels\settings_panel.cpp" />
@@ -48,12 +49,6 @@
     <ClCompile Include="src\graphics\debug\normals_renderer.cpp" />
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\externals\glad.c" />
-    <ClCompile Include="src\editor\editor_main.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="src\game\game_object.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -296,19 +291,19 @@
     <ClInclude Include="src\core\input_manager.h" />
     <ClInclude Include="src\core\slot_map.h" />
     <ClInclude Include="src\core\timer.h" />
+    <ClInclude Include="src\editor\editor_main.h" />
     <ClInclude Include="src\editor\panel.h" />
     <ClInclude Include="src\editor\panels\inspector_panel.h" />
+    <ClInclude Include="src\editor\panels\performance_panel.h" />
     <ClInclude Include="src\editor\panels\settings_panel.h" />
     <ClInclude Include="src\editor\panel_manager.h" />
-    <ClInclude Include="src\editor\panels\performance_panel.h" />
-    <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
+    <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\graphics\mesh\mesh_manager.h" />
-    <ClInclude Include="src\editor\editor_main.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\scenes.h" />
     <ClInclude Include="src\game\scene_builder.h" />

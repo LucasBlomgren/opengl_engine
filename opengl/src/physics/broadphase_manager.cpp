@@ -7,48 +7,36 @@
 //      Main functions
 // -----------------------------------
 
-void BroadphaseManager::init(std::vector<GameObject>* gameObjects, std::vector<Tri>* terrainTris) {
-    this->dynamicObjects = gameObjects;
-    this->terrainTriangles = terrainTris;
+void BroadphaseManager::init(SlotMap<GameObject, GameObjectHandle>* sm, std::vector<Tri>* terrainTris) {
+    slotMap = sm;
+    terrainTriangles = terrainTris;
 
-    // #TODO: Skapa generell freelist struktur för att undvika massiva vektorer med tomma platser
-    // och jobba med indexer istället för pekare överallt
+    awakeBvh.init(sm);
+    asleepBvh.init(sm);
+    staticBvh.init(sm);
 
-    awakeIds.clear();
-    awakeIds.reserve(5000000);
-    asleepIds.clear();
-    asleepIds.reserve(5000000);
-    staticIds.clear();
-    staticIds.reserve(5000000);
+    awakeHandles.clear();
+    asleepHandles.clear();
+    staticHandles.clear();
 
-    awakeBvh.nodes.reserve(5000000);
-    awakeBvh.rootIdx = -1;
-    awakeBvh.nodes.clear();
+    uint32_t slotCap = sm->dense().capacity();
+    awakeHandles.reserve(slotCap * 2);
+    asleepHandles.reserve(slotCap * 2);
+    staticHandles.reserve(slotCap * 2);
 
-    asleepBvh.nodes.reserve(5000000);
-    asleepBvh.rootIdx = -1;
-    asleepBvh.nodes.clear();
-
-    staticBvh.nodes.reserve(5000000);
-    staticBvh.rootIdx = -1;
-    staticBvh.nodes.clear();
-
-    awakeBvh.build(*dynamicObjects, awakeIds);
-    asleepBvh.build(*dynamicObjects, asleepIds);
-    staticBvh.build(*dynamicObjects, staticIds);
-    terrainBvh.build(*terrainTris);
+    terrainBvh.build(*terrainTriangles);
 }
 
 // Update BVHs if dirty
 void BroadphaseManager::updateBVHs() {
-    awakeBvh.update(*dynamicObjects, awakeIds);
+    awakeBvh.update(awakeHandles);
 
     if (asleepBvh.dirty) {
-        asleepBvh.update(*dynamicObjects, asleepIds);
+        asleepBvh.update(asleepHandles);
         asleepBvh.dirty = false;
     }
 
-    staticBvh.update(*dynamicObjects, staticIds);
+    staticBvh.update(staticHandles);
 
 
     //std::cout << awakeBvh.nodes.size() << " awake nodes, "
@@ -65,7 +53,7 @@ void BroadphaseManager::computePairs() {
         treeVsTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
         // Sort terrain pairs by GameObject to avoid duplicates 
-        std::unordered_map<GameObject*, std::vector<Tri*>> temp;
+        std::unordered_map<GameObjectHandle, std::vector<Tri*>> temp;
         temp.reserve(pairsBufTerrain.size());
         if (temp.bucket_count() < pairsBufTerrain.size())
             temp.reserve(pairsBufTerrain.size());
@@ -81,8 +69,8 @@ void BroadphaseManager::computePairs() {
         terrainPairs.resize(cap);
         int sp = 0;
 
-        for (auto& [obj, trisVec] : temp) {
-            terrainPairs[sp++] = TerrainPair{ obj, std::move(trisVec) };
+        for (auto& [objHandle, trisVec] : temp) {
+            terrainPairs[sp++] = TerrainPair{ objHandle, std::move(trisVec) };
         }
         terrainPairs.resize(sp);
     }
@@ -99,10 +87,7 @@ void BroadphaseManager::computePairs() {
         int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dynamicPairs[sp++] = DynamicPair{ A,B };
+            dynamicPairs[sp++] = DynamicPair{ hp.first, hp.second };
         }
         dynamicPairs.resize(sp);
     }
@@ -117,10 +102,7 @@ void BroadphaseManager::computePairs() {
         int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dynamicPairs.emplace_back(DynamicPair{ A,B });
+            dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
         }
     }
 
@@ -134,36 +116,36 @@ void BroadphaseManager::computePairs() {
         int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
-            GameObject* A = hp.first, * B = hp.second;
-
-            if (A == B) continue;
-            dynamicPairs.emplace_back(DynamicPair{ A,B });
+            dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
         }
     }
 }
 
 // Add to list
-void BroadphaseManager::add(GameObject& obj, BroadphaseBucket dst) {
-    auto& h = obj.broadphaseHandle;
+void BroadphaseManager::add(GameObjectHandle& handle, BroadphaseBucket dst) {
+    GameObject* objPtr = slotMap->try_get(handle);
+    auto& h = objPtr->broadphaseHandle;
 
     auto& list = listFor(dst);
-    list.push_back(obj.dynamicObjectIdx);
+    list.push_back(handle);
     h.listIdx = (int)list.size() - 1;
 
     auto& bvh = bvhFor(dst);
-    h.leafIdx = bvh.insertLeaf(&obj);   // ideal: return handle
+    h.leafIdx = bvh.insertLeaf(handle);
     bvh.dirty = true;
 
     h.bucket = dst;
 }
 
 // Remove from current list
-void BroadphaseManager::remove(GameObject& obj) {
-    auto& h = obj.broadphaseHandle;
+void BroadphaseManager::remove(GameObjectHandle& handle) {
+    GameObject* objPtr = slotMap->try_get(handle);
+
+    auto& h = objPtr->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
     // remove from list
-    swapAndPop(obj, listFor(h.bucket));
+    swapAndPop(handle, listFor(h.bucket));
 
     // remove from BVH
     bvhFor(h.bucket).removeLeaf(h.leafIdx);
@@ -174,37 +156,43 @@ void BroadphaseManager::remove(GameObject& obj) {
 }
 
 // Move to awake
-void BroadphaseManager::moveToAwake(GameObject& obj) {
-    if (obj.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
-        obj.setAwake();
+void BroadphaseManager::moveToAwake(GameObjectHandle& handle) {
+    GameObject* objPtr = slotMap->try_get(handle);
+
+    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+        objPtr->setAwake();
         return;
     }
 
-    remove(obj);
-    obj.setAwake();
-    add(obj, BroadphaseBucket::Awake);
+    remove(handle);
+    objPtr->setAwake();
+    add(handle, BroadphaseBucket::Awake);
     awakeBvh.dirty = true;
 }
 // Move to asleep
-void BroadphaseManager::moveToAsleep(GameObject& obj) {
-    if (obj.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        obj.setAsleep();
+void BroadphaseManager::moveToAsleep(GameObjectHandle& handle) {
+    GameObject* objPtr = slotMap->try_get(handle);
+
+    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+        objPtr->setAsleep();
         return;
     }
 
-    remove(obj);
-    obj.setAsleep();
-    add(obj, BroadphaseBucket::Asleep);
+    remove(handle);
+    objPtr->setAsleep();
+    add(handle, BroadphaseBucket::Asleep);
     asleepBvh.dirty = true;
 }
 // Move to static
-void BroadphaseManager::moveToStatic(GameObject& obj) {
-    if (obj.broadphaseHandle.bucket == BroadphaseBucket::Static)
+void BroadphaseManager::moveToStatic(GameObjectHandle& handle) {
+    GameObject* objPtr = slotMap->try_get(handle);
+
+    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
 
-    remove(obj);
-    obj.setStatic();
-    add(obj, BroadphaseBucket::Static);
+    remove(handle);
+    objPtr->setStatic();
+    add(handle, BroadphaseBucket::Static);
     staticBvh.dirty = true;
 }
 
@@ -213,21 +201,24 @@ void BroadphaseManager::moveToStatic(GameObject& obj) {
 // ---------------------------------
 
 // Swap and pop from list
-void BroadphaseManager::swapAndPop(GameObject& obj, std::vector<int>& list) {
-    int i = obj.broadphaseHandle.listIdx;
+void BroadphaseManager::swapAndPop(GameObjectHandle& obj, std::vector<GameObjectHandle>& list) {
+    GameObject* objPtr = slotMap->try_get(obj);
+
+    int i = objPtr->broadphaseHandle.listIdx;
     if (i == -1) return;
 
     int lastPos = (int)list.size() - 1;
-    if (i != lastPos) {
-        int movedObjIndex = list[lastPos];   // index in dynamicObjects
-        list[i] = movedObjIndex;
 
-        GameObject& movedObj = (*dynamicObjects)[movedObjIndex];
-        movedObj.broadphaseHandle.listIdx = i;
+    if (i != lastPos) {
+        GameObjectHandle movedHandle = list[lastPos];   // handle in dynamicObjects
+        list[i] = movedHandle;
+
+        GameObject* movedPtr = slotMap->try_get(movedHandle);
+        movedPtr->broadphaseHandle.listIdx = i;
     }
 
     list.pop_back();
-    obj.broadphaseHandle.listIdx = -1;
+    objPtr->broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket
@@ -238,8 +229,8 @@ BVHTree& BroadphaseManager::bvhFor(BroadphaseBucket b) {
 }
 
 // Get list for bucket
-std::vector<int>& BroadphaseManager::listFor(BroadphaseBucket b) {
-    if (b == BroadphaseBucket::Awake)  return awakeIds;
-    if (b == BroadphaseBucket::Asleep) return asleepIds;
-    return staticIds;
+std::vector<GameObjectHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
+    if (b == BroadphaseBucket::Awake)  return awakeHandles;
+    if (b == BroadphaseBucket::Asleep) return asleepHandles;
+    return staticHandles;
 }

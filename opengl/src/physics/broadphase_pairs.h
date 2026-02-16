@@ -1,14 +1,13 @@
 #pragma once
 #include <vector>
 
-class GameObject;
 struct Tri;
 
 struct TerrainPair {
-    GameObject* obj;
+    GameObjectHandle objHandle;
     std::vector<Tri*> tris;
 };
 struct DynamicPair {
-    GameObject* A;
-    GameObject* B;
+    GameObjectHandle A;
+    GameObjectHandle B;
 };

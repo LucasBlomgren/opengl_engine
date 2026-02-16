@@ -1,5 +1,6 @@
 #pragma once
   
+#include "slot_map.h"
 #include "bvh/bvh.h"
 #include "game_object.h"
 
@@ -19,10 +20,11 @@ struct Ray {
 };
 
 struct RaycastHit {
-    GameObject* object = nullptr;
+    bool hit = false;
+    GameObjectHandle objectHandle;
     glm::vec3 point;  
     glm::vec3 normal;
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, const BVHTree& tree);
+RaycastHit raycast(Ray& ray, const BVHTree& tree, SlotMap<GameObject, GameObjectHandle>* slotmap);

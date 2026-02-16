@@ -17,7 +17,8 @@ public:
     World(
         PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm) :
         m_physicsEngine(pe), m_renderer(re), m_textureManager(tm), m_meshManager(mm), m_shaderManager(sm)
-    {}
+    {
+    }
 
     SlotMap<GameObject, GameObjectHandle>& getGameObjects() { return m_gameObjects; }
 

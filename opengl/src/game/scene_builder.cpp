@@ -9,10 +9,6 @@
 #include "lighting/light_manager.h"
 #include "physics.h"
 
-std::vector<GameObject>& SceneBuilder::getDynamicObjects() {
-    return dynamicObjects;
-}
-
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
 }
@@ -83,10 +79,6 @@ void SceneBuilder::createScene(int sceneID)
     sceneDirty = true;
     physicsEngine.clearPhysicsData();
 
-    objectId = 0;
-    dynamicObjects.clear();
-    dynamicObjects.reserve(5000000);
-
     terrainData.triangles.clear(); 
     terrainData.triangles.reserve(5000000);
     terrainData.vertices.clear(); 
@@ -113,52 +105,52 @@ void SceneBuilder::createScene(int sceneID)
     default: break;
     }
 
-    physicsEngine.setupScene(&dynamicObjects, &terrainData.triangles);
+    physicsEngine.setupScene(&terrainData.triangles);
 
     glcount::print();
 }
 
-//----------------------------------
-//        Create GameObject
-//----------------------------------
-GameObject& SceneBuilder::createObject(
-    const std::string& textureName,
-    const std::string& meshName,
-    ColliderType colliderType,
-    const glm::vec3& pos,
-    const glm::vec3& size,
-    float mass,
-    bool isStatic,
-    const glm::quat& orientation,
-    float sleepCounterThreshold,
-    bool asleep,
-    const glm::vec3& color,
-    const bool seeThrough) 
-{
-    unsigned int textureId;
-    if (textureName == "plain") {
-        textureId = 999;
-    } else {
-        textureId = textureManager.getTexture(textureName);
-    }
-
-    Mesh* mesh = meshManager.getMesh(meshName);
-
-    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
-
-    GameObject& newObject = dynamicObjects.back();
-    newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
-    newObject.shader = shaderManager.getShader("default");
-
-    physicsEngine.queueAdd(&newObject, newObject.broadphaseHandle.bucket);
-
-    if (!seeThrough) {
-        renderer.addObjectToBatch(&newObject);
-    }
-
-    objectId++;
-    return dynamicObjects.back();
-}
+////----------------------------------
+////        Create GameObject
+////----------------------------------
+//GameObject& SceneBuilder::world.createGameObject(
+//    const std::string& textureName,
+//    const std::string& meshName,
+//    ColliderType colliderType,
+//    const glm::vec3& pos,
+//    const glm::vec3& size,
+//    float mass,
+//    bool isStatic,
+//    const glm::quat& orientation,
+//    float sleepCounterThreshold,
+//    bool asleep,
+//    const glm::vec3& color,
+//    const bool seeThrough) 
+//{
+//    unsigned int textureId;
+//    if (textureName == "plain") {
+//        textureId = 999;
+//    } else {
+//        textureId = textureManager.getTexture(textureName);
+//    }
+//
+//    Mesh* mesh = meshManager.getMesh(meshName);
+//
+//    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
+//
+//    GameObject& newObject = dynamicObjects.back();
+//    newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
+//    newObject.shader = shaderManager.getShader("default");
+//
+//    physicsEngine.queueAdd(&newObject, newObject.broadphaseHandle.bucket);
+//
+//    if (!seeThrough) {
+//        renderer.addObjectToBatch(&newObject);
+//    }
+//
+//    objectId++;
+//    return dynamicObjects.back();
+//}
 
 //----------------------------------
 //           Heightmap
@@ -168,7 +160,7 @@ void SceneBuilder::generateFlatTerrain(
     int   gridSizeX,
     int   gridSizeZ,
     float cellSize,
-    float maxHeight) 
+    float maxHeight)
 {
     float startHeight = maxHeight * 0.5f;  // t.ex. halvvägs upp
     float maxStep = maxHeight * 0.1f;      // hur stort steg vi tillåter 
@@ -212,7 +204,7 @@ void SceneBuilder::generateFlatTerrain(
     smoothHeightMap(heightMap, 0.5f, 75);
 
     std::vector<Tri>& triangles = terrainData.triangles;
-    std::vector<Vertex>& vertices = terrainData.vertices; 
+    std::vector<Vertex>& vertices = terrainData.vertices;
     std::vector<uint32_t>& indices = terrainData.indices;
 
     // points
@@ -228,8 +220,8 @@ void SceneBuilder::generateFlatTerrain(
 
     // indices
     terrainData.indices.reserve(gridSizeX * gridSizeZ * 6);
-    for (int z = cutOff; z < gridSizeZ-cutOff; ++z) {
-        for (int x = cutOff; x < gridSizeX-cutOff; ++x) {
+    for (int z = cutOff; z < gridSizeZ - cutOff; ++z) {
+        for (int x = cutOff; x < gridSizeX - cutOff; ++x) {
             // triangel 1:
             indices.emplace_back(x + z * (gridSizeX + 1));
             indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
@@ -247,9 +239,9 @@ void SceneBuilder::generateFlatTerrain(
     faceNormals.reserve(indices.size() / 3);
     for (size_t i = 0; i < indices.size(); i += 3) {
         glm::vec3 v0 = points[indices[i]];
-        glm::vec3 v1 = points[indices[i + 1]]; 
-        glm::vec3 v2 = points[indices[i + 2]]; 
-        glm::vec3 edgeA = v1 - v0; 
+        glm::vec3 v1 = points[indices[i + 1]];
+        glm::vec3 v2 = points[indices[i + 2]];
+        glm::vec3 edgeA = v1 - v0;
         glm::vec3 edgeB = v2 - v1;
         faceNormals.emplace_back(glm::normalize(glm::cross(edgeA, edgeB)));
 
@@ -260,32 +252,32 @@ void SceneBuilder::generateFlatTerrain(
     }
 
     // vertex normals
-    std::vector<glm::vec3> vertexNormals; 
+    std::vector<glm::vec3> vertexNormals;
     vertexNormals.resize(points.size(), glm::vec3(0.0f));
-    for (size_t f = 0; f < faceNormals.size(); ++f) { 
-        uint32_t i0 = indices[3 * f + 0]; 
-        uint32_t i1 = indices[3 * f + 1]; 
-        uint32_t i2 = indices[3 * f + 2]; 
-        vertexNormals[i0] += faceNormals[f]; 
-        vertexNormals[i1] += faceNormals[f]; 
-        vertexNormals[i2] += faceNormals[f]; 
+    for (size_t f = 0; f < faceNormals.size(); ++f) {
+        uint32_t i0 = indices[3 * f + 0];
+        uint32_t i1 = indices[3 * f + 1];
+        uint32_t i2 = indices[3 * f + 2];
+        vertexNormals[i0] += faceNormals[f];
+        vertexNormals[i1] += faceNormals[f];
+        vertexNormals[i2] += faceNormals[f];
     }
 
-    for (auto& n : vertexNormals) { 
-        n = glm::normalize(n); 
+    for (auto& n : vertexNormals) {
+        n = glm::normalize(n);
     }
 
     // Tri colliders
-    for (size_t i = 0; i < indices.size(); i += 3) { 
-        uint32_t i0 = indices[i + 0]; 
-        uint32_t i1 = indices[i + 1]; 
-        uint32_t i2 = indices[i + 2]; 
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        uint32_t i0 = indices[i + 0];
+        uint32_t i1 = indices[i + 1];
+        uint32_t i2 = indices[i + 2];
 
-        glm::vec3 v0 = points[i0]; 
-        glm::vec3 v1 = points[i1]; 
-        glm::vec3 v2 = points[i2]; 
+        glm::vec3 v0 = points[i0];
+        glm::vec3 v1 = points[i1];
+        glm::vec3 v2 = points[i2];
 
-        triangles.emplace_back(objectId++, v0, v1, v2);  
+        triangles.emplace_back(objectId++, v0, v1, v2);
     }
 
     // Vertices
@@ -329,7 +321,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
 
     lastTime = current_time;
 
-    for (int i = 0; i < 10; i++) 
+    for (int i = 0; i < 10; i++)
     {
         // position
         glm::vec3& spawnPoint = pos;
@@ -353,14 +345,14 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             zVariance = randomRange(2.0, 5.0);
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
-            createObject("plain", "cube", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            world.createGameObject("plain", "cube", ColliderType::CUBOID, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
         // spheres
         else if (mode == 1) {
             glm::vec3 size{ 2.0f };
             float mass = (size.x * 3.0f) / 2.0f;
 
-            createObject("plain", "sphere", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
+            world.createGameObject("plain", "sphere", ColliderType::SPHERE, spawnPos, size, mass, 0, orientation, 2.0f, 0, color);
         }
     }
 }
@@ -398,7 +390,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", "cube", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
+                world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -433,14 +425,14 @@ void SceneBuilder::createSpherePyramid(
         for (int x = 0; x < pWidthCounter; x++) {
             for (int z = 0; z < pWidthCounter; z++) {
                 float xPos = pos.x + x * (sDiameter + sDistance) + y * (sRadius + sDistance);
-                float yPos = pos.y + y * sqrt2 * sRadius; 
+                float yPos = pos.y + y * sqrt2 * sRadius;
                 float zPos = pos.z + z * (sDiameter + sDistance) + y * (sRadius + sDistance);
 
                 if (randomColor) {
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                createObject("plain", "sphere", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
+                world.createGameObject("plain", "sphere", ColliderType::SPHERE, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, asleep, color);
             }
         }
         pWidthCounter -= 1;
@@ -457,7 +449,7 @@ void SceneBuilder::createBrickWall(
     float brickWeight,
     int brickDecrease,
     glm::vec2 colorRange,
-    bool fullColorRange) 
+    bool fullColorRange)
 {
     if (brickWeight < wallHeight) {
         brickWeight = wallHeight;
@@ -466,7 +458,8 @@ void SceneBuilder::createBrickWall(
     glm::vec3 edgeBrickSize = brickSize;
     if (wallDirection == 0) {
         edgeBrickSize.x = ((wallWidth * brickSize.x + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.x + (wallWidth - 2) * brickDistance)) / 2;
-    } else {
+    }
+    else {
         edgeBrickSize.z = ((wallWidth * brickSize.z + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.z + (wallWidth - 2) * brickDistance)) / 2;
     }
 
@@ -479,18 +472,20 @@ void SceneBuilder::createBrickWall(
             if (wallDirection == 0) {
                 pos.x = startPos.x + row * brickSize.x + brickDistance * row;
                 pos.z = startPos.z;
-            } else {
+            }
+            else {
                 pos.x = startPos.x;
                 pos.z = startPos.z + row * brickSize.z + brickDistance * row;
             }
             glm::vec3 randomColor;
             if (fullColorRange) {
                 randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
-            } else {
-                float c = randomRange(colorRange.x, colorRange.y);
-                randomColor = glm::vec3(c,c,c);
             }
-            createObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+            else {
+                float c = randomRange(colorRange.x, colorRange.y);
+                randomColor = glm::vec3(c, c, c);
+            }
+            world.createGameObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -500,18 +495,20 @@ void SceneBuilder::createBrickWall(
         if (wallDirection == 0) {
             pos.x = startPos.x + (edgeBrickSize.x - brickSize.x) / 2;
             pos.z = startPos.z;
-        } else {
+        }
+        else {
             pos.x = startPos.x;
             pos.z = startPos.z + (edgeBrickSize.z - brickSize.z) / 2;
         }
         glm::vec3 randomColor;
         if (fullColorRange) {
             randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
-        } else {
+        }
+        else {
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         // middle bricks
         for (int row = 1; row < wallWidth - 2; row++) {
             glm::vec3 pos = startPos;
@@ -519,18 +516,20 @@ void SceneBuilder::createBrickWall(
             if (wallDirection == 0) {
                 pos.x = brickSize.x / 2 + startPos.x + row * brickSize.x + brickDistance * row;
                 pos.z = startPos.z;
-            } else {
+            }
+            else {
                 pos.x = startPos.x;
                 pos.z = brickSize.z / 2 + startPos.z + row * brickSize.z + brickDistance * row;
             }
             glm::vec3 randomColor;
             if (fullColorRange) {
                 randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
-            } else {
+            }
+            else {
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            createObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+            world.createGameObject("plain", "cube", ColliderType::CUBOID, pos, brickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         }
         // edge brick
         pos = startPos;
@@ -538,83 +537,85 @@ void SceneBuilder::createBrickWall(
         if (wallDirection == 0) {
             pos.x = startPos.x + wallWidth - 1 * brickSize.x + brickDistance * wallWidth - (edgeBrickSize.x - brickSize.x) / 2;
             pos.z = startPos.z;
-        } else {
+        }
+        else {
             pos.x = startPos.x;
             pos.z = startPos.z + wallWidth - 1 * brickSize.z + brickDistance * wallWidth - (edgeBrickSize.z - brickSize.z) / 2;
         }
         if (fullColorRange) {
             randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
-        } else {
+        }
+        else {
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        createObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, pos, edgeBrickSize, brickWeight, 0, glm::quat(1, 0, 0, 0), 1.5f, 1, randomColor);
         brickWeight -= brickDecrease;
     }
 }
 
-//----------------------------------
-//              Halo
-//----------------------------------
-void SceneBuilder::createHalo(
-    float width,
-    float height,
-    float length,
-    glm::vec3 baseRotation,
-    glm::vec3 rotDir,
-    float rotSpeed,
-    glm::vec3 pos,
-    int segments,
-    glm::vec3 color,
-    bool createsShadows,
-    bool seeThrough)
-{
-    float baseRotAng = 90.0f;
-    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);
-    float halfDepth = length * 0.5f;
-    glm::vec3 desiredCenter = glm::vec3(0, 5, 0);
-    glm::vec3 lastPos = glm::vec3(0,0,0);
-    float lastAngle = 45.0f;
-    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
-
-    float stepSize = 360.0f / segments;
-
-    Halo halo;
-    halo.rotDir = rotDir;
-    halo.rotSpeed = rotSpeed;
-
-    for (int i = 0; i < segments; ++i) {
-        float newAngle = lastAngle - 5.0f;
-        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
-        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
-        glm::vec3 newPos = baseRot * newPosLocal;
-        glm::quat newOrient = baseRot * newOrientLocal;
-
-        createObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color, seeThrough);
-        GameObject& obj = dynamicObjects.back();
-        obj.isInsideShadowFrustum = createsShadows;
-
-        lastAngle = newAngle;
-        lastOrient = newOrientLocal;
-        lastPos = newPosLocal;
-
-        halo.indices.push_back(dynamicObjects.back().id);
-        halo.center = newPos;
-    }
-
-    // calculate haloCenter
-    glm::vec3 sum = glm::vec3(0.0f);
-    for (int i = 0; i < halo.indices.size(); i++)
-        sum += dynamicObjects[halo.indices[i]].position;
-    halo.center = sum / static_cast<float>(halo.indices.size());
-
-    for (int i = 0; i < halo.indices.size(); i++) {
-        GameObject& obj = dynamicObjects[halo.indices[i]];
-        glm::vec3 relativePos = desiredCenter - halo.center;
-        obj.position += relativePos;
-    }
-    halo.center = desiredCenter;
-
-    allHalos.push_back(halo);
-}
+////----------------------------------
+////              Halo
+////----------------------------------
+//void SceneBuilder::createHalo(
+//    float width,
+//    float height,
+//    float length,
+//    glm::vec3 baseRotation,
+//    glm::vec3 rotDir,
+//    float rotSpeed,
+//    glm::vec3 pos,
+//    int segments,
+//    glm::vec3 color,
+//    bool createsShadows,
+//    bool seeThrough)
+//{
+//    float baseRotAng = 90.0f;
+//    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);
+//    float halfDepth = length * 0.5f;
+//    glm::vec3 desiredCenter = glm::vec3(0, 5, 0);
+//    glm::vec3 lastPos = glm::vec3(0, 0, 0);
+//    float lastAngle = 45.0f;
+//    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
+//
+//    float stepSize = 360.0f / segments;
+//
+//    Halo halo;
+//    halo.rotDir = rotDir;
+//    halo.rotSpeed = rotSpeed;
+//
+//    for (int i = 0; i < segments; ++i) {
+//        float newAngle = lastAngle - 5.0f;
+//        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
+//        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
+//        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
+//        glm::vec3 newPos = baseRot * newPosLocal;
+//        glm::quat newOrient = baseRot * newOrientLocal;
+//
+//        GameObjectHandle handle = world.createGameObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color, seeThrough);
+//        GameObject* obj = world.getGameObjects().try_get(handle);
+//        obj->isInsideShadowFrustum = createsShadows;
+//
+//        lastAngle = newAngle;
+//        lastOrient = newOrientLocal;
+//        lastPos = newPosLocal;
+//
+//        halo.indices.push_back(dynamicObjects.back().id);
+//        halo.center = newPos;
+//    }
+//
+//    // calculate haloCenter
+//    glm::vec3 sum = glm::vec3(0.0f);
+//    for (int i = 0; i < halo.indices.size(); i++)
+//        sum += dynamicObjects[halo.indices[i]].position;
+//    halo.center = sum / static_cast<float>(halo.indices.size());
+//
+//    for (int i = 0; i < halo.indices.size(); i++) {
+//        GameObject& obj = dynamicObjects[halo.indices[i]];
+//        glm::vec3 relativePos = desiredCenter - halo.center;
+//        obj.position += relativePos;
+//    }
+//    halo.center = desiredCenter;
+//
+//    allHalos.push_back(halo);
+//}

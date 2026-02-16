@@ -19,7 +19,6 @@
     <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
-    <ClCompile Include="src\editor\editor_main.cpp" />
     <ClCompile Include="src\physics\raycast.cpp" />
     <ClCompile Include="src\graphics\debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\aabb_renderer.cpp" />
@@ -41,7 +40,6 @@
     <ClCompile Include="src\graphics\mesh\mesh_manager.cpp" />
     <ClCompile Include="src\core\imgui_manager.cpp" />
     <ClCompile Include="src\core\timer.cpp" />
-    <ClCompile Include="src\game\player.cpp" />
     <ClCompile Include="src\core\camera.cpp" />
     <ClCompile Include="src\core\input_manager.cpp" />
     <ClCompile Include="src\physics\broadphase_manager.cpp" />
@@ -52,14 +50,16 @@
     <ClCompile Include="Linking\include\imgui-docking\imgui_impl_opengl3.cpp" />
     <ClCompile Include="Linking\include\imgui-docking\imgui_tables.cpp" />
     <ClCompile Include="Linking\include\imgui-docking\imgui_widgets.cpp" />
-    <ClCompile Include="src\editor\panel_manager.cpp" />
-    <ClCompile Include="src\editor\panels\performance_panel.cpp" />
-    <ClCompile Include="src\editor\panels\settings_panel.cpp" />
-    <ClCompile Include="src\editor\panels\inspector_panel.cpp" />
     <ClCompile Include="src\graphics\debug\arrow_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\normals_renderer.cpp" />
     <ClCompile Include="src\game\world.cpp" />
     <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
+    <ClCompile Include="src\editor\panels\inspector_panel.cpp" />
+    <ClCompile Include="src\editor\panels\performance_panel.cpp" />
+    <ClCompile Include="src\editor\panels\settings_panel.cpp" />
+    <ClCompile Include="src\editor\editor_main.cpp" />
+    <ClCompile Include="src\editor\panel_manager.cpp" />
+    <ClCompile Include="src\game\player.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -107,7 +107,6 @@
     <ClInclude Include="src\graphics\debug\xyz_object.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\scene_builder.h" />
-    <ClInclude Include="src\editor\editor_main.h" />
     <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\graphics\debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\debug\aabb_renderer.h" />
@@ -131,17 +130,10 @@
     <ClInclude Include="src\graphics\debug\render_contact_points.h" />
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\core\timer.h" />
-    <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\core\input_manager.h" />
     <ClInclude Include="src\physics\broadphase_manager.h" />
     <ClInclude Include="src\physics\broadphase_types.h" />
     <ClInclude Include="src\physics\broadphase_pairs.h" />
-    <ClInclude Include="src\editor\viewport_fbo.h" />
-    <ClInclude Include="src\editor\panel_manager.h" />
-    <ClInclude Include="src\editor\panel.h" />
-    <ClInclude Include="src\editor\panels\performance_panel.h" />
-    <ClInclude Include="src\editor\panels\settings_panel.h" />
-    <ClInclude Include="src\editor\panels\inspector_panel.h" />
     <ClInclude Include="src\graphics\debug\quad_renderer.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
@@ -149,6 +141,14 @@
     <ClInclude Include="src\core\slot_map.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\bvh\treetree_query.h" />
+    <ClInclude Include="src\editor\panels\inspector_panel.h" />
+    <ClInclude Include="src\editor\panels\performance_panel.h" />
+    <ClInclude Include="src\editor\panels\settings_panel.h" />
+    <ClInclude Include="src\editor\editor_main.h" />
+    <ClInclude Include="src\editor\panel.h" />
+    <ClInclude Include="src\editor\panel_manager.h" />
+    <ClInclude Include="src\editor\viewport_fbo.h" />
+    <ClInclude Include="src\game\player.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

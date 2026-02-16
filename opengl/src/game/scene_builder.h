@@ -4,6 +4,7 @@
 #include "collider.h"
 #include "tri.h"
 
+class World;
 class TextureManager;
 class LightManager;
 class PhysicsEngine;
@@ -14,8 +15,8 @@ class Renderer;
 class SceneBuilder {
 public:
     SceneBuilder(
-        PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
-        physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
+        World& w, PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
+        world(w), physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
     {}
 
     bool sceneDirty = true; 
@@ -32,21 +33,21 @@ public:
     void emptyFloorScene();
     void shapePileScene();
 
-    GameObject& createObject(
-        const std::string& textureName,
-        const std::string& meshName,
-        ColliderType colliderType,
-        const glm::vec3& pos,
-        const glm::vec3& size,
-        float mass,
-        bool isStatic,
-        const glm::quat& orientation = glm::quat(1, 0, 0, 0),
-        float sleepCounterThreshold = 1.0f,
-        bool asleep = 0,
-        const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f),
-        const bool seeThrough = false
-    );
-    int objectsAddedThisFrame = 0;
+    //GameObject& createObject(
+    //    const std::string& textureName,
+    //    const std::string& meshName,
+    //    ColliderType colliderType,
+    //    const glm::vec3& pos,
+    //    const glm::vec3& size,
+    //    float mass,
+    //    bool isStatic,
+    //    const glm::quat& orientation = glm::quat(1, 0, 0, 0),
+    //    float sleepCounterThreshold = 1.0f,
+    //    bool asleep = 0,
+    //    const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f),
+    //    const bool seeThrough = false
+    //);
+    //int objectsAddedThisFrame = 0;
 
     void createBlockPyramid(
         const std::string& textureName,
@@ -129,7 +130,6 @@ public:
     TerrainData terrainData; 
     TerrainData& getTerrainData();
 
-    std::vector<GameObject>& getDynamicObjects();
     void toggleLightsState();
     void setLights();
     void toggleDayNight();
@@ -140,6 +140,7 @@ public:
     int lightsState = 0;
 
 private:
+    World& world;
     PhysicsEngine& physicsEngine;
     Renderer& renderer;
     TextureManager& textureManager;
@@ -149,7 +150,6 @@ private:
     std::mt19937& rng;
 
     int objectId = 0;
-    std::vector<GameObject> dynamicObjects;
     std::vector<GameObject> staticObjects;
 
     //int lightsState = 0;

@@ -65,7 +65,7 @@ int main() {
 	// systems
 	EngineState engineState;
 	FrameTimers frameTimers;
-	PhysicsEngine physicsEngine(&frameTimers);
+	PhysicsEngine physicsEngine;
 	Renderer renderer;
 
 	// managers
@@ -93,14 +93,17 @@ int main() {
 	camera.ProcessMouseMovement(0.0f, 0.0f);
 
 	// scene builder
-	SceneBuilder sceneBuilder(physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 	World world(physicsEngine, renderer, textureManager, meshManager, shaderManager);
+	SceneBuilder sceneBuilder(world, physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
+
+	// physics init
+	physicsEngine.init(&world, &frameTimers);
 
 	// setup input
 	inputManager.init(window);
 
 	// setup rendering
-	renderer.init(SCR_WIDTH, SCR_HEIGHT, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
+	renderer.init(SCR_WIDTH, SCR_HEIGHT, world, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
 
 	// load textures
 	textureManager.loadTexture("crate", "src/assets/crate.jpg");
@@ -139,7 +142,8 @@ int main() {
 		SCR_WIDTH, 
 		SCR_HEIGHT, 
 		&engineState, 
-		&sceneBuilder, 
+		&world,
+		&sceneBuilder,
 		&physicsEngine, 
 		&inputManager, 
 		&camera, 
@@ -154,7 +158,7 @@ int main() {
 	);
 
 	// setup player
-	player.setPointers(&sceneBuilder, &physicsEngine, &camera);
+	player.setPointers(&world, &physicsEngine, &camera);
 
 	// ImGui setup
 	imguiManager.init(window);
@@ -309,49 +313,49 @@ int main() {
 			int steps = 0;
 			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
 			{
-				// --- Kinematisk uppdatering av halo-objekt ---
-				for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
-				{
-					// per-frame rotation (du har redan denna)
-					glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
+				//// --- Kinematisk uppdatering av halo-objekt ---
+				//for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
+				//{
+				//	// per-frame rotation (du har redan denna)
+				//	glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
 
-					for (int i = 0; i < halo.indices.size(); i++) {
-						GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
+				//	for (int i = 0; i < halo.indices.size(); i++) {
+				//		GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
 
-						// --- 1) Spara föregående pose ---
-						glm::vec3 prevPos = obj.position;
-						glm::quat prevOri = obj.orientation;
+				//		// --- 1) Spara föregående pose ---
+				//		glm::vec3 prevPos = obj.position;
+				//		glm::quat prevOri = obj.orientation;
 
-						// --- 2) Sätt ny pose kinematiskt (din kod) ---
-						glm::vec3 relativePos = obj.position - halo.center;
-						glm::vec3 rotatedRelPos = perFrameRot * relativePos;
+				//		// --- 2) Sätt ny pose kinematiskt (din kod) ---
+				//		glm::vec3 relativePos = obj.position - halo.center;
+				//		glm::vec3 rotatedRelPos = perFrameRot * relativePos;
 
-						obj.position = halo.center + rotatedRelPos;
-						obj.orientation = perFrameRot * obj.orientation;
+				//		obj.position = halo.center + rotatedRelPos;
+				//		obj.orientation = perFrameRot * obj.orientation;
 
-						// --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
-						// Linjär hastighet: differens
-						obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
+				//		// --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
+				//		// Linjär hastighet: differens
+				//		obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
 
-						// Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
-						glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
-						dq = glm::normalize(dq);
-						float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
-						float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
-						float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
-						glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
-							: glm::vec3(0, 0, 1);           // fallback
-						obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
+				//		// Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
+				//		glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
+				//		dq = glm::normalize(dq);
+				//		float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
+				//		float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
+				//		float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
+				//		glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
+				//			: glm::vec3(0, 0, 1);           // fallback
+				//		obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
 
-						// --- 4) Uppdatera render/collider ---
-						obj.modelMatrixDirty = true;
-						obj.helperMatricesDirty = true;
-						obj.setModelMatrix();
-						obj.setHelperMatrices();
-						obj.updateAABB();
-						obj.updateCollider();
-					}
-				}
+				//		// --- 4) Uppdatera render/collider ---
+				//		obj.modelMatrixDirty = true;
+				//		obj.helperMatricesDirty = true;
+				//		obj.setModelMatrix();
+				//		obj.setHelperMatrices();
+				//		obj.updateAABB();
+				//		obj.updateCollider();
+				//	}
+				//}
 
 				// physics step
 				physicsEngine.step(fixedTimeStep, rng);

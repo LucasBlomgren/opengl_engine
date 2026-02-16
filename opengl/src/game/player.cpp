@@ -13,8 +13,9 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
-            GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
-            newObject.linearVelocity = camera->front * SHOOT_VELOCITY;
+            GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
+            GameObject* newObj = world->getGameObjects().try_get(handle);
+            newObj->linearVelocity = camera->front * SHOOT_VELOCITY;
             c.mouse = true;
         }
 
@@ -33,6 +34,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         moveInput.y = 0.0f;
 
         if (in.keyDown[GLFW_KEY_SPACE]) {
+            GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
             if (playerObject->onGround and !playerObject->hasJumped) {
                 playerObject->playerJumpImpulse += JUMP_HEIGHT;
                 playerObject->onGround = false;
@@ -43,8 +45,8 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     }
 }
 
-void Player::setPointers(SceneBuilder* sceneBuilder, PhysicsEngine* physicsEngine, Camera* camera) {
-    this->sceneBuilder = sceneBuilder;
+void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera) {
+    this->world = world;
     this->physicsEngine = physicsEngine;
     this->camera = camera;
 }
@@ -59,23 +61,17 @@ void Player::deactivate() {
 }
 
 void Player::createPlayerObject() {
-    sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1, 0, glm::vec3{255}, 1);
-    GameObject& player = sceneBuilder->getDynamicObjects().back();
-    sceneBuilder->playerObjectId = sceneBuilder->getDynamicObjects().size() - 1;
+    playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1, 0, glm::vec3{255}, 1);
 
-    player.player = true;
-    player.allowSleep = false;
-
-    playerObject = &player;
+    GameObject* player = world->getGameObjects().try_get(playerHandle);
+    player->player = true;
+    player->allowSleep = false;
 }
 
 void Player::destroyPlayerObject() {
-    GameObject& player = sceneBuilder->getDynamicObjects()[sceneBuilder->playerObjectId];
-    physicsEngine->queueRemove(&player);
-    //sceneBuilder->getDynamicObjects().erase(sceneBuilder->getDynamicObjects().begin() + sceneBuilder->playerObjectId);
-    sceneBuilder->playerObjectId = -1;
-
-    playerObject = nullptr;
+    physicsEngine->queueRemove(playerHandle);
+    world->removeGameObject(playerHandle);
+    playerHandle = GameObjectHandle{};
 }
 
 void Player::fixedUpdate(float fixedTimeStep) {
@@ -91,7 +87,7 @@ void Player::update(Shader& shader) {
         pendingDrop = false;
     }
 
-    if (selectedObject == nullptr) {
+    if (isObjectSelected == false) {
         createPlaceObjectAABB(shader);
         rayCast(SELECT_RANGE);
     }
@@ -100,6 +96,8 @@ void Player::update(Shader& shader) {
 // Update player movement based on input
 void Player::updatePlayerMovement() {
     //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+
+    GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
     camera->position = playerObject->position + glm::vec3(0, 0.76f, 0);
 
     // Undvik diag-fartbonus
@@ -115,8 +113,12 @@ void Player::updatePlayerMovement() {
 
 // Update position of selected object to follow camera + offset
 void Player::updateSelectedObject(float dt) {
-    if (!selectedObject or selectedObject->isStatic)
+    // function uses selectedObjectHandle not pointer
+    if (isObjectSelected == false)
         return;
+
+    GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
+    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
@@ -139,22 +141,25 @@ void Player::updateSelectedObject(float dt) {
 
 // Select object under crosshair
 void Player::selectObject() {
-    if (selectedObject)
+    if (isObjectSelected)
         return;
 
     RaycastHit& hitData = lastHitData;
 
     // no hit return
-    if (hitData.object == nullptr) {
+    if (hitData.hit == false) {
         return;
     }
 
-    selectedObject = hitData.object;
+    selectedObjectHandle = hitData.objectHandle;
+    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
+
     if (selectedObject->isStatic) {
-        selectedObject = nullptr;
+        isObjectSelected = false;
         return;
     }
 
+    isObjectSelected = true;
     selectedObject->selectedByPlayer = true;
     selectedObject->asleep = false;
 
@@ -162,9 +167,10 @@ void Player::selectObject() {
     GameObject* obj = selectedObject;
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueMove(obj, bpBucket);
+    physicsEngine->queueMove(hitData.objectHandle, bpBucket);
 
     selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
+    selectedObject->allowSleep = false;
     selectedObject->lastPosition = selectedObject->position;
 
     selectedObject->linearVelocity = glm::vec3(0.0f);
@@ -178,25 +184,23 @@ void Player::selectObject() {
 }
 
 void Player::dropObject() {
-    if (selectedObject) {
+    if (isObjectSelected) {
+        isObjectSelected = false;
+
+        GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
         selectedObject->selectedByPlayer = false;
-
-        // avoid nullptr dereference in physics engine
-        GameObject* obj = selectedObject;
-
-        if (selectedObject->isStatic) {
-            BroadphaseBucket target = BroadphaseBucket::Static;
-            physicsEngine->queueMove(obj, target);
-        } else {
-            BroadphaseBucket target = BroadphaseBucket::Awake;
-            physicsEngine->queueMove(obj, target);
-        }
-
+        selectedObject->allowSleep = true;
         selectedObject->sleepCounter = 0.0f;
         selectedObject->sleepCounterThreshold = 1.5f;
         selectedObject->angularVelocity = glm::vec3(0.0f);
-        //selectedObject->linearVelocity += playerObject->linearVelocity;
-        selectedObject = nullptr;
+
+        if (selectedObject->isStatic) {
+            BroadphaseBucket target = BroadphaseBucket::Static;
+            physicsEngine->queueMove(selectedObjectHandle, target);
+        } else {
+            BroadphaseBucket target = BroadphaseBucket::Awake;
+            physicsEngine->queueMove(selectedObjectHandle, target);
+        }
     }
 }
 
@@ -207,8 +211,10 @@ void Player::placeObject() {
     glm::vec3 size{ OBJ_PLACE_SIZE };
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    GameObject& newObject = sceneBuilder->createObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
-    newObject.linearVelocity = glm::vec3(0.0f);
+
+    GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
+    GameObject* newObj = world->getGameObjects().try_get(handle);
+    newObj->linearVelocity = glm::vec3(0.0f);
 }
 
 void Player::createPlaceObjectAABB(Shader& shader) {
@@ -221,7 +227,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
 
     RaycastHit hitData = rayCast(placeDist);
     glm::vec3 normal = hitData.normal;
-    if (hitData.object != nullptr) {
+    if (hitData.hit) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)
             normal = -normal;
 
@@ -239,7 +245,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<GameObject*> collisions;
+        std::vector<GameObjectHandle> collisions;
         collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
@@ -250,13 +256,13 @@ void Player::createPlaceObjectAABB(Shader& shader) {
         // min depth collision
         float min = std::numeric_limits<float>::max();
         GameObject* minDepthObj = nullptr;
-        for (int j = 0; j < collisions.size(); j++) {
-            GameObject& objB = *collisions[j];
+        for (GameObjectHandle& handle : collisions) {
+            GameObject* objB = world->getGameObjects().try_get(handle);
 
-            float depth = aabb.getMinOverlapDepth(objB.aabb);
+            float depth = aabb.getMinOverlapDepth(objB->aabb);
             if (depth < min) {
                 min = depth;
-                minDepthObj = &objB;
+                minDepthObj = objB;
             }
         }
 

@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "world.h"
 #include "timer.h"
 #include "engine_state.h"
 #include "collision_manifold.h"
@@ -25,24 +26,21 @@ struct DebugData {
 
 class PhysicsEngine {
 public:
-    PhysicsEngine(FrameTimers* ft) { 
-        this->collisionManifold = new CollisionManifold(); 
-        this->frameTimers = ft;
-    }
+    void init(World* world, FrameTimers* ft);
 
     //------------------------
     //     Main functions
     //------------------------
-    void setupScene(std::vector<GameObject>* gameObjectList, std::vector<Tri>* terrainTriangles);
+    void setupScene(std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
     void step(float deltaTime, std::mt19937 rng);
 
     void sleepAllObjects();
     void awakenAllObjects();
 
-    void queueAdd(GameObject* obj, BroadphaseBucket& target);
-    void queueRemove(GameObject* obj);
-    void queueMove(GameObject* obj, BroadphaseBucket& target);
+    void queueAdd(GameObjectHandle& handle, BroadphaseBucket& target);
+    void queueRemove(GameObjectHandle& handle);
+    void queueMove(GameObjectHandle& handle, BroadphaseBucket& target);
 
     RaycastHit performRaycast(Ray& ray);
 
@@ -61,6 +59,7 @@ public:
 private:
     float dt;
     FrameTimers* frameTimers;
+    World* world;
     DebugData debugData;
 
     //-----------------------------
@@ -68,16 +67,15 @@ private:
     //-----------------------------
     struct PhysCmd {
         enum class Type { Add, Remove, Move } type;
-        GameObject* obj = nullptr;
+        GameObjectHandle handle;
         BroadphaseBucket dst = BroadphaseBucket::None;
     };
     std::vector<PhysCmd> pending;
     void flushBroadphaseCommands();
 
     //------------------------
-    //     Game objects
+    //     Terrain
     //------------------------
-    std::vector<GameObject>* dynamicObjects;
     std::vector<Tri>* terrainTriangles;
 
     //------------------------
@@ -90,6 +88,28 @@ private:
     //  Collision detection 
     //------------------------
     BroadphaseManager broadphaseManager;
+
+    // cache for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
+    struct StepPtrCache {
+        std::vector<GameObject*> cache;
+        SlotMap<GameObject, GameObjectHandle>* sm;
+
+        void init(SlotMap<GameObject, GameObjectHandle>& slotMap) {
+            sm = &slotMap;
+        }
+
+        void clear() {
+            cache.assign(sm->slot_capacity(), nullptr);
+        }
+
+        GameObject* get(GameObjectHandle h) {
+            auto& slot = cache[h.slot];
+            if (slot) return slot;
+            slot = sm->try_get(h); // gen-check en gång
+            return slot;
+        }
+    };
+    StepPtrCache stepPtrCache;
 
     void detectAndSolveCollisions();
     void narrowPhase(const std::vector<TerrainPair>& tHits, const std::vector<DynamicPair>& dHits);
@@ -110,11 +130,11 @@ private:
     //------------------------
     //       Sleeping
     //------------------------
-    std::vector<int> toWake;
-    std::vector<int> toSleep;
+    std::vector<GameObjectHandle> toWake;
+    std::vector<GameObjectHandle> toSleep;
     void decideSleep();
     void updateSleepThresholds();
 
     struct WakeUpInfo { bool A, B; };
-    WakeUpInfo wakeUpCheck(GameObject& A, GameObject& B);
+    WakeUpInfo wakeUpCheck(const GameObjectHandle& handleA, const GameObjectHandle& handleB, GameObject& objA, GameObject& objB);
 };

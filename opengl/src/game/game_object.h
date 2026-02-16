@@ -93,11 +93,6 @@ public:
 
     // BVH
     BroadphaseHandle broadphaseHandle;
-    int bvhLeafIdx = -1;
-    int dynamicObjectIdx = -1;
-    int awakeListIdx = -1;
-    int asleepListIdx = -1;
-    int staticListIdx = -1;
 
     // sleep
     bool asleep = false;
