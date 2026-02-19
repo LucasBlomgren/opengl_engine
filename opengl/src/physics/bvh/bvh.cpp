@@ -5,11 +5,11 @@
 
 #include "world.h"
 
-void BVHTree::init(SlotMap<GameObject, GameObjectHandle>* s) {
+void BVHTree::init(SlotMap<GameObject, GameObjectHandle>* s, int allocSize) {
     slotmap = s;
 
     nodes.clear();
-    nodes.reserve(100000);
+    nodes.reserve(allocSize * 2);
     rootIdx = -1;
 }   
 
@@ -53,73 +53,73 @@ int BVHTree::insertLeaf(GameObjectHandle objHandle)
         return -1;
     }
 
-    // #TODO: Ändra till Node-index istället för Node-pointer, annars kan det bli problem när vectoren omallokeras.
-
     // create leaf node
-    Node* leaf = createLeaf(objHandle, objPtr);
+    int leafIdx = createLeaf(objHandle, objPtr);
 
     // if tree is empty, set rootIdx. Leaf becomes root.
     if (rootIdx == -1) {
-        rootIdx = leaf->selfIdx;
-        return leaf->selfIdx;
+        rootIdx = leafIdx;
+        return leafIdx;
     }
 
     // find best sibling
-    Node* sibling = findBestSibling(leaf->fatBox);
+    int siblingIdx = findBestSibling(nodes[leafIdx].fatBox);
 
     // create new parent node
-    Node* parent = &nodes.emplace_back();
+    Node& parent = nodes.emplace_back();
 
-    parent->selfIdx = nodes.size() - 1;
-    parent->childAIdx = sibling->selfIdx;
-    parent->childBIdx = leaf->selfIdx;
+    Node& leaf = nodes[leafIdx];
+    Node& sibling = nodes[siblingIdx];
 
-    int oldParentIdx = sibling->parentIdx;
-    sibling->parentIdx = parent->selfIdx;
-    leaf->parentIdx = parent->selfIdx;
+    parent.selfIdx = nodes.size() - 1;
+    parent.childAIdx = sibling.selfIdx;
+    parent.childBIdx = leaf.selfIdx;
+
+    int oldParentIdx = sibling.parentIdx;
+    sibling.parentIdx = parent.selfIdx;
+    leaf.parentIdx = parent.selfIdx;
 
     // sibling was root, parent becomes new root
     if (oldParentIdx == -1) {
-        rootIdx = parent->selfIdx;
-        parent->parentIdx = -1;
+        rootIdx = parent.selfIdx;
+        parent.parentIdx = -1;
     }
     // else connect new parent to old parent
     else {
         Node* oldParent = &nodes[oldParentIdx];
-        bool siblingIsLeft = (sibling->selfIdx == oldParent->childAIdx);
+        bool siblingIsLeft = (sibling.selfIdx == oldParent->childAIdx);
         if (siblingIsLeft) {
-            oldParent->childAIdx = parent->selfIdx;
+            oldParent->childAIdx = parent.selfIdx;
         }
         else {
-            oldParent->childBIdx = parent->selfIdx;
+            oldParent->childBIdx = parent.selfIdx;
         }
-        parent->parentIdx = oldParent->selfIdx;
+        parent.parentIdx = oldParent->selfIdx;
     }
 
     // refit all parents
-    refitParents(leaf->parentIdx);
+    refitParents(leaf.parentIdx);
 
-    return leaf->selfIdx;
+    return leaf.selfIdx;
 }
 
-BVHTree::Node* BVHTree::createLeaf(GameObjectHandle handle, GameObject* objPtr)
-{
-    Node* leaf = &nodes.emplace_back();
-    leaf->selfIdx = nodes.size() - 1;
-    leaf->isLeaf = true;
-    leaf->element = handle;
-    leaf->tightBox = objPtr->getAABB();
-    leaf->fatBox = leaf->tightBox;
-    leaf->fatBox.grow(fatBoxMargin);
+int BVHTree::createLeaf(GameObjectHandle handle, GameObject* objPtr) {
+    Node& leaf = nodes.emplace_back();
+    leaf.selfIdx = nodes.size() - 1;
+    leaf.isLeaf = true;
+    leaf.element = handle;
+    leaf.tightBox = objPtr->getAABB();
+    leaf.fatBox = leaf.tightBox;
+    leaf.fatBox.grow(fatBoxMargin);
 
-    objPtr->broadphaseHandle.leafIdx = leaf->selfIdx;
+    objPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
 
-    updateRenderData(*leaf);
+    updateRenderData(leaf);
 
-    return leaf;
+    return leaf.selfIdx;
 }
 
-typename BVHTree::Node* BVHTree::findBestSibling(AABB& box)
+int BVHTree::findBestSibling(AABB& box)
 {
     Node* n = &nodes[rootIdx];
 
@@ -140,7 +140,7 @@ typename BVHTree::Node* BVHTree::findBestSibling(AABB& box)
         n = (incA < incB) ? A : B;
     }
 
-    return n; // leaf
+    return n->selfIdx;
 }
 
 void BVHTree::refitParents(int parentIdx) {

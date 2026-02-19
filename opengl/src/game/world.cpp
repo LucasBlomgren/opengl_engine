@@ -8,6 +8,11 @@
 #include "lighting/light_manager.h"
 #include "physics.h"
 
+void World::clear() {
+    m_gameObjects = SlotMap<GameObject, GameObjectHandle>();
+    objectId = 0;
+}
+
 GameObjectHandle World::createGameObject(
     const std::string& textureName,
     const std::string& meshName,
@@ -22,22 +27,18 @@ GameObjectHandle World::createGameObject(
     const glm::vec3& color,
     const bool seeThrough)
 {
+    Shader* shader = m_shaderManager.getShader("default");
+    Mesh* mesh = m_meshManager.getMesh(meshName);
     unsigned int textureId;
+
     if (textureName == "plain") {
         textureId = 999;
-    }
-    else {
+    } else {
         textureId = m_textureManager.getTexture(textureName);
     }
 
-    Mesh* mesh = m_meshManager.getMesh(meshName);
-
-    GameObjectHandle handle = m_gameObjects.create(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
-
-    GameObject& newObject = m_gameObjects.dense().back();
-    newObject.handle = handle;
-    newObject.shader = m_shaderManager.getShader("default");
-
+    GameObjectHandle handle = m_gameObjects.create(objectId, shader, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
+   
     BroadphaseBucket targetBucket = asleep ? BroadphaseBucket::Asleep : (isStatic ? BroadphaseBucket::Static : BroadphaseBucket::Awake);
     m_physicsEngine.queueAdd(handle, targetBucket);
 

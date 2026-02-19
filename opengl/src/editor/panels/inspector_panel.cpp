@@ -226,17 +226,33 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
 	// Scale
 	{
-		glm::vec3 scale = obj->scale;
-		if (RowDragFloat3("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f, 1)) {
-			obj->scale = scale;
-			obj->modelMatrixDirty = true;
-			obj->aabbDirty = true;
-			obj->setModelMatrix();
-			obj->updateAABB();
-			obj->updateCollider();
-		}
-		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj->calculateInverseInertia();
+		if (obj->colliderType == ColliderType::SPHERE) {
+			float scale = obj->scale.x;
+			if (RowDragFloat("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f)) {
+				obj->scale = glm::vec3(scale);
+				obj->modelMatrixDirty = true;
+				obj->aabbDirty = true;
+				obj->setModelMatrix();
+				obj->updateAABB();
+				obj->updateCollider();
+			}
+			if (ImGui::IsItemDeactivatedAfterEdit()) {
+				obj->calculateInverseInertia();
+			}
+		} 
+		else {
+			glm::vec3 scale = obj->scale;
+			if (RowDragFloat3("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f, 2)) {
+				obj->scale = scale;
+				obj->modelMatrixDirty = true;
+				obj->aabbDirty = true;
+				obj->setModelMatrix();
+				obj->updateAABB();
+				obj->updateCollider();
+			}
+			if (ImGui::IsItemDeactivatedAfterEdit()) {
+				obj->calculateInverseInertia();
+			}
 		}
 	}
 

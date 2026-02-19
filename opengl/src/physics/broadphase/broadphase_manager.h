@@ -43,7 +43,7 @@ public:
     const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
 
 private:
-    // reference to all game objects
+    // reference to all objects
     SlotMap<GameObject, GameObjectHandle>* slotMap = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 

@@ -78,6 +78,8 @@ void SceneBuilder::createScene(int sceneID)
 {
     sceneDirty = true;
     physicsEngine.clearPhysicsData();
+    world.clear();
+    renderer.clearRenderBatches();
 
     terrainData.triangles.clear(); 
     terrainData.triangles.reserve(5000000);
@@ -87,10 +89,7 @@ void SceneBuilder::createScene(int sceneID)
     terrainData.indices.reserve(5000000); 
 
     setLights();
-
     allHalos.clear();
-
-    renderer.clearRenderBatches();
 
     switch (sceneID) {
     case 0: mainScene(); break;

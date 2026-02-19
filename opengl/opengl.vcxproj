@@ -208,7 +208,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\broadphase_manager.cpp" />
+    <ClCompile Include="src\physics\broadphase\broadphase_manager.cpp" />
     <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -327,11 +327,11 @@
     <ClInclude Include="src\graphics\textures\texture_manager.h" />
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\physics\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
-    <ClInclude Include="src\physics\broadphase_manager.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
-    <ClInclude Include="src\physics\broadphase_pairs.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_pairs.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
     <ClInclude Include="src\physics\colliders\oobb.h" />

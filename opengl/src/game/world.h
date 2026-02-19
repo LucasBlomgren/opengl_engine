@@ -20,6 +20,8 @@ public:
     {
     }
 
+    void clear();
+
     SlotMap<GameObject, GameObjectHandle>& getGameObjects() { return m_gameObjects; }
 
     GameObjectHandle createGameObject(

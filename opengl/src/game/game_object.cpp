@@ -121,7 +121,17 @@ void GameObject::updateOrientation(glm::quat& orientation, const glm::vec3& angu
 
 void GameObject::updateAABB() {
 	setModelMatrix();
-	aabb.update(modelMatrix, position, scale, true);
+
+	if (colliderType == ColliderType::CUBOID) {
+		aabb.update(modelMatrix, position, scale, true);
+	}
+	else if (colliderType == ColliderType::SPHERE) {
+		float r = scale.x;
+		aabb.wMin = position - glm::vec3(r);
+		aabb.wMax = position + glm::vec3(r);
+		aabb.centroid = (aabb.wMin + aabb.wMax) * 0.5f;
+		aabb.halfExtents = (aabb.wMax - aabb.wMin) * 0.5f;
+	}
 }
 
 void GameObject::updateCollider() {
@@ -136,7 +146,7 @@ void GameObject::updateCollider() {
 		}
 		// Sphere
 		else if constexpr (std::is_same_v<T, Sphere>) {
-			shape.update(modelMatrix);
+			shape.update(modelMatrix, scale.x);
 		}
 	}, collider.shape);
 }
@@ -154,7 +164,7 @@ void GameObject::initMesh() {
 void GameObject::initCollider() {
 	// AABB 
 	aabb.Init(verticesPositions);
-	aabb.update(modelMatrix, position, scale, true);
+	updateAABB();
 
 	// Collider
 	if (colliderType == ColliderType::CUBOID) {
@@ -162,7 +172,6 @@ void GameObject::initCollider() {
 		collider.shape = box;
 	}
 	else if (colliderType == ColliderType::SPHERE) {
-		// #TODO: AABB är inte korrekt just nu för sfärer. Just nu så ändras storleken med rotation, eftersom ModelMatrix används.
 		Sphere sphere(modelMatrix, scale.x);
 		collider.shape = sphere;
 	}
@@ -282,6 +291,10 @@ void GameObject::setAsleep() {
 	angularVelocity = glm::vec3(0, 0, 0);
 
 	asleep = true;
+	sleepCounter = 0.0f;
+
+	anchorTimer = 0.0f;
+	anchorPoint = position;
 }
 
 void GameObject::setAwake() {

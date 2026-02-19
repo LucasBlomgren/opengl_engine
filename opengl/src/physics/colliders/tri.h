@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/vec3.hpp>
-#include "broadphase_types.h"
+#include "broadphase/broadphase_types.h"
 #include "aabb.h"
 
 class Tri {

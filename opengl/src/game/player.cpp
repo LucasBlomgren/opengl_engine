@@ -58,6 +58,25 @@ void Player::activate() {
 void Player::deactivate() {
     destroyPlayerObject();
     dropObject();
+
+    // clear hover/selection states on objects to avoid stuck states
+    if (objectIsSelected) {
+        GameObject* obj = world->getGameObjects().try_get(selectedObjectHandle);
+        if (obj) {
+            obj->selectedByEditor = false;
+        }
+        objectIsSelected = false;
+        selectedObjectHandle = GameObjectHandle{};
+    }
+
+    if (objectIsHovered) {
+        GameObject* obj = world->getGameObjects().try_get(hoveredObjectHandle);
+        if (obj) {
+            obj->hoveredByEditor = false;
+        }
+        objectIsHovered = false;
+        hoveredObjectHandle = GameObjectHandle{};
+    }
 }
 
 void Player::createPlayerObject() {
@@ -87,9 +106,26 @@ void Player::update(Shader& shader) {
         pendingDrop = false;
     }
 
-    if (isObjectSelected == false) {
+    if (!objectIsSelected) {
         createPlaceObjectAABB(shader);
-        rayCast(SELECT_RANGE);
+    }
+
+    // clear previous hover state
+    if (objectIsHovered) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(hoveredObjectHandle);
+        hoveredObj->hoveredByEditor = false;
+        objectIsHovered = false;
+    }
+
+    // raycast for hover
+    RaycastHit raycast = rayCast(SELECT_RANGE);
+
+    // set new hover state
+    if (raycast.hit && !objectIsSelected) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(raycast.objectHandle);
+        hoveredObj->hoveredByEditor = true;
+        hoveredObjectHandle = raycast.objectHandle;
+        objectIsHovered = true;
     }
 }
 
@@ -114,7 +150,7 @@ void Player::updatePlayerMovement() {
 // Update position of selected object to follow camera + offset
 void Player::updateSelectedObject(float dt) {
     // function uses selectedObjectHandle not pointer
-    if (isObjectSelected == false)
+    if (objectIsSelected == false)
         return;
 
     GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
@@ -141,25 +177,25 @@ void Player::updateSelectedObject(float dt) {
 
 // Select object under crosshair
 void Player::selectObject() {
-    if (isObjectSelected)
+    if (objectIsSelected)
         return;
 
-    RaycastHit& hitData = lastHitData;
+    RaycastHit raycast = rayCast(SELECT_RANGE);
 
     // no hit return
-    if (hitData.hit == false) {
+    if (raycast.hit == false) {
         return;
     }
 
-    selectedObjectHandle = hitData.objectHandle;
+    selectedObjectHandle = raycast.objectHandle;
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
 
     if (selectedObject->isStatic) {
-        isObjectSelected = false;
+        objectIsSelected = false;
         return;
     }
 
-    isObjectSelected = true;
+    objectIsSelected = true;
     selectedObject->selectedByPlayer = true;
     selectedObject->asleep = false;
 
@@ -167,7 +203,7 @@ void Player::selectObject() {
     GameObject* obj = selectedObject;
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueMove(hitData.objectHandle, bpBucket);
+    physicsEngine->queueMove(raycast.objectHandle, bpBucket);
 
     selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
     selectedObject->allowSleep = false;
@@ -184,8 +220,8 @@ void Player::selectObject() {
 }
 
 void Player::dropObject() {
-    if (isObjectSelected) {
-        isObjectSelected = false;
+    if (objectIsSelected) {
+        objectIsSelected = false;
 
         GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
         selectedObject->selectedByPlayer = false;
@@ -295,14 +331,8 @@ RaycastHit Player::rayCast(float length) {
     Ray r(camera->position, camera->front, rLength);
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
-    lastHitData = hitData;
     return hitData;
 }
-
-RaycastHit& Player::getLastRayHit() {
-    return lastHitData;
-}
-
 
 void Player::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
     glm::vec3 min = aabb.wMin;

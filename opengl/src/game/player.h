@@ -28,8 +28,10 @@ public:
     void updatePlayerMovement();
 
     // select object
-    bool isObjectSelected = false;
+    bool objectIsSelected = false;
+    bool objectIsHovered = false;
     GameObjectHandle selectedObjectHandle;
+    GameObjectHandle hoveredObjectHandle;
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void selectObject();
     void dropObject();
@@ -37,7 +39,6 @@ public:
 
     // raycast for placement/selection/etc
     RaycastHit rayCast(float length);
-    RaycastHit& getLastRayHit();
     AABB aabbToPlace;
     bool placementObstructed = true;
     void placeObject();
@@ -54,7 +55,6 @@ private:
     // selection and placement
     bool dragging = false;
     bool pendingDrop = false;
-    RaycastHit lastHitData;
     bool drawPlacementAABB = false;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };

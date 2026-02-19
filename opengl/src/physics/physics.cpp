@@ -238,7 +238,7 @@ void PhysicsEngine::updateStates() {
     const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
 
     for (const GameObjectHandle& handle : awakeHandles) {
-        GameObject* objPtr = world->getGameObjects().try_get(handle);
+        GameObject* objPtr = stepPtrCache.get(handle);
         objPtr->resetDirtyFlags();
         objPtr->updatePos(this->dt);
         objPtr->updateAABB();
@@ -248,7 +248,7 @@ void PhysicsEngine::updateStates() {
     const std::vector<GameObjectHandle>& staticHandles = broadphaseManager.getStaticList();
 
     for (const GameObjectHandle& handle : staticHandles) {
-        GameObject* objPtr = world->getGameObjects().try_get(handle);
+        GameObject* objPtr = stepPtrCache.get(handle);
         objPtr->resetDirtyFlags();
         objPtr->updatePos(this->dt);
         objPtr->updateAABB();
@@ -887,13 +887,39 @@ void PhysicsEngine::updateSleepThresholds() {
 //-------------------------------
 void PhysicsEngine::decideSleep() 
 {
+    constexpr float jitterThreshold = 1.0f; // threshold for considering an object to be jittering
+    constexpr float anchorTimerThreshold = 5.0f; // time an object must be within the jitter threshold to fall asleep 
+
     const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (GameObjectHandle handle : awakeHandles) {
         GameObject* objPtr = stepPtrCache.get(handle);
         if (!objPtr->allowSleep) continue;
         if (objPtr->inSleepTransition) continue;
 
-        // #TODO: Fixa anchoring så att objekt kan somna även om de sitter fast i en hög av andra sovande objekt.
+        bool goingToSleep = false;
+
+        // anchor point logic
+        if (glm::abs(objPtr->anchorPoint.x - objPtr->position.x) < jitterThreshold &&
+            glm::abs(objPtr->anchorPoint.y - objPtr->position.y) < jitterThreshold &&
+            glm::abs(objPtr->anchorPoint.z - objPtr->position.z) < jitterThreshold) 
+        {
+            // object is within jitter threshold of anchor point, increase timer
+            objPtr->anchorTimer += dt;
+        }
+        else {
+            // decrease timer if object moves away from anchor point (but never below 0)
+            objPtr->anchorTimer = glm::max(0.0f, objPtr->anchorTimer - dt);
+        }
+
+        // set anchor point if timer is 0
+        if (objPtr->anchorTimer == 0.0f) {
+            objPtr->anchorPoint = objPtr->position;
+        }
+
+        // check if anchor timer has exceeded threshold
+        if (objPtr->anchorTimer >= anchorTimerThreshold) {
+            goingToSleep = true;
+        }
 
         // sleep counter
         if (glm::length(objPtr->linearVelocity) < objPtr->velocityThreshold and
@@ -906,6 +932,10 @@ void PhysicsEngine::decideSleep()
         }
 
         if (objPtr->sleepCounter >= objPtr->sleepCounterThreshold) {
+            goingToSleep = true;
+        }
+
+        if (goingToSleep) {
             toSleep.push_back(handle);
         }
     }

@@ -7,7 +7,7 @@ class BVHTree {
 public:
     BVHTree() = default;
 
-    void init(SlotMap<GameObject, GameObjectHandle>* s);
+    void init(SlotMap<GameObject, GameObjectHandle>* s, int allocSize);
 
     using Element = GameObjectHandle;
     bool dirty = false;
@@ -42,8 +42,8 @@ public:
     void singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) const;
 
     int insertLeaf(GameObjectHandle handle);
-    Node* findBestSibling(AABB& box);
-    Node* createLeaf(GameObjectHandle handle, GameObject* objPtr);
+    int findBestSibling(AABB& box);
+    int createLeaf(GameObjectHandle handle, GameObject* objPtr);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);

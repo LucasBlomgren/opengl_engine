@@ -72,7 +72,27 @@ void Editor::EditorMain::activate() {
 }
 void Editor::EditorMain::deactivate() {
     dropObject();
-    lastHitData = {};
+
+    // clear hover/selection states on objects to avoid stuck states
+    if (objectIsSelected) {
+        GameObject* obj = world->getGameObjects().try_get(selectedObjectHandle);
+        if (obj) {
+            obj->selectedByEditor = false;
+        }
+        objectIsSelected = false;
+        selectedObjectHandle = GameObjectHandle{};
+    }
+
+    if (objectIsHovered) {
+        GameObject* obj = world->getGameObjects().try_get(hoveredObjectHandle);
+        if (obj) {
+            obj->hoveredByEditor = false;
+        }
+        objectIsHovered = false;
+        hoveredObjectHandle = GameObjectHandle{};
+    }
+
+    selectedObjectIsBeingMoved = false;
 }
 
 // -----------------------------------
@@ -119,13 +139,13 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         mouseYLastFrame = in.mousePos.y;
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-            if (objectIsSelected == false) {
+            if (!objectIsSelected) {
                 rayCast(SELECT_RANGE);
                 selectObject(ctx);
             }
             else {
                 RaycastHit hitData = rayCast(SELECT_RANGE);
-                if (hitData.hit == false) {
+                if (!hitData.hit) {
                     dropObject();
                 }
                 else if (hitData.objectHandle.slot != selectedObjectHandle.slot) {
@@ -151,6 +171,10 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             consumed.mouse = true;
         }
 
+        selectedObjectIsBeingMoved = false;
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && in.mouseDown[GLFW_MOUSE_BUTTON_2] && objectIsSelected) {
+            selectedObjectIsBeingMoved = true;
+        }
 
         static bool wasDown = false;
         static float shootTimer = 0.0f;
@@ -313,22 +337,21 @@ void Editor::EditorMain::update(Shader& shader) {
     // raycast and draw placement AABB
     createPlaceObjectAABB(shader);
 
-    objectIsHovered = false;
-
     // clear previous hover state
-    if (lastHitData.hit == true) {
-        GameObject* hoveredObj = world->getGameObjects().try_get(lastHitData.objectHandle);
+    if (objectIsHovered) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(hoveredObjectHandle);
         hoveredObj->hoveredByEditor = false;
+        objectIsHovered = false;
     }
 
     // raycast for hover
-    rayCast(SELECT_RANGE);
+    RaycastHit raycast = rayCast(SELECT_RANGE);
 
     // set new hover state
-    if (lastHitData.hit == true) {
-        GameObject* hoveredObj = world->getGameObjects().try_get(lastHitData.objectHandle);
+    if (raycast.hit && !selectedObjectIsBeingMoved) {
+        GameObject* hoveredObj = world->getGameObjects().try_get(raycast.objectHandle);
         hoveredObj->hoveredByEditor = true;
-        hoveredObjectHandle = lastHitData.objectHandle;
+        hoveredObjectHandle = raycast.objectHandle;
         objectIsHovered = true;
     }
 }
@@ -337,7 +360,7 @@ void Editor::EditorMain::update(Shader& shader) {
 //      Selection 
 // -----------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
-    if (objectIsSelected == false) return;
+    if (!objectIsSelected) return;
 
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
     glm::vec3 worldOffset = selectedObject->position - camera->position;
@@ -352,14 +375,15 @@ void Editor::EditorMain::syncSelectionOffset() {
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
     if (objectIsSelected) return;
 
-    RaycastHit& hitData = lastHitData;
+    RaycastHit raycast = rayCast(SELECT_RANGE);
 
     // no hit return
-    if (hitData.hit == false) {
+    if (!raycast.hit) {
         return;
     }
 
-    selectedObjectHandle = hitData.objectHandle;
+    objectIsSelected = true;
+    selectedObjectHandle = raycast.objectHandle;
 
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
     selectedObject->selectedByEditor = true;
@@ -381,21 +405,19 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-    if (objectIsSelected == false)
+    if (!objectIsSelected)
         return;
 
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
 
-    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
-
     // position
+    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
     glm::vec3 newPos = camera->position + worldOffset;
     selectedObject->position = newPos;
+    selectedObject->lastPosition = newPos;
 
     // velocity
     //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
-
-    selectedObject->lastPosition = newPos;
 
     selectedObject->modelMatrixDirty = true;
     selectedObject->aabbDirty = true;
@@ -430,6 +452,7 @@ void Editor::EditorMain::dropObject() {
     selectedObjectHandle = {};
     hoveredObjectHandle = {};
     panelManager->ctx.objectIsSelected = false;
+    panelManager->ctx.selectedObjectHandle = {};
 }
 
 // place object at placement AABB position
@@ -445,10 +468,6 @@ void Editor::EditorMain::placeObject() {
     newObject->linearVelocity = glm::vec3(0.0f);
 }
 
-// get raycast
-RaycastHit& Editor::EditorMain::getLastRayHit() {
-    return lastHitData;
-}
 // Raycast from camera through mouse cursor into world
 RaycastHit Editor::EditorMain::rayCast(float length)
 {
@@ -490,7 +509,6 @@ RaycastHit Editor::EditorMain::rayCast(float length)
     Ray r(camera->position, dir, SELECT_RANGE);
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
-    lastHitData = hitData;
     return hitData;
 }
 

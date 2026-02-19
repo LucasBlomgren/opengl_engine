@@ -11,15 +11,16 @@ void BroadphaseManager::init(SlotMap<GameObject, GameObjectHandle>* sm, std::vec
     slotMap = sm;
     terrainTriangles = terrainTris;
 
-    awakeBvh.init(sm);
-    asleepBvh.init(sm);
-    staticBvh.init(sm);
+    uint32_t slotCap = sm->dense().capacity();
+
+    awakeBvh.init(sm, slotCap);
+    asleepBvh.init(sm, slotCap);
+    staticBvh.init(sm, slotCap);
 
     awakeHandles.clear();
     asleepHandles.clear();
     staticHandles.clear();
 
-    uint32_t slotCap = sm->dense().capacity();
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);
     staticHandles.reserve(slotCap * 2);

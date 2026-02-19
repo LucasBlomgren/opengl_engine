@@ -11,8 +11,8 @@
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "bvh/treetree_query.h"
-#include "broadphase_manager.h"
-#include "broadphase_pairs.h"
+#include "broadphase/broadphase_manager.h"
+#include "broadphase/broadphase_pairs.h"
 
 #include "tri.h"
 
@@ -103,9 +103,28 @@ private:
         }
 
         GameObject* get(GameObjectHandle h) {
-            auto& slot = cache[h.slot];
-            if (slot) return slot;
-            slot = sm->try_get(h); // gen-check en gång
+            // 1) Hämta vad cachen tror
+            GameObject*& slot = cache[h.slot];
+
+            // 2) Hämta "sanningen" från slotmap just nu
+            GameObject* real = sm->try_get(h);  // gen-check + aktuell adress
+
+            // Om handle är invalid -> crasha tidigt, eller returnera nullptr
+            if (!real) {
+                // Om du *vill* kunna cache:a nullptr, hantera separat.
+                __debugbreak();
+                return nullptr;
+            }
+
+            // 3) Om vi redan har cacheat en pekare, verifiera att den fortfarande matchar
+            if (slot && slot != real) {
+                // Här har dense flyttat, eller din cache-slot pekar på gammalt minne
+                __debugbreak();
+            }
+
+            // 4) Fyll cachen om tom
+            if (!slot) slot = real;
+
             return slot;
         }
     };

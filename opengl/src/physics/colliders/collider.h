@@ -17,7 +17,7 @@ enum class ColliderType {
 using ColliderShape = std::variant<OOBB, Sphere>;
 
 struct Collider {
-    GameObject* owner;
+    GameObject* owner;    // #TODO: krasch här pga reallokering i slotmap. Kommer fixas när physics istället kommer jobba med PhysicsWorld och Collider handles 
     ColliderShape shape;
 
     Collider(GameObject* o) 

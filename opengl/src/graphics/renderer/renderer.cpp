@@ -406,6 +406,7 @@ void Renderer::render(
     // render raycast hit for player/editor
     if (engineState->isPlayerMode()) {
         renderRayCastHit(player->selectedObjectHandle, camera, builder);
+        renderRayCastHit(player->hoveredObjectHandle, camera, builder);
     } else {
         renderRayCastHit(editor->selectedObjectHandle, camera, builder);
         renderRayCastHit(editor->hoveredObjectHandle, camera, builder);
@@ -837,13 +838,17 @@ void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneB
     // #TODO: fix logic for selected vs hovered
 
     GameObject* obj = world->getGameObjects().try_get(handle);
+    if (obj == nullptr) {
+        return;
+    }
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 
     bool selected;
-    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; } 
-    else if (obj->hoveredByEditor) { selected = false; } 
+    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
+    else if (obj->hoveredByEditor) { selected = false; }
+    else return;
 
     if (obj->colliderType == ColliderType::CUBOID) {
         OOBB& box = std::get<OOBB>(obj->collider.shape);

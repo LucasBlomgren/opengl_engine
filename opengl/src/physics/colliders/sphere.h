@@ -14,7 +14,8 @@ public:
         radius = radi;
     }
 
-    void update(const glm::mat4& modelMatrix) {
+    void update(const glm::mat4& modelMatrix, float newRadius) {
         wCenter = glm::vec3(modelMatrix * glm::vec4(lCenter, 1.0f));
+        radius = newRadius;
     }
 };

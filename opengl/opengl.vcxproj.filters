@@ -42,7 +42,7 @@
     <ClCompile Include="src\core\timer.cpp" />
     <ClCompile Include="src\core\camera.cpp" />
     <ClCompile Include="src\core\input_manager.cpp" />
-    <ClCompile Include="src\physics\broadphase_manager.cpp" />
+    <ClCompile Include="src\physics\broadphase\broadphase_manager.cpp" />
     <ClCompile Include="Linking\include\imgui-docking\imgui.cpp" />
     <ClCompile Include="Linking\include\imgui-docking\imgui_demo.cpp" />
     <ClCompile Include="Linking\include\imgui-docking\imgui_draw.cpp" />
@@ -131,9 +131,9 @@
     <ClInclude Include="src\core\imgui_manager.h" />
     <ClInclude Include="src\core\timer.h" />
     <ClInclude Include="src\core\input_manager.h" />
-    <ClInclude Include="src\physics\broadphase_manager.h" />
-    <ClInclude Include="src\physics\broadphase_types.h" />
-    <ClInclude Include="src\physics\broadphase_pairs.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\broadphase_pairs.h" />
     <ClInclude Include="src\graphics\debug\quad_renderer.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />

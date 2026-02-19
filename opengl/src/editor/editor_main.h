@@ -60,6 +60,7 @@ public:
 
     // select object
     bool objectIsSelected = false;
+    bool selectedObjectIsBeingMoved = false;
     bool objectIsHovered = false;
     GameObjectHandle selectedObjectHandle;
     GameObjectHandle hoveredObjectHandle;
@@ -72,7 +73,6 @@ public:
 
     // raycast for placement/selection/etc
     RaycastHit rayCast(float length);
-    RaycastHit& getLastRayHit();
     AABB aabbToPlace;
     bool placementObstructed = true;
     void placeObject();
@@ -112,7 +112,6 @@ private:
     float mouseYLastFrame = 0.0f;
 
     // selection and placement
-    RaycastHit lastHitData;
     bool drawPlacementAABB = false;
     constexpr static float SELECT_RANGE = 5000.0f;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;

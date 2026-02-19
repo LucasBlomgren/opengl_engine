@@ -654,7 +654,7 @@ void SceneBuilder::mainScene() {
             float z = 100.5f + row - (col + 0.5f) / 2;
             glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
-            world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(1), 1, 0, glm::quat(1, 0, 0, 0), 99, 0, randomColor);
+            world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(x, y, z), glm::vec3(1), 1, 0, glm::quat(1, 0, 0, 0), 3.0f, 0, randomColor);
         }
     }
 

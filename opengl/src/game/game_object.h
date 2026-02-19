@@ -13,7 +13,7 @@
 #include "colliders/sphere.h"
 #include "debug/oobb_renderer.h"
 #include "debug/aabb_renderer.h"
-#include "broadphase_types.h"
+#include "broadphase/broadphase_types.h"
 
 #include <glm/gtc/quaternion.hpp>    // defines glm::quat
 #include <glm/gtx/quaternion.hpp>    // extra helpers om du behöver
@@ -50,7 +50,6 @@ struct CircBuffer {
 class GameObject {
 public:
     int id;
-    GameObjectHandle handle;
 
     // hot data
     glm::vec3 position;
@@ -103,6 +102,9 @@ public:
     float velocityThreshold = 0;
     float angularVelocityThreshold = 0;
 
+    float anchorTimer = 0.0f;      // used for sleeping to prevent jittering when waking up
+    glm::vec3 anchorPoint;    // used for sleeping to prevent jittering when waking up
+
     int totalCollisionCount = 0;
     float lastAvg = 0.0f;
     CircBuffer collisionHistory;
@@ -136,6 +138,7 @@ public:
     // constructor
     GameObject(
         int id,
+        Shader* shader,
         Mesh* mesh,
         glm::vec3 position,
         glm::vec3 scale,
@@ -150,7 +153,9 @@ public:
         bool seeThrough = false
     )
         : id(id),
+        shader(shader),
         mesh(mesh),
+        collider(this),
         position(position),
         scale(scale),
         allowGravity(true),
@@ -162,7 +167,6 @@ public:
         asleep(asleep),
         color(color),
         colliderType(colliderType),
-        collider(this),
         seeThrough(seeThrough)
     {
         // physics stuff
@@ -179,6 +183,8 @@ public:
             invMass = 0;
             asleep = false;
         }
+
+        anchorPoint = position;
 
         // broadphase bucket
         if (asleep) {
