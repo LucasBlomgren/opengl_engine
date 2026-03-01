@@ -62,49 +62,42 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 <table>
   <tr>
     <td valign="top" width="33%">
-      <b>Global</b>
-      <table>
-        <tr><td>Toggle UI</td><td><b>F1</b></td></tr>
-        <tr><td>Toggle Editor / Player</td><td><b>V</b></td></tr>
-        <tr><td>Pause physics</td><td><b>G</b></td></tr>
-        <tr><td>Step (paused)</td><td><b>F</b></td></tr>
-      </table>
+      <b>Global</b><br/>
+      Toggle UI: <b>F1</b><br/>
+      Toggle Editor / Player: <b>V</b><br/>
+      Pause physics: <b>G</b><br/>
+      Step (paused): <b>F</b><br/>
     </td>
 
     <td valign="top" width="33%">
-      <b>Editor</b>
-      <table>
-        <tr><td>Mouse look (viewport)</td><td><b>Hold RMB</b></td></tr>
-        <tr><td>Move camera</td><td><b>W/A/S/D</b></td></tr>
-        <tr><td>Up / Down</td><td><b>E / Q</b></td></tr>
-        <tr><td>Faster movement</td><td><b>Hold LShift</b></td></tr>
-        <tr><td>Select / raycast</td><td><b>LMB</b></td></tr>
-        <tr><td>Drag selected</td><td><b>Hold LMB</b></td></tr>
-        <tr><td>Manipulate selected</td><td><b>Hold LMB + RMB</b></td></tr>
-        <tr><td>Toggle placement AABB</td><td><b>1</b></td></tr>
-        <tr><td>Object rain (cubes)</td><td><b>2</b></td></tr>
-        <tr><td>Object rain (spheres)</td><td><b>3</b></td></tr>
-        <tr><td>Sleep all</td><td><b>4</b></td></tr>
-        <tr><td>Awaken all</td><td><b>5</b></td></tr>
-        <tr><td>Shoot spheres</td><td><b>Hold MB4</b></td></tr>
-      </table>
+      <b>Editor</b><br/>
+      Mouse look (viewport): <b>Hold RMB</b><br/>
+      Move camera: <b>W/A/S/D</b><br/>
+      Up / Down: <b>E / Q</b><br/>
+      Faster movement: <b>Hold LShift</b><br/>
+      Select / raycast: <b>LMB</b><br/>
+      Drag selected: <b>Hold LMB</b><br/>
+      Manipulate selected: <b>Hold LMB + RMB</b><br/>
+      Toggle placement AABB: <b>1</b><br/>
+      Object rain (cubes): <b>2</b><br/>
+      Object rain (spheres): <b>3</b><br/>
+      Sleep all: <b>4</b><br/>
+      Awaken all: <b>5</b><br/>
+      Shoot spheres: <b>Hold MB4</b><br/>
     </td>
 
     <td valign="top" width="33%">
-      <b>Player</b>
-      <table>
-        <tr><td>Move</td><td><b>W/A/S/D</b></td></tr>
-        <tr><td>Jump</td><td><b>Space</b></td></tr>
-        <tr><td>Select / drag</td><td><b>LMB</b></td></tr>
-        <tr><td>Place object</td><td><b>RMB</b></td></tr>
-        <tr><td>Shoot object</td><td><b>MB4</b></td></tr>
-      </table>
+      <b>Player</b><br/>
+      Move: <b>W/A/S/D</b><br/>
+      Jump: <b>Space</b><br/>
+      Select / drag: <b>LMB</b><br/>
+      Place object: <b>RMB</b><br/>
+      Shoot object: <b>MB4</b><br/>
       <br/>
       <sub>In player mode, mouse look is always enabled (cursor captured).</sub>
     </td>
   </tr>
 </table>
-
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
 - Broad-phase collision management (`broadphase_manager`, `broadphase_pairs`)
