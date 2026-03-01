@@ -98,6 +98,7 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
     </td>
   </tr>
 </table>
+
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
 - Broad-phase collision management (`broadphase_manager`, `broadphase_pairs`)
