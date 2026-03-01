@@ -6,21 +6,47 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 
 ## Demos (click to watch on YouTube)
 
-### Pyramid stack stress test (YouTube)
-Click the GIF to open the full video on YouTube.
-<a href="https://www.youtube.com/watch?v=RYxrwt0Qe-M" target="_blank" rel="noopener noreferrer">
-  <img src="media/pyramid.gif" width="700">
-</a>
-
-### Terrain + BVH stress test (YouTube)
-Click the GIF to open the full video on YouTube.
-<a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
-  <img src="media/terrain_bvh.gif" width="700">
-</a>
-
-### Object manipulation (raycast) + sleeping
-Lifting/moving a dense stack using raycast-based interaction, then letting the scene settle and go to sleep.
-<img src="media/object_manipulation.gif" width="700">
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO1" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb1.gif" width="180">
+      </a><br/>
+      <sub><b>Pyramid</b></sub>
+    </td>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO2" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb2.gif" width="180">
+      </a><br/>
+      <sub><b>Terrain BVH</b></sub>
+    </td>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO3" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb3.gif" width="180">
+      </a><br/>
+      <sub><b>Raycast Lift</b></sub>
+    </td>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO4" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb4.gif" width="180">
+      </a><br/>
+      <sub><b>Demo 4</b></sub>
+    </td>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO5" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb5.gif" width="180">
+      </a><br/>
+      <sub><b>Demo 5</b></sub>
+    </td>
+    <td align="center">
+      <a href="https://www.youtube.com/watch?v=VIDEO6" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb6.gif" width="180">
+      </a><br/>
+      <sub><b>Demo 6</b></sub>
+    </td>
+  </tr>
+</table>
+<p><sub>All thumbnails are clickable and link to the full demos on YouTube.</sub></p>
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
