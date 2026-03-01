@@ -7,19 +7,19 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
   <tr>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
-        <img src="media/pyramid.gif" width="260">
+        <img src="media/pyramid.gif" width="250">
       </a><br/>
       <sub><b>Pyramid stack</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
-        <img src="media/terrain.gif" width="260">
+        <img src="media/terrain.gif" width="250">
       </a><br/>
       <sub><b>Terrain + BVH debug</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
-        <img src="media/tumbler.gif" width="260">
+        <img src="media/tumbler.gif" width="250">
       </a><br/>
       <sub><b>Physics based tumbler</b></sub>
     </td>
@@ -28,19 +28,19 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
   <tr>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=LhIm9BXafNY" target="_blank" rel="noopener noreferrer">
-        <img src="media/objectmanip.gif" width="260">
+        <img src="media/objectmanip.gif" width="250">
       </a><br/>
       <sub><b>Object manipulation</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=CNvF_xG1Sus" target="_blank" rel="noopener noreferrer">
-        <img src="media/inspector.gif" width="260">
+        <img src="media/inspector.gif" width="250">
       </a><br/>
       <sub><b>Object inspector</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=7ER52cchTe0" target="_blank" rel="noopener noreferrer">
-        <img src="media/debug.gif" width="260">
+        <img src="media/debug.gif" width="250">
       </a><br/>
       <sub><b>Debug visualizations</b></sub>
     </td>
