@@ -1,49 +1,6 @@
 # opengl_engine
 A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
-## 1) General
-**opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability - especially for physics-heavy scenes with lots of objects.
-
-## Build & Run
-- Platform: **Windows**
-- IDE: **Visual Studio** (open `opengl_engine.sln`)
-- Recommended: **x64 / Release**
-
-Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
-
-## Controls
-
-### Global
-- **F1**: Toggle UI
-- **V**: Toggle **Editor / Player** mode
-- **G**: Pause physics
-- **F**: Advance one physics step (when paused)
-
-### Camera (Editor mode)
-- **RMB (hold)**: Mouse look + capture cursor (viewport)
-- **W/A/S/D**: Move camera
-- **Q / E**: Move down / up
-- **Left Shift (hold)**: Faster camera movement
-
-### Editor interaction
-- **LMB**: Select / interact (raycast)
-- **LMB (hold)**: Drag selected object
-- **LMB + RMB (hold)**: Move selected object (editor manipulation mode)
-- **1**: Toggle placement AABB
-- **2**: Toggle “object rain” (cubes)
-- **3**: Toggle “object rain” (spheres)
-- **4**: Sleep all objects
-- **5**: Awaken all objects
-- **Mouse button 4 (hold)**: Shoot spheres (stress test)
-
-### Player mode
-- Mouse look always enabled (cursor captured)
-- **W/A/S/D**: Move
-- **Space**: Jump (when grounded)
-- **LMB**: Select / drag
-- **RMB**: Place object
-- **Mouse button 4**: Shoot object
-
 ## Demos (click to watch on YouTube)
 
 <table>
@@ -89,6 +46,49 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
     </td>
   </tr>
 </table>
+
+## 1) General
+**opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability - especially for physics-heavy scenes with lots of objects.
+
+## Build & Run
+- Platform: **Windows**
+- IDE: **Visual Studio** (open `opengl_engine.sln`)
+- Recommended: **x64 / Release**
+
+Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
+
+## Controls
+
+### Global
+- **F1**: Toggle UI
+- **V**: Toggle **Editor / Player** mode
+- **G**: Pause physics
+- **F**: Advance one physics step (when paused)
+
+### Camera (Editor mode)
+- **RMB (hold)**: Mouse look + capture cursor (viewport)
+- **W/A/S/D**: Move camera
+- **Q / E**: Move down / up
+- **Left Shift (hold)**: Faster camera movement
+
+### Editor interaction
+- **LMB**: Select / interact (raycast)
+- **LMB (hold)**: Drag selected object
+- **LMB + RMB (hold)**: Move selected object (editor manipulation mode)
+- **1**: Toggle placement AABB
+- **2**: Toggle “object rain” (cubes)
+- **3**: Toggle “object rain” (spheres)
+- **4**: Sleep all objects
+- **5**: Awaken all objects
+- **Mouse button 4 (hold)**: Shoot spheres (stress test)
+
+### Player mode
+- Mouse look always enabled (cursor captured)
+- **W/A/S/D**: Move
+- **Space**: Jump (when grounded)
+- **LMB**: Select / drag
+- **RMB**: Place object
+- **Mouse button 4**: Shoot object
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
