@@ -12,15 +12,23 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 
 ## Controls
-### General
-- **F1**: Toggle UI
-- **Shift**: Faster camera movement
 
-### Editor mode (default)
+### Global
+- **F1**: Toggle UI
+- **V**: Toggle **Editor / Player** mode
+- **G**: Pause physics
+- **F**: Advance one physics step (when paused)
+
+### Camera (Editor mode)
 - **RMB (hold)**: Mouse look + capture cursor (viewport)
-- **W/A/S/D**: Move camera (Q/E down/up)
+- **W/A/S/D**: Move camera
+- **Q / E**: Move down / up
+- **Left Shift (hold)**: Faster camera movement
+
+### Editor interaction
 - **LMB**: Select / interact (raycast)
-- **LMB + RMB (hold)**: Move selected object
+- **LMB (hold)**: Drag selected object
+- **LMB + RMB (hold)**: Move selected object (editor manipulation mode)
 - **1**: Toggle placement AABB
 - **2**: Toggle “object rain” (cubes)
 - **3**: Toggle “object rain” (spheres)
@@ -29,9 +37,9 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 - **Mouse button 4 (hold)**: Shoot spheres (stress test)
 
 ### Player mode
-- **Mouse look** always enabled
+- Mouse look always enabled (cursor captured)
 - **W/A/S/D**: Move
-- **Space**: Jump
+- **Space**: Jump (when grounded)
 - **LMB**: Select / drag
 - **RMB**: Place object
 - **Mouse button 4**: Shoot object
