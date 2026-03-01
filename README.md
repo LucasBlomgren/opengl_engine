@@ -1,6 +1,7 @@
 # opengl_engine
 A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
+## Terrain stress test with many objects, showcasing BVH-based broad-phase acceleration (including terrain BVH) for efficient collision queries at scale.
 <a href="https://www.youtube.com/watch?v=rpU5otEmwG8">
   <img src="media/terrain_thumbnail.png" width="700">
 </a>
