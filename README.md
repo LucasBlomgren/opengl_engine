@@ -9,44 +9,48 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 <table>
   <tr>
     <td align="center">
-      <a href="https://www.youtube.com/watch?v=RYxrwt0Qe-M" target="_blank" rel="noopener noreferrer">
-        <img src="media/stack.gif" width="180">
+      <a href="https://www.youtube.com/watch?v=VIDEO1" target="_blank" rel="noopener noreferrer">
+        <img src="media/thumb1.gif" width="260">
       </a><br/>
-      <sub><b>Pyramid</b></sub>
+      <sub><b>Pyramid stack</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO2" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb2.gif" width="180">
+        <img src="media/thumb2.gif" width="260">
       </a><br/>
-      <sub><b>Terrain BVH</b></sub>
+      <sub><b>Terrain + BVH</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO3" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb3.gif" width="180">
+        <img src="media/thumb3.gif" width="260">
       </a><br/>
-      <sub><b>Raycast Lift</b></sub>
+      <sub><b>Raycast lift</b></sub>
     </td>
+  </tr>
+
+  <tr>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO4" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb4.gif" width="180">
+        <img src="media/thumb4.gif" width="260">
       </a><br/>
       <sub><b>Demo 4</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO5" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb5.gif" width="180">
+        <img src="media/thumb5.gif" width="260">
       </a><br/>
       <sub><b>Demo 5</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO6" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb6.gif" width="180">
+        <img src="media/thumb6.gif" width="260">
       </a><br/>
       <sub><b>Demo 6</b></sub>
     </td>
   </tr>
 </table>
-<p><sub>All thumbnails are clickable and link to the full demos on YouTube.</sub></p>
+
+<p><sub>Click any thumbnail to watch the full demo on YouTube.</sub></p>
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
