@@ -18,22 +18,22 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
       <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
         <img src="media/terrain.gif" width="260">
       </a><br/>
-      <sub><b>Terrain + BVH</b></sub>
+      <sub><b>Terrain + BVH debug</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
         <img src="media/tumbler.gif" width="260">
       </a><br/>
-      <sub><b>Raycast lift</b></sub>
+      <sub><b>Object manipulation</b></sub>
     </td>
   </tr>
 
   <tr>
     <td align="center">
-      <a href="https://www.youtube.com/watch?v=VIDEO4" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb4.gif" width="260">
+      <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
+        <img src="media/tumbler.gif" width="260">
       </a><br/>
-      <sub><b>Demo 4</b></sub>
+      <sub><b>Physics based tumbler</b></sub>
     </td>
     <td align="center">
       <a href="https://www.youtube.com/watch?v=VIDEO5" target="_blank" rel="noopener noreferrer">
