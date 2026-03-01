@@ -60,35 +60,38 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 ## Controls
 
 ### Global
-- **F1**: Toggle UI
-- **V**: Toggle **Editor / Player** mode
-- **G**: Pause physics
-- **F**: Advance one physics step (when paused)
+| Action | Key |
+|---|---|
+| Toggle UI | **F1** |
+| Toggle Editor / Player mode | **V** |
+| Pause physics | **G** |
+| Step one physics tick (when paused) | **F** |
 
-### Camera (Editor mode)
-- **RMB (hold)**: Mouse look + capture cursor (viewport)
-- **W/A/S/D**: Move camera
-- **Q / E**: Move down / up
-- **Left Shift (hold)**: Faster camera movement
+### Editor (camera + interaction)
+| Action | Input |
+|---|---|
+| Mouse look (viewport) | **Hold RMB** |
+| Move camera | **W/A/S/D** |
+| Up / Down | **E / Q** |
+| Faster movement | **Hold Left Shift** |
+| Select / interact (raycast) | **LMB** |
+| Drag selected object | **Hold LMB** |
+| Manipulate selected object | **Hold LMB + RMB** |
+| Toggle placement AABB | **1** |
+| Toggle object rain (cubes) | **2** |
+| Toggle object rain (spheres) | **3** |
+| Sleep all objects | **4** |
+| Awaken all objects | **5** |
+| Shoot spheres (stress test) | **Hold Mouse button 4** |
 
-### Editor interaction
-- **LMB**: Select / interact (raycast)
-- **LMB (hold)**: Drag selected object
-- **LMB + RMB (hold)**: Move selected object (editor manipulation mode)
-- **1**: Toggle placement AABB
-- **2**: Toggle “object rain” (cubes)
-- **3**: Toggle “object rain” (spheres)
-- **4**: Sleep all objects
-- **5**: Awaken all objects
-- **Mouse button 4 (hold)**: Shoot spheres (stress test)
-
-### Player mode
-- Mouse look always enabled (cursor captured)
-- **W/A/S/D**: Move
-- **Space**: Jump (when grounded)
-- **LMB**: Select / drag
-- **RMB**: Place object
-- **Mouse button 4**: Shoot object
+### Player
+| Action | Input |
+|---|---|
+| Move | **W/A/S/D** |
+| Jump | **Space** |
+| Select / drag | **LMB** |
+| Place object | **RMB** |
+| Shoot object | **Mouse button 4** |
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
