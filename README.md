@@ -4,7 +4,7 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 ## Demos (click to watch on YouTube)
 
 <table>
-  <tr>
+  <tr bgcolor="#0d1117">
     <td align="center">
       <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
         <img src="media/pyramid.gif" width="250">
@@ -25,7 +25,7 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
     </td>
   </tr>
 
-  <tr>
+  <tr bgcolor="#0d1117">
     <td align="center">
       <a href="https://www.youtube.com/watch?v=LhIm9BXafNY" target="_blank" rel="noopener noreferrer">
         <img src="media/objectmanip.gif" width="250">
