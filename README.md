@@ -1,13 +1,26 @@
 # opengl_engine
 A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
-## Terrain stress test with many objects, showcasing BVH-based broad-phase acceleration (including terrain BVH) for efficient collision queries at scale.
-<a href="https://www.youtube.com/watch?v=rpU5otEmwG8">
-  <img src="media/terrain_thumbnail.png" width="700">
-</a>
-
 ## 1) General
 **opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability—especially for physics-heavy scenes with lots of objects.
+
+## Demos (click to watch on YouTube)
+
+### Pyramid stack stress test (YouTube)
+Click the GIF to open the full video on YouTube.
+<a href="https://www.youtube.com/watch?v=RYxrwt0Qe-M" target="_blank" rel="noopener noreferrer">
+  <img src="media/pyramid.gif" width="700">
+</a>
+
+### Terrain + BVH stress test (YouTube)
+Click the GIF to open the full video on YouTube.
+<a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
+  <img src="media/terrain_bvh.gif" width="700">
+</a>
+
+### Object manipulation (raycast) + sleeping
+Lifting/moving a dense stack using raycast-based interaction, then letting the scene settle and go to sleep.
+<img src="media/object_manipulation.gif" width="700">
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
