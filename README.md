@@ -57,41 +57,53 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 
 Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 
-## Controls
+<h2>Controls</h2>
 
-### Global
-| Action | Key |
-|---|---|
-| Toggle UI | **F1** |
-| Toggle Editor / Player mode | **V** |
-| Pause physics | **G** |
-| Step one physics tick (when paused) | **F** |
+<table>
+  <tr>
+    <td valign="top" width="33%">
+      <b>Global</b>
+      <table>
+        <tr><td>Toggle UI</td><td><b>F1</b></td></tr>
+        <tr><td>Toggle Editor / Player</td><td><b>V</b></td></tr>
+        <tr><td>Pause physics</td><td><b>G</b></td></tr>
+        <tr><td>Step (paused)</td><td><b>F</b></td></tr>
+      </table>
+    </td>
 
-### Editor (camera + interaction)
-| Action | Input |
-|---|---|
-| Mouse look (viewport) | **Hold RMB** |
-| Move camera | **W/A/S/D** |
-| Up / Down | **E / Q** |
-| Faster movement | **Hold Left Shift** |
-| Select / interact (raycast) | **LMB** |
-| Drag selected object | **Hold LMB** |
-| Manipulate selected object | **Hold LMB + RMB** |
-| Toggle placement AABB | **1** |
-| Toggle object rain (cubes) | **2** |
-| Toggle object rain (spheres) | **3** |
-| Sleep all objects | **4** |
-| Awaken all objects | **5** |
-| Shoot spheres (stress test) | **Hold Mouse button 4** |
+    <td valign="top" width="33%">
+      <b>Editor</b>
+      <table>
+        <tr><td>Mouse look (viewport)</td><td><b>Hold RMB</b></td></tr>
+        <tr><td>Move camera</td><td><b>W/A/S/D</b></td></tr>
+        <tr><td>Up / Down</td><td><b>E / Q</b></td></tr>
+        <tr><td>Faster movement</td><td><b>Hold LShift</b></td></tr>
+        <tr><td>Select / raycast</td><td><b>LMB</b></td></tr>
+        <tr><td>Drag selected</td><td><b>Hold LMB</b></td></tr>
+        <tr><td>Manipulate selected</td><td><b>Hold LMB + RMB</b></td></tr>
+        <tr><td>Toggle placement AABB</td><td><b>1</b></td></tr>
+        <tr><td>Object rain (cubes)</td><td><b>2</b></td></tr>
+        <tr><td>Object rain (spheres)</td><td><b>3</b></td></tr>
+        <tr><td>Sleep all</td><td><b>4</b></td></tr>
+        <tr><td>Awaken all</td><td><b>5</b></td></tr>
+        <tr><td>Shoot spheres</td><td><b>Hold MB4</b></td></tr>
+      </table>
+    </td>
 
-### Player
-| Action | Input |
-|---|---|
-| Move | **W/A/S/D** |
-| Jump | **Space** |
-| Select / drag | **LMB** |
-| Place object | **RMB** |
-| Shoot object | **Mouse button 4** |
+    <td valign="top" width="33%">
+      <b>Player</b>
+      <table>
+        <tr><td>Move</td><td><b>W/A/S/D</b></td></tr>
+        <tr><td>Jump</td><td><b>Space</b></td></tr>
+        <tr><td>Select / drag</td><td><b>LMB</b></td></tr>
+        <tr><td>Place object</td><td><b>RMB</b></td></tr>
+        <tr><td>Shoot object</td><td><b>MB4</b></td></tr>
+      </table>
+      <br/>
+      <sub>In player mode, mouse look is always enabled (cursor captured).</sub>
+    </td>
+  </tr>
+</table>
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
