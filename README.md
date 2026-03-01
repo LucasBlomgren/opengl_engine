@@ -15,14 +15,14 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
       <sub><b>Pyramid stack</b></sub>
     </td>
     <td align="center">
-      <a href="https://www.youtube.com/watch?v=VIDEO2" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb2.gif" width="260">
+      <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
+        <img src="media/terrain.gif" width="260">
       </a><br/>
       <sub><b>Terrain + BVH</b></sub>
     </td>
     <td align="center">
-      <a href="https://www.youtube.com/watch?v=VIDEO3" target="_blank" rel="noopener noreferrer">
-        <img src="media/thumb3.gif" width="260">
+      <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
+        <img src="media/tumbler.gif" width="260">
       </a><br/>
       <sub><b>Raycast lift</b></sub>
     </td>
