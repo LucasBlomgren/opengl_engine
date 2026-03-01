@@ -3,51 +3,53 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 
 ## Demos (click to watch on YouTube)
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
-    <img src="media/pyramid.gif" width="250" />
-  </a>
-  
-  <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
-    <img src="media/terrain.gif" width="250" />
-  </a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
-    <img src="media/tumbler.gif" width="250" />
-  </a>
-</p>
+<div align="center">
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
+      <img src="media/pyramid.gif" width="250">
+    </a><br/>
+    <sub><b>Pyramid stack</b></sub>
+  </div>
 
-<p align="center">
-  <sub><b>Pyramid stack</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Terrain + BVH debug</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Physics based tumbler</b></sub>
-</p>
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
+      <img src="media/terrain.gif" width="250">
+    </a><br/>
+    <sub><b>Terrain + BVH debug</b></sub>
+  </div>
+
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=9N-Z2AVxhxM" target="_blank" rel="noopener noreferrer">
+      <img src="media/tumbler.gif" width="250">
+    </a><br/>
+    <sub><b>Physics based tumbler</b></sub>
+  </div>
+</div>
 
 <br/>
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=LhIm9BXafNY" target="_blank" rel="noopener noreferrer">
-    <img src="media/objectmanip.gif" width="250" />
-  </a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://www.youtube.com/watch?v=CNvF_xG1Sus" target="_blank" rel="noopener noreferrer">
-    <img src="media/inspector.gif" width="250" />
-  </a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://www.youtube.com/watch?v=7ER52cchTe0" target="_blank" rel="noopener noreferrer">
-    <img src="media/debug.gif" width="250" />
-  </a>
-</p>
+<div align="center">
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=LhIm9BXafNY" target="_blank" rel="noopener noreferrer">
+      <img src="media/objectmanip.gif" width="250">
+    </a><br/>
+    <sub><b>Object manipulation</b></sub>
+  </div>
 
-<p align="center">
-  <sub><b>Object manipulation</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Object inspector</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Debug visualizations</b></sub>
-</p>
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=CNvF_xG1Sus" target="_blank" rel="noopener noreferrer">
+      <img src="media/inspector.gif" width="250">
+    </a><br/>
+    <sub><b>Object inspector</b></sub>
+  </div>
+
+  <div style="display:inline-block; margin: 0 12px; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=7ER52cchTe0" target="_blank" rel="noopener noreferrer">
+      <img src="media/debug.gif" width="250">
+    </a><br/>
+    <sub><b>Debug visualizations</b></sub>
+  </div>
+</div>
 
 ## 1) General
 **opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability - especially for physics-heavy scenes with lots of objects.
