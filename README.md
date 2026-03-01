@@ -50,8 +50,6 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
   </tr>
 </table>
 
-<p><sub>Click any thumbnail to watch the full demo on YouTube.</sub></p>
-
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
 - Broad-phase collision management (`broadphase_manager`, `broadphase_pairs`)
