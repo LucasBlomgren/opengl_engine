@@ -1,8 +1,8 @@
 # opengl_engine
-A lightweight C++/OpenGL real-time engine built from scratch to explore engine architecture, rendering, physics, and editor tooling.
+A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
 ## 1) General
-**opengl_engine** is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability.
+**opengl_engine** is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability—especially for physics-heavy scenes with lots of objects.
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
@@ -10,6 +10,7 @@ A lightweight C++/OpenGL real-time engine built from scratch to explore engine a
 - BVH acceleration structures, including terrain support (`bvh`, `bvh_terrain`, `treetree_query`)
 - Narrow-phase collision detection using SAT (`sat`)
 - Collision manifolds + contact generation with multi-contact support (`collision_manifold`)
+- Sleeping/awake handling to reduce simulation cost in large scenes (integrated in the physics update flow)
 - Raycasting utilities (`raycast`)
 - Collider primitives: AABB, OOBB, sphere, triangle (`aabb`, `oobb`, `sphere`, `tri`, `collider`)
 
