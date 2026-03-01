@@ -6,8 +6,8 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 <table>
   <tr>
     <td align="center">
-      <a href="https://www.youtube.com/watch?v=RYxrwt0Qe-M" target="_blank" rel="noopener noreferrer">
-        <img src="media/stack.gif" width="260">
+      <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
+        <img src="media/pyramid.gif" width="260">
       </a><br/>
       <sub><b>Pyramid stack</b></sub>
     </td>
