@@ -1,8 +1,8 @@
 # opengl_engine
 A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
-<a href="media/terrain_thumbnail.png">
-  <img src="https://www.youtube.com/watch?v=rpU5otEmwG8" width="700">
+<a href="https://www.youtube.com/watch?v=rpU5otEmwG8">
+  <img src="media/terrain_thumbnail.png" width="700">
 </a>
 
 ## 1) General
