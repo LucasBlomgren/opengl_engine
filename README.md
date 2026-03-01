@@ -57,24 +57,6 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 
 Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 
-## Controls
-
-| Global | Editor | Player |
-|---|---|---|
-| **F1** Toggle UI | **RMB (hold)** Mouse look (viewport) | Mouse look always enabled |
-| **V** Toggle Editor/Player | **W/A/S/D** Move camera | **W/A/S/D** Move |
-| **G** Pause physics | **E / Q** Up / Down | **Space** Jump |
-| **F** Step (paused) | **LShift (hold)** Faster movement | **LMB** Select / drag |
-|  | **LMB** Select / raycast | **RMB** Place object |
-|  | **LMB (hold)** Drag selected | **MB4** Shoot object |
-|  | **LMB + RMB (hold)** Manipulate selected |  |
-|  | **1** Toggle placement AABB |  |
-|  | **2** Object rain (cubes) |  |
-|  | **3** Object rain (spheres) |  |
-|  | **4** Sleep all |  |
-|  | **5** Awaken all |  |
-|  | **MB4 (hold)** Shoot spheres |  |
-
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
 - Broad-phase collision management (`broadphase_manager`, `broadphase_pairs`)
