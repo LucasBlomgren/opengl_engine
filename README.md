@@ -80,7 +80,7 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 - Editor UI and integration (`editor_main`, `imgui_manager`)
 - Panel framework + built-in panels (`panel`, `panel_manager`, `inspector_panel`, `performance_panel`, `settings_panel`)
 - Viewport rendering infrastructure (`viewport_fbo`)
-- Interaction workflows intended to support fast iteration while developing the engine (inspection + debug visualization + picking/raycast integration)
+- Interaction workflows intended to support fast iteration while developing the engine (inspection + debug visualization + object selection/raycast integration)
 
 ## License
 MIT (see `LICENSE`).
