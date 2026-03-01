@@ -2,7 +2,7 @@
 A lightweight C++/OpenGL real-time engine built from scratch with a focus on physics, performance, and handling many objects in real time.
 
 ## 1) General
-**opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability—especially for physics-heavy scenes with lots of objects.
+**opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability - especially for physics-heavy scenes with lots of objects.
 
 ## Demos (click to watch on YouTube)
 
