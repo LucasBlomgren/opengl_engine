@@ -57,7 +57,7 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 
 Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 
-<h2>Controls</h2>
+## Controls
 
 <table>
   <tr>
