@@ -59,45 +59,21 @@ Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
 
 ## Controls
 
-<table>
-  <tr>
-    <td valign="top" width="33%">
-      <b>Global</b><br/>
-      Toggle UI: <b>F1</b><br/>
-      Toggle Editor / Player: <b>V</b><br/>
-      Pause physics: <b>G</b><br/>
-      Step (paused): <b>F</b><br/>
-    </td>
-
-    <td valign="top" width="33%">
-      <b>Editor</b><br/>
-      Mouse look (viewport): <b>Hold RMB</b><br/>
-      Move camera: <b>W/A/S/D</b><br/>
-      Up / Down: <b>E / Q</b><br/>
-      Faster movement: <b>Hold LShift</b><br/>
-      Select / raycast: <b>LMB</b><br/>
-      Drag selected: <b>Hold LMB</b><br/>
-      Manipulate selected: <b>Hold LMB + RMB</b><br/>
-      Toggle placement AABB: <b>1</b><br/>
-      Object rain (cubes): <b>2</b><br/>
-      Object rain (spheres): <b>3</b><br/>
-      Sleep all: <b>4</b><br/>
-      Awaken all: <b>5</b><br/>
-      Shoot spheres: <b>Hold MB4</b><br/>
-    </td>
-
-    <td valign="top" width="33%">
-      <b>Player</b><br/>
-      Move: <b>W/A/S/D</b><br/>
-      Jump: <b>Space</b><br/>
-      Select / drag: <b>LMB</b><br/>
-      Place object: <b>RMB</b><br/>
-      Shoot object: <b>MB4</b><br/>
-      <br/>
-      <sub>In player mode, mouse look is always enabled (cursor captured).</sub>
-    </td>
-  </tr>
-</table>
+| Global | Editor | Player |
+|---|---|---|
+| **F1** Toggle UI | **RMB (hold)** Mouse look (viewport) | Mouse look always enabled |
+| **V** Toggle Editor/Player | **W/A/S/D** Move camera | **W/A/S/D** Move |
+| **G** Pause physics | **E / Q** Up / Down | **Space** Jump |
+| **F** Step (paused) | **LShift (hold)** Faster movement | **LMB** Select / drag |
+|  | **LMB** Select / raycast | **RMB** Place object |
+|  | **LMB (hold)** Drag selected | **MB4** Shoot object |
+|  | **LMB + RMB (hold)** Manipulate selected |  |
+|  | **1** Toggle placement AABB |  |
+|  | **2** Object rain (cubes) |  |
+|  | **3** Object rain (spheres) |  |
+|  | **4** Sleep all |  |
+|  | **5** Awaken all |  |
+|  | **MB4 (hold)** Shoot spheres |  |
 
 ## 2) Physics
 - Custom rigid body simulation (`rigid_body`, `physics`, `physics_world`)
