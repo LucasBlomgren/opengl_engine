@@ -7,7 +7,7 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
   <a href="https://www.youtube.com/watch?v=hdSbTTQnSto" target="_blank" rel="noopener noreferrer">
     <img src="media/pyramid.gif" width="250" />
   </a>
-  &nbsp;&nbsp;&nbsp;
+  
   <a href="https://www.youtube.com/watch?v=rpU5otEmwG8" target="_blank" rel="noopener noreferrer">
     <img src="media/terrain.gif" width="250" />
   </a>
