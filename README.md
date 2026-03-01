@@ -4,6 +4,38 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 ## 1) General
 **opengl_engine** (name subject to change) is a personal engine project focused on building core real-time systems end-to-end. It’s primarily a learning + experimentation repository: features evolve quickly, APIs may change, and the main goal is to iterate on design, performance, and debuggability - especially for physics-heavy scenes with lots of objects.
 
+## Build & Run
+- Platform: **Windows**
+- IDE: **Visual Studio** (open `opengl_engine.sln`)
+- Recommended: **x64 / Release**
+
+Dependencies (GLFW/GLAD/GLM/ImGui/stb) are vendored under `opengl/Linking/`.
+
+## Controls
+### General
+- **F1**: Toggle UI
+- **Shift**: Faster camera movement
+
+### Editor mode (default)
+- **RMB (hold)**: Mouse look + capture cursor (viewport)
+- **W/A/S/D**: Move camera (Q/E down/up)
+- **LMB**: Select / interact (raycast)
+- **LMB + RMB (hold)**: Move selected object
+- **1**: Toggle placement AABB
+- **2**: Toggle “object rain” (cubes)
+- **3**: Toggle “object rain” (spheres)
+- **4**: Sleep all objects
+- **5**: Awaken all objects
+- **Mouse button 4 (hold)**: Shoot spheres (stress test)
+
+### Player mode
+- **Mouse look** always enabled
+- **W/A/S/D**: Move
+- **Space**: Jump
+- **LMB**: Select / drag
+- **RMB**: Place object
+- **Mouse button 4**: Shoot object
+
 ## Demos (click to watch on YouTube)
 
 <table>
@@ -74,3 +106,6 @@ A lightweight C++/OpenGL real-time engine built from scratch with a focus on phy
 - Panel framework + built-in panels (`panel`, `panel_manager`, `inspector_panel`, `performance_panel`, `settings_panel`)
 - Viewport rendering infrastructure (`viewport_fbo`)
 - Interaction workflows intended to support fast iteration while developing the engine (inspection + debug visualization + picking/raycast integration)
+
+## License
+MIT (see `LICENSE`).
