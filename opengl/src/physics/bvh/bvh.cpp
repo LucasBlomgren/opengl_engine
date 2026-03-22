@@ -48,6 +48,11 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) 
 int BVHTree::insertLeaf(GameObjectHandle objHandle)
 {
     GameObject* objPtr = slotmap->try_get(objHandle);
+    if (!objPtr) {
+        std::cout << "Error: Object handle in BVHTree::insertLeaf is invalid.\n";
+        return -1;
+    }
+
     if (objPtr->broadphaseHandle.leafIdx != -1) {
         // already in tree
         return -1;
@@ -174,6 +179,11 @@ void BVHTree::removeLeaf(int leafIdx)
     if (leafIdx == rootIdx) {
         // root is leaf, clear tree
         GameObject* objPtr = slotmap->try_get(leaf.element);
+        if (!objPtr) {
+            std::cout << "Error: Object handle in BVH leaf is invalid. Function: removeLeaf\n";
+            return;
+
+        }
         objPtr->broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
@@ -211,6 +221,11 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.parentIdx = -1;
 
     GameObject* objPtr = slotmap->try_get(leaf.element);
+    if (!objPtr) {
+        std::cout << "Error: Object handle in BVH leaf is invalid. Function: removeLeaf\n";
+        return;
+    }
+
     objPtr->broadphaseHandle.leafIdx = -1;
     leaf.element = GameObjectHandle{};
 
@@ -248,6 +263,11 @@ void BVHTree::updateLeaves() {
         }
 
         GameObject* objPtr = slotmap->try_get(n.element);
+        if (!objPtr) {
+            std::cout << "Error: Object handle in BVH leaf is invalid. Function: updateLeaves\n";
+            continue;
+        }
+
         n.tightBox = objPtr->getAABB();
         if (n.fatBox.contains(n.tightBox)) {
             continue;
@@ -351,6 +371,10 @@ void BVHTree::createPrimitives(std::vector<GameObjectHandle>& handles) {
 
     for (GameObjectHandle& handle : handles) {
         GameObject* objPtr = slotmap->try_get(handle);
+        if (!objPtr) {
+            std::cout << "Error: Object handle in BVH build is invalid. Function: createPrimitives\n";
+            continue;
+        }
 
         objPtr->broadphaseHandle.leafIdx = -1;
         AABB box = objPtr->getAABB();
@@ -434,6 +458,11 @@ void BVHTree::makeLeaf(int nodeIdx) {
     leaf.element = prims[leaf.start].element;
 
     GameObject* objPtr = slotmap->try_get(leaf.element);
+    if (!objPtr) {
+        std::cout << "Error: Object handle in BVH makeLeaf is invalid. Function: makeLeaf\n";
+        return;
+    }
+
     objPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
     leaf.tightBox = objPtr->getAABB();
     leaf.fatBox = leaf.tightBox;

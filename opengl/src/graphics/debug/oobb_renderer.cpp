@@ -40,7 +40,7 @@ void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {
     glDrawArrays(GL_LINES, 0, 18);
 }
 
-void OOBBRenderer::initShared() {
+void OOBBRenderer::init() {
     setupWireframeBox();
     setupNormals();
 }

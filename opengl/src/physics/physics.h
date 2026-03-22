@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "physics_world.h"
 #include "world.h"
 #include "timer.h"
 #include "engine_state.h"
@@ -47,20 +48,28 @@ public:
     //------------------------
     //        Getters
     //------------------------
+    PhysicsWorld* getPhysicsWorld();
     const DebugData getDebugData();
-    const BVHTree& getDynamicAwakeBvh();
-    const BVHTree& getDynamicAsleepBvh();
-    const BVHTree& getStaticBvh();
-    const TerrainBVH& getTerrainBvh();
+    const BVHTree& getDynamicAwakeBvh() const;
+    const BVHTree& getDynamicAsleepBvh() const;
+    const BVHTree& getStaticBvh() const;
+    const TerrainBVH& getTerrainBvh() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
     std::vector<Contact*> contactsToSolve;
 
 private:
     float dt;
-    FrameTimers* frameTimers;
+    PhysicsWorld physicsWorld;
     World* world;
+
+    FrameTimers* frameTimers;
+
+    //-----------------------------
+    // Debug visualization data
+    //-----------------------------
     DebugData debugData;
+
 
     //-----------------------------
     //  Broadphase Add/Remove/Move
@@ -94,38 +103,14 @@ private:
         std::vector<GameObject*> cache;
         SlotMap<GameObject, GameObjectHandle>* sm;
 
-        void init(SlotMap<GameObject, GameObjectHandle>& slotMap) {
-            sm = &slotMap;
-        }
-
-        void clear() {
-            cache.assign(sm->slot_capacity(), nullptr);
-        }
+        void init(SlotMap<GameObject, GameObjectHandle>& slotMap) { sm = &slotMap; }
+        void clear() { cache.assign(sm->slot_capacity(), nullptr); }
 
         GameObject* get(GameObjectHandle h) {
-            // 1) Hämta vad cachen tror
-            GameObject*& slot = cache[h.slot];
-
-            // 2) Hämta "sanningen" från slotmap just nu
-            GameObject* real = sm->try_get(h);  // gen-check + aktuell adress
-
-            // Om handle är invalid -> crasha tidigt, eller returnera nullptr
-            if (!real) {
-                // Om du *vill* kunna cache:a nullptr, hantera separat.
-                __debugbreak();
-                return nullptr;
-            }
-
-            // 3) Om vi redan har cacheat en pekare, verifiera att den fortfarande matchar
-            if (slot && slot != real) {
-                // Här har dense flyttat, eller din cache-slot pekar på gammalt minne
-                __debugbreak();
-            }
-
-            // 4) Fyll cachen om tom
-            if (!slot) slot = real;
-
-            return slot;
+            auto& slot = cache[h.slot]; 
+            if (slot) return slot; 
+            slot = sm->try_get(h); // gen-check en gång 
+            return slot; 
         }
     };
     StepPtrCache stepPtrCache;

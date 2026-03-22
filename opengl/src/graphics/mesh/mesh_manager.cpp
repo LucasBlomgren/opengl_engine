@@ -3,7 +3,7 @@
 
 std::unordered_map<std::string, Mesh> MeshManager::meshes;
 
-Mesh* MeshManager::getMesh(const std::string& name) {
+Mesh* MeshManager::getMesh(const std::string& name) const {
     auto it = meshes.find(name);
 
     if (it == meshes.end()) {

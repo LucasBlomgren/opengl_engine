@@ -30,7 +30,7 @@ public:
 
 		std::vector<Vertex> debugArrowVerts			= loadVerticesFromTxt("src/assets/debugarrow_vertices.txt");
 		std::vector<unsigned int> debugArrowIndices	= loadIndicesFromTxt("src/assets/debugarrow_indices.txt");
-        recenterVertices(debugArrowVerts);
+		recenterVertices(debugArrowVerts);
 
 		meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
 		meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
@@ -41,7 +41,7 @@ public:
 		meshes.emplace("debug_arrow", Mesh(debugArrowVerts, debugArrowIndices));
 	};
 
-	Mesh* getMesh(const std::string& name);
+	Mesh* getMesh(const std::string& name) const;
 
 private:
 	static std::unordered_map<std::string, Mesh> meshes;

@@ -125,6 +125,11 @@ void BroadphaseManager::computePairs() {
 // Add to list
 void BroadphaseManager::add(GameObjectHandle& handle, BroadphaseBucket dst) {
     GameObject* objPtr = slotMap->try_get(handle);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in add. Function: add\n";
+        return;
+    }
+
     auto& h = objPtr->broadphaseHandle;
 
     auto& list = listFor(dst);
@@ -141,6 +146,10 @@ void BroadphaseManager::add(GameObjectHandle& handle, BroadphaseBucket dst) {
 // Remove from current list
 void BroadphaseManager::remove(GameObjectHandle& handle) {
     GameObject* objPtr = slotMap->try_get(handle);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in remove. Function: remove\n";
+        return;
+    }
 
     auto& h = objPtr->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
@@ -159,6 +168,10 @@ void BroadphaseManager::remove(GameObjectHandle& handle) {
 // Move to awake
 void BroadphaseManager::moveToAwake(GameObjectHandle& handle) {
     GameObject* objPtr = slotMap->try_get(handle);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in moveToAwake. Function: moveToAwake\n";
+        return;
+    }
 
     if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         objPtr->setAwake();
@@ -173,6 +186,10 @@ void BroadphaseManager::moveToAwake(GameObjectHandle& handle) {
 // Move to asleep
 void BroadphaseManager::moveToAsleep(GameObjectHandle& handle) {
     GameObject* objPtr = slotMap->try_get(handle);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in moveToAsleep. Function: moveToAsleep\n";
+        return;
+    }
 
     if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         objPtr->setAsleep();
@@ -187,6 +204,10 @@ void BroadphaseManager::moveToAsleep(GameObjectHandle& handle) {
 // Move to static
 void BroadphaseManager::moveToStatic(GameObjectHandle& handle) {
     GameObject* objPtr = slotMap->try_get(handle);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in moveToStatic. Function: moveToStatic\n";
+        return;
+    }
 
     if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
@@ -204,6 +225,10 @@ void BroadphaseManager::moveToStatic(GameObjectHandle& handle) {
 // Swap and pop from list
 void BroadphaseManager::swapAndPop(GameObjectHandle& obj, std::vector<GameObjectHandle>& list) {
     GameObject* objPtr = slotMap->try_get(obj);
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in swapAndPop. Function: swapAndPop\n";
+        return;
+    }
 
     int i = objPtr->broadphaseHandle.listIdx;
     if (i == -1) return;
@@ -215,6 +240,11 @@ void BroadphaseManager::swapAndPop(GameObjectHandle& obj, std::vector<GameObject
         list[i] = movedHandle;
 
         GameObject* movedPtr = slotMap->try_get(movedHandle);
+        if (!movedPtr) {
+            std::cout << "Error: Invalid object handle in swapAndPop movedPtr. Function: swapAndPop\n";
+            return;
+        }
+
         movedPtr->broadphaseHandle.listIdx = i;
     }
 

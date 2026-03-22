@@ -89,7 +89,7 @@ void Player::createPlayerObject() {
 
 void Player::destroyPlayerObject() {
     physicsEngine->queueRemove(playerHandle);
-    world->removeGameObject(playerHandle);
+    world->deleteGameObject(playerHandle);
     playerHandle = GameObjectHandle{};
 }
 

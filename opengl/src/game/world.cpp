@@ -46,17 +46,21 @@ GameObjectHandle World::createGameObject(
         m_renderer.addObjectToBatch(handle);
     }
 
+    PhysicsWorld* world = m_physicsEngine.getPhysicsWorld();
+    world->createRigidBody();
+    world->createCollider();
+
     objectId++;
     return handle;
 }
 
-void World::removeGameObject(GameObjectHandle handle) {
-    //GameObject* obj = m_gameObjects.try_get(handle);
-    //if (obj) {
-    //    m_physicsEngine.queueRemove(obj);
-    //    if (!obj->seeThrough) {
-    //        m_renderer.removeObjectFromBatch(obj);
-    //    }
-    //    m_gameObjects.destroy(handle);
-    //}
+void World::deleteGameObject(GameObjectHandle handle) {
+    GameObject* obj = m_gameObjects.try_get(handle);
+    if (obj) {
+        //m_physicsEngine.queueRemove(handle);
+        if (!obj->seeThrough) {
+            m_renderer.removeObjectFromBatch(handle);
+        }
+        m_gameObjects.destroy(handle);
+    }
 }

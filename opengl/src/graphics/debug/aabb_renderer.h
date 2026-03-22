@@ -5,7 +5,7 @@
 
 class AABBRenderer {
 public:
-    static void initShared();
+    static void init();
     static void destroy();
 
     void updateModel(const AABB& box, const bool asleep);

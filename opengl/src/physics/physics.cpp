@@ -3,6 +3,10 @@
 #include "aabb.h"
 #include "sat.h"
 
+PhysicsWorld* PhysicsEngine::getPhysicsWorld() {
+    return &physicsWorld;
+}
+
 void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
     this->frameTimers = ft;
@@ -47,16 +51,16 @@ void PhysicsEngine::clearPhysicsData() {
 //-----------------------------
 //          Getters
 //-----------------------------
-const BVHTree& PhysicsEngine::getDynamicAwakeBvh() {
+const BVHTree& PhysicsEngine::getDynamicAwakeBvh() const {
     return broadphaseManager.getAwakeBVH();
 }
-const BVHTree& PhysicsEngine::getDynamicAsleepBvh() {
+const BVHTree& PhysicsEngine::getDynamicAsleepBvh() const {
     return broadphaseManager.getAsleepBVH();
 }
-const BVHTree& PhysicsEngine::getStaticBvh() {
+const BVHTree& PhysicsEngine::getStaticBvh() const {
     return broadphaseManager.getStaticBVH();
 }
-const TerrainBVH& PhysicsEngine::getTerrainBvh() {
+const TerrainBVH& PhysicsEngine::getTerrainBvh() const {
     return broadphaseManager.getTerrainBVH();
 }
 const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
@@ -132,8 +136,16 @@ void PhysicsEngine::queueAdd(GameObjectHandle& handle, BroadphaseBucket& target)
     pending.push_back({ PhysCmd::Type::Add, handle, target });
 }
 void PhysicsEngine::queueRemove(GameObjectHandle& handle) {
+
+    std::cout << "Physics QueueRemove: Queue remove object with handle: slot " << handle.slot << ", gen " << handle.gen << "\n";
+
+
     GameObject* objPtr = world->getGameObjects().try_get(handle);
-    std::cout << "Queue remove object " << objPtr->id << " from broadphase\n";
+
+    if (!objPtr) {
+        std::cout << "Error: Invalid object handle in queueRemove. Function: queueRemove\n";
+        return;
+    }
 
     pending.push_back({ PhysCmd::Type::Remove, handle, BroadphaseBucket::None });
 }
@@ -149,8 +161,7 @@ void PhysicsEngine::flushBroadphaseCommands() {
     {
         GameObject* objPtr = world->getGameObjects().try_get(cmd.handle);
         if (!objPtr) {
-            std::cout << "Warning: Tried to execute broadphase command for invalid object handle\n";
-            continue;
+            std::cout << "Error: Invalid object handle in pending broadphase command. Function: flushBroadphaseCommands\n";
         }
 
         switch (cmd.type) {
@@ -239,6 +250,12 @@ void PhysicsEngine::updateStates() {
 
     for (const GameObjectHandle& handle : awakeHandles) {
         GameObject* objPtr = stepPtrCache.get(handle);
+
+        if (!objPtr) {
+            std::cout << "Error: Awake object handle in broadphase is invalid. Function: updateStates\n";
+            continue;
+        }
+
         objPtr->resetDirtyFlags();
         objPtr->updatePos(this->dt);
         objPtr->updateAABB();
@@ -249,6 +266,12 @@ void PhysicsEngine::updateStates() {
 
     for (const GameObjectHandle& handle : staticHandles) {
         GameObject* objPtr = stepPtrCache.get(handle);
+
+        if (!objPtr) {
+            std::cout << "Error: Static object handle in broadphase is invalid. Function: updateStates\n";
+            continue;
+        }
+
         objPtr->resetDirtyFlags();
         objPtr->updatePos(this->dt);
         objPtr->updateAABB();
@@ -282,6 +305,12 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
     // ----- Terrain vs dynamic ----- 
     for (const TerrainPair& th : terrainHits) {
         GameObject* objPtr = stepPtrCache.get(th.objHandle);
+
+        if (!objPtr) {
+            std::cout << "Error: Object handle in terrain pairs is invalid. Function: narrowPhase\n";
+            continue;
+        }
+
         if (objPtr->asleep) {
             continue;
         }
@@ -365,6 +394,11 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
         GameObject* objAPtr = stepPtrCache.get(dh.A);
         GameObject* objBPtr = stepPtrCache.get(dh.B);
 
+        if (!objAPtr || !objBPtr) {
+            std::cout << "Error: Object handle in dynamic pairs is invalid. Function: narrowPhase\n";
+            continue;
+        }
+
         if (objAPtr->isStatic and objBPtr->isStatic) {
             continue;
         }
@@ -378,8 +412,8 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             objAPtr->totalCollisionCount++;
             objBPtr->totalCollisionCount++;
 
-            glm::vec3 centerA = std::get<OOBB>(objAPtr->collider.shape).wCenter;
-            glm::vec3 centerB = std::get<OOBB>(objBPtr->collider.shape).wCenter;
+            glm::vec3& centerA = std::get<OOBB>(objAPtr->collider.shape).wCenter;
+            glm::vec3& centerB = std::get<OOBB>(objBPtr->collider.shape).wCenter;
             SAT::reverseNormal(centerA, centerB, satResult.normal);
 
             if (objAPtr->player) {
@@ -854,6 +888,11 @@ void PhysicsEngine::updateSleepThresholds() {
     for (const GameObjectHandle& handle : awakeHandles) {
         GameObject* objPtr = stepPtrCache.get(handle);
 
+        if (!objPtr) {
+            std::cout << "Error: Object handle in awake list is invalid. Function: updateSleepThresholds\n";
+            continue;
+        }
+
         if (objPtr->isStatic or objPtr->asleep or !objPtr->allowSleep)
             continue;
 
@@ -893,6 +932,12 @@ void PhysicsEngine::decideSleep()
     const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (GameObjectHandle handle : awakeHandles) {
         GameObject* objPtr = stepPtrCache.get(handle);
+
+        if (!objPtr) {
+            std::cout << "Error: Object handle in awake list is invalid. Function: decideSleep\n";
+            continue;
+        }
+
         if (!objPtr->allowSleep) continue;
         if (objPtr->inSleepTransition) continue;
 
@@ -946,6 +991,12 @@ void PhysicsEngine::decideSleep()
 
     for (GameObjectHandle& handle : toWake) {
         GameObject* objPtr = stepPtrCache.get(handle);
+
+        if (!objPtr) {
+            std::cout << "Error: Object handle in wake list is invalid. Function: decideSleep\n";
+            continue;
+        }
+
         broadphaseManager.moveToAwake(handle);
         objPtr->inSleepTransition = false;
     }

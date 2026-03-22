@@ -17,7 +17,7 @@ public:
 		shaders["SkyShader"]				= Shader("src/graphics/shaders/SkyShader.vert", "src/graphics/shaders/SkyShader.frag");
 	};
 
-	Shader* getShader(const std::string& name);
+	Shader* getShader(const std::string& name) const;
 
 private:
 	static std::unordered_map<std::string, Shader> shaders;

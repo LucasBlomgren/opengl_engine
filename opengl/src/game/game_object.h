@@ -68,6 +68,8 @@ public:
     glm::mat3 invRotationMatrix;
     bool helperMatricesDirty = true;
 
+    int number = 5;
+
     // physics
     glm::vec3 scale;
     glm::vec3 biasLinearVelocity;

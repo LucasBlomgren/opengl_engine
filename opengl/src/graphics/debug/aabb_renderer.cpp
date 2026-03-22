@@ -5,7 +5,7 @@ unsigned int AABBRenderer::sVAO = 0;
 unsigned int AABBRenderer::sVBO = 0;
 bool         AABBRenderer::sInitialized = false;
 
-void AABBRenderer::initShared() {
+void AABBRenderer::init() {
     if (sInitialized) return;
     sInitialized = true;
 

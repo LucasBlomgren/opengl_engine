@@ -18,6 +18,11 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<GameObject, GameObjectH
     for (GameObjectHandle& handle : collisions) {
         GameObject* objPtr = slotmap->try_get(handle);
 
+        if (!objPtr) {
+            std::cout << "Error: Object handle in raycast is invalid. Function: raycast\n";
+            continue;
+        }
+
         if (objPtr->player) continue;
 
         glm::vec3 min = objPtr->aabb.wMin;

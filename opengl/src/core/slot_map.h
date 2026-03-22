@@ -5,8 +5,8 @@
 
 template<class Tag>
 struct HandleT {
-    uint32_t slot = 0;
-    uint32_t gen = 0;
+    uint32_t slot = 0xFFFFFFFFu;
+    uint32_t gen = 0xFFFFFFFFu;
 
     friend bool operator==(const HandleT& a, const HandleT& b) noexcept {
         return a.slot == b.slot && a.gen == b.gen;
@@ -26,6 +26,7 @@ namespace std {
 
 using GameObjectHandle = HandleT<struct GameObjectTag>;
 using ColliderHandle = HandleT<struct ColliderTag>;
+using RigidBodyHandle = HandleT<struct RigidBodyTag>;
 
 template<class T, class Id>
 class SlotMap {

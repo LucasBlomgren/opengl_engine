@@ -4,7 +4,6 @@
 #include "game/game_object.h"
 #include "physics/colliders/collider.h"
 
-class GameObject;
 class TextureManager;
 class LightManager;
 class PhysicsEngine;
@@ -39,7 +38,7 @@ public:
         const bool seeThrough = false
     );
 
-    void removeGameObject(GameObjectHandle handle);
+    void deleteGameObject(GameObjectHandle handle);
 
 private:
     int objectId = 0;

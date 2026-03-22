@@ -281,7 +281,7 @@ int main() {
 		// editor/player update
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer t(frameTimers, "Editor");
-			editor.update(*renderer.debugShader);
+			//editor.update(*renderer.debugShader);
 		}
 		else {
 			ScopedTimer t(frameTimers, "Player");
@@ -298,6 +298,7 @@ int main() {
 		}
 
 		// physics step
+		bool hasPhysicsSteppedThisFrame = false;
 		if (!engineState.isPaused() or engineState.getAdvanceStep())
 		{
 			const int   kMaxStepsPerFrame = 8;
@@ -357,6 +358,7 @@ int main() {
 				//	}
 				//}
 
+				hasPhysicsSteppedThisFrame = true;
 				// physics step
 				physicsEngine.step(fixedTimeStep, rng);
 				
@@ -381,6 +383,13 @@ int main() {
 		if (!engineState.isPaused()) {
 			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
 			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
+		}
+
+		if (hasPhysicsSteppedThisFrame) {
+			for (GameObjectHandle& handle : editor.handlesToRemove) {
+				world.deleteGameObject(handle);
+			}
+			editor.handlesToRemove.clear();
 		}
 
 		frameTimers.endFrame();

@@ -9,13 +9,9 @@
 #include "shaders/shader_manager.h"
 #include "lighting/shadow_manager.h"
 #include "skybox/skybox_manager.h"
-
-#include "debug/render_contact_points.h"
-#include "debug/xyz_object.h"
-#include "debug/sphere_outline_renderer.h"
 #include "debug/quad_renderer.h"
-#include "debug/arrow_renderer.h"
-#include "debug/normals_renderer.h"
+
+#include "renderer/debug_renderer.h"
 
 #include "scene_builder.h"
 #include "editor/editor_main.h"
@@ -71,29 +67,10 @@ public:
     void renderLights() const; 
     void renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder);
 
-    // debug
-    template<class Tree>
-    void renderBVH(const Tree& tree, glm::vec3& nodeColor, glm::vec3& leafColor);
-    void renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz);
-    void renderFrustum(const glm::mat4& viewProj);
-
-    struct DebugMesh {
-        Mesh* mesh;
-        glm::mat4 model;
-        glm::vec3 color;
-        bool castsShadow;
-    };
-    std::vector<DebugMesh> debugMeshes;
-    void fillDebugMeshes(PhysicsEngine* physicsEngine, std::vector<GameObject>& objects);
-    void renderDebugMeshesShadow();
-    void renderDebugMeshesDefault();
-
     Shader* defaultShader;
     Shader* debugShader;
     Shader* shadowShader;
     Shader* skyboxShader;
-
-    float terrainRotationAngle = 0.0f;
 
     struct InstanceData {
         glm::mat4 model;
@@ -104,6 +81,8 @@ public:
     void clearRenderBatches();
 
 private:
+    DebugRenderer debugRenderer;
+
     float screenWidth;
     float screenHeight;
 
@@ -117,12 +96,7 @@ private:
     SkyboxManager* skyboxManager = nullptr;
     MeshManager* meshManager = nullptr;
 
-    AABBRenderer aabbRenderer;
-    OOBBRenderer oobbRenderer;
-    SphereOutlineRenderer sphereOutlineRenderer;
     QuadRenderer quadRenderer;
-    ArrowRenderer arrowRenderer;
-    NormalsRenderer normalsRenderer;
 
     float maxViewDistance = 10000000000000.0f;
 
@@ -130,10 +104,6 @@ private:
     glm::vec3 sceneMin = { 0.0f, 0.0f, 0.0f };
     glm::vec3 sceneMax = { 0.0f, 0.0f, 0.0f };
     std::vector<glm::vec3> sceneCorners; 
-
-    unsigned int VAO_line;
-    unsigned int VAO_xyz;
-    unsigned int VAO_contactPoint;
 
     struct RenderBatch {
         Mesh* mesh;

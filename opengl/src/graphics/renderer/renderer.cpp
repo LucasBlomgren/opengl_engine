@@ -32,24 +32,15 @@ void Renderer::init(
     this->shaderManager = &shaderManager;
     this->meshManager   = &meshManager;
 
-    aabbRenderer.initShared();
-    oobbRenderer.initShared();
-    sphereOutlineRenderer.init();
-    this->arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
-    this->normalsRenderer.init();
-
     defaultShader = shaderManager.getShader("default");
     debugShader   = shaderManager.getShader("debug");
     shadowShader  = shaderManager.getShader("shadow");
     skyboxShader  = shaderManager.getShader("skybox");
 
     defaultShader->use();
-
-    this->VAO_line = setupLine();
-    this->VAO_xyz = setup_xyzObject();
-    this->VAO_contactPoint = setupContactPoint();
-
     batches.reserve(100000);
+
+    debugRenderer.init(engineState, meshManager, shaderManager);
 }
 
 // set viewport
@@ -205,143 +196,6 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int ta
     glActiveTexture(GL_TEXTURE0);
 }
 
-//-------------------------------------------
-//     Debug Meshes
-//-------------------------------------------
-void Renderer::fillDebugMeshes(PhysicsEngine* physicsEngine, std::vector<GameObject>& objects) {
-    debugMeshes.clear();
-
-    // contact normals
-    if (engineState->getShowCollisionNormals()) {
-        for (Contact* c : physicsEngine->contactsToSolve)
-        {
-            glm::vec3 pos;
-            GameObject* objA = c->objA_ptr;
-            GameObject* objB = c->objB_ptr;
-
-            if (objA == nullptr) {
-                pos = objB->position;
-            }
-            else if (objB == nullptr) {
-                pos = objA->position;
-            }
-
-            if (objA != nullptr && objB != nullptr) {
-
-                // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
-                if (!objA->isStatic && !objB->isStatic) {
-                    pos = 0.5f * (objA->position + objB->position);
-                }
-                else {
-                    // 2) hitta dynamiska objektet (det som INTE är static)
-                    GameObject* dyn = objA->isStatic ? objB : objA;
-
-                    // 3) välj d så att den pekar från dyn MOT den andra kroppen
-                    // antag: c->normal pekar från A -> B
-                    glm::vec3 d = (dyn == objB) ? (-c->normal) : (c->normal);   // om dyn är A: mot B = -n, om dyn är B: mot A = +n
-
-                    // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
-                    pos = dyn->position;
-
-                    float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
-
-                    AABB* aabb = &dyn->collider.getAABB(); // se till att denna är world-space halfExtents
-
-                    if (ax >= ay && ax >= az) {
-                        pos.x += (d.x >= 0 ? aabb->halfExtents.x : -aabb->halfExtents.x);
-                    }
-                    else if (ay >= ax && ay >= az) {
-                        pos.y += (d.y >= 0 ? aabb->halfExtents.y : -aabb->halfExtents.y);
-                    }
-                    else {
-                        pos.z += (d.z >= 0 ? aabb->halfExtents.z : -aabb->halfExtents.z);
-                    }
-
-                    // liten offset så pilen syns ovanpå ytan
-                    pos += c->normal * 0.01f;
-                }
-            }
-
-
-            // push arrow mesh with model matrix oriented along the contact normal
-            debugMeshes.push_back({
-                arrowRenderer.mesh,
-                arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
-                glm::vec3(1, 0, 1),
-                false
-                });
-        }
-    }
-
-    // object local normals
-    if (engineState->getShowObjectLocalNormals()) {
-        for (GameObject& obj : objects) {
-            Mesh* m = arrowRenderer.mesh;
-
-            // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
-            glm::vec3 pos = glm::vec3(obj.modelMatrix[3]);
-
-            glm::mat3 R = glm::mat3(obj.modelMatrix);
-            R[0] = glm::normalize(R[0]);
-            R[1] = glm::normalize(R[1]);
-            R[2] = glm::normalize(R[2]);
-
-            glm::mat4 baseTR(1.0f);
-            baseTR[0] = glm::vec4(R[0], 0.0f);
-            baseTR[1] = glm::vec4(R[1], 0.0f);
-            baseTR[2] = glm::vec4(R[2], 0.0f);
-            baseTR[3] = glm::vec4(pos, 1.0f);
-
-            // valfri debug-skala (konstant i world)
-            glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
-
-            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
-            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
-            debugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
-        }
-    }
-
-    // XYZ axes at world origin
-    if (engineState->getShowObjectLocalNormals() or engineState->getShowCollisionNormals()) {
-        Mesh* m = arrowRenderer.mesh;
-
-        const float axisLength = 1.0f;
-        const glm::vec3 offset = glm::vec3(-50.0f, 0.0f, -50.0f);
-        const glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(axisLength));
-        const glm::mat4 T = glm::translate(glm::mat4(1.0f), offset);
-        const glm::mat4 TailToOrigin = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.77f, 0.0f));
-
-        debugMeshes.push_back({ m, T * normalsRenderer.modelX * TailToOrigin * S, glm::vec3(1,0,0), false });
-        debugMeshes.push_back({ m, T * normalsRenderer.modelY * TailToOrigin * S, glm::vec3(0,1,0), false });
-        debugMeshes.push_back({ m, T * normalsRenderer.modelZ * TailToOrigin * S, glm::vec3(0,0,1), false });
-    }
-}
-void Renderer::renderDebugMeshesDefault() {
-    defaultShader->use();
-    defaultShader->setBool("useTexture", false);
-
-    for (const DebugMesh& dm : debugMeshes) {
-        glBindVertexArray(dm.mesh->VAO);
-
-        defaultShader->setVec3("uColor", dm.color);
-        defaultShader->setMat4("model", dm.model);
-
-        dm.mesh->draw();
-    }
-}
-void Renderer::renderDebugMeshesShadow() {
-    shadowShader->use();
-
-    for (const DebugMesh& dm : debugMeshes) {
-        if (!dm.castsShadow)
-            continue;
-
-        glBindVertexArray(dm.mesh->VAO);
-        shadowShader->setMat4("model", dm.model);
-        dm.mesh->draw();
-    }
-}
-
 //-------------------------------------
 //        Main render
 //-------------------------------------
@@ -362,14 +216,14 @@ void Renderer::render(
     }
 
     fillBatchInstances();
-    fillDebugMeshes(&physics, world->getGameObjects().dense());
+    debugRenderer.prepareFrame(physics, world->getGameObjects().dense());
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
     renderGameObjectsShadow();
-    renderDebugMeshesShadow();
+    debugRenderer.renderShadowPass(); 
     renderTerrain(builder.getTerrainData(), builder.sceneDirty, true);
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
@@ -395,9 +249,9 @@ void Renderer::render(
     uploadLightsToShader();
 
     // draw sky quad
-    DirectionalLight& light = lightManager->getDirectionalLight();
+    //DirectionalLight& light = lightManager->getDirectionalLight();
     //light.direction.y -= 0.0001f;
-    quadRenderer.draw(shaderManager->getShader("SkyShader"), &camera, light.direction, targetW, targetH);
+    //quadRenderer.draw(shaderManager->getShader("SkyShader"), &camera, light.direction, targetW, targetH);
 
     renderLights();
     renderScene(builder);
@@ -413,38 +267,12 @@ void Renderer::render(
     }
 
     glDepthFunc(GL_LEQUAL);
-    //skyboxManager->render(*skyboxShader); 
+    skyboxManager->render(*skyboxShader); 
     glDepthFunc(GL_LESS); 
 
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
-
-    renderDebug(physics, camera, world->getGameObjects().dense(), VAO_contactPoint, VAO_xyz);
-    //renderFrustum(lightSpaceMatrix);
-
-    if (engineState->getShowBVH_awake()) {
-        static glm::vec3 c{ 0.80f, 0.40f, 0.00f }; // Dynamic awake nodes
-        static glm::vec3 c2{ 1.00f, 0.65f, 0.20f }; // Dynamic awake leaves (ljusare orange)
-        renderBVH(physics.getDynamicAwakeBvh(), c, c2);
-    }
-    if (engineState->getShowBVH_asleep()) {
-        static glm::vec3 c{ 0.13f, 0.33f, 0.67f }; // Dynamic asleep nodes
-        static glm::vec3 c2{ 0.45f, 0.70f, 1.00f }; // Dynamic asleep leaves (ljusare blå)
-        renderBVH(physics.getDynamicAsleepBvh(), c,c2);
-    }
-    if (engineState->getShowBVH_static()) {
-        static glm::vec3 c{ 0.10f, 0.60f, 0.27f }; // Static nodes
-        static glm::vec3 c2{ 0.30f, 0.95f, 0.50f }; // Static leaves (ljusare grön)
-        renderBVH(physics.getStaticBvh(), c, c2);
-    }
-    if (engineState->getShowBVH_terrain()) {
-        static glm::vec3 c{ 0.40f, 0.31f, 0.13f }; // Terrain nodes
-        static glm::vec3 c2{ 0.70f, 0.50f, 0.25f }; // Terrain leaves (ljusare brun/ockra)
-        renderBVH(physics.getTerrainBvh(), c, c2);
-    }
-
-    glClear(GL_DEPTH_BUFFER_BIT);
-    renderDebugMeshesDefault();
+    debugRenderer.renderOverlayPass(physics, camera, world->getGameObjects().dense());
     glEndQuery(GL_TIME_ELAPSED);
 
     if (viewportFBO) {
@@ -852,170 +680,10 @@ void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneB
 
     if (obj->colliderType == ColliderType::CUBOID) {
         OOBB& box = std::get<OOBB>(obj->collider.shape);
-        oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
+        debugRenderer.oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
     }
     else if (obj->colliderType == ColliderType::SPHERE) {
         Sphere& sphere = std::get<Sphere>(obj->collider.shape);
-        sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
+        debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
     }
-}
-
-//----------------------------
-//     Render debug info
-//----------------------------
-void Renderer::renderDebug(PhysicsEngine& physicsEngine, Camera& camera, std::vector<GameObject>& objects, unsigned int VAO_contactPoint, unsigned int VAO_xyz) {
-
-    // #TODO: fixa instancing för debug-rendering
-
-    if (!(engineState->getShowAABB() || engineState->getShowColliders() || engineState->getShowContactPoints())) {
-        return;
-    }
-
-    debugShader->use();
-    debugShader->setBool("debug.useUniformColor", true); 
-    debugShader->setInt("debug.objectType", 0); 
-
-    if (engineState->getShowAABB()) {
-        glLineWidth(2.0f); 
-        glBindVertexArray(aabbRenderer.sVAO);  
-        glm::vec3 color{ 0.9f, 0.7f, 0.2f };
-
-        for (GameObject& obj : objects) {
-            aabbRenderer.updateModel(obj.aabb, false);
-            aabbRenderer.render(color, *debugShader);
-        }
-    }
-
-    if (engineState->getShowColliders()) {
-        glLineWidth(2.0f);
-        for (GameObject& obj : objects) {
-            debugShader->setBool("debug.useUniformColor", true);
-
-            if (obj.colliderType == ColliderType::CUBOID) {
-                OOBB& box = std::get<OOBB>(obj.collider.shape);
-                oobbRenderer.renderBox(*debugShader, box, obj.asleep, obj.isStatic, false, false);
-            }
-            else if (obj.colliderType == ColliderType::SPHERE) {
-                Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-                sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, false, false);
-            }
-        }
-    }
-
-    if (engineState->getShowContactPoints()) {
-        debugShader->setInt("debug.objectType", 2);
-        debugShader->setBool("debug.useUniformColor", true);
-        debugShader->setVec3("debug.uColor", glm::vec3(0, 250, 154));
-
-        // skip depth test
-        glDisable(GL_DEPTH_TEST);
-        const auto& contactCache = physicsEngine.GetContactCache();
-        for (const auto& pair : contactCache) {
-            const Contact& contact = pair.second;
-
-            for (int i = 0; i < contact.points.size(); i++) {
-                if (!contact.points[i].wasUsedThisFrame) {
-                    continue;
-                }
-
-                if (contact.points[i].wasWarmStarted) {
-                    debugShader->setVec3("debug.uColor", glm::vec3(250,0,0)); // röd för warm-startade punkter
-                } else {
-                    debugShader->setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
-                }
-
-                renderContactPoint(*debugShader, VAO_contactPoint, contact.points[i].globalCoord);
-            }
-        }
-        glEnable(GL_DEPTH_TEST);
-    }
-}
-
-//-------------------------
-//       Render BVH
-//-------------------------
-template<class Tree>
-void Renderer::renderBVH(const Tree& tree, glm::vec3& nodeColor, glm::vec3& leafColor) {
-    debugShader->use();
-    debugShader->setBool("debug.useUniformColor", true);
-
-    glLineWidth(2.0f); 
-    glBindVertexArray(aabbRenderer.sVAO); 
-
-    glm::vec3 color;
-    AABB toDraw;
-
-    for (auto& node : tree.nodes) {
-        if (!node.alive) continue;
-
-        if (node.isLeaf) {
-            glLineWidth(4.0f);
-            toDraw = node.tightBox;
-            toDraw.centroid = (toDraw.wMin + toDraw.wMax) * 0.5f;
-            toDraw.halfExtents = (toDraw.wMax - toDraw.wMin) * 0.5f;
-            color = leafColor;
-        }
-        else {
-            glLineWidth(2.0f);
-            toDraw = node.fatBox;
-            color = nodeColor;
-        }
-
-        aabbRenderer.updateModel(toDraw, /*asleep=*/false);
-        aabbRenderer.render(color, *debugShader);
-    }
-}
-
-//------------------------------
-//     Render Shadow Frustum
-//------------------------------
-void Renderer::renderFrustum(const glm::mat4& viewProj)
-{
-    // 1) Invertera viewProj för att gå från clip → world
-    glm::mat4 inv = glm::inverse(viewProj);
-
-    // 2) Definiera hörn i clip-space
-    glm::vec4 clip[8] = {
-        {-1,-1,-1,1}, { 1,-1,-1,1}, { 1, 1,-1,1}, {-1, 1,-1,1},  // near
-        {-1,-1, 1,1}, { 1,-1, 1,1}, { 1, 1, 1,1}, {-1, 1, 1,1}   // far
-    };
-
-    // 3) Transformera till world-space och dela med w
-    glm::vec3 wc[8];
-    for (int i = 0; i < 8; i++) {
-        glm::vec4 t = inv * clip[i];
-        wc[i] = glm::vec3(t) / t.w;
-    }
-
-    // 4) Platta ut 12 linje-segment (24 punkter)
-    glm::vec3 lines[24] = {
-        wc[0], wc[1], wc[1], wc[2], wc[2], wc[3], wc[3], wc[0], // near
-        wc[4], wc[5], wc[5], wc[6], wc[6], wc[7], wc[7], wc[4], // far
-        wc[0], wc[4], wc[1], wc[5], wc[2], wc[6], wc[3], wc[7]  // sidor
-    };
-
-    // 5) Skapa/VISA en VAO/VBO EN gång, uppdatera data och rita
-    static GLuint vao = 0, vbo = 0;
-    if (!vao) {
-        glGenVertexArrays(1, &vao); glcount::incVAO();
-        glGenBuffers(1, &vbo); glcount::incVBO();
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(lines), lines, GL_DYNAMIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    }
-    else {
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(lines), lines);
-    }
-
-    // 6) Rita
-    debugShader->use();
-    debugShader->setMat4("model", glm::mat4(1.0f));
-    debugShader->setBool("debug.useUniformColor", true);
-    debugShader->setVec3("debug.uColor", glm::vec3(1, 0, 0));
-    glBindVertexArray(vao);
-    glDrawArrays(GL_LINES, 0, 24);
-    glBindVertexArray(0);
 }

@@ -3,7 +3,7 @@
 
 std::unordered_map<std::string, Shader> ShaderManager::shaders;
 
-Shader* ShaderManager::getShader(const std::string& name) {
+Shader* ShaderManager::getShader(const std::string& name) const {
     auto it = shaders.find(name);
 
     if (it == shaders.end()) {

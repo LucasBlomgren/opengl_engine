@@ -251,6 +251,18 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             physicsEngine->awakenAllObjects();
             consumed.keyboard = true;
         }
+
+
+        if (in.keyDown[GLFW_KEY_C]) {
+            static uint32_t i = 0;
+            GameObjectHandle handle { .slot = i, .gen = 0 };
+            i++;
+
+            physicsEngine->queueRemove(handle);
+            handlesToRemove.push_back(handle);
+
+            std::cout << "Editor: Queued remove of handle slot " << handle.slot << " gen " << handle.gen << std::endl;
+        }
     }
 }
 

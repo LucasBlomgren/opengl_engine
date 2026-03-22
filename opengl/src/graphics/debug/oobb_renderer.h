@@ -16,7 +16,7 @@ public:
     );
 
     void destroy();
-    void initShared();
+    void init();
     void setupNormals();
     void renderNormals(Shader& shader, const glm::mat4& model);
     void makeOOBBModelMatrix(glm::mat4& M, const OOBB& box);

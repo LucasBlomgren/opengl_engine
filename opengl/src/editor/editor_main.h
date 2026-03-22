@@ -83,6 +83,8 @@ public:
     bool objectRainBlocks = false;
     bool objectRainSpheres = false;
 
+    std::vector<GameObjectHandle> handlesToRemove;
+
 private:
     float SCR_WIDTH;
     float SCR_HEIGHT;
