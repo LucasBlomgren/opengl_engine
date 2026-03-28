@@ -1,22 +1,17 @@
 #include "pch.h"
 #include "oobb.h"
+#include "game/game_object.h"
 
-void OOBB::update(const glm::mat4& M, const glm::vec3& scale) {
-    // rotate normals
-    glm::mat3 R = glm::mat3(M);
+void OOBB::update(const Transform& t) {
     for (int i = 0; i < 3; i++) {
-        wAxes[i] = glm::normalize(R * lAxes[i]);
+        wAxes[i] = glm::normalize(t.rotationMatrix * lAxes[i]);
     }
 
-    // transform world corners
     for (int i = 0; i < 8; ++i) {
-        wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
+        wVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(lVertices[i], 1.0f));
     }
 
-    this->scale = scale;
-
-    // compute centroid
-    wCenter = glm::vec3(M * glm::vec4(lCenter, 1.0f));
+    wCenter = glm::vec3(t.modelMatrix * glm::vec4(lCenter, 1.0f));
 }
 
 std::array<OOBB::Edge, 4> OOBB::createEdgesAlongAxis(int axisIdx) const {
@@ -41,7 +36,7 @@ std::array<OOBB::Edge, 4> OOBB::createEdgesAlongAxis(int axisIdx) const {
     return edges;
 }
 
-void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
+void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
     glm::vec3 lMin(+FLT_MAX), lMax(-FLT_MAX); 
     for (auto const& v : verts) { 
         lMin = glm::min(lMin, v);  
@@ -72,6 +67,6 @@ void OOBB::init(std::vector<glm::vec3>& verts, const glm::mat4& M) {
 
     // transform world corners
     for (int i = 0; i < 8; ++i) {
-        wVertices[i] = glm::vec3(M * glm::vec4(lVertices[i], 1.0f));
+        wVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(lVertices[i], 1.0f));
     }
 }

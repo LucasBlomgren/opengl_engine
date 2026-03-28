@@ -6,272 +6,422 @@
 #include "core/timer.h"
 #include "core/engine_state.h"
 
+#include <algorithm>
+#include <cstdio>
+#include <string>
+
+namespace
+{
+    std::string FormatCompactCount(size_t value)
+    {
+        char buf[32];
+
+        if (value >= 1000000)
+        {
+            std::snprintf(buf, sizeof(buf), "%.1fm", value / 1000000.0);
+            return buf;
+        }
+        if (value >= 1000)
+        {
+            std::snprintf(buf, sizeof(buf), "%.1fk", value / 1000.0);
+            return buf;
+        }
+
+        std::snprintf(buf, sizeof(buf), "%zu", value);
+        return buf;
+    }
+}
+
 void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 {
-	ImGui::Begin("Performance");
+    // ----------------------------------------------------
+    //   Persistent UI state
+    // ----------------------------------------------------
+    static bool showFullProfiler = false;
 
-	// Ringbuffer för frametime i ms
-	static float ft_ms[400] = {};
-	static int   ft_i = 0;
+    // ----------------------------------------------------
+    //   Frametime history
+    // ----------------------------------------------------
+    static float ft_ms[400] = {};
+    static int   ft_i = 0;
 
-	static float sampleAcc = 0.0f;
-	static float lastDtMs = 0.0f;
+    static float sampleAcc = 0.0f;
+    static float lastDtMs = 0.0f;
 
-	const float sampleHz = 60.0f;
-	const float sampleDt = 1.0f / sampleHz;
+    const float sampleHz = 60.0f;
+    const float sampleDt = 1.0f / sampleHz;
 
-	sampleAcc += ctx.deltaTime;
-	lastDtMs = ctx.deltaTime * 1000.0f;
+    sampleAcc += ctx.deltaTime;
+    lastDtMs = ctx.deltaTime * 1000.0f;
 
-	int ticks = (int)(sampleAcc / sampleDt);
-	if (ticks > 0)
-	{
-		sampleAcc -= ticks * sampleDt;
-		ticks = std::min(ticks, 100);
+    int ticks = (int)(sampleAcc / sampleDt);
+    if (ticks > 0)
+    {
+        sampleAcc -= ticks * sampleDt;
+        ticks = std::min(ticks, 100);
 
-		for (int i = 0; i < ticks; ++i)
-		{
-			ft_ms[ft_i] = lastDtMs; // håll senaste värdet
-			ft_i = (ft_i + 1) % IM_ARRAYSIZE(ft_ms);
-		}
-	}
+        for (int i = 0; i < ticks; ++i)
+        {
+            ft_ms[ft_i] = lastDtMs;
+            ft_i = (ft_i + 1) % IM_ARRAYSIZE(ft_ms);
+        }
+    }
 
-	// UI-smoothade värden
-	static float dt_ui = 0.0f;
-	static float framerate_ui = 0.0f;
+    // ----------------------------------------------------
+    //   Smoothed values (updates at 20 Hz)
+    // ----------------------------------------------------
+    static float dt_ui = 0.0f;
+    static float framerate_ui = 0.0f;
 
-	static float renderSub_ui = 0.0f;
-	static float editor_ui = 0.0f;
-	static float imgui_ui = 0.0f;
-	static float phys_ui = 0.0f;
+    static float renderSub_ui = 0.0f;
+    static float editor_ui = 0.0f;
+    static float imgui_ui = 0.0f;
+    static float phys_ui = 0.0f;
 
-	static float cpu_total_ms = 0.0f;
-	static float gpu_total_ms = 0.0f;
+    static float cpu_total_ms = 0.0f;
+    static float gpu_total_ms = 0.0f;
 
-	static float gpuShadowMs_ui = 0.0f;
-	static float gpuMainMs_ui = 0.0f;
-	static float gpuDebugMs_ui = 0.0f;
+    static float gpuShadowMs_ui = 0.0f;
+    static float gpuMainMs_ui = 0.0f;
+    static float gpuDebugMs_ui = 0.0f;
 
-	static float preStep_ui = 0.0f;
-	static float bvhUpdate_ui = 0.0f;
-	static float broadphase_ui = 0.0f;
-	static float narrowphase_ui = 0.0f;
-	static float contactCollect_ui = 0.0f;
-	static float collisionResolve_ui = 0.0f;
-	static float postStep_ui = 0.0f;
+    static float preStep_ui = 0.0f;
+    static float bvhUpdate_ui = 0.0f;
+    static float broadphase_ui = 0.0f;
+    static float narrowphase_ui = 0.0f;
+    static float contactCollect_ui = 0.0f;
+    static float collisionResolve_ui = 0.0f;
+    static float postStep_ui = 0.0f;
 
-	// --- update 20 Hz ---
-	uiTimer += ctx.deltaTime;
-	if (uiTimer >= 0.2f)
-	{
-		uiTimer = 0.0f;
+    uiTimer += ctx.deltaTime;
+    if (uiTimer >= 0.2f)
+    {
+        uiTimer = 0.0f;
 
-		::FrameTimers* frameTimers = ctx.frameTimers;
-		::GpuTimers* gpuTimers = ctx.gpuTimers;
+        ::FrameTimers* frameTimers = ctx.frameTimers;
+        ::GpuTimers* gpuTimers = ctx.gpuTimers;
 
-		ImGuiIO& io = ImGui::GetIO();
-		framerate_ui = io.Framerate;
-		dt_ui = ctx.deltaTime * 1000.0f;
+        ImGuiIO& io = ImGui::GetIO();
+        framerate_ui = io.Framerate;
+        dt_ui = ctx.deltaTime * 1000.0f;
 
-		gpu_total_ms = gpuTimers->totalMs();
-		gpuShadowMs_ui = gpuTimers->shadowMs;
-		gpuMainMs_ui = gpuTimers->mainMs;
-		gpuDebugMs_ui = gpuTimers->debugMs;
+        gpu_total_ms = gpuTimers->totalMs();
+        gpuShadowMs_ui = gpuTimers->shadowMs;
+        gpuMainMs_ui = gpuTimers->mainMs;
+        gpuDebugMs_ui = gpuTimers->debugMs;
 
-		renderSub_ui = frameTimers->get("Render");
-		editor_ui = frameTimers->get("Editor");
-		imgui_ui = frameTimers->get("ImGui");
-		phys_ui = frameTimers->get("Physics");
-		cpu_total_ms = phys_ui + renderSub_ui + editor_ui + imgui_ui;
+        renderSub_ui = frameTimers->get("Render");
+        editor_ui = frameTimers->get("Editor");
+        imgui_ui = frameTimers->get("ImGui");
+        phys_ui = frameTimers->get("Physics");
+        cpu_total_ms = phys_ui + renderSub_ui + editor_ui + imgui_ui;
 
-		preStep_ui = frameTimers->get("Pre step");
-		bvhUpdate_ui = frameTimers->get("BVH update");
-		broadphase_ui = frameTimers->get("Broadphase");
-		narrowphase_ui = frameTimers->get("Narrowphase");
-		contactCollect_ui = frameTimers->get("Contact collection");
-		collisionResolve_ui = frameTimers->get("Collision resolution");
-		postStep_ui = frameTimers->get("Post step");
-	}
+        preStep_ui = frameTimers->get("Pre step");
+        bvhUpdate_ui = frameTimers->get("BVH update");
+        broadphase_ui = frameTimers->get("Broadphase");
+        narrowphase_ui = frameTimers->get("Narrowphase");
+        contactCollect_ui = frameTimers->get("Contact collection");
+        collisionResolve_ui = frameTimers->get("Collision resolution");
+        postStep_ui = frameTimers->get("Post step");
+    }
 
-	// --- helpers ---
-	auto BarCell = [&](float ms, float denom_ms)
-		{
-			float rawPct = (denom_ms > 0.f) ? (ms / denom_ms) : 0.f;
-			float barPct = std::clamp(rawPct, 0.0f, 1.0f);
+    const std::string objCompact = FormatCompactCount(ctx.amountObjects);
 
-			float wFull = ImGui::GetContentRegionAvail().x;
-			float barW = wFull;
-			float barH = 12.0f;
+    // ----------------------------------------------------
+    //   Shared helpers
+    // ----------------------------------------------------
+    auto PushOverlayStyle = []()
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 6.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 2.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 4.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4.0f, 2.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
 
-			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.75f);
-			ImGui::ProgressBar(barPct, ImVec2(barW, barH), "");
-			ImGui::PopStyleVar();
+            ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1.f, 1.f, 1.f, 0.08f));
+            ImGui::PushStyleColor(ImGuiCol_Separator, ImVec4(1.f, 1.f, 1.f, 0.10f));
+            ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.f, 0.f, 0.f, 0.00f));
+            ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(1.f, 1.f, 1.f, 0.03f));
+        };
 
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::BeginTooltip();
-				ImGui::Text("Time:  %.2f ms", ms);
-				ImGui::Text("Share: %.1f%%", rawPct * 100.0f);
-				ImGui::EndTooltip();
-			}
-		};
+    auto PopOverlayStyle = []()
+        {
+            ImGui::PopStyleColor(4);
+            ImGui::PopStyleVar(6);
+        };
 
-	auto Row = [&](const char* name, float ms, float denom_ms)
-		{
-			ImGui::TableNextRow();
+    auto TotalTooltip = [&]()
+        {
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("CPU  %.2f ms", cpu_total_ms);
+                ImGui::Text("GPU  %.2f ms", gpu_total_ms);
+                ImGui::Separator();
+                ImGui::TextUnformatted("Double click: open full profiler");
+                ImGui::EndTooltip();
+            }
+        };
 
-			ImGui::TableNextColumn();
-			ImGui::TextUnformatted(name);
+    auto DrawSparkline = [&](float width, float height)
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 
-			ImGui::TableNextColumn();
-			ImGui::Text("%.2f ms", ms);
+            const float fpsBottom = 144.0f;
+            const float fpsTop = 30.0f;
+            const float msMin = 1000.0f / fpsBottom;
+            const float msMax = 1000.0f / fpsTop;
 
-			ImGui::TableNextColumn();
-			BarCell(ms, denom_ms);
-		};
+            ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, msMin, msMax, ImVec2(width, height));
 
-	// ---- Header ----
-	ImGui::Text("Frame %.2f ms | %.0f FPS", dt_ui, framerate_ui);
-	// Tooltip för headern (CPU/GPU total)
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-		ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-		ImGui::EndTooltip();
-	}
-	//ImGui::SameLine();
-	ImGui::TextDisabled("Objects: %zu", ctx.amountObjects);
-	ImGui::TextDisabled("Awake: %zu", ctx.amountAwakeObjects);
-	ImGui::TextDisabled("Asleep: %zu", ctx.amountAsleepObjects);
-	ImGui::TextDisabled("Static: %zu", ctx.amountStaticObjects);
-	ImGui::TextDisabled("Terrain: %zu", ctx.amountTerrainTris);
-	ImGui::TextDisabled("Collisions: %zu", ctx.amountCollisions);
+            ImGui::PopStyleColor(2);
+            ImGui::PopStyleVar();
+        };
 
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Spacing();
+    auto DrawSummaryTable = [&](const char* tableId)
+        {
+            ImGuiTableFlags flags =
+                ImGuiTableFlags_SizingStretchSame |
+                ImGuiTableFlags_NoBordersInBody |
+                ImGuiTableFlags_NoPadOuterX;
 
-	// ---- Plot ----
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_PlotLines, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            if (ImGui::BeginTable(tableId, 2, flags))
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Objects: %zu", ctx.amountObjects);
+                ImGui::TableNextColumn();
+                ImGui::Text("Awake: %zu", ctx.amountAwakeObjects);
 
-	const float fpsBottom = 144.0f;                 // “max FPS” som ska hamna längst ner i grafen
-	const float fpsTop = 30.0f;                     // ska hamna längst upp
-	const float msMin = 1000.0f / fpsBottom;        // nederkant i grafen
-	const float msMax = 1000.0f / fpsTop;           // överkant i grafen (~33.33 ms)
-	ImGui::PlotLines("##ft", ft_ms, IM_ARRAYSIZE(ft_ms), ft_i, nullptr, msMin, msMax, ImVec2(-1, 60));
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Static: %zu", ctx.amountStaticObjects);
+                ImGui::TableNextColumn();
+                ImGui::Text("Asleep: %zu", ctx.amountAsleepObjects);
 
-	ImGui::PopStyleColor(2);
-	ImGui::PopStyleVar();
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Terrain: %zu", ctx.amountTerrainTris);
+                ImGui::TableNextColumn();
+                ImGui::Text("Collisions: %zu", ctx.amountCollisions);
 
-	ImGui::Separator();
+                ImGui::EndTable();
+            }
+        };
 
-	// ---- Table ----
-	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(6, 3));
-	ImGuiTableFlags tflags =
-		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_SizingStretchProp |
-		ImGuiTableFlags_NoBordersInBody;
+    auto BarCell = [&](float ms, float denom_ms, float alpha = 0.65f, float height = 10.0f)
+        {
+            const float rawPct = (denom_ms > 0.0f) ? (ms / denom_ms) : 0.0f;
+            const float barPct = std::clamp(rawPct, 0.0f, 1.0f);
+            const float width = ImGui::GetContentRegionAvail().x;
 
-	if (ImGui::BeginTable("perf_tbl", 3, tflags))
-	{
-		ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 85.0f);
-		ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 65.0f);
-		ImGui::TableSetupColumn("Share", ImGuiTableColumnFlags_WidthFixed, 85.0f);
-		ImGui::TableHeadersRow();
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+            ImGui::ProgressBar(barPct, ImVec2(width, height), "");
+            ImGui::PopStyleVar();
 
-		// --- GPU group header ---
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::TextDisabled("GPU");
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::BeginTooltip();
-			ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-			ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-			ImGui::EndTooltip();
-		}
-		ImGui::TableNextColumn(); ImGui::TableNextColumn();
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("Time:  %.2f ms", ms);
+                ImGui::Text("Share: %.1f%%", rawPct * 100.0f);
+                ImGui::EndTooltip();
+            }
+        };
 
-		Row("Shadow", gpuShadowMs_ui, gpu_total_ms);
-		Row("Main", gpuMainMs_ui, gpu_total_ms);
-		Row("Debug", gpuDebugMs_ui, gpu_total_ms);
+    auto DrawTimingTable = [&](const char* tableId, bool showHeaders)
+        {
+            ImGuiTableFlags flags =
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_SizingStretchProp |
+                ImGuiTableFlags_NoBordersInBody |
+                ImGuiTableFlags_NoPadOuterX;
 
-		// --- CPU group header ---
-		ImGui::TableNextRow();
-		ImGui::TableNextColumn();
-		ImGui::TextDisabled("CPU");
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::BeginTooltip();
-			ImGui::Text("CPU  %.2f ms", cpu_total_ms);
-			ImGui::Text("GPU  %.2f ms", gpu_total_ms);
-			ImGui::EndTooltip();
-		}
-		ImGui::TableNextColumn(); ImGui::TableNextColumn();
+            if (!ImGui::BeginTable(tableId, 3, flags))
+                return;
 
-		// Render submit som vanlig rad (share av CPU total)
-		Row("Render", renderSub_ui, cpu_total_ms);
-		Row("Editor", editor_ui, cpu_total_ms);
-		Row("ImGui", imgui_ui, cpu_total_ms);
+            ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthFixed, 78.0f);
+            ImGui::TableSetupColumn("Time", ImGuiTableColumnFlags_WidthFixed, 52.0f);
+            ImGui::TableSetupColumn("Share", ImGuiTableColumnFlags_WidthStretch);
 
-		// === Physics (expanderbar) ===
-		ImGui::TableNextRow();
+            if (showHeaders)
+                ImGui::TableHeadersRow();
 
-		ImGui::TableNextColumn();
-		bool physicsOpen = ImGui::TreeNodeEx("Physics",
-			ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_FramePadding,
-			"Physics");
+            auto SimpleRow = [&](const char* name, float ms, float denom_ms)
+                {
+                    ImGui::TableNextRow();
 
-		ImGui::TableNextColumn();
-		ImGui::Text("%.2f ms", phys_ui);
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(name);
 
-		ImGui::TableNextColumn();
-		BarCell(phys_ui, cpu_total_ms);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", ms);
 
-		if (physicsOpen)
-		{
-			// Hämta subtimers (byt keys till dina riktiga)
-			struct Sub { const char* name; float ms; };
-			Sub subs[] = {
-				{"Pre",      preStep_ui},
-				{"BVH",      bvhUpdate_ui},
-				{"Broad",    broadphase_ui},
-				{"Narrow",   narrowphase_ui},
-				{"Sort",	 contactCollect_ui},
-				{"Solve",   collisionResolve_ui},
-				{"Post",     postStep_ui}
-			};
+                    ImGui::TableNextColumn();
+                    BarCell(ms, denom_ms);
+                };
 
-			ImGui::Spacing();
-			ImGui::Spacing();
-			ImGui::Spacing();
+            auto GroupLabelRow = [&](const char* label, float totalMs)
+                {
+                    ImGui::TableNextRow();
 
-			//ImGui::TableNextRow(0, ImGui::GetTextLineHeightWithSpacing());
-			ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextDisabled("%s", label);
 
-			for (auto& s : subs)
-			{
-				ImGui::TableNextColumn();
-				ImGui::Indent(10.0f);
-				ImGui::TextUnformatted(s.name);   // TextUnformatted: för färdig sträng
-				ImGui::Unindent(10.0f);
+                    ImGui::TableNextColumn();
+                    ImGui::TextDisabled("%.2f", totalMs);
 
-				ImGui::TableNextColumn();
-				ImGui::Text("%.2f ms", s.ms);
+                    ImGui::TableNextColumn();
+                };
 
-				ImGui::TableNextColumn();
-				BarCell(s.ms, phys_ui); // share inom Physics
-			}
+            GroupLabelRow("GPU", gpu_total_ms);
+            SimpleRow("Shadow", gpuShadowMs_ui, gpu_total_ms);
+            SimpleRow("Main", gpuMainMs_ui, gpu_total_ms);
+            SimpleRow("Debug", gpuDebugMs_ui, gpu_total_ms);
 
-			ImGui::TreePop();
-		}
+            GroupLabelRow("CPU", cpu_total_ms);
+            SimpleRow("Render", renderSub_ui, cpu_total_ms);
+            SimpleRow("Editor", editor_ui, cpu_total_ms);
+            SimpleRow("ImGui", imgui_ui, cpu_total_ms);
 
-		ImGui::EndTable();
-	}
+            char physicsLabel[128];
+            std::snprintf(physicsLabel, sizeof(physicsLabel), "Physics##%s", tableId);
 
-	ImGui::PopStyleVar();
-	ImGui::End();
+            ImGui::TableNextRow();
+
+            ImGui::TableNextColumn();
+            bool physicsOpen = ImGui::TreeNodeEx(
+                physicsLabel,
+                ImGuiTreeNodeFlags_SpanFullWidth |
+                ImGuiTreeNodeFlags_FramePadding |
+                ImGuiTreeNodeFlags_DefaultOpen,
+                "Physics"
+            );
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%.2f", phys_ui);
+
+            ImGui::TableNextColumn();
+            BarCell(phys_ui, cpu_total_ms);
+
+            if (physicsOpen)
+            {
+                struct Sub { const char* name; float ms; };
+                Sub subs[] = {
+                    {"Pre",    preStep_ui},
+                    {"BVH",    bvhUpdate_ui},
+                    {"Broad",  broadphase_ui},
+                    {"Narrow", narrowphase_ui},
+                    {"Sort",   contactCollect_ui},
+                    {"Solve",  collisionResolve_ui},
+                    {"Post",   postStep_ui}
+                };
+
+                for (const auto& s : subs)
+                {
+                    ImGui::TableNextRow();
+
+                    ImGui::TableNextColumn();
+                    ImGui::Indent(10.0f);
+                    ImGui::TextUnformatted(s.name);
+                    ImGui::Unindent(10.0f);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", s.ms);
+
+                    ImGui::TableNextColumn();
+                    BarCell(s.ms, phys_ui);
+                }
+
+                ImGui::TreePop();
+            }
+
+            ImGui::EndTable();
+        };
+
+    // ----------------------------------------------------
+    //  Compact always-visible HUD
+    // ----------------------------------------------------
+    ImVec2 hudPos(12.0f, 12.0f);
+    ImVec2 hudSize(0.0f, 0.0f);
+
+    PushOverlayStyle();
+    ImGui::SetNextWindowBgAlpha(0.35f);
+
+    ImGuiWindowFlags hudFlags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav |
+        ImGuiWindowFlags_AlwaysAutoResize;
+
+    ImGui::Begin("##PerformanceHUD", nullptr, hudFlags);
+
+    ImGui::Text("%.0f FPS   %.2f ms", framerate_ui, dt_ui);
+    TotalTooltip();
+
+    ImGui::TextDisabled("CPU %.2f   GPU %.2f", cpu_total_ms, gpu_total_ms);
+    ImGui::TextDisabled("Obj %s   Col %zu", objCompact.c_str(), ctx.amountCollisions);
+
+    DrawSparkline(190.0f, 18.0f);
+
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+        ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+    {
+        showFullProfiler = !showFullProfiler;
+    }
+
+    if (ImGui::BeginPopupContextWindow("PerformanceHudContext"))
+    {
+        if (ImGui::MenuItem("Open full profiler"))
+            showFullProfiler = true;
+
+        ImGui::EndPopup();
+    }
+
+    hudPos = ImGui::GetWindowPos();
+    hudSize = ImGui::GetWindowSize();
+
+    ImGui::End();
+    PopOverlayStyle();
+
+   
+    // ----------------------------------------------------
+    //  Full profiler window
+    // ----------------------------------------------------
+    if (showFullProfiler)
+    {
+        ImGui::SetNextWindowSize(ImVec2(460.0f, 520.0f), ImGuiCond_FirstUseEver);
+
+        if (ImGui::Begin("Profiler", &showFullProfiler))
+        {
+            ImGui::Text("%.0f FPS   Frame %.2f ms", framerate_ui, dt_ui);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::BeginTooltip();
+                ImGui::Text("CPU  %.2f ms", cpu_total_ms);
+                ImGui::Text("GPU  %.2f ms", gpu_total_ms);
+                ImGui::EndTooltip();
+            }
+
+            ImGui::Spacing();
+
+            DrawSparkline(ImGui::GetContentRegionAvail().x, 70.0f);
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            DrawSummaryTable("FullProfilerSummaryTable");
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            DrawTimingTable("FullProfilerTimingTable", true);
+        }
+        ImGui::End();
+    }
 }

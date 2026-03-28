@@ -6,14 +6,9 @@ void AABB::Init(const std::vector<glm::vec3>& vertices) {
     setLocalFaces();
 }
 
-void AABB::update(glm::mat4& model, glm::vec3& pos, glm::vec3& scale, bool isRotated) {
-    if (isRotated) {
-        glm::mat3 model3x3 = glm::mat3(model);
-        transform_withRotation(model3x3, pos);
-    }
-    else {
-        transform_noRotation(model, pos, scale);
-    }
+void AABB::update(const Transform& t) {
+    glm::mat3 model3x3 = glm::mat3(t.modelMatrix);
+    transform_withRotation(model3x3, t.position);
 
     centroid = (wMin + wMax) * 0.5f;
     halfExtents = (wMax - wMin) * 0.5f;

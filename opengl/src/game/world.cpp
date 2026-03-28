@@ -37,21 +37,89 @@ GameObjectHandle World::createGameObject(
         textureId = m_textureManager.getTexture(textureName);
     }
 
-    GameObjectHandle handle = m_gameObjects.create(objectId, shader, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
+    Transform transform;
+    transform.position = pos;
+    transform.orientation = orientation;
+    transform.scale = size;
+    transform.updateCache();
+
+    GameObjectHandle gameObjectHandle = m_gameObjects.create(
+        objectId, 
+        shader, 
+        mesh, 
+        textureId, 
+        transform,
+        color, 
+        seeThrough
+    );
    
     BroadphaseBucket targetBucket = asleep ? BroadphaseBucket::Asleep : (isStatic ? BroadphaseBucket::Static : BroadphaseBucket::Awake);
-    m_physicsEngine.queueAdd(handle, targetBucket);
 
+    // ------ rendering initialization ----------
     if (!seeThrough) {
-        m_renderer.addObjectToBatch(handle);
+        m_renderer.addObjectToBatch(gameObjectHandle);
     }
 
-    PhysicsWorld* world = m_physicsEngine.getPhysicsWorld();
-    world->createRigidBody();
-    world->createCollider();
+    // ------ physics initialization ---------
+    PhysicsWorld* physicsWorld = m_physicsEngine.getPhysicsWorld();
+
+    // temporay solution to get the inverse inertia from the game object, will be refactored when physics instead works with PhysicsWorld and Collider/RigidBody handles
+    GameObject& gameObject = *m_gameObjects.try_get(gameObjectHandle);
+
+    // create rigid body
+    RigidBodyHandle bodyHandle = physicsWorld->createRigidBody();
+    RigidBody& body = *physicsWorld->getRigidBodies().try_get(bodyHandle);
+    body.position = pos;
+    body.orientation = orientation;
+    body.mass = mass;
+    body.invMass = isStatic ? 0.0f : 1.0f / mass;
+    body.isStatic = isStatic;
+    body.asleep = asleep;
+    body.sleepCounterThreshold = sleepCounterThreshold;
+    body.anchorPoint = pos;
+    body.calculateInverseInertia(colliderType, gameObject.transform);
+
+    // create collider
+    ColliderHandle colliderHandle = physicsWorld->createCollider();
+    Collider& collider = *physicsWorld->getColliders().try_get(colliderHandle);
+    collider.ownerHandle = gameObjectHandle;
+    collider.rigidBodyHandle = bodyHandle;
+
+    // aabb init
+    std::vector<glm::vec3> verticesPositions;   
+    for (const Vertex& vertex : mesh->vertices) {
+        verticesPositions.push_back(vertex.position);
+    }
+    collider.aabb.Init(verticesPositions);
+    collider.aabb.update(gameObject.transform);
+
+    // collider shape init
+    if (colliderType == ColliderType::CUBOID) {
+        OOBB box(verticesPositions, gameObject.transform);
+        collider.shape = box;
+    }
+    else if (colliderType == ColliderType::SPHERE) {
+        Sphere sphere(gameObject.transform);
+        collider.shape = sphere;
+    }
+
+    // collider broadphase bucket
+    if (asleep) {
+        collider.broadphaseHandle.bucket = BroadphaseBucket::Asleep;
+    } else if (isStatic) {
+        collider.broadphaseHandle.bucket = BroadphaseBucket::Static;
+    } else {
+        collider.broadphaseHandle.bucket = BroadphaseBucket::Awake;
+    }
+
+    body.colliderHandle = colliderHandle;
+    gameObject.colliderHandle = colliderHandle;
+    gameObject.rigidBodyHandle = bodyHandle;
+
+    m_physicsEngine.queueAdd(colliderHandle, collider.broadphaseHandle.bucket);
 
     objectId++;
-    return handle;
+    return gameObjectHandle;
 }
 
 void World::deleteGameObject(GameObjectHandle handle) {

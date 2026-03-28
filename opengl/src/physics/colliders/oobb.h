@@ -10,9 +10,9 @@ class OOBB {
 public:
     //constructor
     OOBB() = default;
-    OOBB(std::vector<glm::vec3>& verts, const glm::mat4& M, const glm::vec3& scale) {
-        init(verts, M);
-        update(M, scale);
+    OOBB(const std::vector<glm::vec3>& verts, const Transform& t) {
+        init(verts, t);
+        update(t);
     };
 
     glm::vec3 lCenter;
@@ -41,9 +41,6 @@ public:
     struct Edge { glm::vec3 A, B; };
     std::array<Edge, 4> createEdgesAlongAxis(int axisIdx) const;
 
-    void update(const glm::mat4& M, const glm::vec3& scale);
-    void init(std::vector<glm::vec3>& verts, const glm::mat4& M);   // för COM tillfälligt
-
-private:
-    //void init(std::vector<glm::vec3>& verts, const glm::mat4& M);
+    void update(const Transform& t);
+    void init(const std::vector<glm::vec3>& verts, const Transform& t);   // för COM tillfälligt
 };

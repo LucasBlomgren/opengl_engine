@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -302,6 +302,8 @@
     <ClInclude Include="src\editor\panel_manager.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\game\player.h" />
+    <ClInclude Include="src\game\ring_buffer.h" />
+    <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />

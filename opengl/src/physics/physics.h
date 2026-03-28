@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "pointer_cache.h"
 #include "physics_world.h"
 #include "world.h"
 #include "timer.h"
@@ -39,9 +40,9 @@ public:
     void sleepAllObjects();
     void awakenAllObjects();
 
-    void queueAdd(GameObjectHandle& handle, BroadphaseBucket& target);
-    void queueRemove(GameObjectHandle& handle);
-    void queueMove(GameObjectHandle& handle, BroadphaseBucket& target);
+    void queueAdd(ColliderHandle& handle, BroadphaseBucket& target);
+    void queueRemove(ColliderHandle& handle);
+    void queueMove(ColliderHandle& handle, BroadphaseBucket& target);
 
     RaycastHit performRaycast(Ray& ray);
 
@@ -76,7 +77,7 @@ private:
     //-----------------------------
     struct PhysCmd {
         enum class Type { Add, Remove, Move } type;
-        GameObjectHandle handle;
+        ColliderHandle handle;
         BroadphaseBucket dst = BroadphaseBucket::None;
     };
     std::vector<PhysCmd> pending;
@@ -99,21 +100,9 @@ private:
     BroadphaseManager broadphaseManager;
 
     // cache for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
-    struct StepPtrCache {
-        std::vector<GameObject*> cache;
-        SlotMap<GameObject, GameObjectHandle>* sm;
-
-        void init(SlotMap<GameObject, GameObjectHandle>& slotMap) { sm = &slotMap; }
-        void clear() { cache.assign(sm->slot_capacity(), nullptr); }
-
-        GameObject* get(GameObjectHandle h) {
-            auto& slot = cache[h.slot]; 
-            if (slot) return slot; 
-            slot = sm->try_get(h); // gen-check en gång 
-            return slot; 
-        }
-    };
-    StepPtrCache stepPtrCache;
+    PointerCache<GameObject, GameObjectHandle> gameObjectPtrCache;
+    PointerCache<Collider, ColliderHandle> colliderPtrCache;
+    PointerCache<RigidBody, RigidBodyHandle> bodyPtrCache;
 
     void detectAndSolveCollisions();
     void narrowPhase(const std::vector<TerrainPair>& tHits, const std::vector<DynamicPair>& dHits);
@@ -134,11 +123,11 @@ private:
     //------------------------
     //       Sleeping
     //------------------------
-    std::vector<GameObjectHandle> toWake;
-    std::vector<GameObjectHandle> toSleep;
+    std::vector<RigidBody*> toWake;
+    std::vector<RigidBody*> toSleep;
     void decideSleep();
     void updateSleepThresholds();
 
     struct WakeUpInfo { bool A, B; };
-    WakeUpInfo wakeUpCheck(const GameObjectHandle& handleA, const GameObjectHandle& handleB, GameObject& objA, GameObject& objB);
+    WakeUpInfo wakeUpCheck(RigidBody& A, RigidBody& B);
 };

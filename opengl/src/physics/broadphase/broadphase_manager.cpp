@@ -1,21 +1,23 @@
 #include "pch.h"
 #include "broadphase_manager.h"
 #include "game_object.h"
+#include "rigid_body.h"
 #include "tri.h"
 
 // -----------------------------------
 //      Main functions
 // -----------------------------------
 
-void BroadphaseManager::init(SlotMap<GameObject, GameObjectHandle>* sm, std::vector<Tri>* terrainTris) {
-    slotMap = sm;
+void BroadphaseManager::init(SlotMap<Collider, ColliderHandle>* cMap, SlotMap<RigidBody, RigidBodyHandle>* bMap, std::vector<Tri>* terrainTris) {
+    colliderMap = cMap;
+    bodyMap = bMap;
     terrainTriangles = terrainTris;
 
-    uint32_t slotCap = sm->dense().capacity();
+    uint32_t slotCap = cMap->dense().capacity();
 
-    awakeBvh.init(sm, slotCap);
-    asleepBvh.init(sm, slotCap);
-    staticBvh.init(sm, slotCap);
+    awakeBvh.init(cMap, slotCap);
+    asleepBvh.init(cMap, slotCap);
+    staticBvh.init(cMap, slotCap);
 
     awakeHandles.clear();
     asleepHandles.clear();
@@ -53,15 +55,15 @@ void BroadphaseManager::computePairs() {
         pairsBufTerrain.clear();
         treeVsTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
-        // Sort terrain pairs by GameObject to avoid duplicates 
-        std::unordered_map<GameObjectHandle, std::vector<Tri*>> temp;
+        // Sort terrain pairs by Collider to avoid duplicates 
+        std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
         temp.reserve(pairsBufTerrain.size());
         if (temp.bucket_count() < pairsBufTerrain.size())
             temp.reserve(pairsBufTerrain.size());
 
         for (int i = 0; i < pairsBufTerrain.size(); i++) {
-            auto [obj, tri] = pairsBufTerrain[i];
-            temp[obj].push_back(tri);
+            auto [collider, tri] = pairsBufTerrain[i];
+            temp[collider].push_back(tri);
         }
 
         // Finalize terrain pairs
@@ -70,8 +72,8 @@ void BroadphaseManager::computePairs() {
         terrainPairs.resize(cap);
         int sp = 0;
 
-        for (auto& [objHandle, trisVec] : temp) {
-            terrainPairs[sp++] = TerrainPair{ objHandle, std::move(trisVec) };
+        for (auto& [colliderHandle, trisVec] : temp) {
+            terrainPairs[sp++] = TerrainPair{ colliderHandle, std::move(trisVec) };
         }
         terrainPairs.resize(sp);
     }
@@ -123,14 +125,13 @@ void BroadphaseManager::computePairs() {
 }
 
 // Add to list
-void BroadphaseManager::add(GameObjectHandle& handle, BroadphaseBucket dst) {
-    GameObject* objPtr = slotMap->try_get(handle);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in add. Function: add\n";
+void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::add] Error: Invalid collider handle\n";
         return;
     }
-
-    auto& h = objPtr->broadphaseHandle;
+    Collider* colliderPtr = colliderMap->try_get(handle);
+    auto& h = colliderPtr->broadphaseHandle;
 
     auto& list = listFor(dst);
     list.push_back(handle);
@@ -144,14 +145,14 @@ void BroadphaseManager::add(GameObjectHandle& handle, BroadphaseBucket dst) {
 }
 
 // Remove from current list
-void BroadphaseManager::remove(GameObjectHandle& handle) {
-    GameObject* objPtr = slotMap->try_get(handle);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in remove. Function: remove\n";
+void BroadphaseManager::remove(ColliderHandle& handle) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::remove] Error: Invalid collider handle\n";
         return;
     }
 
-    auto& h = objPtr->broadphaseHandle;
+    Collider* colliderPtr = colliderMap->try_get(handle);
+    auto& h = colliderPtr->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
     // remove from list
@@ -166,54 +167,72 @@ void BroadphaseManager::remove(GameObjectHandle& handle) {
 }
 
 // Move to awake
-void BroadphaseManager::moveToAwake(GameObjectHandle& handle) {
-    GameObject* objPtr = slotMap->try_get(handle);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in moveToAwake. Function: moveToAwake\n";
+void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToAwake] Error: Invalid collider handle\n";
         return;
     }
+    Collider* colliderPtr = colliderMap->try_get(handle);
 
-    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
-        objPtr->setAwake();
+    if (!colliderPtr->rigidBodyHandle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToAwake] Error: Invalid rigid body handle\n";
+        return;
+    }
+    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+
+    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+        bodyPtr->setAwake();
         return;
     }
 
     remove(handle);
-    objPtr->setAwake();
+    bodyPtr->setAwake();
     add(handle, BroadphaseBucket::Awake);
     awakeBvh.dirty = true;
 }
 // Move to asleep
-void BroadphaseManager::moveToAsleep(GameObjectHandle& handle) {
-    GameObject* objPtr = slotMap->try_get(handle);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in moveToAsleep. Function: moveToAsleep\n";
+void BroadphaseManager::moveToAsleep(ColliderHandle& handle) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToAsleep] Error: Invalid collider handle\n";
         return;
     }
+    Collider* colliderPtr = colliderMap->try_get(handle);
 
-    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        objPtr->setAsleep();
+    if (!colliderPtr->rigidBodyHandle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToAsleep] Error: Invalid rigid body handle\n";
+        return;
+    }
+    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+
+    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+        bodyPtr->setAsleep();
         return;
     }
 
     remove(handle);
-    objPtr->setAsleep();
+    bodyPtr->setAsleep();
     add(handle, BroadphaseBucket::Asleep);
     asleepBvh.dirty = true;
 }
 // Move to static
-void BroadphaseManager::moveToStatic(GameObjectHandle& handle) {
-    GameObject* objPtr = slotMap->try_get(handle);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in moveToStatic. Function: moveToStatic\n";
+void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToStatic] Error: Invalid collider handle\n";
         return;
     }
+    Collider* colliderPtr = colliderMap->try_get(handle);
 
-    if (objPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
+    if (!colliderPtr->rigidBodyHandle.isValid()) {
+        std::cout << "[BroadPhaseManager::moveToStatic] Error: Invalid rigid body handle\n";
+        return;
+    }
+    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+
+    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
 
     remove(handle);
-    objPtr->setStatic();
+    bodyPtr->setStatic();
     add(handle, BroadphaseBucket::Static);
     staticBvh.dirty = true;
 }
@@ -223,33 +242,32 @@ void BroadphaseManager::moveToStatic(GameObjectHandle& handle) {
 // ---------------------------------
 
 // Swap and pop from list
-void BroadphaseManager::swapAndPop(GameObjectHandle& obj, std::vector<GameObjectHandle>& list) {
-    GameObject* objPtr = slotMap->try_get(obj);
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in swapAndPop. Function: swapAndPop\n";
+void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderHandle>& list) {
+    if (!handle.isValid()) {
+        std::cout << "[BroadPhaseManager::swapAndPop] Error: Invalid collider handle\n";
         return;
     }
+    Collider* colliderPtr = colliderMap->try_get(handle);
 
-    int i = objPtr->broadphaseHandle.listIdx;
+    int i = colliderPtr->broadphaseHandle.listIdx;
     if (i == -1) return;
 
     int lastPos = (int)list.size() - 1;
-
     if (i != lastPos) {
-        GameObjectHandle movedHandle = list[lastPos];   // handle in dynamicObjects
+        ColliderHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        GameObject* movedPtr = slotMap->try_get(movedHandle);
-        if (!movedPtr) {
-            std::cout << "Error: Invalid object handle in swapAndPop movedPtr. Function: swapAndPop\n";
+        if (!movedHandle.isValid()) {
+            std::cout << "[BroadPhaseManager::swapAndPop] Error: Invalid collider handle\n";
             return;
         }
+        Collider* movedPtr = colliderMap->try_get(handle);
 
         movedPtr->broadphaseHandle.listIdx = i;
     }
 
     list.pop_back();
-    objPtr->broadphaseHandle.listIdx = -1;
+    colliderPtr->broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket
@@ -260,7 +278,7 @@ BVHTree& BroadphaseManager::bvhFor(BroadphaseBucket b) {
 }
 
 // Get list for bucket
-std::vector<GameObjectHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
+std::vector<ColliderHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
     if (b == BroadphaseBucket::Awake)  return awakeHandles;
     if (b == BroadphaseBucket::Asleep) return asleepHandles;
     return staticHandles;

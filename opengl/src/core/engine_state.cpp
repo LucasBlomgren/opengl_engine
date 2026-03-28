@@ -1,8 +1,16 @@
 #include "pch.h"
 #include "engine_state.h"
 
-void EngineState::setAdvanceStep(bool arg) { advanceStep = arg; }
-void EngineState::setPaused(bool arg) { paused = arg; }
+void EngineState::toggleShowWireframes() { 
+    showWireframes = !showWireframes; 
+
+    if (showWireframes) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    } else {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+}
+
 void EngineState::togglePause() { paused = !paused; }
 void EngineState::toggleShowFPS() { showFPS = !showFPS; }
 void EngineState::toggleShowAABB() { showAABB = !showAABB; }
@@ -14,7 +22,12 @@ void EngineState::toggleShowBVH_awake() { showBVH_awake = !showBVH_awake; }
 void EngineState::toggleShowBVH_asleep() { showBVH_asleep = !showBVH_asleep; }
 void EngineState::toggleShowBVH_static() { showBVH_static = !showBVH_static; }
 void EngineState::toggleShowBVH_terrain() { showBVH_terrain = !showBVH_terrain; }
+
+void EngineState::setAdvanceStep(bool arg) { advanceStep = arg; }
+void EngineState::setPaused(bool arg) { paused = arg; }
 void EngineState::setPlayerMode(bool arg) { playerMode = arg; }
+
+bool EngineState::getShowWireframes() const { return showWireframes; }
 bool EngineState::getAdvanceStep() const { return advanceStep; }
 bool EngineState::isPaused() const { return paused; }
 bool EngineState::getShowFPS() const { return showFPS; }

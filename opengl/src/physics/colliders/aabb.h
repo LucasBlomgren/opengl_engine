@@ -5,6 +5,7 @@
 
 #include "shaders/shader.h"
 #include "vertex.h"
+#include "game/transform.h"
 
 struct Faces {
     std::array<glm::vec3, 4> minX, maxX;
@@ -29,7 +30,7 @@ public:
     float surfaceArea = 0.0f;
 
     void Init(const std::vector<glm::vec3>& vertices);
-    void update(glm::mat4& model, glm::vec3& pos, glm::vec3& scale, bool hasRotated);
+    void update(const Transform& t);
     bool intersects(const AABB& b) const;
 
     // ----- bvh funktioner -----

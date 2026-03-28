@@ -7,9 +7,9 @@ class BVHTree {
 public:
     BVHTree() = default;
 
-    void init(SlotMap<GameObject, GameObjectHandle>* s, int allocSize);
+    void init(SlotMap<Collider, ColliderHandle>* s, int allocSize);
 
-    using Element = GameObjectHandle;
+    using Element = ColliderHandle;
     bool dirty = false;
     int rootIdx = -1;
 
@@ -37,19 +37,19 @@ public:
     static constexpr int MaxStackSize = 256;
     static constexpr int MaxCollisionBuf = 25000;
 
-    void build(std::vector<GameObjectHandle>& objects);
-    void update(std::vector<GameObjectHandle>& objects);
-    void singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) const;
+    void build(std::vector<ColliderHandle>& objects);
+    void update(std::vector<ColliderHandle>& objects);
+    void singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) const;
 
-    int insertLeaf(GameObjectHandle handle);
+    int insertLeaf(ColliderHandle handle);
     int findBestSibling(AABB& box);
-    int createLeaf(GameObjectHandle handle, GameObject* objPtr);
+    int createLeaf(ColliderHandle handle, Collider* objPtr);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
 
 private:
-    SlotMap<GameObject, GameObjectHandle>* slotmap;
+    SlotMap<Collider, ColliderHandle>* slotMap;
     int   leafThreshold = 1;
     int   numRefits = 0;
     int   rebuildThreshold = 0;        // räknas om i build()
@@ -66,7 +66,7 @@ private:
     std::vector<BVHPrimitive> prims;
 
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
-    void createPrimitives(std::vector<GameObjectHandle>& objectHandles);
+    void createPrimitives(std::vector<ColliderHandle>& objectHandles);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();

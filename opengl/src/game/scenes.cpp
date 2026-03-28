@@ -5,8 +5,8 @@
 #include <glm/gtx/quaternion.hpp>
 
 void SceneBuilder::emptyFloorScene() {
-    int floorWidth = 25;
-    int floorHeight = 25;
+    int floorWidth = 1;
+    int floorHeight = 1;
     const float baseX = 0.0f;
     const float baseZ = 0.0f;
     for (int i = 0; i < floorWidth; i++) {
@@ -37,10 +37,24 @@ void SceneBuilder::emptyFloorScene() {
 
     //world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(0,10,0), glm::vec3(50.0, 30.0, 5.0), 0, 1, {});
 
-    for (int i = 0; i < 100; i++) {
-        glm::vec3 pos = glm::vec3(-20 + i * 0.40f, 0.25f, -10.0f);
-        world.createGameObject("crate", "cube", ColliderType::CUBOID, pos, glm::vec3(0.05f, 0.5f, 0.2f), 1, 0);
-    }
+    //for (int i = 0; i < 100; i++) {
+    //    glm::vec3 pos = glm::vec3(-20 + i * 0.40f, 0.25f, -10.0f);
+    //    world.createGameObject("crate", "cube", ColliderType::CUBOID, pos, glm::vec3(0.05f, 0.5f, 0.2f), 1, 0);
+    //}
+
+        // -------------------- double brick wall ---------------------
+    int wallHeight = 20;
+    int wallWidth = 20;
+    float brickWidth = 1.0f;
+    float brickLength = 1.0f;
+    float brickHeight = 0.5f;
+    float brickDistance = 0.2f;
+
+    int brickWeight = 10;
+    int brickDecrease = 1;
+
+    createBrickWall(glm::vec3(-5, 0, -10), 0, wallWidth, wallHeight, glm::vec3(brickWidth, brickHeight, brickLength), brickDistance, brickWeight, brickDecrease, glm::vec2(0, 255), true);
+    createBrickWall(glm::vec3(-5, 0, -9), 1, wallWidth, wallHeight, glm::vec3(brickWidth, brickHeight, brickLength), brickDistance, brickWeight, brickDecrease, glm::vec2(0, 255), true);
 }
 
 void SceneBuilder::testFloorScene() {
@@ -107,7 +121,7 @@ void SceneBuilder::testFloorScene() {
                     newCenter.y += i;
 
                     glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-                    world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(newCenter), glm::vec3(2.5, 1.0, 1.0), 1, 0, orientation, 1.5, 1, randomColor);
+                    world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(newCenter), glm::vec3(2.5, 1.0, 1.0), 100, 0, orientation, 1.5, 1, randomColor);
 
                     angleRad += glm::radians(30.0f);
                 }

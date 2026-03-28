@@ -25,7 +25,7 @@ namespace SAT {
     };
 
     bool boxBox(Collider& A, Collider& B, Result& out);
-    bool boxSphere(Collider& A, Collider& B, Result& out);
+    bool boxSphere(Collider& A, Collider& B, const Transform& transformA, Result& out);
     bool boxTri(Collider& A, Tri& tri, Result& out);
     bool sphereSphere(Collider& A, Collider& B, Result& out);
     bool sphereTri(Collider& A, Tri& tri, Result& out);

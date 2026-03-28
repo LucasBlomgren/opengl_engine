@@ -3,6 +3,8 @@
 #include "aabb.h"
 #include "sat.h"
 
+#define FUNC_NAME __FUNCTION__
+
 PhysicsWorld* PhysicsEngine::getPhysicsWorld() {
     return &physicsWorld;
 }
@@ -19,8 +21,11 @@ void PhysicsEngine::init(World* world, FrameTimers* ft) {
 void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
     this->terrainTriangles = terrainTris;
 
-    broadphaseManager.init(&world->getGameObjects(), terrainTris);
-    stepPtrCache.init(world->getGameObjects());
+    broadphaseManager.init(&physicsWorld.getColliders(), &physicsWorld.getRigidBodies(), terrainTris);
+    
+    gameObjectPtrCache.init(world->getGameObjects(), "GameObject");
+    colliderPtrCache.init(physicsWorld.getColliders(), "Collider");
+    bodyPtrCache.init(physicsWorld.getRigidBodies(), "RigidBody");
 
     flushBroadphaseCommands();
 
@@ -94,18 +99,19 @@ RaycastHit PhysicsEngine::performRaycast(Ray& r) {
 //         Sleep All
 //-----------------------------
 void PhysicsEngine::sleepAllObjects() {
-    auto& slotmap = world->getGameObjects();
-    auto& dense = slotmap.dense();
+    auto& bodyMap = physicsWorld.getRigidBodies();
+    auto& colliderMap = physicsWorld.getColliders();
+    auto& dense = bodyMap.dense();
 
     for (uint32_t i = 0; i < (uint32_t)dense.size(); ++i) {
-        GameObject& obj = dense[i];
+        RigidBody& body = dense[i];
 
-        if (obj.asleep) continue;
-        if (obj.isStatic) continue;
-        if (obj.player) continue;
-        if (obj.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
+        if (body.asleep) continue;
+        if (body.type == BodyType::Static) continue;
+        if (body.player) continue;
+        //if (body.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
 
-        GameObjectHandle h = slotmap.handle_from_dense_index(i);
+        ColliderHandle h = colliderMap.handle_from_dense_index(i);
         broadphaseManager.moveToAsleep(h);
     }
 }
@@ -114,17 +120,18 @@ void PhysicsEngine::sleepAllObjects() {
 //         Wake All
 //-----------------------------
 void PhysicsEngine::awakenAllObjects() {
-    auto& slotmap = world->getGameObjects();
-    auto& dense = slotmap.dense();
+    auto& bodyMap = physicsWorld.getRigidBodies();
+    auto& colliderMap = physicsWorld.getColliders();
+    auto& dense = bodyMap.dense();
 
     for (uint32_t i = 0; i < (uint32_t)dense.size(); ++i) {
-        GameObject& obj = dense[i];
+        RigidBody& body = dense[i];
 
-        if (!obj.asleep) continue;
-        if (obj.isStatic) continue;
-        if (obj.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
+        if (!body.asleep) continue;
+        if (body.type == BodyType::Static) continue;
+        //if (body.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
 
-        GameObjectHandle h = slotmap.handle_from_dense_index(i);
+        ColliderHandle h = colliderMap.handle_from_dense_index(i);
         broadphaseManager.moveToAwake(h);
     }
 }
@@ -132,24 +139,15 @@ void PhysicsEngine::awakenAllObjects() {
 //-----------------------------
 //     Add/Remove commands
 //-----------------------------
-void PhysicsEngine::queueAdd(GameObjectHandle& handle, BroadphaseBucket& target) {
+void PhysicsEngine::queueAdd(ColliderHandle& handle, BroadphaseBucket& target) {
     pending.push_back({ PhysCmd::Type::Add, handle, target });
 }
-void PhysicsEngine::queueRemove(GameObjectHandle& handle) {
+void PhysicsEngine::queueRemove(ColliderHandle& handle) {
 
     std::cout << "Physics QueueRemove: Queue remove object with handle: slot " << handle.slot << ", gen " << handle.gen << "\n";
-
-
-    GameObject* objPtr = world->getGameObjects().try_get(handle);
-
-    if (!objPtr) {
-        std::cout << "Error: Invalid object handle in queueRemove. Function: queueRemove\n";
-        return;
-    }
-
     pending.push_back({ PhysCmd::Type::Remove, handle, BroadphaseBucket::None });
 }
-void PhysicsEngine::queueMove(GameObjectHandle& handle, BroadphaseBucket& target) {
+void PhysicsEngine::queueMove(ColliderHandle& handle, BroadphaseBucket& target) {
     pending.push_back({ PhysCmd::Type::Move, handle, target });
 }
 
@@ -157,13 +155,7 @@ void PhysicsEngine::queueMove(GameObjectHandle& handle, BroadphaseBucket& target
 //     Flush pending commands
 //-------------------------------
 void PhysicsEngine::flushBroadphaseCommands() {
-    for (auto& cmd : pending) 
-    {
-        GameObject* objPtr = world->getGameObjects().try_get(cmd.handle);
-        if (!objPtr) {
-            std::cout << "Error: Invalid object handle in pending broadphase command. Function: flushBroadphaseCommands\n";
-        }
-
+    for (auto& cmd : pending) {
         switch (cmd.type) {
         case PhysCmd::Type::Add:
             broadphaseManager.add(cmd.handle, cmd.dst);
@@ -192,7 +184,8 @@ void PhysicsEngine::flushBroadphaseCommands() {
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     ScopedTimer t(*frameTimers, "Physics");
 
-    stepPtrCache.clear();
+    colliderPtrCache.clear();
+    bodyPtrCache.clear();
 
     // Pre-step preparations
     {
@@ -200,7 +193,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         this->dt = deltaTime;
 
         // prepare for this frame
-        uint32_t slotCap = world->getGameObjects().slot_capacity();
+        uint32_t slotCap = physicsWorld.getRigidBodies().slot_capacity();
         toWake.reserve(slotCap);
         toSleep.reserve(slotCap);
         toWake.clear();
@@ -246,36 +239,26 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //       Update methods
 //-----------------------------
 void PhysicsEngine::updateStates() {
-    const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    for (const ColliderHandle& handle : broadphaseManager.getAwakeList()) {
+        Collider* collider = colliderPtrCache.get(handle, __FUNCTION__);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
 
-    for (const GameObjectHandle& handle : awakeHandles) {
-        GameObject* objPtr = stepPtrCache.get(handle);
-
-        if (!objPtr) {
-            std::cout << "Error: Awake object handle in broadphase is invalid. Function: updateStates\n";
-            continue;
-        }
-
-        objPtr->resetDirtyFlags();
-        objPtr->updatePos(this->dt);
-        objPtr->updateAABB();
-        objPtr->updateCollider();
+        obj->transform.updateCache();
+        body->update(this->dt);
+        collider->updateAABB(obj->transform);
+        collider->updateCollider(obj->transform);
     }
 
-    const std::vector<GameObjectHandle>& staticHandles = broadphaseManager.getStaticList();
+    for (const ColliderHandle& handle : broadphaseManager.getStaticList()) {
+        Collider* collider = colliderPtrCache.get(handle, __FUNCTION__);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
 
-    for (const GameObjectHandle& handle : staticHandles) {
-        GameObject* objPtr = stepPtrCache.get(handle);
-
-        if (!objPtr) {
-            std::cout << "Error: Static object handle in broadphase is invalid. Function: updateStates\n";
-            continue;
-        }
-
-        objPtr->resetDirtyFlags();
-        objPtr->updatePos(this->dt);
-        objPtr->updateAABB();
-        objPtr->updateCollider();
+        obj->transform.updateCache();
+        body->update(this->dt);
+        collider->updateAABB(obj->transform);
+        collider->updateCollider(obj->transform);
     }
 }
 
@@ -304,16 +287,12 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
 
     // ----- Terrain vs dynamic ----- 
     for (const TerrainPair& th : terrainHits) {
-        GameObject* objPtr = stepPtrCache.get(th.objHandle);
-
-        if (!objPtr) {
-            std::cout << "Error: Object handle in terrain pairs is invalid. Function: narrowPhase\n";
+        Collider* collider = colliderPtrCache.get(th.colliderHandle, __FUNCTION__);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
+        if (body->asleep) {
             continue;
         }
-
-        if (objPtr->asleep) {
-            continue;
-        }
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
 
         static std::vector<SAT::Result> allResults;
         int reserveSize = th.tris.size() * 2; // worst case
@@ -321,14 +300,14 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
         allResults.reserve(reserveSize); // reserve space for results
 
         // CUBE vs tris
-        if (objPtr->colliderType == ColliderType::CUBOID) {
+        if (collider->type == ColliderType::CUBOID) {
             for (Tri* tri : th.tris) {
                 SAT::Result satResult;
-                if (!SAT::boxTri(objPtr->collider, *tri, satResult)) {
+                if (!SAT::boxTri(*collider, *tri, satResult)) {
                     continue;
                 }
 
-                glm::vec3& centerBox = std::get<OOBB>(objPtr->collider.shape).wCenter;
+                glm::vec3& centerBox = std::get<OOBB>(collider->shape).wCenter;
                 SAT::reverseNormal(centerBox, satResult.tri_ptr->centroid, satResult.normal);
                 allResults.push_back(satResult);
             }
@@ -337,9 +316,10 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 continue;
             }
 
-            objPtr->setHelperMatrices();  // update helper matrixes and aabb faces
+            //body->setHelperMatrices();  // update helper matrixes and aabb faces
+            body->updateInertiaWorld();
 
-            Contact contact(objPtr, nullptr);
+            Contact contact(colliderHandle, nullptr);
 
             glm::vec3 avgNormal{ 0.0f }; 
             for (const SAT::Result& res : allResults) { 
@@ -348,23 +328,22 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             avgNormal = glm::normalize(avgNormal); // average normal  
             contact.normal = avgNormal;
 
-            if (objPtr->player) {
-                pushAwayPlayer(*objPtr, false, avgNormal, allResults[0].depth);
+            if (body->player) {
+                pushAwayPlayer(*obj, false, avgNormal, allResults[0].depth);
                 continue;
             }
 
             SAT::findBestTriangles(allResults);
-
             collisionManifold->boxMesh(contact, contactCache, allResults);
         }
         // SPHERE vs tris
-        else if (objPtr->colliderType == ColliderType::SPHERE) {
+        else if (collider->type == ColliderType::SPHERE) {
             for (Tri* tri : th.tris) {
                 SAT::Result satResult;
-                if (!SAT::sphereTri(objPtr->collider, *tri, satResult)) {
+                if (!SAT::sphereTri(*collider, *tri, satResult)) {
                     continue;
                 }
-                SAT::reverseNormal(objPtr->position, tri->centroid, satResult.normal); // reverse normal to point outwards
+                SAT::reverseNormal(obj->transform.position, tri->centroid, satResult.normal); // reverse normal to point outwards
                 allResults.push_back(satResult);
             }
 
@@ -372,7 +351,8 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 continue;
             }
 
-            objPtr->setHelperMatrices();
+            //obj->setHelperMatrices();
+            body->updateInertiaWorld(); 
 
             glm::vec3 avgNormal{ 0.0f };
             for (const SAT::Result& res : allResults) {
@@ -380,7 +360,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             }
             avgNormal = glm::normalize(avgNormal); // average normal 
 
-            Contact contact(objPtr, nullptr);
+            Contact contact(colliderHandle, nullptr);
             contact.normal = avgNormal; 
 
             SAT::findBestTriangles(allResults);
@@ -391,116 +371,152 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
 
     // ----- Dynamic vs dynamic -----
     for (const DynamicPair& dh : dynamicHits) {
-        GameObject* objAPtr = stepPtrCache.get(dh.A);
-        GameObject* objBPtr = stepPtrCache.get(dh.B);
+        Collider* colliderA = colliderPtrCache.get(dh.A, __FUNCTION__);
+        Collider* colliderB = colliderPtrCache.get(dh.B, __FUNCTION__);
 
-        if (!objAPtr || !objBPtr) {
-            std::cout << "Error: Object handle in dynamic pairs is invalid. Function: narrowPhase\n";
+        RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, __FUNCTION__);
+        RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, __FUNCTION__);
+
+        if (bodyA->type == BodyType::Static and 
+            bodyB->type == BodyType::Static) {
             continue;
         }
 
-        if (objAPtr->isStatic and objBPtr->isStatic) {
-            continue;
-        }
+        GameObject* objA = gameObjectPtrCache.get(bodyA->gameObjectHandle, __FUNCTION__);
+        GameObject* objB = gameObjectPtrCache.get(bodyB->gameObjectHandle, __FUNCTION__);
 
         // CUBE vs CUBE
-        if (objAPtr->colliderType == ColliderType::CUBOID and objBPtr->colliderType == ColliderType::CUBOID) {
+        if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
             SAT::Result satResult;
-            if (!SAT::boxBox(objAPtr->collider, objBPtr->collider, satResult)) {
+            if (!SAT::boxBox(*colliderA, *colliderB, satResult)) {
                 continue;
             }
-            objAPtr->totalCollisionCount++;
-            objBPtr->totalCollisionCount++;
+            bodyA->totalCollisionCount++;
+            bodyB->totalCollisionCount++;
 
-            glm::vec3& centerA = std::get<OOBB>(objAPtr->collider.shape).wCenter;
-            glm::vec3& centerB = std::get<OOBB>(objBPtr->collider.shape).wCenter;
+            glm::vec3& centerA = std::get<OOBB>(colliderA->shape).wCenter;
+            glm::vec3& centerB = std::get<OOBB>(colliderB->shape).wCenter;
             SAT::reverseNormal(centerA, centerB, satResult.normal);
 
-            if (objAPtr->player) {
-                pushAwayPlayer(*objAPtr, false, satResult.normal, satResult.depth);
+            if (objA->player) {
+                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
                 continue;
             }
-            if (objBPtr->player) {
-                pushAwayPlayer(*objBPtr, true, satResult.normal, satResult.depth);
+            if (objB->player) {
+                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
                 continue;
             }
 
             // used only for worldInertia (so far)
-            objAPtr->setHelperMatrices();
-            objBPtr->setHelperMatrices();
+            //objA->setHelperMatrices();
+            //objB->setHelperMatrices();
+            bodyA->updateInertiaWorld();
+            bodyB->updateInertiaWorld();
 
-            Contact contact(objAPtr, objBPtr);
+            Contact contact(objA, objB);
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(dh.A, dh.B, *objAPtr, *objBPtr);
-            // editor-freeze bara om motparten INTE är statisk
-            bool editorFreezeA = (objAPtr->selectedByEditor or objAPtr->selectedByPlayer) and !objBPtr->isStatic;
-            bool editorFreezeB = (objBPtr->selectedByEditor or objBPtr->selectedByPlayer) and !objAPtr->isStatic;
-            contact.freezeA = editorFreezeA || (objAPtr->asleep and !wakeInfo.A);
-            contact.freezeB = editorFreezeB || (objBPtr->asleep and !wakeInfo.B);
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
+
+            // freeze if kinematic and colliding with dynamic or kinematic, or if sleeping and not woken up by this collision
+            bool frozenA =
+                bodyA->type == BodyType::Static ||
+                bodyA->type == BodyType::Kinematic ||
+                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+
+            bool frozenB =
+                bodyB->type == BodyType::Static ||
+                bodyB->type == BodyType::Kinematic ||
+                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+
+            contact.freezeA = frozenA;
+            contact.freezeB = frozenB;
 
             collisionManifold->boxBox(contact, contactCache, satResult);
         }
         // CUBE vs SPHERE
-        else if ((objAPtr->colliderType == ColliderType::CUBOID and objBPtr->colliderType == ColliderType::SPHERE) or
-            (objAPtr->colliderType == ColliderType::SPHERE and objBPtr->colliderType == ColliderType::CUBOID)) {
+        else if (
+            (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
+            (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID)) 
+        {
             // swap if A is not cuboid
-
-            GameObjectHandle hA = dh.A;
-            GameObjectHandle hB = dh.B;
-            if (objAPtr->colliderType != ColliderType::CUBOID) {
-                std::swap(objAPtr, objBPtr);
-                std::swap(hA, hB);
+            if (colliderA->type != ColliderType::CUBOID) {
+                std::swap(objA, objB);
+                std::swap(bodyA, bodyB);
             }
 
             // used in SAT
-            objAPtr->setHelperMatrices();
-            objBPtr->setHelperMatrices();
+            //objA->setHelperMatrices();
+            //objB->setHelperMatrices();
+            bodyA->updateInertiaWorld();
+            bodyB->updateInertiaWorld();
 
             SAT::Result satResult;
-
-            if (!SAT::boxSphere(objAPtr->collider, objBPtr->collider, satResult)) {
+            if (!SAT::boxSphere(*colliderA, *colliderB, objA->transform, satResult)) {
                 continue;
             }
 
-            objAPtr->totalCollisionCount++;
-            objBPtr->totalCollisionCount++;
+            bodyA->totalCollisionCount++;
+            bodyB->totalCollisionCount++;
 
-            if (objAPtr->player) {
-                pushAwayPlayer(*objAPtr, false, satResult.normal, satResult.depth);
+            if (objA->player) {
+                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
                 continue;
             }
-            if (objBPtr->player) {
-                pushAwayPlayer(*objBPtr, true, satResult.normal, satResult.depth);
+            if (objB->player) {
+                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
                 continue;
             }
 
-            Contact contact(objAPtr, objBPtr);
+            Contact contact(objA, objB);
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(hA, hB, *objAPtr, *objBPtr);
-            contact.freezeA = (objAPtr->isStatic) || (objAPtr->asleep && !wakeInfo.A);
-            contact.freezeB = (objBPtr->isStatic) || (objBPtr->asleep && !wakeInfo.B);
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
+            bool frozenA =
+                bodyA->type == BodyType::Static ||
+                bodyA->type == BodyType::Kinematic ||
+                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+
+            bool frozenB =
+                bodyB->type == BodyType::Static ||
+                bodyB->type == BodyType::Kinematic ||
+                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+
+            contact.freezeA = frozenA;
+            contact.freezeB = frozenB;
 
             collisionManifold->boxSphere(contact, contactCache, satResult);
         }
         // SPHERE vs SPHERE
-        else if (objAPtr->colliderType == ColliderType::SPHERE and objBPtr->colliderType == ColliderType::SPHERE) {
+        else if (
+            colliderA->type == ColliderType::SPHERE and 
+            colliderB->type == ColliderType::SPHERE) 
+        {
             SAT::Result satResult;
-            if (!SAT::sphereSphere(objAPtr->collider, objBPtr->collider, satResult)) {
+            if (!SAT::sphereSphere(*colliderA, *colliderB, satResult)) {
                 continue;
             }
 
             // used only for worldInertia
-            objAPtr->setHelperMatrices();
-            objBPtr->setHelperMatrices();
+            //objA->setHelperMatrices();
+            //objB->setHelperMatrices();
 
-            objAPtr->totalCollisionCount++;
-            objBPtr->totalCollisionCount++;
+            bodyA->totalCollisionCount++;
+            bodyB->totalCollisionCount++;
 
-            Contact contact(objAPtr, objBPtr);
+            Contact contact(objA, objB);
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(dh.A, dh.B, *objAPtr, *objBPtr);
-            contact.freezeA = (objAPtr->isStatic) || (objAPtr->asleep && !wakeInfo.A);
-            contact.freezeB = (objBPtr->isStatic) || (objBPtr->asleep && !wakeInfo.B);
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
+            bool frozenA =
+                bodyA->type == BodyType::Static ||
+                bodyA->type == BodyType::Kinematic ||
+                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+
+            bool frozenB =
+                bodyB->type == BodyType::Static ||
+                bodyB->type == BodyType::Kinematic ||
+                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+
+            contact.freezeA = frozenA;
+            contact.freezeB = frozenB;
 
             collisionManifold->sphereSphere(contact, contactCache, satResult);  
         }
@@ -844,35 +860,35 @@ void PhysicsEngine::resolveCollisions() {
 //-----------------------------
 //       Wake up check
 //-----------------------------
-PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(const GameObjectHandle& handleA, const GameObjectHandle& handleB, GameObject& objA, GameObject& objB) {
+PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(RigidBody& A, RigidBody& B) {
     constexpr float velocityThreshold = 1.2f; // hälften för 120hz
     constexpr float angularThreshold = 0.8f;
     constexpr float v2 = velocityThreshold * velocityThreshold;
     constexpr float w2 = angularThreshold * angularThreshold;
 
     // Beräkna lokalt (aktuella värden just nu i narrow)
-    const float Av2 = glm::dot(objA.linearVelocity, objA.linearVelocity);
-    const float Aw2 = glm::dot(objA.angularVelocity, objA.angularVelocity);
-    const float Bv2 = glm::dot(objB.linearVelocity, objB.linearVelocity);
-    const float Bw2 = glm::dot(objB.angularVelocity, objB.angularVelocity);
+    const float Av2 = glm::dot(A.linearVelocity, A.linearVelocity);
+    const float Aw2 = glm::dot(A.angularVelocity, A.angularVelocity);
+    const float Bv2 = glm::dot(B.linearVelocity, B.linearVelocity);
+    const float Bw2 = glm::dot(B.angularVelocity, B.angularVelocity);
 
     WakeUpInfo info{ false, false };
 
-    if (objA.asleep and !objA.isStatic and objA.allowSleep) {
+    if (A.asleep and !A.isStatic and A.allowSleep) {
         if (Bv2 > v2 || Bw2 > w2) {
             info.A = true;
-            if (!objA.inSleepTransition) {
-                toWake.push_back(handleA);
-                objA.inSleepTransition = true;
+            if (!A.inSleepTransition) {
+                toWake.push_back(&A);
+                A.inSleepTransition = true;
             }
         }
     }
-    if (objB.asleep and !objB.isStatic and objB.allowSleep) {
+    if (B.asleep and !B.isStatic and B.allowSleep) {
         if (Av2 > v2 || Aw2 > w2) {
             info.B = true;
-            if (!objB.inSleepTransition) {
-                toWake.push_back(handleB);
-                objB.inSleepTransition = true;
+            if (!B.inSleepTransition) {
+                toWake.push_back(&B);
+                B.inSleepTransition = true;
             }
         }
     }
@@ -886,38 +902,38 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(const GameObjectHandle& han
 void PhysicsEngine::updateSleepThresholds() {
     const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const GameObjectHandle& handle : awakeHandles) {
-        GameObject* objPtr = stepPtrCache.get(handle);
+        GameObject* obj = stepCache.get(handle);
 
-        if (!objPtr) {
+        if (!obj) {
             std::cout << "Error: Object handle in awake list is invalid. Function: updateSleepThresholds\n";
             continue;
         }
 
-        if (objPtr->isStatic or objPtr->asleep or !objPtr->allowSleep)
+        if (obj->isStatic or obj->asleep or !obj->allowSleep)
             continue;
 
-        objPtr->collisionHistory.push(objPtr->totalCollisionCount);
-        objPtr->totalCollisionCount = 0;
-        float avg = objPtr->collisionHistory.average();
+        obj->collisionHistory.push(obj->totalCollisionCount);
+        obj->totalCollisionCount = 0;
+        float avg = obj->collisionHistory.average();
 
         if (avg <= 0.0f) {
-            if (std::abs(avg - objPtr->lastAvg) >= 1) {
-                objPtr->sleepCounter = 0.0f;
+            if (std::abs(avg - obj->lastAvg) >= 1) {
+                obj->sleepCounter = 0.0f;
             }
-            objPtr->lastAvg = avg;
+            obj->lastAvg = avg;
 
             continue;
         }
 
         avg = std::max(avg, 1.0f);
-        objPtr->lastAvg = avg;
+        obj->lastAvg = avg;
 
         constexpr float linearFactor = 0.17f;
         constexpr float angularFactor = 0.10f;
 
         // set thresholds
-        objPtr->velocityThreshold = avg * linearFactor;
-        objPtr->angularVelocityThreshold = avg * angularFactor * objPtr->invRadius;
+        obj->velocityThreshold = avg * linearFactor;
+        obj->angularVelocityThreshold = avg * angularFactor * obj->invRadius;
     }
 }
 
@@ -931,52 +947,52 @@ void PhysicsEngine::decideSleep()
 
     const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (GameObjectHandle handle : awakeHandles) {
-        GameObject* objPtr = stepPtrCache.get(handle);
+        GameObject* obj = stepCache.get(handle);
 
-        if (!objPtr) {
+        if (!obj) {
             std::cout << "Error: Object handle in awake list is invalid. Function: decideSleep\n";
             continue;
         }
 
-        if (!objPtr->allowSleep) continue;
-        if (objPtr->inSleepTransition) continue;
+        if (!obj->allowSleep) continue;
+        if (obj->inSleepTransition) continue;
 
         bool goingToSleep = false;
 
         // anchor point logic
-        if (glm::abs(objPtr->anchorPoint.x - objPtr->position.x) < jitterThreshold &&
-            glm::abs(objPtr->anchorPoint.y - objPtr->position.y) < jitterThreshold &&
-            glm::abs(objPtr->anchorPoint.z - objPtr->position.z) < jitterThreshold) 
+        if (glm::abs(obj->anchorPoint.x - obj->position.x) < jitterThreshold &&
+            glm::abs(obj->anchorPoint.y - obj->position.y) < jitterThreshold &&
+            glm::abs(obj->anchorPoint.z - obj->position.z) < jitterThreshold) 
         {
             // object is within jitter threshold of anchor point, increase timer
-            objPtr->anchorTimer += dt;
+            obj->anchorTimer += dt;
         }
         else {
             // decrease timer if object moves away from anchor point (but never below 0)
-            objPtr->anchorTimer = glm::max(0.0f, objPtr->anchorTimer - dt);
+            obj->anchorTimer = glm::max(0.0f, obj->anchorTimer - dt);
         }
 
         // set anchor point if timer is 0
-        if (objPtr->anchorTimer == 0.0f) {
-            objPtr->anchorPoint = objPtr->position;
+        if (obj->anchorTimer == 0.0f) {
+            obj->anchorPoint = obj->position;
         }
 
         // check if anchor timer has exceeded threshold
-        if (objPtr->anchorTimer >= anchorTimerThreshold) {
+        if (obj->anchorTimer >= anchorTimerThreshold) {
             goingToSleep = true;
         }
 
         // sleep counter
-        if (glm::length(objPtr->linearVelocity) < objPtr->velocityThreshold and
-            glm::length(objPtr->angularVelocity) < objPtr->angularVelocityThreshold)
+        if (glm::length(obj->linearVelocity) < obj->velocityThreshold and
+            glm::length(obj->angularVelocity) < obj->angularVelocityThreshold)
         {
-            objPtr->sleepCounter += dt;
+            obj->sleepCounter += dt;
         }
         else {
-            objPtr->sleepCounter = 0.0f;
+            obj->sleepCounter = 0.0f;
         }
 
-        if (objPtr->sleepCounter >= objPtr->sleepCounterThreshold) {
+        if (obj->sleepCounter >= obj->sleepCounterThreshold) {
             goingToSleep = true;
         }
 
@@ -990,15 +1006,15 @@ void PhysicsEngine::decideSleep()
     }
 
     for (GameObjectHandle& handle : toWake) {
-        GameObject* objPtr = stepPtrCache.get(handle);
+        GameObject* obj = stepCache.get(handle);
 
-        if (!objPtr) {
+        if (!obj) {
             std::cout << "Error: Object handle in wake list is invalid. Function: decideSleep\n";
             continue;
         }
 
         broadphaseManager.moveToAwake(handle);
-        objPtr->inSleepTransition = false;
+        obj->inSleepTransition = false;
     }
 }
 

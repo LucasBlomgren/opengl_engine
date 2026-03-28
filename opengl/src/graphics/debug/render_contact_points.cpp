@@ -67,8 +67,7 @@ unsigned int setupContactPoint() {
     return VAO;
 }
 
-void renderContactPoint(const Shader& shader, unsigned int& VAO, const glm::vec3& contactPoint) 
-{
+void renderContactPoint(const Shader& shader, const unsigned int& VAO, const glm::vec3& contactPoint) {
     shader.setVec3("debug.contactPointOffset", contactPoint);
 
     //glClear(GL_DEPTH_BUFFER_BIT);

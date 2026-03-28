@@ -6,6 +6,7 @@
 
 class EngineState {
 public:
+    void toggleShowWireframes();
     void setAdvanceStep(bool);
     void setPaused(bool);
     void togglePause();
@@ -20,6 +21,7 @@ public:
     void toggleShowBVH_static();
     void toggleShowBVH_terrain();
 
+    bool getShowWireframes() const;
     bool isPaused() const;
     bool getAdvanceStep() const;
     bool getShowFPS() const;
@@ -38,6 +40,7 @@ public:
     float deltaTime = 0.0f;
 
 private:
+    bool showWireframes = false;
     bool playerMode = false;
     bool advanceStep = false;
     bool paused = false;

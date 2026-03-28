@@ -37,7 +37,7 @@ void DebugRenderer::prepareFrame(const PhysicsEngine& physics, const std::vector
 // --------------------------------------------
 //   Render Scene debug meshes to shadow map 
 // --------------------------------------------
-void DebugRenderer::renderShadowPass() {
+void DebugRenderer::renderShadowPass() const {
     shadowMeshShader->use();
 
     for (const SceneDebugMesh& dm : sceneDebugMeshes) {
@@ -194,7 +194,7 @@ void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects) {
         aabbRenderer.render(color, *debugShapeShader);
     }
 }
-void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera) {
+void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera) const {
     if (!engineState->getShowColliders()) return;
 
     glLineWidth(2.0f);
@@ -211,7 +211,7 @@ void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, cons
         }
     }
 }
-void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact>& cache) {
+void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const {
     if (!engineState->getShowContactPoints()) return;
 
     debugShapeShader->setInt("debug.objectType", 2);
@@ -292,7 +292,7 @@ void DebugRenderer::renderBVH(const Tree& tree, const glm::vec3& nodeColor, cons
 //------------------------------
 //     Render Shadow Frustum
 //------------------------------
-void DebugRenderer::renderFrustum(const glm::mat4& viewProj) {
+void DebugRenderer::renderFrustum(const glm::mat4& viewProj) const {
     // 1) Invertera viewProj för att gå från clip → world
     glm::mat4 inv = glm::inverse(viewProj);
 

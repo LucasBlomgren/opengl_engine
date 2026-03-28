@@ -74,7 +74,7 @@ public:
 
     struct InstanceData {
         glm::mat4 model;
-        glm::vec3 color;  // valfritt, om du vill ha per-instans-färg
+        glm::vec3 color;
     };
     void addObjectToBatch(GameObjectHandle handle);
     void removeObjectFromBatch(GameObjectHandle handle);

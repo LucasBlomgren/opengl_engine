@@ -1,7 +1,8 @@
 #pragma once
+#include <vector>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-#include <vector>
+#include "game/transform.h"
 
 class Sphere {
 public:
@@ -9,13 +10,13 @@ public:
     glm::vec3 wCenter;
     float     radius;
 
-    Sphere(const glm::mat4& modelMatrix, const float radi) {
-        wCenter = glm::vec3(modelMatrix * glm::vec4(lCenter, 1.0f));
-        radius = radi;
+    Sphere(const Transform& t) {
+        wCenter = glm::vec3(t.modelMatrix * glm::vec4(lCenter, 1.0f));
+        radius = t.scale.x * 0.5f;
     }
 
-    void update(const glm::mat4& modelMatrix, float newRadius) {
-        wCenter = glm::vec3(modelMatrix * glm::vec4(lCenter, 1.0f));
-        radius = newRadius;
+    void update(const Transform& t) {
+        wCenter = glm::vec3(t.modelMatrix * glm::vec4(lCenter, 1.0f));
+        radius = t.scale.x * 0.5f;
     }
 };

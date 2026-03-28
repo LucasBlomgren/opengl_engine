@@ -18,7 +18,7 @@ public:
     void init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager);
 
     void prepareFrame(const PhysicsEngine& physics, const std::vector<GameObject>& objects);
-    void renderShadowPass();
+    void renderShadowPass() const;
     void renderOverlayPass(const PhysicsEngine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects);
 
     OOBBRenderer oobbRenderer;
@@ -49,9 +49,9 @@ private:
 
     // unlit debug shapes
     void renderAABBs(const std::vector<GameObject>& objects);
-    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera);
-    void renderContactPoints(const std::unordered_map<size_t, Contact>& cache);
-    void renderFrustum(const glm::mat4& viewProj);
+    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera) const;
+    void renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const;
+    void renderFrustum(const glm::mat4& viewProj) const;
     void renderBVHs(const PhysicsEngine& physics);
     template<class Tree> void renderBVH(const Tree& tree, const glm::vec3& nodeColor, const glm::vec3& leafColor);
     

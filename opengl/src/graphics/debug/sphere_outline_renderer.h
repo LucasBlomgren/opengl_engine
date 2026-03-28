@@ -14,7 +14,7 @@ public:
         const bool isStatic, 
         const bool selected,
         const bool hovered
-    );
+    ) const;
 
     void destroy();
 

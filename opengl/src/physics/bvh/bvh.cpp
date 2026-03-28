@@ -5,8 +5,8 @@
 
 #include "world.h"
 
-void BVHTree::init(SlotMap<GameObject, GameObjectHandle>* s, int allocSize) {
-    slotmap = s;
+void BVHTree::init(SlotMap<Collider, ColliderHandle>* s, int allocSize) {
+    slotMap = s;
 
     nodes.clear();
     nodes.reserve(allocSize * 2);
@@ -16,7 +16,7 @@ void BVHTree::init(SlotMap<GameObject, GameObjectHandle>* s, int allocSize) {
 //------------------------------
 //        Single Query
 //------------------------------
-void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) const {
+void BVHTree::singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) const {
     if (nodes.empty()) return;
 
     out.clear();
@@ -45,21 +45,20 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<GameObjectHandle>& out) 
 //------------------------------------------------------------------
 //      Insert Leaf
 //------------------------------------------------------------------
-int BVHTree::insertLeaf(GameObjectHandle objHandle)
-{
-    GameObject* objPtr = slotmap->try_get(objHandle);
-    if (!objPtr) {
-        std::cout << "Error: Object handle in BVHTree::insertLeaf is invalid.\n";
-        return -1;
+int BVHTree::insertLeaf(ColliderHandle handle) {
+    if (!handle.isValid()) {
+        std::cout << "[BVHTree::insertLeaf] Error: Invalid collider handle\n";
+        return;
     }
+    Collider* colliderPtr = slotMap->try_get(handle);
 
-    if (objPtr->broadphaseHandle.leafIdx != -1) {
+    if (colliderPtr->broadphaseHandle.leafIdx != -1) {
         // already in tree
         return -1;
     }
 
     // create leaf node
-    int leafIdx = createLeaf(objHandle, objPtr);
+    int leafIdx = createLeaf(handle, colliderPtr);
 
     // if tree is empty, set rootIdx. Leaf becomes root.
     if (rootIdx == -1) {
@@ -108,16 +107,16 @@ int BVHTree::insertLeaf(GameObjectHandle objHandle)
     return leaf.selfIdx;
 }
 
-int BVHTree::createLeaf(GameObjectHandle handle, GameObject* objPtr) {
+int BVHTree::createLeaf(ColliderHandle handle, Collider* colliderPtr) {
     Node& leaf = nodes.emplace_back();
     leaf.selfIdx = nodes.size() - 1;
     leaf.isLeaf = true;
     leaf.element = handle;
-    leaf.tightBox = objPtr->getAABB();
+    leaf.tightBox = colliderPtr->getAABB();
     leaf.fatBox = leaf.tightBox;
     leaf.fatBox.grow(fatBoxMargin);
 
-    objPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
+    colliderPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
 
     updateRenderData(leaf);
 
@@ -178,13 +177,12 @@ void BVHTree::removeLeaf(int leafIdx)
 
     if (leafIdx == rootIdx) {
         // root is leaf, clear tree
-        GameObject* objPtr = slotmap->try_get(leaf.element);
-        if (!objPtr) {
-            std::cout << "Error: Object handle in BVH leaf is invalid. Function: removeLeaf\n";
+        if (!leaf.element.isValid()) {
+            std::cout << "[BVHTree::removeLeaf] Error: Invalid collider handle in root leaf.\n";
             return;
-
         }
-        objPtr->broadphaseHandle.leafIdx = -1;
+        Collider* colliderPtr = slotMap->try_get(leaf.element);
+        colliderPtr->broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
         nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
@@ -220,14 +218,14 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.alive = false;
     leaf.parentIdx = -1;
 
-    GameObject* objPtr = slotmap->try_get(leaf.element);
-    if (!objPtr) {
-        std::cout << "Error: Object handle in BVH leaf is invalid. Function: removeLeaf\n";
+    if (!leaf.element.isValid()) {
+        std::cout << "[BVHTree::removeLeaf] Error: Invalid collider handle in leaf.\n";
         return;
     }
+    Collider* colliderPtr = slotMap->try_get(leaf.element);
 
-    objPtr->broadphaseHandle.leafIdx = -1;
-    leaf.element = GameObjectHandle{};
+    colliderPtr->broadphaseHandle.leafIdx = -1;
+    leaf.element = ColliderHandle{};
 
     parent.alive = false;
     parent.parentIdx = -1;
@@ -238,7 +236,7 @@ void BVHTree::removeLeaf(int leafIdx)
 //------------------------------------------------------------------
 //      Update
 //------------------------------------------------------------------
-void BVHTree::update(std::vector<GameObjectHandle>& handles) {
+void BVHTree::update(std::vector<ColliderHandle>& handles) {
     if (numRefits > rebuildThreshold) {
         // för många refits, bygg om trädet
         build(handles);
@@ -262,13 +260,13 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        GameObject* objPtr = slotmap->try_get(n.element);
-        if (!objPtr) {
-            std::cout << "Error: Object handle in BVH leaf is invalid. Function: updateLeaves\n";
-            continue;
+        if (!n.element.isValid()) {
+            std::cout << "[BVHTree::updateLeaves] Error: Invalid collider handle in leaf node.\n";
+            return;
         }
+        Collider* colliderPtr = slotMap->try_get(n.element);
 
-        n.tightBox = objPtr->getAABB();
+        n.tightBox = colliderPtr->getAABB();
         if (n.fatBox.contains(n.tightBox)) {
             continue;
         }
@@ -319,7 +317,7 @@ void BVHTree::refitNode(int nodeIdx) {
 //------------------------------------------------------------------
 //      Build
 //------------------------------------------------------------------
-void BVHTree::build(std::vector<GameObjectHandle>& handles) {
+void BVHTree::build(std::vector<ColliderHandle>& handles) {
     nodes.clear();
     // Fyll primitives
     createPrimitives(handles);
@@ -365,19 +363,19 @@ void BVHTree::build(std::vector<GameObjectHandle>& handles) {
     if (rootIdx != -1) refitNode(rootIdx);
 }
 
-void BVHTree::createPrimitives(std::vector<GameObjectHandle>& handles) {
+void BVHTree::createPrimitives(std::vector<ColliderHandle>& handles) {
     prims.clear();
     prims.reserve(handles.size());
 
-    for (GameObjectHandle& handle : handles) {
-        GameObject* objPtr = slotmap->try_get(handle);
-        if (!objPtr) {
-            std::cout << "Error: Object handle in BVH build is invalid. Function: createPrimitives\n";
-            continue;
+    for (ColliderHandle& handle : handles) {
+        if (!handle.isValid()) {
+            std::cout << "[BVHTree::createPrimitives] Error: Invalid collider handle.\n";
+            return;
         }
+        Collider* colliderPtr = slotMap->try_get(handle);
 
-        objPtr->broadphaseHandle.leafIdx = -1;
-        AABB box = objPtr->getAABB();
+        colliderPtr->broadphaseHandle.leafIdx = -1;
+        AABB box = colliderPtr->getAABB();
 
         BVHPrimitive prim;
         prim.min = box.wMin;
@@ -457,14 +455,14 @@ void BVHTree::makeLeaf(int nodeIdx) {
     leaf.isLeaf = true;
     leaf.element = prims[leaf.start].element;
 
-    GameObject* objPtr = slotmap->try_get(leaf.element);
-    if (!objPtr) {
-        std::cout << "Error: Object handle in BVH makeLeaf is invalid. Function: makeLeaf\n";
+    if (!leaf.element.isValid()) {
+        std::cout << "[BVHTree::makeLeaf] Error: Invalid collider handle.\n";
         return;
     }
+    Collider* colliderPtr = slotMap->try_get(leaf.element);
 
-    objPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
-    leaf.tightBox = objPtr->getAABB();
+    colliderPtr->broadphaseHandle.leafIdx = leaf.selfIdx;
+    leaf.tightBox = colliderPtr->getAABB();
     leaf.fatBox = leaf.tightBox;
 }
 

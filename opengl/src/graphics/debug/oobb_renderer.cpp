@@ -9,7 +9,7 @@ unsigned int OOBBRenderer::sVAO_normals = 0;
 unsigned int OOBBRenderer::sVBO_normals = 0;
 bool         OOBBRenderer::sInitialized_normals = false;
 
-void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) {
+void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) const {
     glm::mat4 model(1.0f);
     makeOOBBModelMatrix(model, box);
 
@@ -27,7 +27,7 @@ void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep,
 }
 
 // #TODO: optimize by passing model matrix directly to shader
-void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) {
+void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) const {
     M[0] = glm::vec4(box.wAxes[0] * (box.lHalfExtents.x * 2.0f * box.scale.x), 0.0f);
     M[1] = glm::vec4(box.wAxes[1] * (box.lHalfExtents.y * 2.0f * box.scale.y), 0.0f);
     M[2] = glm::vec4(box.wAxes[2] * (box.lHalfExtents.z * 2.0f * box.scale.z), 0.0f);

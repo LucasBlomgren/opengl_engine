@@ -28,8 +28,7 @@ void SphereOutlineRenderer::render(
     const bool asleep, 
     const bool isStatic, 
     const bool selected, 
-    const bool hovered) 
-{
+    const bool hovered) const {
     glm::vec3 viewDir = glm::normalize(cameraPos - sphereCenter);
 
     glm::vec3 up = glm::abs(glm::dot(viewDir, glm::vec3(0, 1, 0))) > 0.99f
