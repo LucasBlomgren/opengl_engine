@@ -2,31 +2,26 @@
 #include "raycast.h"
 #include "aabb.h"
 
-RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<GameObject, GameObjectHandle>* slotmap)
+RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<Collider, ColliderHandle>* colliderMap, SlotMap<GameObject, GameObjectHandle>* goMap)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
     rayAABB.wMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
 
-    GameObjectHandle bestObjHandle;
+    ColliderHandle bestColliderHandle;
     float bestT = std::numeric_limits<float>::max();
 
-    std::vector<GameObjectHandle> collisions;
+    std::vector<ColliderHandle> collisions;
     bvh.singleQuery(rayAABB, collisions);
 
     bool noHit = true;
-    for (GameObjectHandle& handle : collisions) {
-        GameObject* objPtr = slotmap->try_get(handle);
+    for (ColliderHandle& handle : collisions) {
+        Collider* collider = colliderMap->try_get(handle);
+        GameObject* obj = goMap->try_get(collider->gameObjectHandle);
+        if (obj->player) continue;
 
-        if (!objPtr) {
-            std::cout << "Error: Object handle in raycast is invalid. Function: raycast\n";
-            continue;
-        }
-
-        if (objPtr->player) continue;
-
-        glm::vec3 min = objPtr->aabb.wMin;
-        glm::vec3 max = objPtr->aabb.wMax;
+        glm::vec3 min = collider->aabb.wMin;
+        glm::vec3 max = collider->aabb.wMax;
 
         glm::vec3 tMin = (min - ray.start) / ray.direction;
         glm::vec3 tMax = (max - ray.start) / ray.direction;
@@ -40,7 +35,7 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<GameObject, GameObjectH
         if (!(tNear > tFar || tFar < 0.0f)) {
             if (tNear < bestT) {
                 bestT = tNear;
-                bestObjHandle = handle;
+                bestColliderHandle = handle;
                 noHit = false;
             }
         }
@@ -56,13 +51,13 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<GameObject, GameObjectH
     RaycastHit hitData;
     hitData.hit = true;
     hitData.point = ray.start + ray.direction * bestT;
-    hitData.objectHandle = bestObjHandle;
+    hitData.colliderHandle = bestColliderHandle;
     hitData.t = bestT;
 
     // Åter­beräkna t1 per axel
-    GameObject* bestObjPtr = slotmap->try_get(bestObjHandle);   
-    glm::vec3 min = bestObjPtr->aabb.wMin;
-    glm::vec3 max = bestObjPtr->aabb.wMax;
+    Collider* bestColliderPtr = colliderMap->try_get(bestColliderHandle);
+    glm::vec3 min = bestColliderPtr->aabb.wMin;
+    glm::vec3 max = bestColliderPtr->aabb.wMax;
     glm::vec3 tMin = (min - ray.start) / ray.direction;
     glm::vec3 tMax = (max - ray.start) / ray.direction;
     glm::vec3 t1 = glm::min(tMin, tMax);  // entry‐tider

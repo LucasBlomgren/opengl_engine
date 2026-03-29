@@ -13,6 +13,7 @@ void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
     this->frameTimers = ft;
     collisionManifold = new CollisionManifold();
+    collisionManifold->init(&gameObjectPtrCache, &colliderPtrCache, &bodyPtrCache);
 }
 
 //-----------------------------
@@ -76,10 +77,11 @@ const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() cons
 //           Raycast
 //-----------------------------
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
-    SlotMap<GameObject, GameObjectHandle>* slotmap = &world->getGameObjects();
-    RaycastHit a = raycast(r, broadphaseManager.getAwakeBVH(), slotmap);
-    RaycastHit b = raycast(r, broadphaseManager.getAsleepBVH(), slotmap);
-    RaycastHit c = raycast(r, broadphaseManager.getStaticBVH(), slotmap);
+    SlotMap<Collider, ColliderHandle>* colMap = &physicsWorld.getColliders();
+    SlotMap<GameObject, GameObjectHandle>* goMap = &world->getGameObjects();
+    RaycastHit a = raycast(r, broadphaseManager.getAwakeBVH(), colMap, goMap);
+    RaycastHit b = raycast(r, broadphaseManager.getAsleepBVH(), colMap, goMap);
+    RaycastHit c = raycast(r, broadphaseManager.getStaticBVH(), colMap, goMap);
 
     RaycastHit bestHit = a;
     if (b.hit) {
@@ -186,6 +188,7 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 
     colliderPtrCache.clear();
     bodyPtrCache.clear();
+    gameObjectPtrCache.clear();
 
     // Pre-step preparations
     {
@@ -240,9 +243,9 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //-----------------------------
 void PhysicsEngine::updateStates() {
     for (const ColliderHandle& handle : broadphaseManager.getAwakeList()) {
-        Collider* collider = colliderPtrCache.get(handle, __FUNCTION__);
-        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
-        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
+        Collider* collider = colliderPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME);
 
         obj->transform.updateCache();
         body->update(this->dt);
@@ -251,9 +254,9 @@ void PhysicsEngine::updateStates() {
     }
 
     for (const ColliderHandle& handle : broadphaseManager.getStaticList()) {
-        Collider* collider = colliderPtrCache.get(handle, __FUNCTION__);
-        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
-        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
+        Collider* collider = colliderPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME);
 
         obj->transform.updateCache();
         body->update(this->dt);
@@ -287,12 +290,12 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
 
     // ----- Terrain vs dynamic ----- 
     for (const TerrainPair& th : terrainHits) {
-        Collider* collider = colliderPtrCache.get(th.colliderHandle, __FUNCTION__);
-        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, __FUNCTION__);
+        Collider* collider = colliderPtrCache.get(th.colliderHandle, FUNC_NAME);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
         if (body->asleep) {
             continue;
         }
-        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, __FUNCTION__);
+        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME);
 
         static std::vector<SAT::Result> allResults;
         int reserveSize = th.tris.size() * 2; // worst case
@@ -319,20 +322,21 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             //body->setHelperMatrices();  // update helper matrixes and aabb faces
             body->updateInertiaWorld();
 
-            Contact contact(colliderHandle, nullptr);
-
+            // average normal 
             glm::vec3 avgNormal{ 0.0f }; 
             for (const SAT::Result& res : allResults) { 
                 avgNormal += res.normal; 
             }
             avgNormal = glm::normalize(avgNormal); // average normal  
-            contact.normal = avgNormal;
-
+            
+            // if player, push out of collision and skip manifold generation
             if (body->player) {
                 pushAwayPlayer(*obj, false, avgNormal, allResults[0].depth);
                 continue;
             }
 
+            // collision manifold generation
+            Contact contact(th.colliderHandle, avgNormal);
             SAT::findBestTriangles(allResults);
             collisionManifold->boxMesh(contact, contactCache, allResults);
         }
@@ -354,36 +358,35 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             //obj->setHelperMatrices();
             body->updateInertiaWorld(); 
 
+            // average normal 
             glm::vec3 avgNormal{ 0.0f };
             for (const SAT::Result& res : allResults) {
                 avgNormal += res.normal;
             }
-            avgNormal = glm::normalize(avgNormal); // average normal 
+            avgNormal = glm::normalize(avgNormal); 
 
-            Contact contact(colliderHandle, nullptr);
-            contact.normal = avgNormal; 
-
+            // collision manifold generation
+            Contact contact(th.colliderHandle, avgNormal);
             SAT::findBestTriangles(allResults);
-
             collisionManifold->sphereMesh(contact, contactCache, allResults); 
         }
     }
 
     // ----- Dynamic vs dynamic -----
     for (const DynamicPair& dh : dynamicHits) {
-        Collider* colliderA = colliderPtrCache.get(dh.A, __FUNCTION__);
-        Collider* colliderB = colliderPtrCache.get(dh.B, __FUNCTION__);
+        Collider* colliderA = colliderPtrCache.get(dh.A, FUNC_NAME);
+        Collider* colliderB = colliderPtrCache.get(dh.B, FUNC_NAME);
 
-        RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, __FUNCTION__);
-        RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, __FUNCTION__);
+        RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, FUNC_NAME);
+        RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, FUNC_NAME);
 
         if (bodyA->type == BodyType::Static and 
             bodyB->type == BodyType::Static) {
             continue;
         }
 
-        GameObject* objA = gameObjectPtrCache.get(bodyA->gameObjectHandle, __FUNCTION__);
-        GameObject* objB = gameObjectPtrCache.get(bodyB->gameObjectHandle, __FUNCTION__);
+        GameObject* objA = gameObjectPtrCache.get(bodyA->gameObjectHandle, FUNC_NAME);
+        GameObject* objB = gameObjectPtrCache.get(bodyB->gameObjectHandle, FUNC_NAME);
 
         // CUBE vs CUBE
         if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
@@ -398,6 +401,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             glm::vec3& centerB = std::get<OOBB>(colliderB->shape).wCenter;
             SAT::reverseNormal(centerA, centerB, satResult.normal);
 
+            // if player, push out of collision and skip manifold generation
             if (objA->player) {
                 pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
                 continue;
@@ -413,8 +417,6 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             bodyA->updateInertiaWorld();
             bodyB->updateInertiaWorld();
 
-            Contact contact(objA, objB);
-
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
 
             // freeze if kinematic and colliding with dynamic or kinematic, or if sleeping and not woken up by this collision
@@ -428,9 +430,10 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
+            // collision manifold generation
+            Contact contact(dh.A, dh.B, satResult.normal);
             contact.freezeA = frozenA;
             contact.freezeB = frozenB;
-
             collisionManifold->boxBox(contact, contactCache, satResult);
         }
         // CUBE vs SPHERE
@@ -458,6 +461,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             bodyA->totalCollisionCount++;
             bodyB->totalCollisionCount++;
 
+            // if player, push out of collision and skip manifold generation
             if (objA->player) {
                 pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
                 continue;
@@ -466,8 +470,6 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
                 continue;
             }
-
-            Contact contact(objA, objB);
 
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
             bool frozenA =
@@ -480,9 +482,10 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
+            // collision manifold generation
+            Contact contact(dh.A, dh.B, satResult.normal);
             contact.freezeA = frozenA;
             contact.freezeB = frozenB;
-
             collisionManifold->boxSphere(contact, contactCache, satResult);
         }
         // SPHERE vs SPHERE
@@ -502,8 +505,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             bodyA->totalCollisionCount++;
             bodyB->totalCollisionCount++;
 
-            Contact contact(objA, objB);
-
+            // sleep check
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
             bool frozenA =
                 bodyA->type == BodyType::Static ||
@@ -515,9 +517,10 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
+            // collision manifold generation
+            Contact contact(dh.A, dh.B, satResult.normal);
             contact.freezeA = frozenA;
             contact.freezeB = frozenB;
-
             collisionManifold->sphereSphere(contact, contactCache, satResult);  
         }
     }
@@ -536,7 +539,7 @@ void PhysicsEngine::collectActiveContacts() {
         if (!c.wasUsedThisFrame) continue;
 
         const bool aActive = !c.freezeA;
-        const bool bActive = (c.objB_ptr && !c.freezeB);
+        const bool bActive = (c.partnerTypeB == ContactPartnerType::Collider && !c.freezeB);
         if (aActive || bActive) {
             contactsToSolve.push_back(&c);
         }
@@ -579,8 +582,10 @@ void PhysicsEngine::resolveCollisions() {
     float lastResidualSq = 0.0f;
 
     for (Contact* contact : contactsToSolve) { 
-        GameObject& objA = *contact->objA_ptr; 
-        GameObject& objB = *contact->objB_ptr; 
+        Collider* colliderA = colliderPtrCache.get(contact->colliderA, FUNC_NAME);
+        Collider* colliderB = colliderPtrCache.get(contact->colliderB, FUNC_NAME);
+        RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, FUNC_NAME);
+        RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, FUNC_NAME);
 
         // ----- Baumgarte stabilization -----
         float slop = 0.0005f; 
@@ -629,20 +634,20 @@ void PhysicsEngine::resolveCollisions() {
                 // linjär + tangentiell
                 glm::vec3 J = Pn + Pt;
 
-                if (contact->objA_ptr and !contact->freezeA) {
-                    objA.applyImpulseLinear(-J * objA.invMass);
-                    objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, J));
+                if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
+                    bodyA->applyImpulseLinear(-J * bodyA->invMass);
+                    bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, J));
                 }
-                if (contact->objB_ptr and !contact->freezeB) {
-                    objB.applyImpulseLinear(J * objB.invMass);
-                    objB.applyImpulseAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, J));
+                if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                    bodyB->applyImpulseLinear(J * bodyB->invMass);
+                    bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, J));
                 }
             }
 
             if (contact->accumulatedTwistImpulse != 0.0f) {
                 glm::vec3 tauWS = (contact->accumulatedTwistImpulse * warmStartFactor) * contact->normal;
-                if (!contact->freezeA) objA.applyImpulseAngular(-objA.inverseInertiaWorld * tauWS);
-                if (!contact->freezeB) objB.applyImpulseAngular(objB.inverseInertiaWorld * tauWS);
+                if (!contact->freezeA) bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * tauWS);
+                if (!contact->freezeB) bodyB->applyImpulseAngular(bodyB->invInertiaWorld * tauWS);
             }
         }
     } 
@@ -655,9 +660,10 @@ void PhysicsEngine::resolveCollisions() {
         float residualSq = 0.0f;
 
         for (Contact* contact : contactsToSolve) {
-
-            GameObject& objA = *contact->objA_ptr;
-            GameObject& objB = *contact->objB_ptr;
+            Collider* colliderA = colliderPtrCache.get(contact->colliderA, FUNC_NAME);
+            Collider* colliderB = colliderPtrCache.get(contact->colliderB, FUNC_NAME);
+            RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, FUNC_NAME);
+            RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, FUNC_NAME);
 
             for (int j = 0; j < contact->points.size(); j++) {
                 ContactPoint& cp = contact->points[j];
@@ -666,13 +672,13 @@ void PhysicsEngine::resolveCollisions() {
                 glm::vec3 relVelB{ 0.0f };
                 glm::vec3 angVelA{ 0.0f };
                 glm::vec3 angVelB{ 0.0f };
-                if (contact->objA_ptr and !contact->freezeA) {
-                    relVelA = objA.linearVelocity;
-                    angVelA = objA.angularVelocity;
+                if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
+                    relVelA = bodyA->linearVelocity;
+                    angVelA = bodyA->angularVelocity;
                 }
-                if (contact->objB_ptr and !contact->freezeB) {
-                    relVelB = objB.linearVelocity;
-                    angVelB = objB.angularVelocity;
+                if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                    relVelB = bodyB->linearVelocity;
+                    angVelB = bodyB->angularVelocity;
                 }
 
                 glm::vec3 relativeVelocity =
@@ -701,29 +707,29 @@ void PhysicsEngine::resolveCollisions() {
                 // Apply impulses
                 float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
                 if (deltaNormalImpulseLen > 1e-6f) {
-                    if (contact->objA_ptr and !contact->freezeA) {
-                        objA.applyImpulseLinear(-deltaNormalImpulse * objA.invMass);
-                        objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
+                    if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
+                        bodyA->applyImpulseLinear(-deltaNormalImpulse * bodyA->invMass);
+                        bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
                     }
-                    if (contact->objB_ptr and !contact->freezeB) {
-                        objB.applyImpulseLinear(deltaNormalImpulse * objB.invMass);
-                        objB.applyImpulseAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
+                    if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                        bodyB->applyImpulseLinear(deltaNormalImpulse * bodyB->invMass);
+                        bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
                     }
                 }
-                maxDelta = std::max(maxDelta, std::abs(deltaImpulse)); 
+                maxDelta = std::max(maxDelta, std::abs(deltaImpulse));
 
                 //--------------- Pre-calculate for friction ----------------
                 relVelA = glm::vec3{ 0.0f };
                 relVelB = glm::vec3{ 0.0f };
                 angVelA = glm::vec3{ 0.0f };
                 angVelB = glm::vec3{ 0.0f };
-                if (contact->objA_ptr and !contact->freezeA) {
-                    relVelA = objA.linearVelocity;
-                    angVelA = objA.angularVelocity;
+                if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
+                    relVelA = bodyA->linearVelocity;
+                    angVelA = bodyA->angularVelocity;
                 }
-                if (contact->objB_ptr and !contact->freezeB) {
-                    relVelB = objB.linearVelocity;
-                    angVelB = objB.angularVelocity;
+                if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                    relVelB = bodyB->linearVelocity;
+                    angVelB = bodyB->angularVelocity;
                 }
 
                 relativeVelocity =
@@ -759,18 +765,18 @@ void PhysicsEngine::resolveCollisions() {
                     residualSq += dT * dT;
 
                     // Applicera den statiska friktionsimpulsen:
-                    if (contact->objA_ptr and !contact->freezeA) {
-                        objA.applyImpulseLinear(-dFt * objA.invMass);
-                        objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, dFt));
+                    if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
+                        bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
+                        bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
                     }
-                    if (contact->objB_ptr and !contact->freezeB) {
-                        objB.applyImpulseLinear(dFt * objB.invMass);
-                        objB.applyImpulseAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, dFt));
+                    if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                        bodyB->applyImpulseLinear(dFt * bodyB->invMass);
+                        bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
                     }
-                } 
+                }
                 else {
-                // ---------- Dynamic friction ----------
-                    // Dynamisk friktion: projektera TOTAL impuls till cirkeln μ_d * Jn
+                    // ---------- Dynamic friction ----------
+                        // Dynamisk friktion: projektera TOTAL impuls till cirkeln μ_d * Jn
                     float maxDyn = dynamicFriction * Jn;
 
                     float len = std::sqrt(newLen2);
@@ -788,16 +794,16 @@ void PhysicsEngine::resolveCollisions() {
                         cp.accumulatedFrictionImpulse2 = clampedF2;
 
                         glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
-                        if (contact->objA_ptr and !contact->freezeA) {
+                        if (contact->partnerTypeA == ContactPartnerType::Collider and !contact->freezeA) {
 
                             residualSq += dT * dT;
 
-                            objA.applyImpulseLinear(-dFt * objA.invMass);
-                            objA.applyImpulseAngular(-objA.inverseInertiaWorld * glm::cross(cp.rA, dFt));
+                            bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
+                            bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
                         }
-                        if (contact->objB_ptr and !contact->freezeB) {
-                            objB.applyImpulseLinear(dFt * objB.invMass);
-                            objB.applyImpulseAngular(objB.inverseInertiaWorld * glm::cross(cp.rB, dFt));
+                        if (contact->partnerTypeB == ContactPartnerType::Collider and !contact->freezeB) {
+                            bodyB->applyImpulseLinear(dFt * bodyB->invMass);
+                            bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
                         }
                     }
                 }
@@ -808,8 +814,8 @@ void PhysicsEngine::resolveCollisions() {
             // 1) Relativ rotationshastighet kring normalen
             glm::vec3 angVelA{ 0.0f };
             glm::vec3 angVelB{ 0.0f };
-            if (contact->objA_ptr && !contact->freezeA) angVelA = objA.angularVelocity;
-            if (contact->objB_ptr && !contact->freezeB) angVelB = objB.angularVelocity;
+            if (contact->partnerTypeA == ContactPartnerType::Collider && !contact->freezeA) angVelA = bodyA->angularVelocity;
+            if (contact->partnerTypeB == ContactPartnerType::Collider && !contact->freezeB) angVelB = bodyB->angularVelocity;
 
             float v_twist = glm::dot((angVelB - angVelA), contact->normal);
 
@@ -834,11 +840,11 @@ void PhysicsEngine::resolveCollisions() {
 
                 residualSq += delta * delta;
 
-                if (contact->objA_ptr && !contact->freezeA) {
-                    objA.applyImpulseAngular(-objA.inverseInertiaWorld * tau);
+                if (contact->partnerTypeA == ContactPartnerType::Collider && !contact->freezeA) {
+                    bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * tau);
                 }
-                if (contact->objB_ptr && !contact->freezeB) {
-                    objB.applyImpulseAngular(objB.inverseInertiaWorld * tau);
+                if (contact->partnerTypeB == ContactPartnerType::Collider && !contact->freezeB) {
+                    bodyB->applyImpulseAngular(bodyB->invInertiaWorld * tau);
                 }
             }
         }
@@ -874,7 +880,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(RigidBody& A, RigidBody& B)
 
     WakeUpInfo info{ false, false };
 
-    if (A.asleep and !A.isStatic and A.allowSleep) {
+    if (A.asleep and A.type != BodyType::Static and A.allowSleep) {
         if (Bv2 > v2 || Bw2 > w2) {
             info.A = true;
             if (!A.inSleepTransition) {
@@ -883,7 +889,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(RigidBody& A, RigidBody& B)
             }
         }
     }
-    if (B.asleep and !B.isStatic and B.allowSleep) {
+    if (B.asleep and B.type != BodyType::Static and B.allowSleep) {
         if (Av2 > v2 || Aw2 > w2) {
             info.B = true;
             if (!B.inSleepTransition) {
@@ -900,40 +906,36 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(RigidBody& A, RigidBody& B)
 //       Sleep Thresholds
 //-----------------------------
 void PhysicsEngine::updateSleepThresholds() {
-    const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
-    for (const GameObjectHandle& handle : awakeHandles) {
-        GameObject* obj = stepCache.get(handle);
+    const std::vector<ColliderHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    for (const ColliderHandle& handle : awakeHandles) {
+        Collider* collider = colliderPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
 
-        if (!obj) {
-            std::cout << "Error: Object handle in awake list is invalid. Function: updateSleepThresholds\n";
-            continue;
-        }
-
-        if (obj->isStatic or obj->asleep or !obj->allowSleep)
+        if (body->type == BodyType::Static or body->asleep or !body->allowSleep)
             continue;
 
-        obj->collisionHistory.push(obj->totalCollisionCount);
-        obj->totalCollisionCount = 0;
-        float avg = obj->collisionHistory.average();
+        body->collisionHistory.push(body->totalCollisionCount);
+        body->totalCollisionCount = 0;
+        float avg = body->collisionHistory.average();
 
         if (avg <= 0.0f) {
-            if (std::abs(avg - obj->lastAvg) >= 1) {
-                obj->sleepCounter = 0.0f;
+            if (std::abs(avg - body->lastAvg) >= 1) {
+                body->sleepCounter = 0.0f;
             }
-            obj->lastAvg = avg;
+            body->lastAvg = avg;
 
             continue;
         }
 
         avg = std::max(avg, 1.0f);
-        obj->lastAvg = avg;
+        body->lastAvg = avg;
 
         constexpr float linearFactor = 0.17f;
         constexpr float angularFactor = 0.10f;
 
         // set thresholds
-        obj->velocityThreshold = avg * linearFactor;
-        obj->angularVelocityThreshold = avg * angularFactor * obj->invRadius;
+        body->velocityThreshold = avg * linearFactor;
+        body->angularVelocityThreshold = avg * angularFactor * body->invRadius;
     }
 }
 
@@ -945,76 +947,70 @@ void PhysicsEngine::decideSleep()
     constexpr float jitterThreshold = 1.0f; // threshold for considering an object to be jittering
     constexpr float anchorTimerThreshold = 5.0f; // time an object must be within the jitter threshold to fall asleep 
 
-    const std::vector<GameObjectHandle>& awakeHandles = broadphaseManager.getAwakeList();
-    for (GameObjectHandle handle : awakeHandles) {
-        GameObject* obj = stepCache.get(handle);
+    const std::vector<ColliderHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    for (const ColliderHandle& handle : awakeHandles) {
+        Collider* collider = colliderPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
 
-        if (!obj) {
-            std::cout << "Error: Object handle in awake list is invalid. Function: decideSleep\n";
-            continue;
-        }
+        if (!body->allowSleep) continue;
+        if (body->inSleepTransition) continue;
 
-        if (!obj->allowSleep) continue;
-        if (obj->inSleepTransition) continue;
+        Transform* transform = &gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME)->transform;
 
         bool goingToSleep = false;
 
         // anchor point logic
-        if (glm::abs(obj->anchorPoint.x - obj->position.x) < jitterThreshold &&
-            glm::abs(obj->anchorPoint.y - obj->position.y) < jitterThreshold &&
-            glm::abs(obj->anchorPoint.z - obj->position.z) < jitterThreshold) 
+        if (glm::abs(body->anchorPoint.x - transform->position.x) < jitterThreshold &&
+            glm::abs(body->anchorPoint.y - transform->position.y) < jitterThreshold &&
+            glm::abs(body->anchorPoint.z - transform->position.z) < jitterThreshold)
         {
             // object is within jitter threshold of anchor point, increase timer
-            obj->anchorTimer += dt;
+            body->anchorTimer += dt;
         }
         else {
             // decrease timer if object moves away from anchor point (but never below 0)
-            obj->anchorTimer = glm::max(0.0f, obj->anchorTimer - dt);
+            body->anchorTimer = glm::max(0.0f, body->anchorTimer - dt);
         }
 
         // set anchor point if timer is 0
-        if (obj->anchorTimer == 0.0f) {
-            obj->anchorPoint = obj->position;
+        if (body->anchorTimer == 0.0f) {
+            body->anchorPoint = transform->position;
         }
 
         // check if anchor timer has exceeded threshold
-        if (obj->anchorTimer >= anchorTimerThreshold) {
+        if (body->anchorTimer >= anchorTimerThreshold) {
             goingToSleep = true;
         }
 
         // sleep counter
-        if (glm::length(obj->linearVelocity) < obj->velocityThreshold and
-            glm::length(obj->angularVelocity) < obj->angularVelocityThreshold)
+        if (glm::length(body->linearVelocity) < body->velocityThreshold and
+            glm::length(body->angularVelocity) < body->angularVelocityThreshold)
         {
-            obj->sleepCounter += dt;
+            body->sleepCounter += dt;
         }
         else {
-            obj->sleepCounter = 0.0f;
+            body->sleepCounter = 0.0f;
         }
 
-        if (obj->sleepCounter >= obj->sleepCounterThreshold) {
+        if (body->sleepCounter >= body->sleepCounterThreshold) {
             goingToSleep = true;
         }
 
         if (goingToSleep) {
-            toSleep.push_back(handle);
+            toSleep.push_back(body);
         }
     }
 
-    for (GameObjectHandle& handle : toSleep) {
-        broadphaseManager.moveToAsleep(handle);
+    for (const RigidBody* rb : toSleep) {
+        ColliderHandle colliderHandle = rb->colliderHandle;
+        broadphaseManager.moveToAsleep(colliderHandle);
     }
 
-    for (GameObjectHandle& handle : toWake) {
-        GameObject* obj = stepCache.get(handle);
+    for (RigidBody* rb : toWake) {
+        ColliderHandle colliderHandle = rb->colliderHandle;
 
-        if (!obj) {
-            std::cout << "Error: Object handle in wake list is invalid. Function: decideSleep\n";
-            continue;
-        }
-
-        broadphaseManager.moveToAwake(handle);
-        obj->inSleepTransition = false;
+        broadphaseManager.moveToAwake(colliderHandle);
+        rb->inSleepTransition = false;
     }
 }
 
@@ -1042,22 +1038,22 @@ void PhysicsEngine::updateContactCache() {
     }
 }
 
-void PhysicsEngine::pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d) {
+void PhysicsEngine::pushAwayPlayer(GameObject& playerObj, bool playerIsA, glm::vec3& n, float d) {
     glm::vec3 up;
 
     if (playerIsA) {
-        player.position += n * (d + 0.001f);
+        playerObj.transform.position += n * (d + 0.001f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
     } else {
-        player.position -= n * (d - 0.001f);
+        playerObj.transform.position -= n * (d - 0.001f);
         up = glm::vec3(0.0f, -1.0f, 0.0f);
     }
 
-    player.onGround = false;
+    playerObj.onGround = false;
 
     // Ground check
     float t = glm::dot(up, n);
     if (t > 0.75f) {
-        player.onGround = true;
+        playerObj.onGround = true;
     }
 }

@@ -10,12 +10,17 @@ void PhysicsWorld::clear() {
 }
 
 RigidBodyHandle PhysicsWorld::createRigidBody() {
-    return m_rigidBodies.create();
+    RigidBodyHandle handle = m_rigidBodies.create();
+    RigidBody* body = m_rigidBodies.try_get(handle);
+    body->id = rigidBodyId++;
+    return handle;
 }
 
 ColliderHandle PhysicsWorld::createCollider() {
-    GameObject* owner = nullptr;
-    return m_colliders.create(owner);
+    ColliderHandle handle = m_colliders.create();
+    Collider* collider = m_colliders.try_get(handle);
+    collider->id = colliderId++;
+    return handle;
 }
 
 void PhysicsWorld::deleteRigidBody(RigidBodyHandle handle) {

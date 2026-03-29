@@ -118,7 +118,7 @@ private:
     //  Collision Resolution
     //------------------------
     void resolveCollisions();
-    void pushAwayPlayer(GameObject& player, bool playerIsA, glm::vec3& n, float d);
+    void pushAwayPlayer(GameObject& playerObj, bool playerIsA, glm::vec3& n, float d);
 
     //------------------------
     //       Sleeping

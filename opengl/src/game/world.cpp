@@ -17,10 +17,10 @@ GameObjectHandle World::createGameObject(
     const std::string& textureName,
     const std::string& meshName,
     ColliderType colliderType,
+    BodyType bodyType,
     const glm::vec3& pos,
     const glm::vec3& size,
     float mass,
-    bool isStatic,
     const glm::quat& orientation,
     float sleepCounterThreshold,
     bool asleep,
@@ -52,8 +52,6 @@ GameObjectHandle World::createGameObject(
         color, 
         seeThrough
     );
-   
-    BroadphaseBucket targetBucket = asleep ? BroadphaseBucket::Asleep : (isStatic ? BroadphaseBucket::Static : BroadphaseBucket::Awake);
 
     // ------ rendering initialization ----------
     if (!seeThrough) {
@@ -72,8 +70,7 @@ GameObjectHandle World::createGameObject(
     body.position = pos;
     body.orientation = orientation;
     body.mass = mass;
-    body.invMass = isStatic ? 0.0f : 1.0f / mass;
-    body.isStatic = isStatic;
+    body.invMass = bodyType == BodyType::Static ? 0.0f : 1.0f / mass;
     body.asleep = asleep;
     body.sleepCounterThreshold = sleepCounterThreshold;
     body.anchorPoint = pos;
@@ -82,8 +79,8 @@ GameObjectHandle World::createGameObject(
     // create collider
     ColliderHandle colliderHandle = physicsWorld->createCollider();
     Collider& collider = *physicsWorld->getColliders().try_get(colliderHandle);
-    collider.ownerHandle = gameObjectHandle;
     collider.rigidBodyHandle = bodyHandle;
+    collider.gameObjectHandle = gameObjectHandle;
 
     // aabb init
     std::vector<glm::vec3> verticesPositions;   
@@ -104,18 +101,26 @@ GameObjectHandle World::createGameObject(
     }
 
     // collider broadphase bucket
-    if (asleep) {
-        collider.broadphaseHandle.bucket = BroadphaseBucket::Asleep;
-    } else if (isStatic) {
-        collider.broadphaseHandle.bucket = BroadphaseBucket::Static;
-    } else {
-        collider.broadphaseHandle.bucket = BroadphaseBucket::Awake;
+    BroadphaseBucket target;
+    switch (bodyType) {
+    case BodyType::Dynamic:
+        target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
+        break;
+    case BodyType::Kinematic:
+        target = BroadphaseBucket::Awake;
+        break;
+    case BodyType::Static:
+        target = BroadphaseBucket::Static;
+        break;
     }
+    collider.broadphaseHandle.bucket = target;
 
+    // link game object, collider and rigid body
     body.colliderHandle = colliderHandle;
     gameObject.colliderHandle = colliderHandle;
     gameObject.rigidBodyHandle = bodyHandle;
 
+    // add to broadphase
     m_physicsEngine.queueAdd(colliderHandle, collider.broadphaseHandle.bucket);
 
     objectId++;

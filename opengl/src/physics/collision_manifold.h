@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include "rigid_body.h"
+#include "pointer_cache.h"
 #include "game_object.h"
 #include "sat.h"
 
@@ -28,6 +30,11 @@ struct ContactPoint {
     bool wasWarmStarted = false;
 };
 
+enum class ContactPartnerType {
+    Collider,
+    Terrain
+};
+
 struct Contact {
     size_t hashKey;
     std::vector<ContactPoint> points;
@@ -39,11 +46,11 @@ struct Contact {
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
-    // #TODO: ska bara använda handles i contact, inte råa pekare.
-    GameObjectHandle handleA;
-    GameObjectHandle handleB;
-    GameObject* objA_ptr;
-    GameObject* objB_ptr;
+    ContactPartnerType partnerTypeA = ContactPartnerType::Collider;
+    ContactPartnerType partnerTypeB = ContactPartnerType::Collider;
+    ColliderHandle colliderA{};
+    ColliderHandle colliderB{};
+
     bool freezeA = false;
     bool freezeB = false;
 
@@ -55,12 +62,39 @@ struct Contact {
     std::vector<glm::vec3> incidentFace;
     glm::vec3 referenceFaceNormal;
 
-    Contact(GameObject* A, GameObject* B) : objA_ptr(A), objB_ptr(B) { points.reserve(8); }
-    Contact() = default;
+    // collider vs collider
+    Contact(ColliderHandle A, ColliderHandle B, glm::vec3& normal) : 
+        partnerTypeA(ContactPartnerType::Collider),
+        partnerTypeB(ContactPartnerType::Collider),
+        colliderA(A),
+        colliderB(B),
+        normal(normal)
+    {
+        points.reserve(8);
+    }
+
+    // collider vs terrain
+    Contact(ColliderHandle A, glm::vec3& normal) :
+        partnerTypeA(ContactPartnerType::Collider),
+        partnerTypeB(ContactPartnerType::Terrain),
+        colliderA(A),
+        normal(normal)
+    {
+        points.reserve(8);
+    }
 };
 
 class CollisionManifold {
 public:
+    void init(
+        PointerCache<GameObject, GameObjectHandle>* objectCache,
+        PointerCache<Collider, ColliderHandle>* colliderCache,
+        PointerCache<RigidBody, RigidBodyHandle>* bodyCache) {
+        gameObjectPtrCache = objectCache;
+        colliderPtrCache = colliderCache;
+        bodyPtrCache = bodyCache;
+    }
+
     void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void boxMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
@@ -70,8 +104,12 @@ public:
     size_t generateKey(int idA, int idB);
 
 private:
+    PointerCache<GameObject, GameObjectHandle>* gameObjectPtrCache = nullptr;
+    PointerCache<Collider, ColliderHandle>* colliderPtrCache = nullptr;
+    PointerCache<RigidBody, RigidBodyHandle>* bodyPtrCache = nullptr;
+
     std::vector<glm::vec3> selectedFace;
-    void selectCollisionFace(GameObject& obj, const glm::vec3& normal);
+    void selectCollisionFace(const Collider* collider, const GameObject* go, const glm::vec3& normal);
 
     std::vector<glm::vec3> furthestPoints; // uses allClippedPoints
     std::vector<int> indices; // indices of furthestPoints in allClippedPoints

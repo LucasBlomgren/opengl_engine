@@ -10,15 +10,13 @@ enum class BodyType {
 
 class RigidBody {
 public:
+    int id;
     BodyType type = BodyType::Dynamic;
     GameObjectHandle gameObjectHandle;
     ColliderHandle colliderHandle;
 
     bool player = false;
 
-    glm::vec3 position;
-    glm::vec3 lastPosition;
-    glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
     glm::mat3 invInertiaLocal{ 0.0f };
@@ -46,15 +44,18 @@ public:
     float lastAvg = 0.0f;
     RingBuffer collisionHistory;
 
-    void update(float dt);
-    void updateInertiaWorld();
+    void update(Transform& t, float dt);
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
+    void updateInertiaWorld(Transform& t);
 
-    void setAsleep();
+    void applyImpulseLinear(const glm::vec3& impulse);
+    void applyImpulseAngular(const glm::vec3& impulse);
+
+    void setAsleep(Transform& t);
     void setAwake();
     void setStatic();
 
-    void calculateInverseInertia(const ColliderType& type, const Transform& t);
+    void calculateInverseInertia(const ColliderType& type, Transform& t);
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);

@@ -1,15 +1,16 @@
 #include "collider.h"
 #include "game_object.h"
 
-AABB& Collider::getAABB() const {
-	return owner->aabb;
+AABB& Collider::getAABB() {
+	return aabb;
 }
 
 void Collider::updateAABB(const Transform& t) {
-	if (colliderType == ColliderType::CUBOID) {
+	if (type == ColliderType::CUBOID) {
 		aabb.update(t);
 	}
-	else if (colliderType == ColliderType::SPHERE) {
+	else if (type == ColliderType::SPHERE) {
+		float radius = t.scale.x * 0.5f;
 		aabb.wMin = t.position - glm::vec3(radius);
 		aabb.wMax = t.position + glm::vec3(radius);
 		aabb.centroid = (aabb.wMin + aabb.wMax) * 0.5f;

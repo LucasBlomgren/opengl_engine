@@ -21,10 +21,10 @@ struct Ray {
 
 struct RaycastHit {
     bool hit = false;
-    GameObjectHandle objectHandle;
+    ColliderHandle colliderHandle;
     glm::vec3 point;  
     glm::vec3 normal;
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, const BVHTree& tree, SlotMap<GameObject, GameObjectHandle>* slotmap);
+RaycastHit raycast(Ray& ray, const BVHTree& tree, SlotMap<Collider, ColliderHandle>* colliderMap, SlotMap<GameObject, GameObjectHandle>* goMap);

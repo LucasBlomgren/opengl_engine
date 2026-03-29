@@ -1,5 +1,6 @@
 #pragma once
 
+#include "physics/physics.h"
 #include "game_object.h"
 #include "collider.h"
 #include "tri.h"
@@ -7,7 +8,6 @@
 class World;
 class TextureManager;
 class LightManager;
-class PhysicsEngine;
 class ShaderManager;
 class MeshManager;
 class Renderer;
@@ -32,22 +32,6 @@ public:
     void testFloorScene();
     void emptyFloorScene();
     void shapePileScene();
-
-    //GameObject& createObject(
-    //    const std::string& textureName,
-    //    const std::string& meshName,
-    //    ColliderType colliderType,
-    //    const glm::vec3& pos,
-    //    const glm::vec3& size,
-    //    float mass,
-    //    bool isStatic,
-    //    const glm::quat& orientation = glm::quat(1, 0, 0, 0),
-    //    float sleepCounterThreshold = 1.0f,
-    //    bool asleep = 0,
-    //    const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f),
-    //    const bool seeThrough = false
-    //);
-    //int objectsAddedThisFrame = 0;
 
     void createBlockPyramid(
         const std::string& textureName,

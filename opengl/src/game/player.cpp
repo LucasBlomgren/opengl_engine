@@ -13,9 +13,10 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
-            GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, 0);
+            GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, {}, 1.5f, false, {}, false);
             GameObject* newObj = world->getGameObjects().try_get(handle);
-            newObj->linearVelocity = camera->front * SHOOT_VELOCITY;
+            RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(newObj->rigidBodyHandle);
+            rb->linearVelocity = camera->front * SHOOT_VELOCITY;
             c.mouse = true;
         }
 
@@ -80,15 +81,17 @@ void Player::deactivate() {
 }
 
 void Player::createPlayerObject() {
-    playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, 0, {}, 1, 0, glm::vec3{255}, 1);
+    playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, {}, 1, false, glm::vec3{255}, true);
 
     GameObject* player = world->getGameObjects().try_get(playerHandle);
+    RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(player->rigidBodyHandle);
     player->player = true;
-    player->allowSleep = false;
+    rb->allowSleep = false;
 }
 
 void Player::destroyPlayerObject() {
-    physicsEngine->queueRemove(playerHandle);
+    ColliderHandle colliderHandle = world->getGameObjects().try_get(playerHandle)->colliderHandle;
+    physicsEngine->queueRemove(colliderHandle);
     world->deleteGameObject(playerHandle);
     playerHandle = GameObjectHandle{};
 }
@@ -122,10 +125,13 @@ void Player::update(Shader& shader) {
 
     // set new hover state
     if (raycast.hit && !objectIsSelected) {
-        GameObject* hoveredObj = world->getGameObjects().try_get(raycast.objectHandle);
+        Collider* collider = physicsEngine->getPhysicsWorld()->getColliders().try_get(raycast.colliderHandle);
+        RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(collider->rigidBodyHandle);
+        GameObject* hoveredObj = world->getGameObjects().try_get(collider->gameObjectHandle);
         hoveredObj->hoveredByEditor = true;
-        hoveredObjectHandle = raycast.objectHandle;
+        hoveredObjectHandle = collider->gameObjectHandle;
         objectIsHovered = true;
+        rb->type = BodyType::Kinematic; // make kinematic while hovered for better interaction (e.g. no gravity while hovering)
     }
 }
 
@@ -134,7 +140,7 @@ void Player::updatePlayerMovement() {
     //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
 
     GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
-    camera->position = playerObject->position + glm::vec3(0, 0.76f, 0);
+    camera->position = playerObject->transform.position + glm::vec3(0, 0.76f, 0);
 
     // Undvik diag-fartbonus
     if (glm::length2(moveInput) > 0.0f) {
@@ -155,24 +161,25 @@ void Player::updateSelectedObject(float dt) {
 
     GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
+    RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
+    RigidBody* playerRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(playerObject->rigidBodyHandle);
+    Collider* selectedCollider = physicsEngine->getPhysicsWorld()->getColliders().try_get(selectedRb->colliderHandle);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
     // position
     glm::vec3 newPos = camera->position + worldOffset;
-    selectedObject->position = newPos;
+    selectedObject->transform.position = newPos;
 
     // velocity
-    selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / dt;
-    selectedObject->linearVelocity += playerObject->linearVelocity;
-    selectedObject->angularVelocity = glm::vec3(0.0f);
-    selectedObject->lastPosition = newPos;
+    selectedRb->linearVelocity = (newPos - selectedObject->transform.lastPosition) / dt;
+    selectedRb->linearVelocity += playerRb->linearVelocity;
+    selectedRb->angularVelocity = glm::vec3(0.0f);
+    selectedObject->transform.lastPosition = newPos;
 
-    selectedObject->modelMatrixDirty = true;
-    selectedObject->aabbDirty = true;
-    selectedObject->setModelMatrix();
-    selectedObject->updateAABB();
-    selectedObject->updateCollider();
+    selectedObject->transform.updateCache();
+    selectedCollider->updateAABB(selectedObject->transform);
+    selectedCollider->updateCollider(selectedObject->transform);
 }
 
 // Select object under crosshair
@@ -187,32 +194,34 @@ void Player::selectObject() {
         return;
     }
 
-    selectedObjectHandle = raycast.objectHandle;
+    selectedObjectHandle = physicsEngine->getPhysicsWorld()->getColliders().try_get(raycast.colliderHandle)->gameObjectHandle;
     GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
+    RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
 
-    if (selectedObject->isStatic) {
+    if (selectedRb->type == BodyType::Static) {
         objectIsSelected = false;
         return;
     }
 
     objectIsSelected = true;
     selectedObject->selectedByPlayer = true;
-    selectedObject->asleep = false;
+    selectedRb->asleep = false;
+    selectedRb->type = BodyType::Kinematic;
 
     // avoid nullptr dereference in physics engine
     GameObject* obj = selectedObject;
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueMove(raycast.objectHandle, bpBucket);
+    physicsEngine->queueMove(raycast.colliderHandle, bpBucket);
 
-    selectedObject->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
-    selectedObject->allowSleep = false;
-    selectedObject->lastPosition = selectedObject->position;
+    selectedRb->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
+    selectedRb->allowSleep = false;
+    selectedObject->transform.lastPosition = selectedObject->transform.position;
 
-    selectedObject->linearVelocity = glm::vec3(0.0f);
-    selectedObject->angularVelocity = glm::vec3(0.0f);
+    selectedRb->linearVelocity = glm::vec3(0.0f);
+    selectedRb->angularVelocity = glm::vec3(0.0f);
 
-    glm::vec3 worldOffset = selectedObject->position - camera->position;
+    glm::vec3 worldOffset = selectedObject->transform.position - camera->position;
     // Projicera worldOffset på kamerans lokala axlar:
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
@@ -224,19 +233,20 @@ void Player::dropObject() {
         objectIsSelected = false;
 
         GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
+        RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
         selectedObject->selectedByPlayer = false;
-        selectedObject->allowSleep = true;
-        selectedObject->sleepCounter = 0.0f;
-        selectedObject->sleepCounterThreshold = 1.5f;
-        selectedObject->angularVelocity = glm::vec3(0.0f);
+        selectedRb->allowSleep = true;
+        selectedRb->sleepCounter = 0.0f;
+        selectedRb->sleepCounterThreshold = 1.5f;
+        selectedRb->angularVelocity = glm::vec3(0.0f);
 
-        if (selectedObject->isStatic) {
-            BroadphaseBucket target = BroadphaseBucket::Static;
-            physicsEngine->queueMove(selectedObjectHandle, target);
+        BroadphaseBucket target;
+        if (selectedRb->type == BodyType::Static) {
+            target = BroadphaseBucket::Static;
         } else {
-            BroadphaseBucket target = BroadphaseBucket::Awake;
-            physicsEngine->queueMove(selectedObjectHandle, target);
+            target = BroadphaseBucket::Awake;
         }
+        physicsEngine->queueMove(selectedObject->colliderHandle, target);
     }
 }
 
@@ -248,9 +258,10 @@ void Player::placeObject() {
     glm::vec3 spawnPos = aabbToPlace.centroid;
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
-    GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, spawnPos, size, 1, 0, orientation, 1.5f, 0);
+    GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, 1, orientation, 1.5f, false, {}, false);
     GameObject* newObj = world->getGameObjects().try_get(handle);
-    newObj->linearVelocity = glm::vec3(0.0f);
+    RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(newObj->rigidBodyHandle);
+    rb->linearVelocity = glm::vec3(0.0f);
 }
 
 void Player::createPlaceObjectAABB(Shader& shader) {
@@ -281,7 +292,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<GameObjectHandle> collisions;
+        std::vector<ColliderHandle> collisions;
         collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
@@ -291,19 +302,19 @@ void Player::createPlaceObjectAABB(Shader& shader) {
 
         // min depth collision
         float min = std::numeric_limits<float>::max();
-        GameObject* minDepthObj = nullptr;
-        for (GameObjectHandle& handle : collisions) {
-            GameObject* objB = world->getGameObjects().try_get(handle);
+        Collider* minDepthCollider = nullptr;
+        for (ColliderHandle& handle : collisions) {
+            Collider* collider = physicsEngine->getPhysicsWorld()->getColliders().try_get(handle);
 
-            float depth = aabb.getMinOverlapDepth(objB->aabb);
+            float depth = aabb.getMinOverlapDepth(collider->aabb);
             if (depth < min) {
                 min = depth;
-                minDepthObj = objB;
+                minDepthCollider = collider;
             }
         }
 
         // move AABB away from collision
-        glm::vec3 normal = aabb.getCollisionNormal(minDepthObj->aabb);
+        glm::vec3 normal = aabb.getCollisionNormal(minDepthCollider->aabb);
         aabb.centroid += normal * min * 1.2f;
         aabb.wMin = aabb.centroid - aabb.halfExtents;
         aabb.wMax = aabb.centroid + aabb.halfExtents;

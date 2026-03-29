@@ -1,10 +1,9 @@
 #include "pch.h"
 #include "rigid_body.h"
 
-void RigidBody::update(float dt) {
-	lastPosition = position;
-	position += linearVelocity * dt;
-	updateOrientation(orientation, angularVelocity, dt);
+void RigidBody::update(Transform& t, float dt) {
+	t.position += linearVelocity * dt;
+	updateOrientation(t.orientation, angularVelocity, dt);
 }
 
 void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
@@ -13,12 +12,19 @@ void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angul
 	orientation = glm::normalize(orientation);
 }
 
-void RigidBody::updateInertiaWorld() {
-	glm::mat3 R = glm::mat3_cast(orientation);
+void RigidBody::updateInertiaWorld(Transform& t) {
+	glm::mat3 R = glm::mat3_cast(t.orientation);
 	invInertiaWorld = R * invInertiaLocal * glm::transpose(R);
 }
 
-void RigidBody::setAsleep() {
+void RigidBody::applyImpulseLinear(const glm::vec3& j) {
+	linearVelocity += j;
+}
+void RigidBody::applyImpulseAngular(const glm::vec3& j) {
+	angularVelocity += j;
+}
+
+void RigidBody::setAsleep(Transform& t) {
 	if (type == BodyType::Static)
 		return;
 
@@ -29,7 +35,7 @@ void RigidBody::setAsleep() {
 	sleepCounter = 0.0f;
 
 	anchorTimer = 0.0f;
-	anchorPoint = position;
+	anchorPoint = t.position;
 }
 
 void RigidBody::setAwake() {
@@ -46,7 +52,7 @@ void RigidBody::setStatic() {
 	invMass = 0.0f;
 }
 
-void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const Transform& t) {
+void RigidBody::calculateInverseInertia(const ColliderType& colliderType, Transform& t) {
 	if (type == BodyType::Static) {
 		invInertiaLocal = glm::mat3(0.0f);
 		return;
@@ -66,7 +72,7 @@ void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const 
 	}
 
 	invInertiaWorld = invInertiaLocal;
-	updateInertiaWorld();
+	updateInertiaWorld(t);
 }
 
 void RigidBody::inertiaCube(float side) {

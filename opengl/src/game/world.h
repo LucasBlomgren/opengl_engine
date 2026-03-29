@@ -1,5 +1,6 @@
 #pragma once
 
+#include "physics/rigid_body.h"
 #include "core/slot_map.h"
 #include "game/game_object.h"
 #include "physics/colliders/collider.h"
@@ -27,15 +28,15 @@ public:
         const std::string& textureName,
         const std::string& meshName,
         ColliderType colliderType,
+        BodyType bodyType,
         const glm::vec3& pos,
         const glm::vec3& size,
         float mass,
-        bool isStatic,
-        const glm::quat& orientation = glm::quat(1, 0, 0, 0),
-        float sleepCounterThreshold = 1.0f,
-        bool asleep = 0,
-        const glm::vec3& color = glm::vec3(255.0f, 255.0f, 255.0f),
-        const bool seeThrough = false
+        const glm::quat& orientation,
+        float sleepCounterThreshold,
+        bool asleep,
+        const glm::vec3& color,
+        const bool seeThrough
     );
 
     void deleteGameObject(GameObjectHandle handle);

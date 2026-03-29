@@ -19,21 +19,17 @@ enum class ColliderType {
 using ColliderShape = std::variant<OOBB, Sphere>;
 
 struct Collider {
+    int id;
     ColliderType type;
     ColliderShape shape;
     AABB aabb;
     bool aabbDirty = true;
 
-    GameObjectHandle ownerHandle;    
+    GameObjectHandle gameObjectHandle;
     RigidBodyHandle rigidBodyHandle;
     BroadphaseHandle broadphaseHandle;
 
-    GameObject* owner;    // #TODO: krasch här pga reallokering i slotmap. Kommer fixas när physics istället kommer jobba med PhysicsWorld och Collider handles 
-
-    Collider(GameObject* o) 
-        : owner(o) {}
-
-    AABB& getAABB() const;
+    AABB& getAABB();
     void updateCollider(const Transform& t);
     void updateAABB(const Transform& t);
 };

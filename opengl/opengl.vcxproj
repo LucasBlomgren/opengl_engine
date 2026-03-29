@@ -346,6 +346,7 @@
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\physics_world.h" />
+    <ClInclude Include="src\physics\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\physics\rigid_body.h" />
     <ClInclude Include="src\physics\sat.h" />
