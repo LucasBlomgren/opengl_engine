@@ -5,10 +5,6 @@
 
 #define FUNC_NAME __FUNCTION__
 
-PhysicsWorld* PhysicsEngine::getPhysicsWorld() {
-    return &physicsWorld;
-}
-
 void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
     this->frameTimers = ft;
@@ -61,6 +57,9 @@ void PhysicsEngine::clearPhysicsData() {
 //-----------------------------
 //          Getters
 //-----------------------------
+PhysicsWorld* PhysicsEngine::getPhysicsWorld() {
+    return &physicsWorld;
+}
 const BVHTree& PhysicsEngine::getDynamicAwakeBvh() const {
     return broadphaseManager.getAwakeBVH();
 }
@@ -75,6 +74,9 @@ const TerrainBVH& PhysicsEngine::getTerrainBvh() const {
 }
 const std::unordered_map<size_t, Contact>& PhysicsEngine::GetContactCache() const {
     return contactCache;
+}
+const std::vector<ExternalMotionContact>& PhysicsEngine::getExternalMotionContacts() const {
+    return externalContacts;
 }
 
 //-----------------------------
@@ -114,7 +116,7 @@ void PhysicsEngine::sleepAllObjects() {
 
         if (body.asleep) continue;
         if (body.type == BodyType::Static) continue;
-        if (body.player) continue;
+        if (body.motionControl == MotionControl::External) continue;
         //if (body.broadphaseHandle.bucket == BroadphaseBucket::None) continue;
 
         ColliderHandle h = colliderMap.handle_from_dense_index(i);
@@ -189,11 +191,6 @@ void PhysicsEngine::flushBroadphaseCommands() {
 //-----------------------------
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     ScopedTimer t(*frameTimers, "Physics");
-
-    colliderPtrCache.clear();
-    bodyPtrCache.clear();
-    gameObjectPtrCache.clear();
-
     // Pre-step preparations
     {
         ScopedTimer t(*frameTimers, "Pre step");
@@ -205,6 +202,11 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         toSleep.reserve(slotCap);
         toWake.clear();
         toSleep.clear();
+
+        colliderPtrCache.clear();
+        bodyPtrCache.clear();
+        gameObjectPtrCache.clear();
+        externalContacts.clear();
 
         // add/remove objects to the BVH trees
         flushBroadphaseCommands();
@@ -272,7 +274,7 @@ void PhysicsEngine::updateStates() {
 //---------------------------------------------
 //      Collision detection & resolution
 //---------------------------------------------
-void PhysicsEngine::detectAndSolveCollisions() 
+void PhysicsEngine::detectAndSolveCollisions()
 {
     {
         ScopedTimer t(*frameTimers, "Broadphase");
@@ -303,7 +305,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
 
         static std::vector<SAT::Result> allResults;
         int reserveSize = th.tris.size() * 2; // worst case
-        allResults.clear(); 
+        allResults.clear();
         allResults.reserve(reserveSize); // reserve space for results
 
         // CUBE vs tris
@@ -323,21 +325,25 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 continue;
             }
 
-            //body->setHelperMatrices();  // update helper matrixes and aabb faces
             body->updateInertiaWorld(obj->transform);
 
-            // average normal 
-            glm::vec3 avgNormal{ 0.0f }; 
-            for (const SAT::Result& res : allResults) { 
-                avgNormal += res.normal; 
-            }
-            avgNormal = glm::normalize(avgNormal); // average normal  
-            
-            // if player, push out of collision and skip manifold generation
-            if (body->player) {
-                pushAwayPlayer(*obj, false, avgNormal, allResults[0].depth);
+            // export to character controller
+            if (body->motionControl == MotionControl::External) {
+                externalContacts.emplace_back(
+                    collider->rigidBodyHandle,
+                    RigidBodyHandle{},
+                    allResults[0].normal,
+                    allResults[0].depth
+                );
                 continue;
             }
+
+            // average normal 
+            glm::vec3 avgNormal{ 0.0f };
+            for (const SAT::Result& res : allResults) {
+                avgNormal += res.normal;
+            }
+            avgNormal = glm::normalize(avgNormal); // average normal  
 
             // pointer data for solver
             ContactRuntime runtimeData;
@@ -365,15 +371,25 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 continue;
             }
 
-            //obj->setHelperMatrices();
             body->updateInertiaWorld(obj->transform);
+
+            // export to character controller
+            if (body->motionControl == MotionControl::External) {
+                externalContacts.emplace_back(
+                    collider->rigidBodyHandle,
+                    RigidBodyHandle{},
+                    allResults[0].normal,
+                    allResults[0].depth
+                );
+                continue;
+            }
 
             // average normal 
             glm::vec3 avgNormal{ 0.0f };
             for (const SAT::Result& res : allResults) {
                 avgNormal += res.normal;
             }
-            avgNormal = glm::normalize(avgNormal); 
+            avgNormal = glm::normalize(avgNormal);
 
             // pointer data for solver
             ContactRuntime runtimeData;
@@ -384,7 +400,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             // collision manifold generation
             Contact contact(th.colliderHandle, runtimeData, avgNormal);
             SAT::findBestTriangles(allResults);
-            collisionManifold->sphereMesh(contact, contactCache, allResults); 
+            collisionManifold->sphereMesh(contact, contactCache, allResults);
         }
     }
 
@@ -396,7 +412,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
         RigidBody* bodyA = bodyPtrCache.get(colliderA->rigidBodyHandle, FUNC_NAME);
         RigidBody* bodyB = bodyPtrCache.get(colliderB->rigidBodyHandle, FUNC_NAME);
 
-        if (bodyA->type == BodyType::Static and 
+        if (bodyA->type == BodyType::Static and
             bodyB->type == BodyType::Static) {
             continue;
         }
@@ -417,33 +433,37 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             glm::vec3& centerB = std::get<OOBB>(colliderB->shape).centerWorld;
             SAT::reverseNormal(centerA, centerB, satResult.normal);
 
-            // if player, push out of collision and skip manifold generation
-            if (objA->player) {
-                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
-                continue;
-            }
-            if (objB->player) {
-                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
-                continue;
-            }
-
-            // used only for worldInertia (so far)
-            //objA->setHelperMatrices();
-            //objB->setHelperMatrices();
             bodyA->updateInertiaWorld(objA->transform);
             bodyB->updateInertiaWorld(objB->transform);
 
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
 
+            // export to character controller
+            bool aCharacter = bodyA->motionControl == MotionControl::External &&
+                bodyA->responseMode == ContactResponseMode::Character;
+
+            bool bCharacter = bodyB->motionControl == MotionControl::External &&
+                bodyB->responseMode == ContactResponseMode::Character;
+
+            if (aCharacter || bCharacter) {
+                externalContacts.emplace_back(
+                    colliderA->rigidBodyHandle,
+                    colliderB->rigidBodyHandle,
+                    satResult.normal,
+                    satResult.depth
+                );
+                continue;
+            }
+
             // freeze if kinematic and colliding with dynamic or kinematic, or if sleeping and not woken up by this collision
             bool frozenA =
-                bodyA->externalControl ||
+                bodyA->motionControl == MotionControl::External ||
                 bodyA->type == BodyType::Static ||
                 bodyA->type == BodyType::Kinematic ||
                 (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
             bool frozenB =
-                bodyB->externalControl ||
+                bodyB->motionControl == MotionControl::External ||
                 bodyB->type == BodyType::Static ||
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
@@ -466,7 +486,7 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
         // CUBE vs SPHERE
         else if (
             (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
-            (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID)) 
+            (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID))
         {
             // swap if A is not cuboid
             ColliderHandle handleA = dh.A;
@@ -480,8 +500,6 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             }
 
             // used in SAT
-            //objA->setHelperMatrices();
-            //objB->setHelperMatrices();
             bodyA->updateInertiaWorld(objA->transform);
             bodyB->updateInertiaWorld(objB->transform);
 
@@ -493,25 +511,33 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
             bodyA->totalCollisionCount++;
             bodyB->totalCollisionCount++;
 
-            // if player, push out of collision and skip manifold generation
-            if (objA->player) {
-                pushAwayPlayer(*objA, false, satResult.normal, satResult.depth);
-                continue;
-            }
-            if (objB->player) {
-                pushAwayPlayer(*objB, true, satResult.normal, satResult.depth);
+            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
+
+            // export to character controller
+            bool aCharacter = bodyA->motionControl == MotionControl::External &&
+                bodyA->responseMode == ContactResponseMode::Character;
+
+            bool bCharacter = bodyB->motionControl == MotionControl::External &&
+                bodyB->responseMode == ContactResponseMode::Character;
+
+            if (aCharacter || bCharacter) {
+                externalContacts.emplace_back(
+                    colliderA->rigidBodyHandle,
+                    colliderB->rigidBodyHandle,
+                    satResult.normal,
+                    satResult.depth
+                );
                 continue;
             }
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
             bool frozenA =
-                bodyA->externalControl ||
+                bodyA->motionControl == MotionControl::External ||
                 bodyA->type == BodyType::Static ||
                 bodyA->type == BodyType::Kinematic ||
                 (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
             bool frozenB =
-                bodyB->externalControl ||
+                bodyB->motionControl == MotionControl::External ||
                 bodyB->type == BodyType::Static ||
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
@@ -542,27 +568,41 @@ void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, con
                 continue;
             }
 
-            // used only for worldInertia
-            //objA->setHelperMatrices();
-            //objB->setHelperMatrices();
-
             bodyA->totalCollisionCount++;
             bodyB->totalCollisionCount++;
 
-            // sleep check
             PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB);
+
+            // export to character controller
+            bool aCharacter = bodyA->motionControl == MotionControl::External &&
+                bodyA->responseMode == ContactResponseMode::Character;
+
+            bool bCharacter = bodyB->motionControl == MotionControl::External &&
+                bodyB->responseMode == ContactResponseMode::Character;
+
+            if (aCharacter || bCharacter) {
+                externalContacts.emplace_back(
+                    colliderA->rigidBodyHandle,
+                    colliderB->rigidBodyHandle,
+                    satResult.normal,
+                    satResult.depth
+                );
+                continue;
+            }
+
             bool frozenA =
-                bodyA->externalControl ||
+                bodyA->motionControl == MotionControl::External ||
                 bodyA->type == BodyType::Static ||
                 bodyA->type == BodyType::Kinematic ||
                 (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
             bool frozenB =
-                bodyB->externalControl ||
+                bodyB->motionControl == MotionControl::External ||
                 bodyB->type == BodyType::Static ||
                 bodyB->type == BodyType::Kinematic ||
                 (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
+            // pointer data for solver
             ContactRuntime runtimeData;
             runtimeData.bodyA = bodyA;
             runtimeData.bodyB = bodyB;
@@ -964,7 +1004,7 @@ void PhysicsEngine::updateSleepThresholds() {
         Collider* collider = colliderPtrCache.get(handle, FUNC_NAME);
         RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
 
-        if (body->type != BodyType::Dynamic || body->asleep || !body->allowSleep || body->externalControl)
+        if (body->type != BodyType::Dynamic || body->asleep || !body->allowSleep || body->motionControl == MotionControl::External)
             continue;
 
         body->collisionHistory.push(body->totalCollisionCount);
@@ -1005,7 +1045,7 @@ void PhysicsEngine::decideSleep() {
         RigidBody* body = bodyPtrCache.get(collider->rigidBodyHandle, FUNC_NAME);
 
         if (body->type != BodyType::Dynamic) continue;
-        if (body->externalControl) continue;
+        if (body->motionControl == MotionControl::External) continue;
         if (body->asleep) continue;
         if (!body->allowSleep) continue;
         if (body->inSleepTransition) continue;
@@ -1090,25 +1130,5 @@ void PhysicsEngine::updateContactCache() {
             it->second.framesSinceUsed = 0;  // Nollställ räknaren vid träff
         }
         ++it;
-    }
-}
-
-void PhysicsEngine::pushAwayPlayer(GameObject& playerObj, bool playerIsA, glm::vec3& n, float d) {
-    glm::vec3 up;
-
-    if (playerIsA) {
-        playerObj.transform.position += n * (d + 0.001f);
-        up = glm::vec3(0.0f, 1.0f, 0.0f);
-    } else {
-        playerObj.transform.position -= n * (d - 0.001f);
-        up = glm::vec3(0.0f, -1.0f, 0.0f);
-    }
-
-    playerObj.onGround = false;
-
-    // Ground check
-    float t = glm::dot(up, n);
-    if (t > 0.75f) {
-        playerObj.onGround = true;
     }
 }

@@ -1,6 +1,16 @@
 #include "pch.h"
 #include "player.h"
 
+void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera) {
+    this->world = world;
+    this->physicsEngine = physicsEngine;
+    this->camera = camera;
+}
+
+
+//------------------------------------------------------
+// INPUT HANDLING
+//-------------------------------------------------------
 void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& c, FrameWants& wants) {
     if (!ctx.isPlayerMode) return;
 
@@ -21,7 +31,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         }
 
         if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
-            updateSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
+            moveSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
             c.mouse = true;
         }
     }
@@ -36,22 +46,20 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
         if (in.keyDown[GLFW_KEY_SPACE]) {
             GameObject* playerObject = world->getGameObject(playerHandle);
-            if (playerObject->onGround and !playerObject->hasJumped) {
-                playerObject->playerJumpImpulse += JUMP_HEIGHT;
-                playerObject->onGround = false;
-                playerObject->hasJumped = true;
+            if (onGround and !hasJumped) {
+                jumpImpulse += JUMP_HEIGHT;
+                onGround = false;
+                hasJumped = true;
                 c.keyboard = true;
             }
         }
     }
 }
 
-void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera) {
-    this->world = world;
-    this->physicsEngine = physicsEngine;
-    this->camera = camera;
-}
 
+//------------------------------------------------------
+// SWITCHING PLAYER MODE
+//-------------------------------------------------------
 void Player::activate() {
     createPlayerObject();
 }
@@ -82,10 +90,12 @@ void Player::deactivate() {
 
 void Player::createPlayerObject() {
     playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, {}, 1, false, glm::vec3{255}, true);
-
-    GameObject* player = world->getGameObject(playerHandle);
-    RigidBody* rb = world->getRigidBody(playerHandle);
+    GameObject* player = world->getGameObject(playerHandle);    
     player->player = true;
+
+    RigidBody* rb = world->getRigidBody(playerHandle);
+    rb->responseMode = ContactResponseMode::Character;
+    rb->setExternalControl(true);
     rb->allowSleep = false;
 }
 
@@ -96,14 +106,29 @@ void Player::destroyPlayerObject() {
     playerHandle = GameObjectHandle{};
 }
 
-void Player::fixedUpdate(float fixedTimeStep) {
-    //updateSelectedObject(fixedTimeStep);
+
+//----------------------------------------------------------
+// MOVEMENT, CAMERA UPDATE and OBJECT SELECTION UPDATE
+//----------------------------------------------------------
+void Player::updateMovement() {
+    Transform& t = world->getGameObject(playerHandle)->transform;
+
+    // first person camera
+    camera->position = t.position + glm::vec3(0, 0.76f, 0);
+
+    // third person camera
+    //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+
+    // avoid diagonal speed boost
+    if (glm::length2(moveInput) > 0.0f) {
+        moveInput = glm::normalize(moveInput);
+    }
+    moveImpulse = moveInput * MOVE_SPEED;
+
+    moveSelectedObject(1.0f / 60.0f);
 }
 
-void Player::update(Shader& shader) {
-    // update player movement
-    updatePlayerMovement();
-
+void Player::updateObjectSelection(Shader& shader) {
     if (pendingDrop) {
         dropObject();
         pendingDrop = false;
@@ -116,6 +141,12 @@ void Player::update(Shader& shader) {
     // clear previous hover state
     if (objectIsHovered) {
         GameObject* hoveredObj = world->getGameObject(hoveredObjectHandle);
+        if (!hoveredObj) {
+            std::cout << "Warning: hovered object was nullptr" << std::endl;
+            hoveredObjectHandle = GameObjectHandle{};
+            objectIsHovered = false;
+            return;
+        }
         hoveredObj->hoveredByEditor = false;
         objectIsHovered = false;
     }
@@ -131,36 +162,120 @@ void Player::update(Shader& shader) {
         hoveredObj->hoveredByEditor = true;
         hoveredObjectHandle = collider->gameObjectHandle;
         objectIsHovered = true;
-        rb->type = BodyType::Kinematic; // make kinematic while hovered for better interaction (e.g. no gravity while hovering)
     }
 }
 
-// Update player movement based on input
-void Player::updatePlayerMovement() {
-    //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+//------------------------------------------------------
+// PHYSICS
+//-------------------------------------------------------
+void Player::updateBody(float dt) {
+    GameObject* player = world->getGameObject(playerHandle);
+    RigidBody* rb = world->getRigidBody(playerHandle);
+    Transform& t = player->transform;
 
-    GameObject* playerObject = world->getGameObject(playerHandle);
-    camera->position = playerObject->transform.position + glm::vec3(0, 0.76f, 0);
+    glm::vec3 v = rb->linearVelocity;
 
-    // Undvik diag-fartbonus
-    if (glm::length2(moveInput) > 0.0f) {
-        moveInput = glm::normalize(moveInput);
+    // air friction
+    if (!onGround) {
+        moveImpulse.x *= AIR_FRICTION;
+        moveImpulse.z *= AIR_FRICTION;
     }
 
-    const float moveSpeed = 8.f; // meter per sekund
-    playerObject->playerMoveImpulse = moveInput * moveSpeed;
+    v.x += moveImpulse.x;
+    v.z += moveImpulse.z;
 
-    updateSelectedObject(1.0f / 60.0f);
+    // apply stronger gravity when in air for better jump feel and faster fall speed
+    // reset vertical velocity when landing to prevent small bounces from accumulated gravity
+    if (!onGround) {
+        v.y += GRAVITY * GRAVITY_MULTIPLIER * dt;
+    }
+    else if (v.y < 0.0f) {
+        v.y = 0.0f;
+    }
+
+    if (jumpImpulse != 0.0f) {
+        v.y += jumpImpulse;
+        jumpImpulse = 0.0f;
+    }
+
+    glm::vec2 vxz(v.x, v.z);
+    float spd = glm::length(vxz);
+    if (spd > MAX_MOVE_SPEED) {
+        vxz *= (MAX_MOVE_SPEED / spd); // scale both x and z to max speed while preserving direction
+        v.x = vxz.x;
+        v.z = vxz.y;
+    }
+
+    //if (onGround and glm::length2(playerMoveImpulse) < 0.01f) {
+    //    v.x -= v.x * std::min(20.0f * dt, 3.0f);
+    //    v.z -= v.z * std::min(20.0f * dt, 3.0f);
+    //}
+
+
+    // stop horizontal movement when on ground and no input to prevent sliding on slopes and when landing from a jump
+    if (onGround and glm::length2(moveImpulse) < 0.01f) {
+        v.x = 0.0f;
+        v.z = 0.0f;
+    }
+
+    // #TODO: should be using rigidbody functions instead
+    rb->linearVelocity = v;
+    t.lastPosition = t.position;
+    t.position += rb->linearVelocity * dt;
 }
+
+void Player::resolveExternalContact() {
+    onGround = false;
+
+    const auto& contacts = physicsEngine->getExternalMotionContacts();
+    GameObject* playerObj = world->getGameObject(playerHandle);
+
+    for (const ExternalMotionContact& c : contacts) {
+        bool playerIsA = false;
+        bool playerInContact = false;
+
+        if (c.bodyA == playerObj->rigidBodyHandle && c.bodyA.isValid()) {
+            playerIsA = true;
+            playerInContact = true;
+        }
+        else if (c.bodyB == playerObj->rigidBodyHandle && c.bodyB.isValid()) {
+            playerIsA = false;
+            playerInContact = true;
+        }
+
+        if (!playerInContact) continue;
+
+        glm::vec3 up;
+        if (playerIsA) {
+            playerObj->transform.position -= c.normal * (c.penetration + 0.001f);
+            up = glm::vec3(0.0f, -1.0f, 0.0f);
+        }
+        else {
+            playerObj->transform.position += c.normal * (c.penetration + 0.001f);
+            up = glm::vec3(0.0f, 1.0f, 0.0f);
+        }
+
+        if (glm::dot(up, c.normal) > ON_GROUND_ANGLE_THRESHOLD) {
+            onGround = true;
+        }
+    }
+
+    if (onGround) {
+        hasJumped = false;
+    }
+}
+
+//---------------------------------------------------------------
+// SELECTION AND PLACEMENT
+// --------------------------------------------------------------
 
 // Update position of selected object to follow camera + offset
-void Player::updateSelectedObject(float dt) {
-    // function uses selectedObjectHandle not pointer
-    if (objectIsSelected == false)
-        return;
+void Player::moveSelectedObject(float dt) {
+    if (!objectIsSelected) return;
 
     GameObject* playerObject = world->getGameObject(playerHandle);
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+
     RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
     RigidBody* playerRb = world->getRigidBody(playerObject->rigidBodyHandle);
     Collider* selectedCollider = world->getCollider(selectedRb->colliderHandle);
@@ -182,46 +297,45 @@ void Player::updateSelectedObject(float dt) {
     selectedCollider->updateCollider(selectedObject->transform);
 }
 
+//------------------------------------------------------
+// OBJECT SELECTION AND PLACEMENT
+//------------------------------------------------------
+// 
 // Select object under crosshair
 void Player::selectObject() {
-    if (objectIsSelected)
-        return;
+    if (objectIsSelected) return;
 
     RaycastHit raycast = rayCast(SELECT_RANGE);
 
     // no hit return
-    if (raycast.hit == false) {
-        return;
-    }
+    if (!raycast.hit) return;
 
-    GameObject* selectedObject = world->getGameObject(raycast.colliderHandle);
-    RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
+    Collider* selectedCollider = world->getCollider(raycast.colliderHandle);
+    RigidBody* rb = world->getRigidBody(selectedCollider->rigidBodyHandle);
 
-    if (selectedRb->type == BodyType::Static) {
-        objectIsSelected = false;
-        return;
-    }
+    if (rb->type == BodyType::Static) return;
 
     objectIsSelected = true;
-    selectedObject->selectedByPlayer = true;
-    selectedRb->asleep = false;
-    selectedRb->type = BodyType::Kinematic;
+    GameObjectHandle handle = selectedCollider->gameObjectHandle;
+    selectedObjectHandle = handle;
 
-    // avoid nullptr dereference in physics engine
-    GameObject* obj = selectedObject;
+    GameObject* obj = world->getGameObject(handle);
+    obj->selectedByPlayer = true;
+    rb->asleep = false;
+    rb->setExternalControl(true);
+
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
     physicsEngine->queueMove(raycast.colliderHandle, bpBucket);
 
-    selectedRb->sleepCounterThreshold = FLT_MAX; // avoid sleeping while being edited
-    selectedRb->allowSleep = false;
-    selectedObject->transform.lastPosition = selectedObject->transform.position;
+    rb->allowSleep = false;
+    obj->transform.lastPosition = obj->transform.position;
 
-    selectedRb->linearVelocity = glm::vec3(0.0f);
-    selectedRb->angularVelocity = glm::vec3(0.0f);
+    rb->linearVelocity = glm::vec3(0.0f);
+    rb->angularVelocity = glm::vec3(0.0f);
 
-    glm::vec3 worldOffset = selectedObject->transform.position - camera->position;
-    // Projicera worldOffset på kamerans lokala axlar:
+    // Project worldofset onto cameras local axes
+    glm::vec3 worldOffset = obj->transform.position - camera->position;
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
@@ -229,24 +343,18 @@ void Player::selectObject() {
 
 void Player::dropObject() {
     if (objectIsSelected) {
-        objectIsSelected = false;
-
         GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-        RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
         selectedObject->selectedByPlayer = false;
-        selectedRb->allowSleep = true;
-        selectedRb->sleepCounter = 0.0f;
-        selectedRb->sleepCounterThreshold = 1.5f;
-        selectedRb->angularVelocity = glm::vec3(0.0f);
 
-        BroadphaseBucket target;
-        if (selectedRb->type == BodyType::Static) {
-            target = BroadphaseBucket::Static;
-        } else {
-            target = BroadphaseBucket::Awake;
-        }
-        physicsEngine->queueMove(selectedObject->colliderHandle, target);
+        RigidBody* rb = world->getRigidBody(selectedObjectHandle);
+        rb->setExternalControl(false);
     }
+
+    objectIsSelected = false;
+    objectIsHovered = false;
+
+    selectedObjectHandle = {};
+    hoveredObjectHandle = {};
 }
 
 void Player::placeObject() {

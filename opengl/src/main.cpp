@@ -105,7 +105,9 @@ int main() {
 	// setup rendering
 	renderer.init(SCR_WIDTH, SCR_HEIGHT, world, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
 
+	//--------------------------------------------
 	// load textures
+	//--------------------------------------------
 	textureManager.loadTexture("crate", "src/assets/crate.jpg");
 	textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
 	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
@@ -134,10 +136,12 @@ int main() {
 	// setup skybox
 	skyboxManager.init(); 
 
-	// create scene 
+	// create default scene 
 	sceneBuilder.createScene(6);
 
+	//--------------------------------------------
 	// setup editor
+	//--------------------------------------------
 	editor.init(
 		SCR_WIDTH, 
 		SCR_HEIGHT, 
@@ -157,30 +161,44 @@ int main() {
 		&gpu
 	);
 
+	//--------------------------------------------
 	// setup player
+	//--------------------------------------------
 	player.setPointers(&world, &physicsEngine, &camera);
 
+	//--------------------------------------------
 	// ImGui setup
+	//--------------------------------------------
 	imguiManager.init(window);
 
+	//--------------------------------------------
 	// add input routers
+	//--------------------------------------------
 	inputManager.router.add(&editor);
 	inputManager.router.add(&player);
 	inputManager.router.add(&camera);
 
+	//--------------------------------------------
 	// main loop
+	//--------------------------------------------
 	while (true) {
+		//--------------------------------------------
 		// timing
+		//--------------------------------------------
 		frameTimers.beginFrame();
 		float timeNow = (float)glfwGetTime();
 		deltaTime = timeNow - timeLastFrame;
 		timeLastFrame = timeNow;
 		engineState.deltaTime = deltaTime;
 
+		//--------------------------------------------
 		// update camera
+		//--------------------------------------------
 		camera.updateDeltaTime(deltaTime);
 
+		//--------------------------------------------
 		// events
+		//--------------------------------------------
 		inputManager.beginFrame();
 		glfwPollEvents();
 
@@ -192,10 +210,14 @@ int main() {
 			break;
 		}
 
+		//--------------------------------------------
 		// start ImGui frame
+		//--------------------------------------------
 		imguiManager.newFrame();
 
+		//--------------------------------------------
 		// read GPU timers from previous frames
+		//--------------------------------------------
 		GLuint avail = 0;
 		// SHADOW
 		glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
@@ -224,7 +246,9 @@ int main() {
 			readIdx = (readIdx + 1) % NQ;
 		}
 
+		//--------------------------------------------
 		// rendering
+		//--------------------------------------------
 		{
 			ScopedTimer t(frameTimers, "Render");
 
@@ -244,23 +268,31 @@ int main() {
 			writeIdx = (writeIdx + 1) % NQ;
 		}
 
-		// ImGui
+		//--------------------------------------------
+		// Imgui rendering
+		//--------------------------------------------
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer a(frameTimers, "ImGui");
 			editor.drawUI(inputManager.currentContext, deltaTime);
 		}
 		imguiManager.render();
 
+		//--------------------------------------------
 		// setup input context
+		//--------------------------------------------
 		inputManager.setCurrentContext(
 			ImGui::GetIO().WantCaptureMouse,
 			ImGui::GetIO().WantCaptureKeyboard,
 			engineState.isPlayerMode());
 
+		//--------------------------------------------
 		// route input
+		//--------------------------------------------
 		inputManager.route(window);
 
+		//--------------------------------------------
 		// input [V]: toggle editor/player mode
+		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
 			engineState.setPlayerMode(!engineState.isPlayerMode());
 
@@ -278,26 +310,35 @@ int main() {
 			}
 		}
 
+		//--------------------------------------------
 		// editor/player update
+		//--------------------------------------------
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer t(frameTimers, "Editor");
 			//editor.update(*renderer.debugShader);
 		}
 		else {
 			ScopedTimer t(frameTimers, "Player");
-			player.update(*renderer.debugShader);
+			player.updateMovement();
+			player.updateObjectSelection(*renderer.debugShader);
 		}
 
+		//--------------------------------------------
 		// pause toggle [G]
+		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
 			engineState.setPaused(!engineState.isPaused());
 		}
+		//--------------------------------------------
 		// advance step [F]
+		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_F]) {
 			engineState.setAdvanceStep(true);
 		}
 
+		//--------------------------------------------
 		// physics step
+		//--------------------------------------------
 		bool hasPhysicsSteppedThisFrame = false;
 		if (!engineState.isPaused() or engineState.getAdvanceStep())
 		{
@@ -312,79 +353,37 @@ int main() {
 
 			// stepping loop
 			int steps = 0;
-			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
-			{
-				//// --- Kinematisk uppdatering av halo-objekt ---
-				//for (SceneBuilder::Halo& halo : sceneBuilder.allHalos)
-				//{
-				//	// per-frame rotation (du har redan denna)
-				//	glm::quat perFrameRot = glm::angleAxis(glm::radians(halo.rotSpeed) * fixedTimeStep, glm::normalize(halo.rotDir));
-
-				//	for (int i = 0; i < halo.indices.size(); i++) {
-				//		GameObject& obj = sceneBuilder.getDynamicObjects()[halo.indices[i]];
-
-				//		// --- 1) Spara föregående pose ---
-				//		glm::vec3 prevPos = obj.position;
-				//		glm::quat prevOri = obj.orientation;
-
-				//		// --- 2) Sätt ny pose kinematiskt (din kod) ---
-				//		glm::vec3 relativePos = obj.position - halo.center;
-				//		glm::vec3 rotatedRelPos = perFrameRot * relativePos;
-
-				//		obj.position = halo.center + rotatedRelPos;
-				//		obj.orientation = perFrameRot * obj.orientation;
-
-				//		// --- 3) Härled hastigheter från faktisk förflyttning denna frame ---
-				//		// Linjär hastighet: differens
-				//		obj.linearVelocity = (obj.position - prevPos) / fixedTimeStep;
-
-				//		// Vinkelhastighet: delta-quat → (axis, theta) → ω = axis * (theta/dt)
-				//		glm::quat dq = obj.orientation * glm::conjugate(prevOri);  // "rotationen som hände i frame:n"
-				//		dq = glm::normalize(dq);
-				//		float cosHalf = glm::clamp(dq.w, -1.0f, 1.0f);
-				//		float theta = 2.0f * std::acos(cosHalf);                  // rad per frame
-				//		float s = std::sqrt(std::max(0.0f, 1.0f - cosHalf * cosHalf));
-				//		glm::vec3 axis = (s > 1e-8f) ? glm::vec3(dq.x, dq.y, dq.z) / s
-				//			: glm::vec3(0, 0, 1);           // fallback
-				//		obj.angularVelocity = axis * (theta / fixedTimeStep);           // rad/s
-
-				//		// --- 4) Uppdatera render/collider ---
-				//		obj.modelMatrixDirty = true;
-				//		obj.helperMatricesDirty = true;
-				//		obj.setModelMatrix();
-				//		obj.setHelperMatrices();
-				//		obj.updateAABB();
-				//		obj.updateCollider();
-				//	}
-				//}
-
+			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) {
 				hasPhysicsSteppedThisFrame = true;
-				// physics step
+
+				// physics step & player update if in player mode
+				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
 				physicsEngine.step(fixedTimeStep, rng);
-				
-				// editor/player fixed update
-				if (!engineState.isPlayerMode()) {
-					//editor.fixedUpdate(fixedTimeStep);
-				} else {
-					player.fixedUpdate(fixedTimeStep);
-				}
+				if (engineState.isPlayerMode()) player.resolveExternalContact();
 
 				accumulator -= fixedTimeStep;
 				steps++;
 			}
 		}
 
+		//--------------------------------------------
 		// single step advance flag reset
+		//--------------------------------------------
 		if (engineState.getAdvanceStep()) {
 			engineState.setAdvanceStep(false);
 		}
 
+		//--------------------------------------------
 		// object rain
+		//--------------------------------------------
 		if (!engineState.isPaused()) {
 			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
 			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
 		}
 
+		//--------------------------------------------
+		// remove objects marked for deletion by editor
+		//--------------------------------------------
 		if (hasPhysicsSteppedThisFrame) {
 			for (GameObjectHandle& handle : editor.handlesToRemove) {
 				world.deleteGameObject(handle);

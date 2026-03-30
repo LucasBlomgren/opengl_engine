@@ -60,8 +60,8 @@ void SceneBuilder::emptyFloorScene() {
 void SceneBuilder::testFloorScene() {
     int floorWidth = 5;
     int floorHeight = 5;
-    const float baseX = 0.0f;
-    const float baseZ = 0.0f;
+    const float baseX = -30.0f;
+    const float baseZ = -30.0f;
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));

@@ -26,6 +26,22 @@ struct DebugData {
     size_t collisions = 0;
 };
 
+struct ExternalMotionContact {
+    RigidBodyHandle bodyA{};
+    RigidBodyHandle bodyB{};
+    glm::vec3 normal{};
+    float penetration = 0.0f;
+
+    ExternalMotionContact(const RigidBodyHandle& bodyA,
+        const RigidBodyHandle& bodyB,
+        const glm::vec3& normal,
+        float penetration)
+        : bodyA(bodyA), bodyB(bodyB), normal(normal), penetration(penetration) {
+    }
+
+    ExternalMotionContact() = default;
+};
+
 class PhysicsEngine {
 public:
     void init(World* world, FrameTimers* ft);
@@ -51,6 +67,7 @@ public:
     //        Getters
     //------------------------
     PhysicsWorld* getPhysicsWorld();
+    const std::vector<ExternalMotionContact>& getExternalMotionContacts() const;
     const DebugData getDebugData();
     const BVHTree& getDynamicAwakeBvh() const;
     const BVHTree& getDynamicAsleepBvh() const;
@@ -131,4 +148,9 @@ private:
 
     struct WakeUpInfo { bool A, B; };
     WakeUpInfo wakeUpCheck(RigidBody& A, RigidBody& B);
+
+    //-------------------------
+    // External motion control
+    //-------------------------
+    std::vector<ExternalMotionContact> externalContacts;
 };

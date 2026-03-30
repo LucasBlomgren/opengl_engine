@@ -2,11 +2,13 @@
 #include "rigid_body.h"
 
 void RigidBody::update(Transform& t, ColliderType colliderType, float dt) {
-	if (type == BodyType::Static || type == BodyType::Kinematic || asleep || externalControl)
+	if (type == BodyType::Static ||
+		type == BodyType::Kinematic || 
+		motionControl == MotionControl::External ||
+		asleep)
 		return;
 
-	if (allowGravity and !player)
-		linearVelocity += g * dt;
+	if (allowGravity) linearVelocity += g * dt;
 
 	float aLin;
 	float aAng;
@@ -98,7 +100,7 @@ void RigidBody::setStatic() {
 }
 
 void RigidBody::setExternalControl(bool controlled) {
-	externalControl = controlled;
+	motionControl = controlled ? MotionControl::External : MotionControl::Physics;
 	sleepCounter = 0.0f;
 	anchorTimer = 0.0f;
 }
@@ -160,57 +162,3 @@ void RigidBody::inertiaSphere(const glm::vec3& s) {
 		glm::vec3(0.0f, invI, 0.0f),
 		glm::vec3(0.0f, 0.0f, invI));
 }
-
-
-
-//// player controls
-//if (player) {
-//	glm::vec3 v = linearVelocity;
-
-//	if (!onGround) {
-//		playerMoveImpulse.x *= 0.02f;
-//		playerMoveImpulse.z *= 0.02f;
-//	}
-
-//	v.x += playerMoveImpulse.x;
-//	v.z += playerMoveImpulse.z;
-
-//	if (!onGround) {
-//		v += g * 3.0f * dt;
-//	}
-//	else if (v.y < 0.0f) {
-//		v.y = 0.0f;
-//	}
-
-//	if (playerJumpImpulse != 0.0f) {
-//		v.y += playerJumpImpulse;
-//		playerJumpImpulse = 0.0f;
-//	}
-
-//	float maxSpeed = 15.0f;
-//	glm::vec2 vxz(v.x, v.z);
-//	float spd = glm::length(vxz);
-//	if (spd > maxSpeed) {
-//		vxz *= (maxSpeed / spd); // skala båda komponenterna lika
-//		v.x = vxz.x;
-//		v.z = vxz.y;
-//	}
-
-//	//if (onGround and glm::length2(playerMoveImpulse) < 0.01f) {
-//	//    v.x -= v.x * std::min(20.0f * dt, 3.0f);
-//	//    v.z -= v.z * std::min(20.0f * dt, 3.0f);
-//	//}
-
-//	if (onGround and glm::length2(playerMoveImpulse) < 0.01f) {
-//		v.x = 0.0f;
-//		v.z = 0.0f;
-//	}
-
-//	linearVelocity = v;
-
-//	if (onGround) {
-//		hasJumped = false;
-//	}
-
-//	onGround = false;
-//}

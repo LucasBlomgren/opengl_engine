@@ -88,10 +88,21 @@ void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world
         PhysicsWorld* pw = physics.getPhysicsWorld();
         Collider* colA = pw->getCollider(c->colliderA);
         Collider* colB = pw->getCollider(c->colliderB);
-        RigidBody* bodyA = pw->getRigidBody(colA->rigidBodyHandle);
-        RigidBody* bodyB = pw->getRigidBody(colB->rigidBodyHandle);
-        Transform* tA = &world.getGameObject(colA->gameObjectHandle)->transform;    
-        Transform* tB = &world.getGameObject(colB->gameObjectHandle)->transform;
+
+        RigidBody* bodyA = nullptr;
+        Transform* tA = nullptr;
+
+        RigidBody* bodyB = nullptr;
+        Transform* tB = nullptr;
+
+        if (c->partnerTypeA == ContactPartnerType::Collider) {
+            bodyA = pw->getRigidBody(colA->rigidBodyHandle);
+            tA = &world.getGameObject(colA->gameObjectHandle)->transform;
+        }
+        if (c->partnerTypeB == ContactPartnerType::Collider) {
+            bodyB = pw->getRigidBody(colB->rigidBodyHandle);
+            tB = &world.getGameObject(colB->gameObjectHandle)->transform;
+        }
 
         // Om ett av objekten är terrain triangle (objA eller objB är nullptr), placera pilen på det andra objektets position
         if (c->partnerTypeA == ContactPartnerType::Terrain) {

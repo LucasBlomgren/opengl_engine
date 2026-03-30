@@ -12,17 +12,27 @@ enum class BodyType {
     Static
 };
 
+enum class MotionControl {
+    Physics,
+    External
+};
+
+enum class ContactResponseMode {
+    Normal,
+    Character
+};
+
 // #TODO: decide what is private/public in RigidBody
 // #TODO: player logic to player class instead of rigid body, and remove player variable from rigid body
 class RigidBody {
 public:
     int id;
     BodyType type = BodyType::Dynamic;
+    MotionControl motionControl = MotionControl::Physics;
+    ContactResponseMode responseMode = ContactResponseMode::Normal;
+
     GameObjectHandle gameObjectHandle;
     ColliderHandle colliderHandle;
-
-    bool player = false;
-    bool externalControl = false; // for objects moved by the editor
 
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };

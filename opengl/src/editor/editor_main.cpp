@@ -398,9 +398,9 @@ void Editor::EditorMain::update(Shader& shader) {
     }
 }
 
-// -----------------------------------
-//      Selection 
-// -----------------------------------
+//------------------------------------------------------
+// OBJECT SELECTION AND PLACEMENT
+//------------------------------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
     if (!objectIsSelected) return;
 
@@ -410,7 +410,7 @@ void Editor::EditorMain::syncSelectionOffset() {
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    selectedObject->lastPosition = selectedObject->transform.position;
+    selectedObject->transform.lastPosition = selectedObject->transform.position;
 }
 
 // select object
@@ -433,10 +433,10 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     selectedObject->selectedByEditor = true;
     selectedObject->hoveredByEditor = false;
-    selectedObject->lastPosition = selectedObject->transform.position;
+    selectedObject->transform.lastPosition = selectedObject->transform.position;
 
+    // Project worldofset onto cameras local axes
     glm::vec3 worldOffset = selectedObject->transform.position - camera->position;
-    // Projicera worldOffset på kamerans lokala axlar:
     selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);

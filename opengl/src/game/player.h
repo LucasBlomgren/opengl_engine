@@ -23,9 +23,10 @@ public:
     void destroyPlayerObject();
 
     // update
-    void fixedUpdate(float fixedTimeStep);
-    void update(Shader& shader);
-    void updatePlayerMovement();
+    void updateObjectSelection(Shader& shader);
+    void updateMovement();
+    void updateBody(float fixedTimeStep);
+    void resolveExternalContact();
 
     // select object
     bool objectIsSelected = false;
@@ -35,7 +36,7 @@ public:
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
     void selectObject();
     void dropObject();
-    void updateSelectedObject(float fixedTimeStep);
+    void moveSelectedObject(float dt);
 
     // raycast for placement/selection/etc
     RaycastHit rayCast(float length);
@@ -50,7 +51,21 @@ private:
     PhysicsEngine* physicsEngine = nullptr;
     Camera* camera = nullptr;
 
+    // movement
+    bool onGround = false;
+    bool hasJumped = false;
     glm::vec3 moveInput{ 0.0f, 0.0f, 0.0f };
+    glm::vec3 moveImpulse{ 0.0f, 0.0f, 0.0f };
+    float jumpImpulse = 0.0f;
+
+    constexpr static float MOVE_SPEED = 8.f; // meter per sekund
+    constexpr static float MAX_MOVE_SPEED = 15.0f;
+    constexpr static float JUMP_HEIGHT = 10.5f;
+    constexpr static float SHOOT_VELOCITY = 100.0f;
+    constexpr static float ON_GROUND_ANGLE_THRESHOLD = 0.7f; // cos(45 degrees)
+    constexpr static float GRAVITY = -9.81f;    
+    constexpr static float GRAVITY_MULTIPLIER = 3.0f;
+    constexpr static float AIR_FRICTION = 0.02f;
 
     // selection and placement
     bool dragging = false;
@@ -59,7 +74,4 @@ private:
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
     constexpr static float SELECT_RANGE = 5000.0f;
-
-    constexpr static float JUMP_HEIGHT = 10.5f;
-    constexpr static float SHOOT_VELOCITY = 100.0f;
 };

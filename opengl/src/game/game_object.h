@@ -40,18 +40,11 @@ public:
     int batchIdx = -1;
     int batchInstanceIdx = -1;
 
-    // editor
+    // editor/player interaction
+    bool player = false;
     bool hoveredByEditor = false;
     bool selectedByEditor = false;
     bool selectedByPlayer = false;
-    glm::vec3 lastPosition;
-
-    // player variables
-    bool player = false;
-    glm::vec3 playerMoveImpulse{ 0.0f };
-    float playerJumpImpulse = 0.0f;
-    bool onGround = false;
-    bool hasJumped = false;
 
     std::vector<glm::vec3> verticesPositions;
 
