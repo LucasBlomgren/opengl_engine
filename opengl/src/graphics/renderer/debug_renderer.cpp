@@ -26,11 +26,11 @@ void DebugRenderer::init(const EngineState& engineState, const MeshManager& mesh
 //---------------------------------------------
 //  Prepare Scene debug meshes
 //---------------------------------------------
-void DebugRenderer::prepareFrame(const PhysicsEngine& physics, const std::vector<GameObject>& objects) {
+void DebugRenderer::prepareFrame(PhysicsEngine& physics, const std::vector<GameObject>& objects, World& world) {
     sceneDebugMeshes.clear();
 
     prepareObjectLocalNormals(objects);
-    prepareCollisionNormals(physics);
+    prepareCollisionNormals(physics, world);
     prepareXYZAxes();
 }
 
@@ -53,13 +53,13 @@ void DebugRenderer::renderShadowPass() const {
 // ---------------------------------------------------------------------
 //    Render Overlay Pass: (debug shapes + debug meshes with lighting)
 // ---------------------------------------------------------------------
-void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera& camera, const std::vector<GameObject>& objects) {
+void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera& camera, const std::vector<GameObject>& objects, World& world) {
     // render debug shapes (AABBs, contact points etc) without lighting
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
     debugShapeShader->setInt("debug.objectType", 0);
-    renderAABBs(objects);
-    renderColliders(objects, camera);
+    renderAABBs(objects, world);
+    renderColliders(objects, camera, world);
     renderContactPoints(physics.GetContactCache());
     renderBVHs(physics);
 
@@ -79,39 +79,58 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 //-----------------------------------------------------------------
 // Prepare collisions normals, object local normals and XYZ axes
 //-----------------------------------------------------------------
-void DebugRenderer::prepareCollisionNormals(const PhysicsEngine& physics) {
+void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
     if (!engineState->getShowCollisionNormals()) return; 
 
     for (Contact* c : physics.contactsToSolve) {
         glm::vec3 pos;
-        GameObject* objA = c->objA_ptr;
-        GameObject* objB = c->objB_ptr;
+
+        PhysicsWorld* pw = physics.getPhysicsWorld();
+        Collider* colA = pw->getCollider(c->colliderA);
+        Collider* colB = pw->getCollider(c->colliderB);
+        RigidBody* bodyA = pw->getRigidBody(colA->rigidBodyHandle);
+        RigidBody* bodyB = pw->getRigidBody(colB->rigidBodyHandle);
+        Transform* tA = &world.getGameObject(colA->gameObjectHandle)->transform;    
+        Transform* tB = &world.getGameObject(colB->gameObjectHandle)->transform;
 
         // Om ett av objekten är terrain triangle (objA eller objB är nullptr), placera pilen på det andra objektets position
-        if (objA == nullptr) {
-            pos = objB->position;
+        if (c->partnerTypeA == ContactPartnerType::Terrain) {
+            pos = tB->position;
         }
-        else if (objB == nullptr) {
-            pos = objA->position;
+        else if (c->partnerTypeB == ContactPartnerType::Terrain) {
+            pos = tA->position;
         }
 
         // Om båda objekten är vanliga GameObjects, placera pilen på den dynamiska kroppens AABB-sida som vetter mot den andra kroppen
-        if (objA != nullptr && objB != nullptr) {
+        if (c->partnerTypeA == ContactPartnerType::Collider && c->partnerTypeB == ContactPartnerType::Collider) {
             // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
-            if (!objA->isStatic && !objB->isStatic) {
-                pos = 0.5f * (objA->position + objB->position);
+            if (bodyA->type != BodyType::Static && bodyB->type != BodyType::Static) {
+                pos = 0.5f * (tA->position + tB->position);
             }
             else {
                 // 2) hitta dynamiska objektet (det som INTE är static)
-                GameObject* dyn = objA->isStatic ? objB : objA;
+                RigidBody* dynBody = nullptr;
+                Collider* dynCol = nullptr;
+                Transform* dynT = nullptr;
+
+                if (bodyA->type != BodyType::Static) {
+                    dynBody = bodyA;
+                    dynCol = colA;
+                    dynT = tA;
+                } else {
+                    dynBody = bodyB;
+                    dynCol = colB;
+                    dynT = tB;
+                }
+
                 // 3) välj d så att den pekar från dyn MOT den andra kroppen
                 // antag: c->normal pekar från A -> B
-                glm::vec3 d = (dyn == objB) ? (-c->normal) : (c->normal);   // om dyn är A: mot B = -n, om dyn är B: mot A = +n
+                glm::vec3 d = (dynBody == bodyA) ? c->normal : -c->normal;
 
                 // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
-                pos = dyn->position;
+                pos = dynT->position;
                 float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
-                AABB* aabb = &dyn->collider.getAABB(); // se till att denna är world-space halfExtents
+                AABB* aabb = &dynCol->getAABB(); // se till att denna är world-space halfExtents
 
                 if (ax >= ay && ax >= az) {
                     pos.x += (d.x >= 0 ? aabb->halfExtents.x : -aabb->halfExtents.x);
@@ -142,9 +161,9 @@ void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& obj
         Mesh* m = arrowRenderer.mesh;
 
         // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
-        glm::vec3 pos = glm::vec3(obj.modelMatrix[3]);
+        glm::vec3 pos = glm::vec3(obj.transform.modelMatrix[3]);
 
-        glm::mat3 R = glm::mat3(obj.modelMatrix);
+        glm::mat3 R = glm::mat3(obj.transform.modelMatrix);
         R[0] = glm::normalize(R[0]);
         R[1] = glm::normalize(R[1]);
         R[2] = glm::normalize(R[2]);
@@ -182,7 +201,7 @@ void DebugRenderer::prepareXYZAxes() {
 // ----------------------------------------------
 //  Render AABBs, Colliders & Contact Points
 // ----------------------------------------------
-void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects) {
+void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& world) {
     if (!engineState->getShowAABB()) return;
 
     glLineWidth(2.0f);
@@ -190,24 +209,30 @@ void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects) {
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };
 
     for (const GameObject& obj : objects) {
-        aabbRenderer.updateModel(obj.aabb, false);
+        Collider* col = world.getCollider(obj.colliderHandle);
+        aabbRenderer.updateModel(col->aabb, false);
         aabbRenderer.render(color, *debugShapeShader);
     }
 }
-void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera) const {
+void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) const {
     if (!engineState->getShowColliders()) return;
 
     glLineWidth(2.0f);
     debugShapeShader->setBool("debug.useUniformColor", true);
 
     for (const GameObject& obj : objects) {
-        if (obj.colliderType == ColliderType::CUBOID) {
-            const OOBB& box = std::get<OOBB>(obj.collider.shape);
-            oobbRenderer.renderBox(*debugShapeShader, box, obj.asleep, obj.isStatic, false, false);
+        Collider* col = world.getCollider(obj.colliderHandle);
+        RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
+
+        bool isStatic = (rb->type == BodyType::Static);
+
+        if (col->type == ColliderType::CUBOID) {
+            const OOBB& box = std::get<OOBB>(col->shape);
+            oobbRenderer.renderBox(*debugShapeShader, box, rb->asleep, isStatic, false, false);
         }
-        else if (obj.colliderType == ColliderType::SPHERE) {
-            const Sphere& sphere = std::get<Sphere>(obj.collider.shape);
-            sphereOutlineRenderer.render(*debugShapeShader, camera.position, sphere.wCenter, sphere.radius, obj.asleep, obj.isStatic, false, false);
+        else if (col->type == ColliderType::SPHERE) {
+            const Sphere& sphere = std::get<Sphere>(col->shape);
+            sphereOutlineRenderer.render(*debugShapeShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, false, false);
         }
     }
 }

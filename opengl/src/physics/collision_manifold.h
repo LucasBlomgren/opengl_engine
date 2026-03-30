@@ -35,6 +35,15 @@ enum class ContactPartnerType {
     Terrain
 };
 
+struct ContactRuntime {
+    RigidBody* bodyA = nullptr;
+    RigidBody* bodyB = nullptr;
+    Collider* colliderA = nullptr;
+    Collider* colliderB = nullptr;
+    GameObject* objA = nullptr;
+    GameObject* objB = nullptr;
+};
+
 struct Contact {
     size_t hashKey;
     std::vector<ContactPoint> points;
@@ -51,6 +60,8 @@ struct Contact {
     ColliderHandle colliderA{};
     ColliderHandle colliderB{};
 
+    ContactRuntime runtimeData;
+
     bool freezeA = false;
     bool freezeB = false;
 
@@ -63,25 +74,29 @@ struct Contact {
     glm::vec3 referenceFaceNormal;
 
     // collider vs collider
-    Contact(ColliderHandle A, ColliderHandle B, glm::vec3& normal) : 
+    Contact(ColliderHandle handleA, ColliderHandle handleB, ContactRuntime& data, glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::Collider),
         partnerTypeB(ContactPartnerType::Collider),
-        colliderA(A),
-        colliderB(B),
+        colliderA(handleA),
+        colliderB(handleB),
+        runtimeData(data),
         normal(normal)
     {
         points.reserve(8);
     }
 
     // collider vs terrain
-    Contact(ColliderHandle A, glm::vec3& normal) :
+    Contact(ColliderHandle handleA, ContactRuntime& data, glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::Collider),
         partnerTypeB(ContactPartnerType::Terrain),
-        colliderA(A),
+        colliderA(handleA),
+        runtimeData(data),   
         normal(normal)
     {
         points.reserve(8);
     }
+
+    Contact() = default;
 };
 
 class CollisionManifold {

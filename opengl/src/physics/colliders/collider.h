@@ -18,6 +18,7 @@ enum class ColliderType {
 
 using ColliderShape = std::variant<OOBB, Sphere>;
 
+// #TODO: decide what is private/public in Collider
 struct Collider {
     int id;
     ColliderType type;

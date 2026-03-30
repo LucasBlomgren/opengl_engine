@@ -77,7 +77,7 @@ bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
     OOBB& boxA = std::get<OOBB>(A.shape);
     OOBB& boxB = std::get<OOBB>(B.shape);
 
-    return intersectPolygons(boxA.wVertices, boxB.wVertices, boxA.wAxes, boxB.wAxes, out);
+    return intersectPolygons(boxA.verticesWorld, boxB.verticesWorld, boxA.axesWorld, boxB.axesWorld, out);
 
     // #TODO: Korrekt hantering av face vs edge-edge för BoxBox
     // 
@@ -119,15 +119,15 @@ bool SAT::boxSphere(Collider& A, Collider& B, const Transform& transformA, Resul
     const glm::mat4& iM = transformA.invModelMatrix;
 
     // Sphere center i värld
-    glm::vec3 worldC = sph->wCenter;
+    glm::vec3 worldC = sph->centerWorld;
     // Transformera world → box-local
     glm::vec3 localC = glm::vec3(iM * glm::vec4(worldC, 1.0f));
 
     // Clamp i lokal AABB
     glm::vec3 clamped;
-    clamped.x = glm::clamp(localC.x, -box->lHalfExtents.x, +box->lHalfExtents.x);
-    clamped.y = glm::clamp(localC.y, -box->lHalfExtents.y, +box->lHalfExtents.y);
-    clamped.z = glm::clamp(localC.z, -box->lHalfExtents.z, +box->lHalfExtents.z);
+    clamped.x = glm::clamp(localC.x, -box->halfExtentsLocal.x, +box->halfExtentsLocal.x);
+    clamped.y = glm::clamp(localC.y, -box->halfExtentsLocal.y, +box->halfExtentsLocal.y);
+    clamped.z = glm::clamp(localC.z, -box->halfExtentsLocal.z, +box->halfExtentsLocal.z);
 
     // Transformera local → world
     glm::vec3 closestWorld = glm::vec3(M * glm::vec4(clamped, 1.0f));
@@ -135,7 +135,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const Transform& transformA, Resul
     // Beräkna delta och dist2
     glm::vec3 delta = worldC - closestWorld;
     float dist2     = glm::dot(delta, delta);
-    float r2        = sph->radius * sph->radius;
+    float r2        = sph->radiusWorld * sph->radiusWorld;
 
     // Test mot radie
     if (dist2 > r2) {
@@ -144,7 +144,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const Transform& transformA, Resul
 
     // Fyll ut resultat, logga penetration & normal
     float dist = std::sqrt(dist2);
-    out.depth  = sph->radius - dist;
+    out.depth  = sph->radiusWorld - dist;
     out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f,1.0f,0.0f));
     out.point = closestWorld;
 
@@ -155,18 +155,18 @@ bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
     Sphere& sphereA = std::get<Sphere>(A.shape);
     Sphere& sphereB = std::get<Sphere>(B.shape);
 
-    glm::vec3 delta = sphereB.wCenter - sphereA.wCenter; 
+    glm::vec3 delta = sphereB.centerWorld - sphereA.centerWorld; 
     float dist2 = glm::dot(delta, delta); 
-    float r2 = (sphereA.radius + sphereB.radius) * (sphereA.radius + sphereB.radius); 
+    float r2 = (sphereA.radiusWorld + sphereB.radiusWorld) * (sphereA.radiusWorld + sphereB.radiusWorld); 
 
     if (dist2 > r2) {
         return false; // No intersection
     }
 
     float dist = std::sqrt(dist2);
-    out.depth = (sphereA.radius + sphereB.radius) - dist;
+    out.depth = (sphereA.radiusWorld + sphereB.radiusWorld) - dist;
     out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f, 1.0f, 0.0f));
-    out.point = sphereB.wCenter - out.normal * sphereB.radius; // Contact point on sphereB
+    out.point = sphereB.centerWorld - out.normal * sphereB.radiusWorld; // Contact point on sphereB
 
     return true;
 }
@@ -175,12 +175,12 @@ bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
     OOBB& box = std::get<OOBB>(A.shape);
     out.tri_ptr = &tri;
 
-    return intersectPolygons(box.wVertices, tri.vertices, box.wAxes, tri.axes, out);
+    return intersectPolygons(box.verticesWorld, tri.vertices, box.axesWorld, tri.axes, out);
 }
 
 bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     Sphere& sphere = std::get<Sphere>(A.shape);
-    glm::vec3 P = sphere.wCenter - tri.normal * glm::dot(sphere.wCenter - tri.vertices[0], tri.normal); 
+    glm::vec3 P = sphere.centerWorld - tri.normal * glm::dot(sphere.centerWorld - tri.vertices[0], tri.normal); 
 
     // test vs edge planes
     bool isInside = true;
@@ -194,7 +194,7 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
         }
     }
 
-    float depth = sphere.radius - glm::length(sphere.wCenter - P);
+    float depth = sphere.radiusWorld - glm::length(sphere.centerWorld - P);
 
     if (isInside and depth > 0.0f) {
         out.point = P;
@@ -210,11 +210,11 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     for (int i = 0; i < 3; i++) {
         glm::vec3& edge = tri.edgeDirs[i];
 
-        float t = glm::dot(sphere.wCenter - tri.vertices[i], edge) / glm::dot(edge, edge); 
+        float t = glm::dot(sphere.centerWorld - tri.vertices[i], edge) / glm::dot(edge, edge); 
         t = glm::clamp(t, 0.0f, 1.0f);
         glm::vec3 Q = tri.vertices[i] + t * edge; 
 
-        float dist2 = glm::dot(sphere.wCenter - Q, sphere.wCenter - Q);
+        float dist2 = glm::dot(sphere.centerWorld - Q, sphere.centerWorld - Q);
 
         if (dist2 < bestDist2) { 
             bestDist2 = dist2;
@@ -222,10 +222,10 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
         }
     }
 
-    if (bestDist2 <= sphere.radius * sphere.radius) { 
+    if (bestDist2 <= sphere.radiusWorld * sphere.radiusWorld) { 
         out.point = bestQ; 
-        out.normal = glm::normalize(sphere.wCenter - bestQ); 
-        out.depth = sphere.radius - std::sqrt(bestDist2); 
+        out.normal = glm::normalize(sphere.centerWorld - bestQ); 
+        out.depth = sphere.radiusWorld - std::sqrt(bestDist2); 
         out.tri_ptr = &tri;
         return true; 
     }

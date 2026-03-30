@@ -20,7 +20,7 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	auto& io = ImGui::GetIO();
 	ctx.deltaTime = deltaTime;
 	ctx.fps = io.Framerate;
-	ctx.amountObjects = world->getGameObjects().dense().size();
+	ctx.amountObjects = world->getGameObjectsMap().dense().size();
 
 	const DebugData data = physicsEngine->getDebugData();
 	ctx.amountAwakeObjects = data.awake;

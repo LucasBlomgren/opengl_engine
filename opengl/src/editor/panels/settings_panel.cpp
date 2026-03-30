@@ -127,7 +127,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Combo("", &currentItem, items, IM_ARRAYSIZE(items));
+    ImGui::Combo("##scene_select", &currentItem, items, IM_ARRAYSIZE(items));
 
     if (ImGui::Button("Load")) {
         switch (currentItem) {

@@ -28,11 +28,11 @@ void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep,
 
 // #TODO: optimize by passing model matrix directly to shader
 void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) const {
-    M[0] = glm::vec4(box.wAxes[0] * (box.lHalfExtents.x * 2.0f * box.scale.x), 0.0f);
-    M[1] = glm::vec4(box.wAxes[1] * (box.lHalfExtents.y * 2.0f * box.scale.y), 0.0f);
-    M[2] = glm::vec4(box.wAxes[2] * (box.lHalfExtents.z * 2.0f * box.scale.z), 0.0f);
+    M[0] = glm::vec4(box.axesWorld[0] * (box.halfExtentsLocal.x * 2.0f * box.scale.x), 0.0f);
+    M[1] = glm::vec4(box.axesWorld[1] * (box.halfExtentsLocal.y * 2.0f * box.scale.y), 0.0f);
+    M[2] = glm::vec4(box.axesWorld[2] * (box.halfExtentsLocal.z * 2.0f * box.scale.z), 0.0f);
 
-    M[3] = glm::vec4(box.wCenter, 1.0f);
+    M[3] = glm::vec4(box.centerWorld, 1.0f);
 }
 
 void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {

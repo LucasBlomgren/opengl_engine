@@ -1,4 +1,5 @@
 #pragma once
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -16,11 +17,7 @@ struct Transform {
     glm::mat3 rotationMatrix{ 1.0f };
     glm::mat3 invRotationMatrix{ 1.0f };
 
-    bool dirty = true;
-
     void updateCache() {
-        if (!dirty) return;
-
         rotationMatrix = glm::mat3_cast(orientation);
         invRotationMatrix = glm::transpose(rotationMatrix);
 
@@ -30,7 +27,5 @@ struct Transform {
 
         modelMatrix = T * R * S;
         invModelMatrix = glm::inverse(modelMatrix);
-
-        dirty = false;
     }
 };

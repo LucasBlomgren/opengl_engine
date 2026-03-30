@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "pointer_cache.h"
+#include "core/pointer_cache.h"
 #include "physics_world.h"
 #include "world.h"
 #include "timer.h"
@@ -44,6 +44,7 @@ public:
     void queueRemove(ColliderHandle& handle);
     void queueMove(ColliderHandle& handle, BroadphaseBucket& target);
 
+    void setBVHDirty(ColliderHandle& handle);
     RaycastHit performRaycast(Ray& ray);
 
     //------------------------

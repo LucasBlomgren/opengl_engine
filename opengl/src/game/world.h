@@ -1,9 +1,11 @@
 #pragma once
 
-#include "physics/rigid_body.h"
 #include "core/slot_map.h"
 #include "game/game_object.h"
 #include "physics/colliders/collider.h"
+
+class RigidBody;
+enum class BodyType;
 
 class TextureManager;
 class LightManager;
@@ -22,7 +24,13 @@ public:
 
     void clear();
 
-    SlotMap<GameObject, GameObjectHandle>& getGameObjects() { return m_gameObjects; }
+    SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() { return m_gameObjects; }
+    GameObject* getGameObject(const GameObjectHandle& handle);
+    GameObject* getGameObject(const ColliderHandle& handle);
+    RigidBody* getRigidBody(const GameObjectHandle& handle);
+    RigidBody* getRigidBody(const RigidBodyHandle& handle);
+    Collider* getCollider(const GameObjectHandle& handle);
+    Collider* getCollider(const ColliderHandle& handle);
 
     GameObjectHandle createGameObject(
         const std::string& textureName,

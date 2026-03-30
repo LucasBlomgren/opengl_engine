@@ -48,7 +48,7 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) co
 int BVHTree::insertLeaf(ColliderHandle handle) {
     if (!handle.isValid()) {
         std::cout << "[BVHTree::insertLeaf] Error: Invalid collider handle\n";
-        return;
+        return -1;
     }
     Collider* colliderPtr = slotMap->try_get(handle);
 

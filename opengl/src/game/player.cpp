@@ -14,8 +14,8 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
             GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, {}, 1.5f, false, {}, false);
-            GameObject* newObj = world->getGameObjects().try_get(handle);
-            RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(newObj->rigidBodyHandle);
+            GameObject* newObj = world->getGameObject(handle);
+            RigidBody* rb = world->getRigidBody(handle);
             rb->linearVelocity = camera->front * SHOOT_VELOCITY;
             c.mouse = true;
         }
@@ -35,7 +35,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         moveInput.y = 0.0f;
 
         if (in.keyDown[GLFW_KEY_SPACE]) {
-            GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
+            GameObject* playerObject = world->getGameObject(playerHandle);
             if (playerObject->onGround and !playerObject->hasJumped) {
                 playerObject->playerJumpImpulse += JUMP_HEIGHT;
                 playerObject->onGround = false;
@@ -62,7 +62,7 @@ void Player::deactivate() {
 
     // clear hover/selection states on objects to avoid stuck states
     if (objectIsSelected) {
-        GameObject* obj = world->getGameObjects().try_get(selectedObjectHandle);
+        GameObject* obj = world->getGameObject(selectedObjectHandle);
         if (obj) {
             obj->selectedByEditor = false;
         }
@@ -71,7 +71,7 @@ void Player::deactivate() {
     }
 
     if (objectIsHovered) {
-        GameObject* obj = world->getGameObjects().try_get(hoveredObjectHandle);
+        GameObject* obj = world->getGameObject(hoveredObjectHandle);
         if (obj) {
             obj->hoveredByEditor = false;
         }
@@ -83,15 +83,15 @@ void Player::deactivate() {
 void Player::createPlayerObject() {
     playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, {}, 1, false, glm::vec3{255}, true);
 
-    GameObject* player = world->getGameObjects().try_get(playerHandle);
-    RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(player->rigidBodyHandle);
+    GameObject* player = world->getGameObject(playerHandle);
+    RigidBody* rb = world->getRigidBody(playerHandle);
     player->player = true;
     rb->allowSleep = false;
 }
 
 void Player::destroyPlayerObject() {
-    ColliderHandle colliderHandle = world->getGameObjects().try_get(playerHandle)->colliderHandle;
-    physicsEngine->queueRemove(colliderHandle);
+    GameObject* player = world->getGameObject(playerHandle);
+    physicsEngine->queueRemove(player->colliderHandle);
     world->deleteGameObject(playerHandle);
     playerHandle = GameObjectHandle{};
 }
@@ -115,7 +115,7 @@ void Player::update(Shader& shader) {
 
     // clear previous hover state
     if (objectIsHovered) {
-        GameObject* hoveredObj = world->getGameObjects().try_get(hoveredObjectHandle);
+        GameObject* hoveredObj = world->getGameObject(hoveredObjectHandle);
         hoveredObj->hoveredByEditor = false;
         objectIsHovered = false;
     }
@@ -125,9 +125,9 @@ void Player::update(Shader& shader) {
 
     // set new hover state
     if (raycast.hit && !objectIsSelected) {
-        Collider* collider = physicsEngine->getPhysicsWorld()->getColliders().try_get(raycast.colliderHandle);
-        RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(collider->rigidBodyHandle);
-        GameObject* hoveredObj = world->getGameObjects().try_get(collider->gameObjectHandle);
+        Collider* collider = world->getCollider(raycast.colliderHandle);
+        RigidBody* rb = world->getRigidBody(collider->rigidBodyHandle);
+        GameObject* hoveredObj = world->getGameObject(collider->gameObjectHandle);
         hoveredObj->hoveredByEditor = true;
         hoveredObjectHandle = collider->gameObjectHandle;
         objectIsHovered = true;
@@ -139,7 +139,7 @@ void Player::update(Shader& shader) {
 void Player::updatePlayerMovement() {
     //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
 
-    GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
+    GameObject* playerObject = world->getGameObject(playerHandle);
     camera->position = playerObject->transform.position + glm::vec3(0, 0.76f, 0);
 
     // Undvik diag-fartbonus
@@ -159,11 +159,11 @@ void Player::updateSelectedObject(float dt) {
     if (objectIsSelected == false)
         return;
 
-    GameObject* playerObject = world->getGameObjects().try_get(playerHandle);
-    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
-    RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
-    RigidBody* playerRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(playerObject->rigidBodyHandle);
-    Collider* selectedCollider = physicsEngine->getPhysicsWorld()->getColliders().try_get(selectedRb->colliderHandle);
+    GameObject* playerObject = world->getGameObject(playerHandle);
+    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+    RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
+    RigidBody* playerRb = world->getRigidBody(playerObject->rigidBodyHandle);
+    Collider* selectedCollider = world->getCollider(selectedRb->colliderHandle);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
@@ -194,9 +194,8 @@ void Player::selectObject() {
         return;
     }
 
-    selectedObjectHandle = physicsEngine->getPhysicsWorld()->getColliders().try_get(raycast.colliderHandle)->gameObjectHandle;
-    GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
-    RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
+    GameObject* selectedObject = world->getGameObject(raycast.colliderHandle);
+    RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
 
     if (selectedRb->type == BodyType::Static) {
         objectIsSelected = false;
@@ -232,8 +231,8 @@ void Player::dropObject() {
     if (objectIsSelected) {
         objectIsSelected = false;
 
-        GameObject* selectedObject = world->getGameObjects().try_get(selectedObjectHandle);
-        RigidBody* selectedRb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(selectedObject->rigidBodyHandle);
+        GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+        RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
         selectedObject->selectedByPlayer = false;
         selectedRb->allowSleep = true;
         selectedRb->sleepCounter = 0.0f;
@@ -259,20 +258,19 @@ void Player::placeObject() {
     glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
     GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, 1, orientation, 1.5f, false, {}, false);
-    GameObject* newObj = world->getGameObjects().try_get(handle);
-    RigidBody* rb = physicsEngine->getPhysicsWorld()->getRigidBodies().try_get(newObj->rigidBodyHandle);
+    GameObject* newObj = world->getGameObject(handle);
+    RigidBody* rb = world->getRigidBody(newObj->rigidBodyHandle);
     rb->linearVelocity = glm::vec3(0.0f);
 }
 
 void Player::createPlaceObjectAABB(Shader& shader) {
-    float placeDist = OBJ_PLACE_DISTANCE;
     glm::vec3 size{ OBJ_PLACE_SIZE };
 
     AABB aabb;
-    aabb.centroid = camera->position + camera->front * placeDist;
+    aabb.centroid = camera->position + camera->front * OBJ_PLACE_DISTANCE;
     aabb.halfExtents = glm::vec3(size / 2.0f);
 
-    RaycastHit hitData = rayCast(placeDist);
+    RaycastHit hitData = rayCast(OBJ_PLACE_DISTANCE);
     glm::vec3 normal = hitData.normal;
     if (hitData.hit) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)
@@ -304,7 +302,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
         float min = std::numeric_limits<float>::max();
         Collider* minDepthCollider = nullptr;
         for (ColliderHandle& handle : collisions) {
-            Collider* collider = physicsEngine->getPhysicsWorld()->getColliders().try_get(handle);
+            Collider* collider = world->getCollider(handle);
 
             float depth = aabb.getMinOverlapDepth(collider->aabb);
             if (depth < min) {

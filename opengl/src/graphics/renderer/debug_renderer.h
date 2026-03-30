@@ -17,9 +17,9 @@ class DebugRenderer {
 public:
     void init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager);
 
-    void prepareFrame(const PhysicsEngine& physics, const std::vector<GameObject>& objects);
+    void prepareFrame(PhysicsEngine& physics, const std::vector<GameObject>& objects, World& world);
     void renderShadowPass() const;
-    void renderOverlayPass(const PhysicsEngine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects);
+    void renderOverlayPass(const PhysicsEngine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects, World& world);
 
     OOBBRenderer oobbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;
@@ -43,13 +43,13 @@ private:
         bool castsShadow;
     };
     std::vector<SceneDebugMesh> sceneDebugMeshes;
-    void prepareCollisionNormals(const PhysicsEngine& physics);
+    void prepareCollisionNormals(PhysicsEngine& physics, World& world);
     void prepareObjectLocalNormals(const std::vector<GameObject>& objects);
     void prepareXYZAxes();
 
     // unlit debug shapes
-    void renderAABBs(const std::vector<GameObject>& objects);
-    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera) const;
+    void renderAABBs(const std::vector<GameObject>& objects, World& world);
+    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) const;
     void renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const;
     void renderFrustum(const glm::mat4& viewProj) const;
     void renderBVHs(const PhysicsEngine& physics);

@@ -57,7 +57,7 @@ void Renderer::clearRenderBatches() {
 //    Add Object to Batch
 //----------------------------- 
 void Renderer::addObjectToBatch(GameObjectHandle handle) {
-    GameObject* obj = world->getGameObjects().try_get(handle);   
+    GameObject* obj = world->getGameObject(handle);   
 
     // check existing buckets
     for (RenderBatch& bucket : batches) {
@@ -66,7 +66,7 @@ void Renderer::addObjectToBatch(GameObjectHandle handle) {
             bucket.textureId == obj->textureId)
         {
             bucket.objects.push_back(handle);
-            bucket.instances.emplace_back(obj->modelMatrix, obj->color);
+            bucket.instances.emplace_back(obj->transform.modelMatrix, obj->color);
 
             obj->batchIdx = static_cast<int>(&bucket - &batches[0]);
             obj->batchInstanceIdx = static_cast<int>(bucket.objects.size()) - 1;
@@ -80,7 +80,7 @@ void Renderer::addObjectToBatch(GameObjectHandle handle) {
     newBatch.shader = defaultShader;
     newBatch.textureId = obj->textureId;
     newBatch.objects.push_back(handle);
-    newBatch.instances.emplace_back(obj->modelMatrix, obj->color);
+    newBatch.instances.emplace_back(obj->transform.modelMatrix, obj->color);
 
     // new batch & instance
     obj->batchIdx = static_cast<int>(batches.size());
@@ -93,7 +93,7 @@ void Renderer::addObjectToBatch(GameObjectHandle handle) {
 //  Remove Object from Batch
 //----------------------------- 
 void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
-    GameObject* obj = world->getGameObjects().try_get(handle);
+    GameObject* obj = world->getGameObject(handle);
 
     if (obj->batchIdx == -1) return; // not in a batch
 
@@ -103,7 +103,7 @@ void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
     if (obj->batchInstanceIdx != lastIdx) {
         // swap with last object
         GameObjectHandle lastObjHandle = batch.objects[lastIdx];
-        GameObject* lastObjPtr = world->getGameObjects().try_get(lastObjHandle);
+        GameObject* lastObjPtr = world->getGameObject(lastObjHandle);
 
         batch.objects[obj->batchInstanceIdx] = lastObjHandle;
         batch.instances[obj->batchInstanceIdx] = batch.instances[lastIdx];
@@ -216,7 +216,7 @@ void Renderer::render(
     }
 
     fillBatchInstances();
-    debugRenderer.prepareFrame(physics, world->getGameObjects().dense());
+    debugRenderer.prepareFrame(physics, world->getGameObjectsMap().dense(), *world);
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -272,7 +272,7 @@ void Renderer::render(
 
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
-    debugRenderer.renderOverlayPass(physics, camera, world->getGameObjects().dense());
+    debugRenderer.renderOverlayPass(physics, camera, world->getGameObjectsMap().dense(), *world);
     glEndQuery(GL_TIME_ELAPSED);
 
     if (viewportFBO) {
@@ -287,8 +287,8 @@ void Renderer::fillBatchInstances() {
     for (RenderBatch& bucket : batches) {
         bucket.instances.clear();
         for (GameObjectHandle& handle : bucket.objects) {
-            GameObject* obj = world->getGameObjects().try_get(handle);
-            bucket.instances.emplace_back(obj->modelMatrix, obj->color);
+            GameObject* obj = world->getGameObject(handle);;
+            bucket.instances.emplace_back(obj->transform.modelMatrix, obj->color);
         }
     }
 }
@@ -328,7 +328,7 @@ void Renderer::renderGameObjectsShadow() {
 //       Render scene
 //-----------------------------
 void Renderer::renderScene(SceneBuilder& builder) {
-    renderGameObjects(world->getGameObjects().dense());
+    renderGameObjects(world->getGameObjectsMap().dense());
     renderTerrain(builder.getTerrainData(), builder.sceneDirty, false);
 }
 
@@ -530,7 +530,7 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
     sceneCorners.clear();
 
     SceneBuilder::TerrainData& tData = builder.getTerrainData();
-    std::vector<GameObject>& dData = world->getGameObjects().dense();
+    std::vector<GameObject>& dData = world->getGameObjectsMap().dense();
 
     //inf max variable
     float minY = std::numeric_limits<float>::max(); 
@@ -560,7 +560,8 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
                 continue;
             }
 
-            const AABB& aabb = obj.aabb;
+            Collider* col = world->getCollider(obj.colliderHandle);
+            const AABB& aabb = col->aabb;
             minY = std::min(minY, aabb.wMin.y); 
             maxY = std::max(maxY, aabb.wMax.y); 
             minX = std::min(minX, aabb.wMin.x); 
@@ -665,10 +666,13 @@ void Renderer::renderLights() const {
 void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
     // #TODO: fix logic for selected vs hovered
 
-    GameObject* obj = world->getGameObjects().try_get(handle);
+    GameObject* obj = world->getGameObject(handle);
     if (obj == nullptr) {
         return;
     }
+
+    Collider* col = world->getCollider(obj->colliderHandle);
+    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
@@ -678,12 +682,14 @@ void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneB
     else if (obj->hoveredByEditor) { selected = false; }
     else return;
 
-    if (obj->colliderType == ColliderType::CUBOID) {
-        OOBB& box = std::get<OOBB>(obj->collider.shape);
-        debugRenderer.oobbRenderer.renderBox(*debugShader, box, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
+    bool isStatic = (rb->type == BodyType::Static);
+
+    if (col->type == ColliderType::CUBOID) {
+        OOBB& box = std::get<OOBB>(col->shape);
+        debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
     }
-    else if (obj->colliderType == ColliderType::SPHERE) {
-        Sphere& sphere = std::get<Sphere>(obj->collider.shape);
-        debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.wCenter, sphere.radius, obj->asleep, obj->isStatic, selected, obj->hoveredByEditor);
+    else if (col->type == ColliderType::SPHERE) {
+        Sphere& sphere = std::get<Sphere>(col->shape);
+        debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
     }
 }

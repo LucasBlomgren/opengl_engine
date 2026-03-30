@@ -6,17 +6,17 @@
 
 class Sphere {
 public:
-    glm::vec3 lCenter{ 0.0f };
-    glm::vec3 wCenter;
-    float     radius;
+    glm::vec3 centerWorld{ 0.0f };
+    glm::vec3 centerLocal{ 0.0f };
+    float     radiusWorld = 0.0f;
 
     Sphere(const Transform& t) {
-        wCenter = glm::vec3(t.modelMatrix * glm::vec4(lCenter, 1.0f));
-        radius = t.scale.x * 0.5f;
+        centerWorld = glm::vec3(t.modelMatrix * glm::vec4(centerLocal, 1.0f));
+        radiusWorld = t.scale.x; // sphere mesh has diameter = 2 [-1.0f, 1.0f] in local space
     }
 
     void update(const Transform& t) {
-        wCenter = glm::vec3(t.modelMatrix * glm::vec4(lCenter, 1.0f));
-        radius = t.scale.x * 0.5f;
+        centerWorld = glm::vec3(t.modelMatrix * glm::vec4(centerLocal, 1.0f));
+        radiusWorld = t.scale.x;
     }
 };

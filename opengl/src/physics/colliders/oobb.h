@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 
+#include "game/transform.h"
 #include "shaders/shader.h"
 #include "vertex.h"
 
@@ -15,32 +16,22 @@ public:
         update(t);
     };
 
-    glm::vec3 lCenter;
-    glm::vec3 wCenter;
-    glm::vec3 lHalfExtents;
-    glm::vec3 scale;
-    std::array<glm::vec3, 8> lVertices;
-    std::array<glm::vec3, 8> wVertices;
+    void update(const Transform& t);
+    void init(const std::vector<glm::vec3>& verts, const Transform& t);   // för COM tillfälligt
 
-    std::array<std::array<int,4>,6> faceIndices = {{
-        { 1, 2, 6, 5 },
-        { 0, 4, 7, 3 },
-        { 3, 7, 6, 2 },
-        { 0, 1, 5, 4 },
-        { 4, 5, 6, 7 },
-        { 0, 3, 2, 1 },
-    }};
+    std::array<glm::vec3, 8> verticesWorld;
+    std::array<glm::vec3, 3> axesWorld;
+    glm::vec3 centerWorld;
+    glm::vec3 halfExtentsLocal;
+    glm::vec3 scale;
+
+private:
+    glm::vec3 centerLocal;
+    std::array<glm::vec3, 8> verticesLocal;
 
     static constexpr std::array<glm::vec3, 3>  lAxes = {
       glm::vec3( 1,  0,  0),
       glm::vec3( 0,  1,  0),  
       glm::vec3( 0,  0,  1), 
     };
-    std::array<glm::vec3, 3> wAxes;
-
-    struct Edge { glm::vec3 A, B; };
-    std::array<Edge, 4> createEdgesAlongAxis(int axisIdx) const;
-
-    void update(const Transform& t);
-    void init(const std::vector<glm::vec3>& verts, const Transform& t);   // för COM tillfälligt
 };

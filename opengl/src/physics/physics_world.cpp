@@ -2,6 +2,20 @@
 
 #include "physics_world.h"
 
+// getters
+RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle& handle) {
+    return m_rigidBodies.try_get(handle); 
+}
+Collider* PhysicsWorld::getCollider(ColliderHandle& handle) { 
+    return m_colliders.try_get(handle); 
+}
+SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() { 
+    return m_colliders; 
+}
+SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() { 
+    return m_rigidBodies; 
+}
+
 void PhysicsWorld::clear() {
     m_colliders = SlotMap<Collider, ColliderHandle>();
     m_rigidBodies = SlotMap<RigidBody, RigidBodyHandle>();

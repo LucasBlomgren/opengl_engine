@@ -43,6 +43,7 @@ public:
 		, textureManager(textureManager)
 		, frameTimers(frameTimers)
 		, gpuTimers(gpuTimers) {
+		ctx.physicsEngine = physicsEngine;
 		ctx.engineState = engineState;
 		ctx.renderer = renderer;
 		ctx.world = world;

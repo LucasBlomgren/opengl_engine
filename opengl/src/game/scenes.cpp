@@ -305,8 +305,8 @@ void SceneBuilder::castleScene() {
 
     for (int i = 0; i < 1; i++) {
         GameObjectHandle handle = world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, glm::vec3(55 - i * 2, 40 + i * 2, -90 - i * 10), glm::vec3(0.75f), 150, glm::quat(1, 0, 0, 0), 1, true, {}, false);
-        GameObject* heavyBox = world.getGameObjects().try_get(handle);
-        RigidBody* rb = physicsEngine.getPhysicsWorld()->getRigidBodies().try_get(heavyBox->rigidBodyHandle);
+        GameObject* heavyBox = world.getGameObject(handle);
+        RigidBody* rb = world.getRigidBody(heavyBox->rigidBodyHandle);
         rb->linearVelocity = glm::vec3(0, 0, 50);
     }
 }
@@ -377,8 +377,8 @@ void SceneBuilder::tallStructureScene() {
     world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(0.0, -10.0, 0.0), glm::vec3(135.0, 10.0, 135.0), 100000, glm::quat(1, 0, 0, 0), 2.0f, false, {}, false);
 
     GameObjectHandle handle = world.createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(-10.0, 5.0, -10.0), glm::vec3(7.2), 1000, glm::quat(1, 0, 0, 0), 2.0f, false, {}, false);
-    GameObject* heavyBox = world.getGameObjects().try_get(handle);
-    RigidBody* rb = physicsEngine.getPhysicsWorld()->getRigidBodies().try_get(heavyBox->rigidBodyHandle);
+    GameObject* heavyBox = world.getGameObject(handle);
+    RigidBody* rb = world.getRigidBody(heavyBox->rigidBodyHandle);
     rb->linearVelocity = glm::vec3(120, 180, 150);
 
     // ----- staplar ----- 
@@ -515,7 +515,7 @@ void SceneBuilder::mainScene() {
         glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(halfDepth, 0, 0);
         glm::vec3 newPos = frontTip1 + newOrient * glm::vec3(halfDepth, 0, 0);
 
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, newPos, glm::vec3(wWidth, wHeight, wLength), 0, newOrient, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, newPos, glm::vec3(wWidth, wHeight, wLength), 0, newOrient, 0, false, glm::vec3(255.0f), false);
         lastAngle += 5.0f;
         lastOrient = newOrient;
         lastPos = newPos;
@@ -554,16 +554,16 @@ void SceneBuilder::mainScene() {
         // main platform 
         glm::vec3 pos{ slopeLeftX, slopeLeftY + i * distHeight, slopeLeftZ };
         glm::vec3 size{ slopeWidth, slopeHeight, slopeLength };
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
         // guard rails
 
         pos = glm::vec3(slopeLeftX + (railWidth / 2) + (slopeWidth / 2), slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
 
         pos = glm::vec3(slopeLeftX - (railWidth / 2) - (slopeWidth / 2), slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
     }
     // right platforms
     for (int i = 0; i < 3; i++) {
@@ -571,16 +571,16 @@ void SceneBuilder::mainScene() {
         // main platform
         glm::vec3 pos{ slopeRightX, slopeRightY + i * distHeight, slopeRightZ };
         glm::vec3 size{ slopeWidth, slopeHeight, slopeLength };
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
 
         // guard rails
         pos = glm::vec3(slopeRightX + (railWidth / 2) + (slopeWidth / 2), slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
 
         pos = glm::vec3(slopeRightX - (railWidth / 2) - (slopeWidth / 2), slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight);
         size = glm::vec3(railWidth, slopeHeight * railHeight, railLength);
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, {}, false);
+        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, pos, size, 0, orientation, 0, false, glm::vec3(255.0f), false);
 
     }
     // falling pyramid
@@ -591,8 +591,8 @@ void SceneBuilder::mainScene() {
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
     glm::quat orientation1 = glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
-    GameObjectHandle handle = world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, glm::vec3(80, 0, 120), glm::vec3(30, 0.5, 30), 0, orientation1, 0, false, {}, false);
-    GameObject* obj = world.getGameObjects().try_get(handle);
+    GameObjectHandle handle = world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static, glm::vec3(80, 0, 120), glm::vec3(30, 0.5, 30), 0, orientation1, 0, false, glm::vec3(255.0f), false);
+    GameObject* obj = world.getGameObject(handle);
     obj->textureId = 999;
 
     // ___________________________________________________________
@@ -609,8 +609,8 @@ void SceneBuilder::mainScene() {
     int mass = 10;
     glm::vec3 size = glm::vec3(14, 0.2, 0.5);
     handle = world.createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(34.5, 3.1, 20), size, mass, glm::quat(1, 0, 0, 0), 999, false, {}, false);
-    obj = world.getGameObjects().try_get(handle);
-    RigidBody* rb = physicsEngine.getPhysicsWorld()->getRigidBodies().try_get(obj->rigidBodyHandle);
+    obj = world.getGameObject(handle);
+    RigidBody* rb = world.getRigidBody(obj->rigidBodyHandle);
     rb->canMoveLinearly = false;
 
     // projectile
@@ -693,5 +693,5 @@ void SceneBuilder::mainScene() {
     //GameObject& girlObj = dynamicObjects.back();
     //girlObj.useRandomColor = true;
 
-    world.createGameObject("plain", "tank", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(-20, 0, 0), glm::vec3(1), 1, orientation, 3.5f, false, glm::vec3(-1,-1,-1), false);
+    world.createGameObject("plain", "tank", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(-20, 0, 0), glm::vec3(1), 1, orientation, 3.5f, false, glm::vec3(255.0f), false);
 }

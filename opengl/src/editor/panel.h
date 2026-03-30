@@ -2,6 +2,7 @@
 
 #include "core/slot_map.h"
 
+class PhysicsEngine;
 class GameObject;
 class EngineState;
 class Renderer;
@@ -29,6 +30,7 @@ struct PanelContext {
 	GameObjectHandle selectedObjectHandle;
 	bool objectIsSelected = false;
 
+	::PhysicsEngine* physicsEngine = nullptr;
 	::EngineState* engineState = nullptr;
 	::Renderer* renderer = nullptr;
 	::SceneBuilder* sceneBuilder = nullptr;

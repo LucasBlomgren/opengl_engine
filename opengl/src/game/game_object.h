@@ -16,17 +16,16 @@
 #include "broadphase/broadphase_types.h"
 
 #include "game/transform.h"
-#include "game/ring_buffer.h"
 
 inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
 }
 
+// #TODO: decide what is private/public in GameObject
 class GameObject {
 public:
     int id;
     Transform transform;
-
     ColliderHandle colliderHandle;
     RigidBodyHandle rigidBodyHandle;
 
@@ -79,6 +78,4 @@ public:
     }
 
     ~GameObject() {}
-    void initMesh();
-    void updatePos(const float& dt);
 };

@@ -1,6 +1,10 @@
 #pragma once
 
+#include "game/transform.h"
 #include "game/game_object.h"
+#include "core/ring_buffer.h"
+#include "core/slot_map.h"
+#include "physics/colliders/collider.h"
 
 enum class BodyType {
     Dynamic,
@@ -8,6 +12,8 @@ enum class BodyType {
     Static
 };
 
+// #TODO: decide what is private/public in RigidBody
+// #TODO: player logic to player class instead of rigid body, and remove player variable from rigid body
 class RigidBody {
 public:
     int id;
@@ -16,6 +22,7 @@ public:
     ColliderHandle colliderHandle;
 
     bool player = false;
+    bool externalControl = false; // for objects moved by the editor
 
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
@@ -24,18 +31,18 @@ public:
     float mass = 0.0f;
     float invMass = 0.0f;
 
-    bool allowGravity;
+    bool allowGravity = true;
     bool canMoveLinearly = true;
     glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
-    float radius;
-    float invRadius;
+    float radius = 0.0f;
+    float invRadius = 0.0f;
 
     // sleep
     bool asleep = false;
     bool allowSleep = true;
     bool inSleepTransition = false; // to avoid waking up immediately and to not add duplicate wake-up requests
     float sleepCounter = 0;
-    float sleepCounterThreshold;
+    float sleepCounterThreshold = 1.5f;
     float velocityThreshold = 0;
     float angularVelocityThreshold = 0;
     float anchorTimer = 0.0f;
@@ -44,7 +51,7 @@ public:
     float lastAvg = 0.0f;
     RingBuffer collisionHistory;
 
-    void update(Transform& t, float dt);
+    void update(Transform& t, ColliderType colliderType, float dt);
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
     void updateInertiaWorld(Transform& t);
 
@@ -55,7 +62,9 @@ public:
     void setAwake();
     void setStatic();
 
-    void calculateInverseInertia(const ColliderType& type, Transform& t);
+    void setExternalControl(bool controlled);
+
+    void calculateInverseInertia(const ColliderType& type, const Collider& collider, Transform& t);
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);

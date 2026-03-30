@@ -2,18 +2,19 @@
 #include "collision_manifold.h"
 
 void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
-    const Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    const Collider* colliderB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-    const GameObject* objA = gameObjectPtrCache->get(colliderA->gameObjectHandle, __FUNCTION__);
-    const GameObject* objB = gameObjectPtrCache->get(colliderB->gameObjectHandle, __FUNCTION__);
+    ContactRuntime& rt = contact.runtimeData;
+    Collider* colliderA = rt.colliderA;
+    Collider* colliderB = rt.colliderB;
+    GameObject* objA = rt.objA;
+    GameObject* objB = rt.objB;
 
-    static std::vector<glm::vec3> referenceFace;  
+    static std::vector<glm::vec3> referenceFace;
     static std::vector<glm::vec3> incidentFace;
-    referenceFace.clear(); 
-    incidentFace.clear(); 
+    referenceFace.clear();
+    incidentFace.clear();
 
     const float linearSlop = 0.001f;
-    const float k_tol = 0.1f * linearSlop; 
+    const float k_tol = 0.1f * linearSlop;
     contact.objBisReference = (satResult.separationB > satResult.separationA + k_tol);
 
     // print who is reference face on line below and the IDs of the objects
@@ -21,24 +22,24 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
 
     if (contact.objBisReference) {
         selectCollisionFace(colliderB, objB, -satResult.normal); referenceFace = this->selectedFace;
-        selectCollisionFace(colliderA, objA, satResult.normal);  incidentFace  = this->selectedFace;
+        selectCollisionFace(colliderA, objA, satResult.normal);  incidentFace = this->selectedFace;
     }
     else {
         selectCollisionFace(colliderA, objA, satResult.normal);  referenceFace = this->selectedFace;
-        selectCollisionFace(colliderB, objB, -satResult.normal); incidentFace  = this->selectedFace;
+        selectCollisionFace(colliderB, objB, -satResult.normal); incidentFace = this->selectedFace;
     }
 
     // räkna ut normalen för referensface
-    glm::vec3 e0 = referenceFace[1] - referenceFace[0]; 
+    glm::vec3 e0 = referenceFace[1] - referenceFace[0];
     glm::vec3 e1 = referenceFace[2] - referenceFace[0];
-    glm::vec3 n_ref = glm::normalize(glm::cross(e0, e1)); 
+    glm::vec3 n_ref = glm::normalize(glm::cross(e0, e1));
 
     contact.referenceFace = referenceFace;
     contact.incidentFace = incidentFace;
-    contact.referenceFaceNormal = n_ref; 
+    contact.referenceFaceNormal = n_ref;
 
     this->clippingPlanes.clear();
-    clipPoints(referenceFace, incidentFace, n_ref); 
+    clipPoints(referenceFace, incidentFace, n_ref);
 
     std::vector<float> pointsDepth;
     pointsDepth.reserve(clippedPoints.size());
@@ -51,7 +52,7 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
         contact.points[i].depth = pointsDepth[i];
     }
 
-    createLocalCoordinates(contact); 
+    createLocalCoordinates(contact);
 
     if (contact.points.size() > 4) {
         contactPointReduction(contact);
@@ -60,25 +61,26 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     contact.hashKey = generateKey(colliderA->id, colliderB->id);
     contact.normal = satResult.normal;
 
-    integrateContact(cache, contact);  
+    integrateContact(cache, contact);
 }
 
 void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
-    const Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    const Collider* colliderB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-    
     contact.normal = satResult.normal;
-    contact.points.resize(1); 
+    contact.points.resize(1);
     contact.points[0].globalCoord = satResult.point; // point is the closest point on the cuboid to the sphere
     contact.points[0].depth = satResult.depth;       // penetration depth
 
-    createLocalCoordinates(contact); 
+    createLocalCoordinates(contact);
 
-    contact.hashKey = generateKey(colliderA->id, colliderB->id);
-    integrateContact(cache, contact); 
+    contact.hashKey = generateKey(contact.runtimeData.colliderA->id, contact.runtimeData.colliderB->id);
+    integrateContact(cache, contact);
 }
 
 void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+    ContactRuntime& rt = contact.runtimeData;
+    Collider* colliderA = rt.colliderA;
+    GameObject* objA = rt.objA;
+
     std::vector<glm::vec3> referenceFace;
     std::vector<glm::vec3> incidentFace;
     glm::vec3 refNormal;
@@ -86,11 +88,8 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
     this->allClippedPoints.clear();
     this->allClippedPoints.reserve(8 * allResults.size());
 
-    const Collider* collider = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    const GameObject* obj = gameObjectPtrCache->get(collider->gameObjectHandle, __FUNCTION__);
-
     // set ref face for contact (for penetration depth calculation etc.)
-    selectCollisionFace(collider, obj, allResults[0].normal);
+    selectCollisionFace(colliderA, objA, allResults[0].normal);
 
     referenceFace = this->selectedFace;
     glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
@@ -104,7 +103,7 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
 
     for (const SAT::Result& satResult : allResults)
     {
-        selectCollisionFace(collider, obj, satResult.normal);
+        selectCollisionFace(colliderA, objA, satResult.normal);
         referenceFace = this->selectedFace;
         incidentFace = satResult.tri_ptr->vertices;
 
@@ -131,42 +130,44 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
 
     createLocalCoordinates(contact);
 
-    contact.hashKey = generateKey(collider->id, allResults[0].tri_ptr->id);
+    contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
     integrateContact(cache, contact);
 }
 
 void CollisionManifold::sphereSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
-    const Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    const Collider* colliderB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-    
+    ContactRuntime& rt = contact.runtimeData;
+    Collider* colliderA = rt.colliderA;
+    Collider* colliderB = rt.colliderB;
+
     contact.normal = satResult.normal;
     contact.points.resize(1);
     contact.points[0].globalCoord = satResult.point; // point is the closest point on the sphere to the sphere
     contact.points[0].depth = satResult.depth;       // penetration depth
 
-    createLocalCoordinates(contact); 
+    createLocalCoordinates(contact);
 
     contact.hashKey = generateKey(colliderA->id, colliderB->id);
-    integrateContact(cache, contact); 
+    integrateContact(cache, contact);
 }
 void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
-    const Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    
+    ContactRuntime& rt = contact.runtimeData;
+    Collider* colliderA = rt.colliderA;
+
     this->allClippedPoints.clear();
-    
+
     this->allClippedPoints.resize(allResults.size());
     for (int i = 0; i < allResults.size(); i++) {
         this->allClippedPoints[i] = allResults[i].point;
     }
 
     // --- pick furthest points from all "clipped points" ---
-    pickFourFurthestPoints(); 
+    pickFourFurthestPoints();
 
     // --- create contact points from furthest points ---
-    contact.points.resize(this->furthestPoints.size()); 
-    for (int i = 0; i < this->furthestPoints.size(); i++) { 
-        contact.points[i].globalCoord = this->furthestPoints[i]; 
-    } 
+    contact.points.resize(this->furthestPoints.size());
+    for (int i = 0; i < this->furthestPoints.size(); i++) {
+        contact.points[i].globalCoord = this->furthestPoints[i];
+    }
 
     // add depth for each cp
     contact.points[0].depth = allResults[0].depth;
@@ -174,7 +175,7 @@ void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, 
         contact.points[i].depth = allResults[indices[i]].depth;
     }
 
-    createLocalCoordinates(contact);  
+    createLocalCoordinates(contact);
     contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
     integrateContact(cache, contact); 
 }
@@ -381,13 +382,10 @@ void CollisionManifold::clipPoints(std::vector<glm::vec3>& referenceFace, std::v
 void CollisionManifold::createLocalCoordinates(Contact& contact) {
     glm::mat4* invM;
     if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
-        Collider* colB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-        GameObject* objB = gameObjectPtrCache->get(colB->gameObjectHandle, __FUNCTION__);
+        GameObject* objB = contact.runtimeData.objB;
         invM = &objB->transform.invModelMatrix;
-    } 
-    else {
-        Collider* colA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-        GameObject* objA = gameObjectPtrCache->get(colA->gameObjectHandle, __FUNCTION__);
+    } else {
+        GameObject* objA = contact.runtimeData.objA;
         invM = &objA->transform.invModelMatrix;
     }
 
@@ -487,14 +485,13 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         restitution = 0.0f; // ingen studs om någon av kropparna är frusen
     }
 
-    const Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    const Collider* colliderB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-    const RigidBody* bodyA = bodyPtrCache->get(colliderA->rigidBodyHandle, __FUNCTION__);
-    const RigidBody* bodyB = bodyPtrCache->get(colliderB->rigidBodyHandle, __FUNCTION__);
-    const GameObject* objA = gameObjectPtrCache->get(colliderA->gameObjectHandle, __FUNCTION__);
-    const GameObject* objB = gameObjectPtrCache->get(colliderB->gameObjectHandle, __FUNCTION__);
-
     glm::vec3& normal = contact.normal; 
+
+    ContactRuntime& rt = contact.runtimeData;
+    RigidBody* bodyA = rt.bodyA;
+    RigidBody* bodyB = rt.bodyB;
+    GameObject* objA = rt.objA;
+    GameObject* objB = rt.objB;
 
     glm::vec3 rA;
     glm::vec3 rB;
@@ -515,9 +512,9 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         angularVelocityA = glm::vec3(0.0f);
     } else {
         rA = cp.globalCoord - objA->transform.position;
-        invMassA = bodyA->invMass; 
-        invInertiaA = bodyA->invInertiaWorld; 
-        linearVelocityA = bodyA->linearVelocity; 
+        invMassA = bodyA->invMass;
+        invInertiaA = bodyA->invInertiaWorld;
+        linearVelocityA = bodyA->linearVelocity;
         angularVelocityA = bodyA->angularVelocity;
     }
 
@@ -529,10 +526,10 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         angularVelocityB = glm::vec3(0.0f);
     } else {
         rB = cp.globalCoord - objB->transform.position;
-        invMassB = bodyB->invMass; 
-        invInertiaB = bodyB->invInertiaWorld; 
-        linearVelocityB = bodyB->linearVelocity; 
-        angularVelocityB = bodyB->angularVelocity; 
+        invMassB = bodyB->invMass;
+        invInertiaB = bodyB->invInertiaWorld;
+        linearVelocityB = bodyB->linearVelocity;
+        angularVelocityB = bodyB->angularVelocity;
     }
 
     // pre-calculate rA, rB, EffectiveMass
@@ -651,11 +648,6 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         return;
     }
 
-    Collider* colliderA = colliderPtrCache->get(contact.colliderA, __FUNCTION__);
-    Collider* colliderB = colliderPtrCache->get(contact.colliderB, __FUNCTION__);
-    Transform* transformA = &gameObjectPtrCache->get(colliderA->gameObjectHandle, __FUNCTION__)->transform;
-    Transform* transformB = &gameObjectPtrCache->get(colliderB->gameObjectHandle, __FUNCTION__)->transform;
-
     // matcha nya punkter med gamla punkter eftersom finalContact inte matchar med en cached contact
     Contact& cachedContact = it->second;
     cachedContact.wasUsedThisFrame = true;
@@ -665,15 +657,23 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     glm::vec3& referenceFaceNormal = contact.referenceFaceNormal;
     std::vector<glm::vec3>& referenceFace = contact.referenceFace;
 
+    ContactRuntime& rt = contact.runtimeData;
+    Collider* colliderA = rt.colliderA;
+    Collider* colliderB = rt.colliderB;
+    RigidBody* bodyA = rt.bodyA;
+    RigidBody* bodyB = rt.bodyB;
+    GameObject* objA = rt.objA;
+    GameObject* objB = rt.objB;
+
     // iterera över alla nya contact points och se om någon är nära en existerande
     glm::mat3 M3; 
     glm::vec3 T3; 
     if (cachedContact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
-        M3 = glm::mat3(transformB->modelMatrix);
-        T3 = glm::vec3(transformB->modelMatrix[3]);
+        M3 = glm::mat3(objB->transform.modelMatrix);
+        T3 = glm::vec3(objB->transform.modelMatrix[3]);
     } else {
-        M3 = glm::mat3(transformA->modelMatrix);
-        T3 = glm::vec3(transformA->modelMatrix[3]);
+        M3 = glm::mat3(objA->transform.modelMatrix);
+        T3 = glm::vec3(objA->transform.modelMatrix[3]);
     }
 
     const float warmstartMatchingThreshold = 0.005f; // #TODO: behöver ändras till att vara en faktor av objektens storlekar
@@ -747,11 +747,12 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         glm::mat3 M3; 
         glm::vec3 T3; 
         if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
-            M3 = glm::mat3(transformB->modelMatrix); 
-            T3 = glm::vec3(transformB->modelMatrix[3]);
-        } else {
-            M3 = glm::mat3(transformA->modelMatrix);
-            T3 = glm::vec3(transformA->modelMatrix[3]);
+            M3 = glm::mat3(objB->transform.modelMatrix);
+            T3 = glm::vec3(objB->transform.modelMatrix[3]);
+        }
+        else {
+            M3 = glm::mat3(objA->transform.modelMatrix);
+            T3 = glm::vec3(objA->transform.modelMatrix[3]);
         }
 
         for (int i = 0; i < cachedContact.points.size(); i++) {
@@ -788,9 +789,9 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
 
             glm::mat4* invM;
             if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
-                invM = &transformB->invModelMatrix;
+                invM = &objB->transform.invModelMatrix;
             } else {
-                invM = &transformA->invModelMatrix;
+                invM = &objA->transform.invModelMatrix;
             }
 
             glm::vec4 loc = *invM * glm::vec4(cachedPoint.globalCoord, 1.0f);

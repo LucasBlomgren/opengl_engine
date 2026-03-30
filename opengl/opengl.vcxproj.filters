@@ -155,9 +155,9 @@
     <ClInclude Include="src\physics\physics_world.h" />
     <ClInclude Include="src\physics\rigid_body.h" />
     <ClInclude Include="src\graphics\renderer\debug_renderer.h" />
-    <ClInclude Include="src\game\ring_buffer.h" />
+    <ClInclude Include="src\core\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
-    <ClInclude Include="src\physics\pointer_cache.h" />
+    <ClInclude Include="src\core\pointer_cache.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

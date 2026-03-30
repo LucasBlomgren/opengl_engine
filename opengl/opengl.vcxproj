@@ -302,7 +302,7 @@
     <ClInclude Include="src\editor\panel_manager.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\game\player.h" />
-    <ClInclude Include="src\game\ring_buffer.h" />
+    <ClInclude Include="src\core\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
@@ -346,7 +346,7 @@
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\physics_world.h" />
-    <ClInclude Include="src\physics\pointer_cache.h" />
+    <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\physics\rigid_body.h" />
     <ClInclude Include="src\physics\sat.h" />
@@ -459,7 +459,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -489,7 +489,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>

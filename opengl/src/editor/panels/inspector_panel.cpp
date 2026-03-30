@@ -33,7 +33,9 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 		return;
 	}
 
-	GameObject* obj = ctx.world->getGameObjects().try_get(ctx.selectedObjectHandle);
+	GameObject* obj = ctx.world->getGameObject(ctx.selectedObjectHandle);
+	RigidBody* rb = ctx.world->getRigidBody(ctx.selectedObjectHandle);
+	Collider* collider = ctx.world->getCollider(ctx.selectedObjectHandle);
 
 	ImGui::Text("Object ID: %d", obj->id);
 	ImGui::Spacing();
@@ -145,8 +147,8 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 			}
 			if (mesh) {
 				obj->mesh = mesh;
-				obj->initMesh();
-				obj->initCollider();
+				//obj->initMesh();
+				//obj->initCollider();
 				ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
 				ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
 			}
@@ -213,52 +215,52 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
 	// Position
 	{
-		glm::vec3 pos = obj->position;
+		glm::vec3 pos = obj->transform.position;
 		if (RowDragFloat3("Position", "##pos", pos, 0.1f, -1000.f, 1000.f, 2)) {
-			obj->position = pos;
-			obj->modelMatrixDirty = true;
-			obj->aabbDirty = true;
-			obj->setModelMatrix();
-			obj->updateAABB();
-			obj->updateCollider();
+			obj->transform.position = pos;
+			obj->transform.updateCache();
+			collider->updateAABB(obj->transform);
+			collider->updateCollider(obj->transform);
 		}
 	}
 
 	// Scale
 	{
-		if (obj->colliderType == ColliderType::SPHERE) {
-			float scale = obj->scale.x;
+		if (collider->type == ColliderType::SPHERE) {
+			float scale = obj->transform.scale.x;
 			if (RowDragFloat("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f)) {
-				obj->scale = glm::vec3(scale);
-				obj->modelMatrixDirty = true;
-				obj->aabbDirty = true;
-				obj->setModelMatrix();
-				obj->updateAABB();
-				obj->updateCollider();
+				obj->transform.scale = glm::vec3(scale);
+				obj->transform.updateCache();
+				collider->updateAABB(obj->transform);
+				collider->updateCollider(obj->transform);
 			}
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				obj->calculateInverseInertia();
+				obj->transform.updateCache();
+				rb->calculateInverseInertia(collider->type, *collider, obj->transform);
+				rb->updateInertiaWorld(obj->transform);
+				rb->invRadius = 1.0f / (0.5f * glm::length(obj->transform.scale));
 			}
 		} 
 		else {
-			glm::vec3 scale = obj->scale;
+			glm::vec3 scale = obj->transform.scale;
 			if (RowDragFloat3("Scale", "##scale", scale, 0.1f, 0.1f, 1000.f, 2)) {
-				obj->scale = scale;
-				obj->modelMatrixDirty = true;
-				obj->aabbDirty = true;
-				obj->setModelMatrix();
-				obj->updateAABB();
-				obj->updateCollider();
+				obj->transform.scale = scale;
+				obj->transform.updateCache();
+				collider->updateAABB(obj->transform);
+				collider->updateCollider(obj->transform);
 			}
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
-				obj->calculateInverseInertia();
+				obj->transform.updateCache();
+				rb->calculateInverseInertia(collider->type, *collider, obj->transform);
+				rb->updateInertiaWorld(obj->transform);
+				rb->invRadius = 1.0f / (0.5f * glm::length(obj->transform.scale));
 			}
 		}
 	}
 
 	// Rotation (stored UI state)
 	{
-		glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(obj->orientation));
+		glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(obj->transform.orientation));
 		glm::vec3 lastUiDeg = uiDeg;
 
 		if (RowDragFloat3("Rotation", "##rot", uiDeg, 0.5f, -720.f, 720.f, 2)) {
@@ -269,12 +271,10 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 				glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
 				glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
 
-			obj->orientation = glm::normalize(obj->orientation * dq);
-			obj->modelMatrixDirty = true;
-			obj->aabbDirty = true;
-			obj->setModelMatrix();
-			obj->updateAABB();
-			obj->updateCollider();
+			obj->transform.orientation = glm::normalize(obj->transform.orientation * dq);
+			obj->transform.updateCache();
+			collider->updateAABB(obj->transform);
+			collider->updateCollider(obj->transform);
 
 			lastUiDeg = uiDeg;
 		}
@@ -287,81 +287,149 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 	// --------------
 	BeginSection("Physics");
 
-	// Static checkbox
+	// RigidBody type
 	{
-		bool isStatic = obj->isStatic;
-		if (RowCheckbox("Static", "##static", isStatic)) {
-			obj->isStatic = isStatic;
-			if (isStatic) {
-				obj->mass = 0.0f;
-				obj->invMass = 0.0f;
-				obj->linearVelocity = glm::vec3(0.0f);
-				obj->angularVelocity = glm::vec3(0.0f);
-			}
-			else {
-				obj->mass = 1.0f;
-				obj->invMass = 1.0f / obj->mass;
-			}
+		const char* bodyTypeItems[] = { "Dynamic", "Kinematic", "Static" };
+
+		int currentType = 0;
+		switch (rb->type) {
+		case BodyType::Dynamic:   currentType = 0; break;
+		case BodyType::Kinematic: currentType = 1; break;
+		case BodyType::Static:    currentType = 2; break;
 		}
-		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj->calculateInverseInertia();
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted("Body Type");
+
+		ImGui::TableSetColumnIndex(1);
+		ImGui::SetNextItemWidth(-FLT_MIN);
+
+		if (ImGui::Combo("##bodyType", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems))) {
+			BroadphaseBucket target;
+
+			switch (currentType) {
+			case 0:
+				rb->type = BodyType::Dynamic;
+				if (rb->mass <= 0.0f) rb->mass = 1.0f;
+				rb->invMass = 1.0f / rb->mass;
+				rb->sleepCounterThreshold = 1.5f;
+
+				if (rb->allowSleep and rb->asleep) {
+					target = BroadphaseBucket::Asleep;
+				}
+				else {
+					target = BroadphaseBucket::Awake;
+				}
+				break;
+
+			case 1:
+				rb->type = BodyType::Kinematic;
+				rb->invMass = 0.0f;
+				rb->linearVelocity = glm::vec3(0.0f);
+				rb->angularVelocity = glm::vec3(0.0f);
+				target = BroadphaseBucket::Awake;
+				break;
+
+			case 2:
+				rb->type = BodyType::Static;
+				rb->mass = 0.0f;
+				rb->invMass = 0.0f;
+				rb->linearVelocity = glm::vec3(0.0f);
+				rb->angularVelocity = glm::vec3(0.0f);
+				target = BroadphaseBucket::Static;
+				break;
+			}
+
+			obj->transform.updateCache();
+			rb->calculateInverseInertia(collider->type, *collider, obj->transform);
+			rb->updateInertiaWorld(obj->transform);
+			ctx.physicsEngine->queueMove(obj->colliderHandle, target);
 		}
 	}
 
-
-	// AllowSleep checkbox
+	// Dynamic body options
+	if (rb->type == BodyType::Dynamic) 
 	{
-		bool allowSleep = obj->allowSleep;
-		if (RowCheckbox("Sleep", "##allowSleep", allowSleep)) {
-			obj->allowSleep = allowSleep;
-			if (allowSleep) {
-				obj->allowSleep = true;
-			} else {
-				obj->allowSleep = false;
+		// AllowSleep checkbox
+		{
+			bool allowSleep = rb->allowSleep;
+			if (RowCheckbox("Allow sleep", "##allowSleep", allowSleep)) {
+				rb->allowSleep = allowSleep;
+
+				if (!rb->allowSleep) {
+					BroadphaseBucket target = BroadphaseBucket::Awake;
+					ctx.physicsEngine->queueMove(obj->colliderHandle, target);
+				}
 			}
 		}
-	}
 
-	// AllowGravity checkbox
-	{
-		bool allowGravity = obj->allowGravity;
-		if (RowCheckbox("Gravity", "##allowGravity", allowGravity)) {
-			obj->allowGravity = allowGravity;
-			if (allowGravity) {
-				obj->allowGravity = true;
-			} else {
-				obj->allowGravity = false;
+		// Asleep checkbox
+		{
+			bool asleep = rb->asleep;
+
+			ImGui::BeginDisabled(!rb->allowSleep);
+			if (RowCheckbox("Asleep", "##asleep", asleep)) {
+				BroadphaseBucket target;
+
+				rb->asleep = asleep;
+				if (rb->allowSleep && asleep) {
+					rb->asleep = true;
+					target = BroadphaseBucket::Asleep;
+				}
+				else {
+					rb->asleep = false;
+					target = BroadphaseBucket::Awake;
+				}
+
+				ctx.physicsEngine->queueMove(obj->colliderHandle, target);
+			}
+			ImGui::EndDisabled();
+		}
+
+		// AllowGravity checkbox
+		{
+			bool allowGravity = rb->allowGravity;
+			if (RowCheckbox("Gravity", "##allowGravity", allowGravity)) {
+				rb->allowGravity = allowGravity;
+				if (allowGravity) {
+					rb->allowGravity = true;
+				}
+				else {
+					rb->allowGravity = false;
+				}
 			}
 		}
-	}
 
-	// Mass
-	{
-		float mass = obj->mass;
-		if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.f)) {
-			if (!obj->isStatic) {
-				obj->mass = mass;
-				obj->invMass = 1.0f / mass;
+		// Mass
+		{
+			float mass = rb->mass;
+			if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.f)) {
+				if (rb->type != BodyType::Static) {
+					rb->mass = mass;
+					rb->invMass = 1.0f / mass;
+				}
+			}
+			if (ImGui::IsItemDeactivatedAfterEdit()) {
+				rb->updateInertiaWorld(obj->transform);
 			}
 		}
-		if (ImGui::IsItemDeactivatedAfterEdit()) {
-			obj->calculateInverseInertia();
-		}
-	}
 
-	// Linear velocity
-	{
-		glm::vec3 vel = obj->linearVelocity;
-		if (RowDragFloat3("Linear vel", "##linvel", vel, 0.1f, -1000.f, 1000.f, 1)) {
-			obj->linearVelocity = vel;
+		// Linear velocity
+		{
+			glm::vec3 vel = rb->linearVelocity;
+			if (RowDragFloat3("Linear vel", "##linvel", vel, 0.1f, -1000.f, 1000.f, 1)) {
+				rb->linearVelocity = vel;
+			}
 		}
-	}
 
-	// Angular velocity
-	{
-		glm::vec3 angVel = obj->angularVelocity;
-		if (RowDragFloat3("Angular vel", "##angvel", angVel, 0.1f, -1000.f, 1000.f, 1)) {
-			obj->angularVelocity = angVel;
+		// Angular velocity
+		{
+			glm::vec3 angVel = rb->angularVelocity;
+			if (RowDragFloat3("Angular vel", "##angvel", angVel, 0.1f, -1000.f, 1000.f, 1)) {
+				rb->angularVelocity = angVel;
+			}
 		}
 	}
 

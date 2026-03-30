@@ -8,11 +8,12 @@
 //      Main functions
 // -----------------------------------
 
-void BroadphaseManager::init(SlotMap<Collider, ColliderHandle>* cMap, SlotMap<RigidBody, RigidBodyHandle>* bMap, std::vector<Tri>* terrainTris) {
-    colliderMap = cMap;
-    bodyMap = bMap;
+void BroadphaseManager::init(PhysicsWorld* physicsWorld, World* gameWorld, std::vector<Tri>* terrainTris) {
+    this->physicsWorld = physicsWorld;
+    this->gameWorld = gameWorld;
     terrainTriangles = terrainTris;
 
+    SlotMap<Collider, ColliderHandle>* cMap = &physicsWorld->getCollidersMap();
     uint32_t slotCap = cMap->dense().capacity();
 
     awakeBvh.init(cMap, slotCap);
@@ -45,7 +46,7 @@ void BroadphaseManager::updateBVHs() {
     //std::cout << awakeBvh.nodes.size() << " awake nodes, "
     //          << asleepBvh.nodes.size() << " asleep nodes, "
     //    << staticBvh.nodes.size() << " static nodes.\n";
-}   
+}
 
 // Compute pairs for this frame
 void BroadphaseManager::computePairs() {
@@ -126,11 +127,7 @@ void BroadphaseManager::computePairs() {
 
 // Add to list
 void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::add] Error: Invalid collider handle\n";
-        return;
-    }
-    Collider* colliderPtr = colliderMap->try_get(handle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
     auto& h = colliderPtr->broadphaseHandle;
 
     auto& list = listFor(dst);
@@ -146,12 +143,7 @@ void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
 
 // Remove from current list
 void BroadphaseManager::remove(ColliderHandle& handle) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::remove] Error: Invalid collider handle\n";
-        return;
-    }
-
-    Collider* colliderPtr = colliderMap->try_get(handle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
     auto& h = colliderPtr->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
@@ -168,17 +160,8 @@ void BroadphaseManager::remove(ColliderHandle& handle) {
 
 // Move to awake
 void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToAwake] Error: Invalid collider handle\n";
-        return;
-    }
-    Collider* colliderPtr = colliderMap->try_get(handle);
-
-    if (!colliderPtr->rigidBodyHandle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToAwake] Error: Invalid rigid body handle\n";
-        return;
-    }
-    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
+    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
 
     if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         bodyPtr->setAwake();
@@ -192,41 +175,24 @@ void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(ColliderHandle& handle) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToAsleep] Error: Invalid collider handle\n";
-        return;
-    }
-    Collider* colliderPtr = colliderMap->try_get(handle);
-
-    if (!colliderPtr->rigidBodyHandle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToAsleep] Error: Invalid rigid body handle\n";
-        return;
-    }
-    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
+    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
+    Transform* transformPtr = &gameWorld->getGameObject(colliderPtr->gameObjectHandle)->transform;
 
     if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        bodyPtr->setAsleep();
+        bodyPtr->setAsleep(*transformPtr);
         return;
     }
 
     remove(handle);
-    bodyPtr->setAsleep();
+    bodyPtr->setAsleep(*transformPtr);
     add(handle, BroadphaseBucket::Asleep);
     asleepBvh.dirty = true;
 }
 // Move to static
 void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToStatic] Error: Invalid collider handle\n";
-        return;
-    }
-    Collider* colliderPtr = colliderMap->try_get(handle);
-
-    if (!colliderPtr->rigidBodyHandle.isValid()) {
-        std::cout << "[BroadPhaseManager::moveToStatic] Error: Invalid rigid body handle\n";
-        return;
-    }
-    RigidBody* bodyPtr = bodyMap->try_get(colliderPtr->rigidBodyHandle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
+    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
 
     if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
@@ -237,17 +203,20 @@ void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
     staticBvh.dirty = true;
 }
 
+void BroadphaseManager::setBVHDirty(ColliderHandle& handle) {
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
+    auto& h = colliderPtr->broadphaseHandle;
+    if (h.bucket == BroadphaseBucket::None) return;
+    bvhFor(h.bucket).dirty = true;
+}
+
 // ---------------------------------
 //     Helpers
 // ---------------------------------
 
 // Swap and pop from list
 void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderHandle>& list) {
-    if (!handle.isValid()) {
-        std::cout << "[BroadPhaseManager::swapAndPop] Error: Invalid collider handle\n";
-        return;
-    }
-    Collider* colliderPtr = colliderMap->try_get(handle);
+    Collider* colliderPtr = physicsWorld->getCollider(handle);
 
     int i = colliderPtr->broadphaseHandle.listIdx;
     if (i == -1) return;
@@ -257,12 +226,7 @@ void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderH
         ColliderHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        if (!movedHandle.isValid()) {
-            std::cout << "[BroadPhaseManager::swapAndPop] Error: Invalid collider handle\n";
-            return;
-        }
-        Collider* movedPtr = colliderMap->try_get(handle);
-
+        Collider* movedPtr = physicsWorld->getCollider(movedHandle);
         movedPtr->broadphaseHandle.listIdx = i;
     }
 

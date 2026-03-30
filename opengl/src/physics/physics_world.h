@@ -11,9 +11,14 @@ class PhysicsWorld {
 public:
     void clear();
 
-    SlotMap<Collider, ColliderHandle>& getColliders() { return m_colliders; }
-    SlotMap<RigidBody, RigidBodyHandle>& getRigidBodies() { return m_rigidBodies; }
+    // getters
+    RigidBody* getRigidBody(RigidBodyHandle& handle);
+    Collider* getCollider(ColliderHandle& handle);
 
+    SlotMap<Collider, ColliderHandle>& getCollidersMap();
+    SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap();
+
+    // creation and deletion
     RigidBodyHandle createRigidBody();
     ColliderHandle createCollider();
 

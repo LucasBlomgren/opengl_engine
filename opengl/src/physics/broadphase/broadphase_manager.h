@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "physics_world.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "bvh/treetree_query.h"
@@ -12,7 +13,7 @@ struct Tri;
 
 class BroadphaseManager {
 public:
-    void init(SlotMap<Collider, ColliderHandle>* cMap, SlotMap<RigidBody, RigidBodyHandle>* bMap, std::vector<Tri>* terrainTris);
+    void init(PhysicsWorld* physicsWorld, World* gameWorld, std::vector<Tri>* terrainTris);
 
     // update BVHs if dirty
     void updateBVHs();
@@ -31,6 +32,8 @@ public:
     void moveToAsleep(ColliderHandle& handle);
     void moveToStatic(ColliderHandle& handle);
 
+    void setBVHDirty(ColliderHandle& handle);
+
     // get lists of indices
     const std::vector<ColliderHandle>& getAwakeList()  const { return awakeHandles; }
     const std::vector<ColliderHandle>& getAsleepList() const { return asleepHandles; }
@@ -44,8 +47,9 @@ public:
 
 private:
     // reference to all objects
-    SlotMap<Collider, ColliderHandle>* colliderMap = nullptr;
-    SlotMap<RigidBody, RigidBodyHandle>* bodyMap = nullptr; 
+    // #TODO: refactor to use pointer cache instead of direct access to world/physicsworld
+    PhysicsWorld* physicsWorld;
+    World* gameWorld;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects
