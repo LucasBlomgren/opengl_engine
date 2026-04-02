@@ -225,7 +225,7 @@ void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& w
         aabbRenderer.render(color, *debugShapeShader);
     }
 }
-void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) const {
+void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) {
     if (!engineState->getShowColliders()) return;
 
     glLineWidth(2.0f);

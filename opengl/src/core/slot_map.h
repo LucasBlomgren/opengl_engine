@@ -106,6 +106,15 @@ public:
     std::vector<T>& dense() { return m_dense; }
     const std::vector<T>& dense() const { return m_dense; }
 
+    // Clear all data
+    void clear() {
+        m_slotGen.clear();
+        m_slotToDense.clear();
+        m_denseToSlot.clear();
+        m_freeSlots.clear();
+        m_dense.clear();
+    }
+
 private:
     uint32_t alloc_slot_() {
         if (!m_freeSlots.empty()) {

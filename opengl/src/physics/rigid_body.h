@@ -23,7 +23,6 @@ enum class ContactResponseMode {
 };
 
 // #TODO: decide what is private/public in RigidBody
-// #TODO: player logic to player class instead of rigid body, and remove player variable from rigid body
 class RigidBody {
 public:
     int id;
@@ -61,7 +60,10 @@ public:
     float lastAvg = 0.0f;
     RingBuffer collisionHistory;
 
-    void update(Transform& t, ColliderType colliderType, float dt);
+    void integrateVelocities(Transform& t, ColliderType colliderType, float dt);
+    void applyGravity(float dt);
+    void applyRollingFriction(ColliderType colliderType, float dt);
+    void applyAntistuckFriction(float dt);
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
     void updateInertiaWorld(Transform& t);
 

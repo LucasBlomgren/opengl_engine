@@ -4,16 +4,20 @@
 #include "rigid_body.h"
 #include "tri.h"
 
-// -----------------------------------
-//      Main functions
-// -----------------------------------
+#define FUNC_NAME __FUNCTION__
 
-void BroadphaseManager::init(PhysicsWorld* physicsWorld, World* gameWorld, std::vector<Tri>* terrainTris) {
-    this->physicsWorld = physicsWorld;
-    this->gameWorld = gameWorld;
+void BroadphaseManager::init(
+    PointerCache<GameObject, GameObjectHandle>* goCache,
+    PointerCache<Collider, ColliderHandle>* colCache,
+    PointerCache<RigidBody, RigidBodyHandle>* bodCache,
+    std::vector<Tri>* terrainTris
+) {
+    gameObjectCache = goCache;
+    colliderCache = colCache;
+    bodyCache = bodCache;
     terrainTriangles = terrainTris;
 
-    SlotMap<Collider, ColliderHandle>* cMap = &physicsWorld->getCollidersMap();
+    SlotMap<Collider, ColliderHandle>* cMap = colCache->sm; // sm=slotmap
     uint32_t slotCap = cMap->dense().capacity();
 
     awakeBvh.init(cMap, slotCap);
@@ -30,6 +34,10 @@ void BroadphaseManager::init(PhysicsWorld* physicsWorld, World* gameWorld, std::
 
     terrainBvh.build(*terrainTriangles);
 }
+
+// -----------------------------------
+//      Main functions
+// -----------------------------------
 
 // Update BVHs if dirty
 void BroadphaseManager::updateBVHs() {
@@ -127,8 +135,8 @@ void BroadphaseManager::computePairs() {
 
 // Add to list
 void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    auto& h = colliderPtr->broadphaseHandle;
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    auto& h = collider->broadphaseHandle;
 
     auto& list = listFor(dst);
     list.push_back(handle);
@@ -143,8 +151,8 @@ void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
 
 // Remove from current list
 void BroadphaseManager::remove(ColliderHandle& handle) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    auto& h = colliderPtr->broadphaseHandle;
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    auto& h = collider->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
     // remove from list
@@ -160,52 +168,52 @@ void BroadphaseManager::remove(ColliderHandle& handle) {
 
 // Move to awake
 void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
 
-    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
-        bodyPtr->setAwake();
+    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+        body->setAwake();
         return;
     }
 
     remove(handle);
-    bodyPtr->setAwake();
+    body->setAwake();
     add(handle, BroadphaseBucket::Awake);
     awakeBvh.dirty = true;
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(ColliderHandle& handle) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
-    Transform* transformPtr = &gameWorld->getGameObject(colliderPtr->gameObjectHandle)->transform;
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
+    Transform* transform = &gameObjectCache->get(body->gameObjectHandle, FUNC_NAME)->transform;
 
-    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        bodyPtr->setAsleep(*transformPtr);
+    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+        body->setAsleep(*transform);
         return;
     }
 
     remove(handle);
-    bodyPtr->setAsleep(*transformPtr);
+    body->setAsleep(*transform);
     add(handle, BroadphaseBucket::Asleep);
     asleepBvh.dirty = true;
 }
 // Move to static
 void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    RigidBody* bodyPtr = physicsWorld->getRigidBody(colliderPtr->rigidBodyHandle);
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
 
-    if (colliderPtr->broadphaseHandle.bucket == BroadphaseBucket::Static)
+    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
 
     remove(handle);
-    bodyPtr->setStatic();
+    body->setStatic();
     add(handle, BroadphaseBucket::Static);
     staticBvh.dirty = true;
 }
 
 void BroadphaseManager::setBVHDirty(ColliderHandle& handle) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
-    auto& h = colliderPtr->broadphaseHandle;
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+    auto& h = collider->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
     bvhFor(h.bucket).dirty = true;
 }
@@ -216,9 +224,9 @@ void BroadphaseManager::setBVHDirty(ColliderHandle& handle) {
 
 // Swap and pop from list
 void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderHandle>& list) {
-    Collider* colliderPtr = physicsWorld->getCollider(handle);
+    Collider* collider = colliderCache->get(handle, FUNC_NAME);
 
-    int i = colliderPtr->broadphaseHandle.listIdx;
+    int i = collider->broadphaseHandle.listIdx;
     if (i == -1) return;
 
     int lastPos = (int)list.size() - 1;
@@ -226,12 +234,12 @@ void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderH
         ColliderHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        Collider* movedPtr = physicsWorld->getCollider(movedHandle);
-        movedPtr->broadphaseHandle.listIdx = i;
+        Collider* moved = colliderCache->get(movedHandle, FUNC_NAME);
+        moved->broadphaseHandle.listIdx = i;
     }
 
     list.pop_back();
-    colliderPtr->broadphaseHandle.listIdx = -1;
+    collider->broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket

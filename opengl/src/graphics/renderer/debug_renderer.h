@@ -49,7 +49,7 @@ private:
 
     // unlit debug shapes
     void renderAABBs(const std::vector<GameObject>& objects, World& world);
-    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) const;
+    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world);
     void renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const;
     void renderFrustum(const glm::mat4& viewProj) const;
     void renderBVHs(const PhysicsEngine& physics);

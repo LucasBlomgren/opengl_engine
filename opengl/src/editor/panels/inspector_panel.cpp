@@ -329,6 +329,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 				rb->invMass = 0.0f;
 				rb->linearVelocity = glm::vec3(0.0f);
 				rb->angularVelocity = glm::vec3(0.0f);
+				rb->setAwake();
 				target = BroadphaseBucket::Awake;
 				break;
 
@@ -350,7 +351,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 	}
 
 	// Dynamic body options
-	if (rb->type == BodyType::Dynamic) 
+	if (rb->type == BodyType::Dynamic)
 	{
 		// AllowSleep checkbox
 		{
@@ -412,10 +413,14 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 				}
 			}
 			if (ImGui::IsItemDeactivatedAfterEdit()) {
+				rb->calculateInverseInertia(collider->type, *collider, obj->transform);
 				rb->updateInertiaWorld(obj->transform);
 			}
 		}
+	}
 
+	if (rb->type != BodyType::Static)
+	{
 		// Linear velocity
 		{
 			glm::vec3 vel = rb->linearVelocity;

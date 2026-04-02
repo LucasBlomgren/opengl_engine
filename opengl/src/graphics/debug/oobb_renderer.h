@@ -13,18 +13,19 @@ public:
         const bool isStatic,
         const bool selected,
         const bool hovered
-    ) const;
+    );
 
     void destroy();
     void init();
     void setupNormals();
     void renderNormals(Shader& shader, const glm::mat4& model);
-    void makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) const;
 
     static unsigned int sVAO_box, sVBO_box;
     static unsigned int sVAO_normals, sVBO_normals;
 
 private:
+    void makeOOBBModelMatrix(glm::mat4& M, const OOBB& box);
+
     static bool sInitialized_box;
     static bool sInitialized_normals;
 };

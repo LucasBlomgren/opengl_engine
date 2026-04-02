@@ -63,6 +63,7 @@ public:
     void setBVHDirty(ColliderHandle& handle);
     RaycastHit performRaycast(Ray& ray);
 
+    // #TODO: fix better public API 
     //------------------------
     //        Getters
     //------------------------

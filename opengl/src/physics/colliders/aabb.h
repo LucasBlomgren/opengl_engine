@@ -29,7 +29,7 @@ public:
     glm::vec3 halfExtents;
     float surfaceArea = 0.0f;
 
-    void Init(const std::vector<glm::vec3>& vertices);
+    void init(const std::vector<glm::vec3>& vertices);
     void update(const Transform& t);
     bool intersects(const AABB& b) const;
 

@@ -277,17 +277,10 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 GameObjectHandle handle = map.handle_from_dense_index((int)nextIndex);
                 GameObject* obj = world->getGameObject(handle);
 
+                world->deleteGameObject(handle);
+
                 nextIndex++;
                 checked++;
-
-                if (!obj) continue;
-
-                physicsEngine->queueRemove(obj->colliderHandle);
-                handlesToRemove.push_back(handle);
-
-                std::cout << "Editor: Queued remove of handle slot "
-                    << handle.slot << " gen " << handle.gen << std::endl;
-
                 removed++;
             }
         }

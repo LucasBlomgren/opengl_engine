@@ -1,14 +1,35 @@
 #include "pch.h"
 #include "rigid_body.h"
 
-void RigidBody::update(Transform& t, ColliderType colliderType, float dt) {
-	if (type == BodyType::Static ||
-		type == BodyType::Kinematic || 
-		motionControl == MotionControl::External ||
+void RigidBody::applyGravity(float dt) {
+	if (type == BodyType::Dynamic && allowGravity && motionControl == MotionControl::Physics)
+		linearVelocity += g * dt;
+}
+
+void RigidBody::integrateVelocities(Transform& t, ColliderType colliderType, float dt) {
+	if (type == BodyType::Static || 
+		motionControl == MotionControl::External || 
 		asleep)
 		return;
 
-	if (allowGravity) linearVelocity += g * dt;
+	// fake constraints
+	if (!canMoveLinearly) {
+		linearVelocity = glm::vec3(0.0f);
+		angularVelocity.x = 0.0f;
+		angularVelocity.y = 0.0f;
+	}
+
+	// update position and orientation
+	t.lastPosition = t.position;
+	t.position += linearVelocity * dt;
+	updateOrientation(t.orientation, angularVelocity, dt);
+}
+
+void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
+	if (colliderType != ColliderType::SPHERE || 
+		motionControl == MotionControl::External || 
+		asleep)
+		return;
 
 	float aLin;
 	float aAng;
@@ -32,25 +53,21 @@ void RigidBody::update(Transform& t, ColliderType colliderType, float dt) {
 			angularVelocity *= (newMag / wMag);
 		}
 	}
+}
+
+void RigidBody::applyAntistuckFriction(float dt) {
+	if (type == BodyType::Static ||
+		type == BodyType::Kinematic || 
+		motionControl == MotionControl::External || 
+		asleep)
+		return;
 
 	// anti stuck for objects with high collision counts
-	avgCollisions = collisionHistory.average() > 3;
+	bool avgCollisions = collisionHistory.average() > 3;
 	if (avgCollisions) {
 		linearVelocity = linearVelocity * std::pow(0.98f, dt);
 		angularVelocity = angularVelocity * std::pow(0.98f, dt);
 	}
-
-	// fake constraints
-	if (!canMoveLinearly) {
-		linearVelocity = glm::vec3(0.0f);
-		angularVelocity.x = 0.0f;
-		angularVelocity.y = 0.0f;
-	}
-
-	// update position and orientation
-	t.lastPosition = t.position;
-	t.position += linearVelocity * dt;
-	updateOrientation(t.orientation, angularVelocity, dt);
 }
 
 void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
@@ -86,7 +103,7 @@ void RigidBody::setAsleep(Transform& t) {
 }
 
 void RigidBody::setAwake() {
-	if (type == BodyType::Static || type == BodyType::Kinematic)
+	if (type == BodyType::Static)
 		return;
 
 	asleep = false;

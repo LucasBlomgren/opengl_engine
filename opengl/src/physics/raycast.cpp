@@ -18,6 +18,11 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<Collider, ColliderHandl
     for (ColliderHandle& handle : collisions) {
         Collider* collider = colliderMap->try_get(handle);
         GameObject* obj = goMap->try_get(collider->gameObjectHandle);
+
+        if (!obj) {
+            std::cout << "[Raycast] Error: Collider with handle " << handle.slot << " has no associated GameObject." << std::endl;
+            continue;
+        }
         if (obj->player) continue;
 
         glm::vec3 min = collider->aabb.wMin;

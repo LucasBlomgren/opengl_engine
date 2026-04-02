@@ -48,7 +48,6 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
             GameObject* playerObject = world->getGameObject(playerHandle);
             if (onGround and !hasJumped) {
                 jumpImpulse += JUMP_HEIGHT;
-                onGround = false;
                 hasJumped = true;
                 c.keyboard = true;
             }
@@ -89,7 +88,18 @@ void Player::deactivate() {
 }
 
 void Player::createPlayerObject() {
-    playerHandle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, camera->position - glm::vec3(0, 0.76f, 0), glm::vec3(1.0f, 1.86f, 1.0f), 1, {}, 1, false, glm::vec3{255}, true);
+    playerHandle = world->createGameObject(
+        "crate", 
+        "cube", 
+        ColliderType::CUBOID, 
+        BodyType::Dynamic, 
+        camera->position - glm::vec3(0, 0.76f, 0), 
+        glm::vec3(1.0f, 1.86f, 1.0f), 1, {}, 1, 
+        false, 
+        glm::vec3{255}, 
+        true
+    );
+
     GameObject* player = world->getGameObject(playerHandle);    
     player->player = true;
 
@@ -117,7 +127,7 @@ void Player::updateMovement() {
     camera->position = t.position + glm::vec3(0, 0.76f, 0);
 
     // third person camera
-    //camera->position = player.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+    //camera->position = t.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
 
     // avoid diagonal speed boost
     if (glm::length2(moveInput) > 0.0f) {
@@ -247,7 +257,7 @@ void Player::resolveExternalContact() {
 
         glm::vec3 up;
         if (playerIsA) {
-            playerObj->transform.position -= c.normal * (c.penetration + 0.001f);
+            playerObj->transform.position -= c.normal * (c.penetration - 0.001f);
             up = glm::vec3(0.0f, -1.0f, 0.0f);
         }
         else {

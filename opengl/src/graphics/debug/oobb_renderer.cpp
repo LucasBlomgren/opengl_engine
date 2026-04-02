@@ -9,7 +9,12 @@ unsigned int OOBBRenderer::sVAO_normals = 0;
 unsigned int OOBBRenderer::sVBO_normals = 0;
 bool         OOBBRenderer::sInitialized_normals = false;
 
-void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) const {
+void OOBBRenderer::init() {
+    setupWireframeBox();
+    setupNormals();
+}
+
+void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) {
     glm::mat4 model(1.0f);
     makeOOBBModelMatrix(model, box);
 
@@ -26,23 +31,17 @@ void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep,
     glDrawArrays(GL_LINES, 0, 24);
 }
 
-// #TODO: optimize by passing model matrix directly to shader
-void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) const {
-    M[0] = glm::vec4(box.axesWorld[0] * (box.halfExtentsLocal.x * 2.0f * box.scale.x), 0.0f);
-    M[1] = glm::vec4(box.axesWorld[1] * (box.halfExtentsLocal.y * 2.0f * box.scale.y), 0.0f);
-    M[2] = glm::vec4(box.axesWorld[2] * (box.halfExtentsLocal.z * 2.0f * box.scale.z), 0.0f);
-
-    M[3] = glm::vec4(box.centerWorld, 1.0f);
-}
-
 void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {
     shader.setMat4("model", model);
     glDrawArrays(GL_LINES, 0, 18);
 }
 
-void OOBBRenderer::init() {
-    setupWireframeBox();
-    setupNormals();
+void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) {
+    M[0] = glm::vec4(box.axesWorld[0] * (box.halfExtentsLocal.x * 2.0f * box.scale.x), 0.0f);
+    M[1] = glm::vec4(box.axesWorld[1] * (box.halfExtentsLocal.y * 2.0f * box.scale.y), 0.0f);
+    M[2] = glm::vec4(box.axesWorld[2] * (box.halfExtentsLocal.z * 2.0f * box.scale.z), 0.0f);
+
+    M[3] = glm::vec4(box.centerWorld, 1.0f);
 }
 
 void OOBBRenderer::setupWireframeBox() {

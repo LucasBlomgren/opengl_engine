@@ -481,10 +481,6 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     constexpr float restitutionThreshold = 0.2f; // Minsta hastighet för att restitution ska aktiveras
     float restitution = 0.0f; // exempelmaterial
 
-    if (contact.freezeA or contact.freezeB) {
-        restitution = 0.0f; // ingen studs om någon av kropparna är frusen
-    }
-
     glm::vec3& normal = contact.normal; 
 
     ContactRuntime& rt = contact.runtimeData;
@@ -504,30 +500,44 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     glm::vec3 angularVelocityA;
     glm::vec3 angularVelocityB;
 
-    if (contact.freezeA) {
-        rA = glm::vec3(0.0f);
+    // bodyA solver response behavior
+    if (contact.noSolverResponseA) {
         invMassA = 0.0f;
         invInertiaA = glm::mat3(0.0f);
-        linearVelocityA = glm::vec3(0.0f);
-        angularVelocityA = glm::vec3(0.0f);
-    } else {
-        rA = cp.globalCoord - objA->transform.position;
+    }
+    else {
         invMassA = bodyA->invMass;
         invInertiaA = bodyA->invInertiaWorld;
+    }
+    // bodyA motion behavior
+    if (contact.contributesMotionA) {
+        rA = cp.globalCoord - objA->transform.position;
         linearVelocityA = bodyA->linearVelocity;
         angularVelocityA = bodyA->angularVelocity;
     }
+    else {
+        rA = glm::vec3(0.0f);
+        linearVelocityA = glm::vec3(0.0f);
+        angularVelocityA = glm::vec3(0.0f);
+    }
 
-    if (contact.freezeB or contact.partnerTypeB == ContactPartnerType::Terrain) {
-        rB = glm::vec3(0.0f);
+    // bodyB solver response behavior
+    if (contact.partnerTypeB == ContactPartnerType::Terrain || contact.noSolverResponseB) {
         invMassB = 0.0f;
         invInertiaB = glm::mat3(0.0f);
-        linearVelocityB = glm::vec3(0.0f);
-        angularVelocityB = glm::vec3(0.0f);
-    } else {
-        rB = cp.globalCoord - objB->transform.position;
+    }
+    else {
         invMassB = bodyB->invMass;
         invInertiaB = bodyB->invInertiaWorld;
+    }
+    // bodyB motion behavior
+    if (contact.partnerTypeB == ContactPartnerType::Terrain || !contact.contributesMotionB) {
+        rB = glm::vec3(0.0f);
+        linearVelocityB = glm::vec3(0.0f);
+        angularVelocityB = glm::vec3(0.0f);
+    }
+    else {
+        rB = cp.globalCoord - objB->transform.position;
         linearVelocityB = bodyB->linearVelocity;
         angularVelocityB = bodyB->angularVelocity;
     }

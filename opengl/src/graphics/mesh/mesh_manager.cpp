@@ -8,7 +8,7 @@ Mesh* MeshManager::getMesh(const std::string& name) const {
 
     if (it == meshes.end()) {
         std::cerr << "[MeshManager] No mesh called \"" << name << "\"\n";
-        return nullptr; // eller assert, eller fallback-mesh-id
+        return nullptr;
     }
 
     return &it->second;

@@ -315,7 +315,7 @@ int main() {
 		//--------------------------------------------
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer t(frameTimers, "Editor");
-			//editor.update(*renderer.debugShader);
+			editor.update(*renderer.debugShader);
 		}
 		else {
 			ScopedTimer t(frameTimers, "Player");
@@ -379,16 +379,6 @@ int main() {
 		if (!engineState.isPaused()) {
 			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
 			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
-		}
-
-		//--------------------------------------------
-		// remove objects marked for deletion by editor
-		//--------------------------------------------
-		if (hasPhysicsSteppedThisFrame) {
-			for (GameObjectHandle& handle : editor.handlesToRemove) {
-				world.deleteGameObject(handle);
-			}
-			editor.handlesToRemove.clear();
 		}
 
 		frameTimers.endFrame();

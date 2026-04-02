@@ -62,8 +62,10 @@ struct Contact {
 
     ContactRuntime runtimeData;
 
-    bool freezeA = false;
-    bool freezeB = false;
+    bool noSolverResponseA = false; 
+    bool noSolverResponseB = true;      // default true for terrain
+    bool contributesMotionA = true;     // default true for dynamic bodies vs terrain
+    bool contributesMotionB = false;
 
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;

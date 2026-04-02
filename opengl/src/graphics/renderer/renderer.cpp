@@ -685,7 +685,7 @@ void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneB
     bool isStatic = (rb->type == BodyType::Static);
 
     if (col->type == ColliderType::CUBOID) {
-        OOBB& box = std::get<OOBB>(col->shape);
+        const OOBB& box = std::get<OOBB>(col->shape);
         debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
     }
     else if (col->type == ColliderType::SPHERE) {

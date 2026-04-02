@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "aabb.h"
 
-void AABB::Init(const std::vector<glm::vec3>& vertices) {
+void AABB::init(const std::vector<glm::vec3>& vertices) {
     computeFromVertices(vertices);
     setLocalFaces();
 }
@@ -129,7 +129,7 @@ void AABB::transform_noRotation(const glm::mat4& M, const glm::vec3& T, const gl
     wMax.z = lMax.z * S.z + T.z;
 }
 
-// fungerar bara om mesh är centrerad i origo
+// only for boxe meshes
 void AABB::transform_withRotation(const glm::mat3& M, const glm::vec3& T) {
     float  a, b;
     float  Amin[3], Amax[3];

@@ -83,8 +83,6 @@ public:
     bool objectRainBlocks = false;
     bool objectRainSpheres = false;
 
-    std::vector<GameObjectHandle> handlesToRemove;
-
 private:
     float SCR_WIDTH;
     float SCR_HEIGHT;
@@ -118,6 +116,6 @@ private:
     constexpr static float SELECT_RANGE = 5000.0f;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static float SHOOT_VELOCITY = 100.0f;
+    constexpr static float SHOOT_VELOCITY = 80.0f;
 };
 }

@@ -116,7 +116,7 @@ GameObjectHandle World::createGameObject(
     for (const Vertex& vertex : mesh->vertices) {
         verticesPositions.push_back(vertex.position);
     }
-    collider.aabb.Init(verticesPositions);
+    collider.aabb.init(verticesPositions);
     collider.aabb.update(gameObject.transform);
 
     // collider shape init
@@ -162,10 +162,13 @@ GameObjectHandle World::createGameObject(
 void World::deleteGameObject(GameObjectHandle handle) {
     GameObject* obj = m_gameObjects.try_get(handle);
     if (obj) {
-        //m_physicsEngine.queueRemove(handle);
+        m_physicsEngine.queueRemove(obj->colliderHandle);
         if (!obj->seeThrough) {
             m_renderer.removeObjectFromBatch(handle);
         }
         m_gameObjects.destroy(handle);
+    }
+    else {
+        std::cerr << "[World] Warning: Tried to delete non-existing GameObject with handle (slot: " << handle.slot << ", gen: " << handle.gen << ")\n";
     }
 }
