@@ -74,8 +74,14 @@ void SceneBuilder::setLights() {
 //----------------------------------
 //         Scene Creation
 //----------------------------------
-void SceneBuilder::createScene(int sceneID)
+void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
 {
+    if (isPlayerMode) {
+        player.resetState();
+    } else {
+        editor.resetState();
+    }
+
     sceneDirty = true;
     physicsEngine.clearPhysicsData();
     world.clear();

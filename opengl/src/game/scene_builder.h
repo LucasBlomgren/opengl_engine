@@ -1,10 +1,14 @@
 #pragma once
 
+#include "game/player.h"
+#include "editor/editor_main.h"
 #include "physics/physics.h"
 #include "game_object.h"
 #include "collider.h"
 #include "tri.h"
 
+class Player;
+class Editor::EditorMain;
 class World;
 class TextureManager;
 class LightManager;
@@ -15,14 +19,14 @@ class Renderer;
 class SceneBuilder {
 public:
     SceneBuilder(
-        World& w, PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
-        world(w), physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
+        Player& p, Editor::EditorMain& e, World& w, PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
+        player(p), editor(e), world(w), physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
     {}
 
     bool sceneDirty = true; 
     void objectRain(float& current_time, glm::vec3& pos, int mode);
 
-    void createScene(int sceneID);
+    void createScene(int sceneID, bool isPlayerMode);
     void mainScene();
     void terrainScene();
     void tumblerScene();
@@ -120,10 +124,11 @@ public:
 
     float randomRange(float start, float end);
 
-    int playerObjectId = -1;
     int lightsState = 0;
 
 private:
+    Player& player;
+    Editor::EditorMain& editor;
     World& world;
     PhysicsEngine& physicsEngine;
     Renderer& renderer;
@@ -134,10 +139,6 @@ private:
     std::mt19937& rng;
 
     int objectId = 0;
-    std::vector<GameObject> staticObjects;
-
-    //int lightsState = 0;
     int dayNightCycle = 0;
-
     float lastTime = 0.0f;
 };

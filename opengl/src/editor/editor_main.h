@@ -53,6 +53,7 @@ public:
     // activate/deactivate editor mode
     void activate();
     void deactivate();
+    void resetState();
 
     // update
     void fixedUpdate(float fixedTimeStep);

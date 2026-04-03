@@ -18,7 +18,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
     wants.captureMouse = true;
 
     if (!c.mouse) {
-        if (in.mousePressed[GLFW_MOUSE_BUTTON_1])  { selectObject(); }
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) { selectObject(); c.mouse = true;  }
         if (in.mouseReleased[GLFW_MOUSE_BUTTON_1]) { pendingDrop = true; c.mouse = true; }
         if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
 
@@ -27,11 +27,6 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
             GameObject* newObj = world->getGameObject(handle);
             RigidBody* rb = world->getRigidBody(handle);
             rb->linearVelocity = camera->front * SHOOT_VELOCITY;
-            c.mouse = true;
-        }
-
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
-            moveSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
             c.mouse = true;
         }
     }
@@ -59,7 +54,20 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 //------------------------------------------------------
 // SWITCHING PLAYER MODE
 //-------------------------------------------------------
+void Player::resetState() {
+    onGround = false;
+    hasJumped = false;
+    moveInput = glm::vec3(0.0f);
+    moveImpulse = glm::vec3(0.0f);
+    jumpImpulse = 0.0f;
+
+    bool objectIsSelected = false;
+    bool objectIsHovered = false;
+    GameObjectHandle selectedObjectHandle;
+    GameObjectHandle hoveredObjectHandle;
+}   
 void Player::activate() {
+    resetState();
     createPlayerObject();
 }
 
@@ -133,9 +141,7 @@ void Player::updateMovement() {
     if (glm::length2(moveInput) > 0.0f) {
         moveInput = glm::normalize(moveInput);
     }
-    moveImpulse = moveInput * MOVE_SPEED;
-
-    moveSelectedObject(1.0f / 60.0f);
+    moveImpulse = moveInput * MOVE_ACCELERATION;
 }
 
 void Player::updateObjectSelection(Shader& shader) {
@@ -297,8 +303,7 @@ void Player::moveSelectedObject(float dt) {
     selectedObject->transform.position = newPos;
 
     // velocity
-    selectedRb->linearVelocity = (newPos - selectedObject->transform.lastPosition) / dt;
-    selectedRb->linearVelocity += playerRb->linearVelocity;
+    selectedRb->linearVelocity = (newPos - selectedObject->transform.lastPosition) / dt; // #TODO: lastpos should be in player class instead of transform
     selectedRb->angularVelocity = glm::vec3(0.0f);
     selectedObject->transform.lastPosition = newPos;
 

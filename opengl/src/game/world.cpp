@@ -71,6 +71,8 @@ GameObjectHandle World::createGameObject(
     transform.scale = size;
     transform.updateCache();
 
+    transform.lastPosition = pos;
+
     GameObjectHandle gameObjectHandle = m_gameObjects.create(
         objectId,
         transform,

@@ -65,10 +65,17 @@ void Editor::EditorMain::init(
     panelManager->init();
 }
 
+void Editor::EditorMain::resetState() {
+    selectedObjectIsBeingMoved = false;
+    objectIsHovered = false;
+    objectIsSelected = false;
+    hoveredObjectHandle = GameObjectHandle{};
+    selectedObjectHandle = GameObjectHandle{};
+}
 
 // activate/deactivate editor mode
 void Editor::EditorMain::activate() {
-
+    resetState();
 }
 void Editor::EditorMain::deactivate() {
     dropObject();
@@ -367,9 +374,6 @@ void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
 }
 
 void Editor::EditorMain::update(Shader& shader) {
-    // raycast and draw placement AABB
-    createPlaceObjectAABB(shader);
-
     // clear previous hover state
     if (objectIsHovered) {
         GameObject* hoveredObj = world->getGameObject(hoveredObjectHandle);

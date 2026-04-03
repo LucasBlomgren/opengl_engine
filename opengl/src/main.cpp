@@ -94,7 +94,7 @@ int main() {
 
 	// scene builder
 	World world(physicsEngine, renderer, textureManager, meshManager, shaderManager);
-	SceneBuilder sceneBuilder(world, physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
+	SceneBuilder sceneBuilder(player, editor, world, physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
 	// physics init
 	physicsEngine.init(&world, &frameTimers);
@@ -137,7 +137,7 @@ int main() {
 	skyboxManager.init(); 
 
 	// create default scene 
-	sceneBuilder.createScene(6);
+	sceneBuilder.createScene(6, engineState.isPlayerMode());
 
 	//--------------------------------------------
 	// setup editor
@@ -255,12 +255,13 @@ int main() {
 			// render to screen or editor viewport
 			if (engineState.isPlayerMode()) {
 				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-			} 
+			}
 			else {
 				if (editor.flag_drawUI) {
 					ImGui::DockSpaceOverViewport();
 					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
-				} else {
+				}
+				else {
 					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
 				}
 			}
@@ -339,9 +340,7 @@ int main() {
 		//--------------------------------------------
 		// physics step
 		//--------------------------------------------
-		bool hasPhysicsSteppedThisFrame = false;
-		if (!engineState.isPaused() or engineState.getAdvanceStep())
-		{
+		if (!engineState.isPaused() or engineState.getAdvanceStep()) {
 			const int   kMaxStepsPerFrame = 8;
 			const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
 			accumulator = std::min(accumulator + deltaTime, kMaxAccum);
@@ -354,10 +353,9 @@ int main() {
 			// stepping loop
 			int steps = 0;
 			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) {
-				hasPhysicsSteppedThisFrame = true;
-
 				// physics step & player update if in player mode
 				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
+				if (engineState.isPlayerMode()) player.moveSelectedObject(fixedTimeStep);
 				physicsEngine.step(fixedTimeStep, rng);
 				if (engineState.isPlayerMode()) player.resolveExternalContact();
 

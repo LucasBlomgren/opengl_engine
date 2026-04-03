@@ -17,6 +17,7 @@ public:
     // activate/deactivate player mode
     void activate();
     void deactivate();
+    void resetState();
 
     // create/destroy player object
     void createPlayerObject();
@@ -58,7 +59,7 @@ private:
     glm::vec3 moveImpulse{ 0.0f, 0.0f, 0.0f };
     float jumpImpulse = 0.0f;
 
-    constexpr static float MOVE_SPEED = 8.f; // meter per sekund
+    constexpr static float MOVE_ACCELERATION = 3.0f; // meters per second
     constexpr static float MAX_MOVE_SPEED = 15.0f;
     constexpr static float JUMP_HEIGHT = 10.5f;
     constexpr static float SHOOT_VELOCITY = 100.0f;
@@ -73,5 +74,5 @@ private:
     bool drawPlacementAABB = false;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static float SELECT_RANGE = 5000.0f;
+    constexpr static float SELECT_RANGE = 100.0f;
 };

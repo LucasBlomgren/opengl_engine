@@ -208,8 +208,7 @@ void Renderer::render(
     GLuint qDebug[],
     int writeIdx,
     const Editor::ViewportFBO* viewportFBO
-)
-{
+) {
     // update scene bounds if dirty
     if (builder.sceneDirty) {
         computeSceneBounds(builder);
@@ -287,7 +286,7 @@ void Renderer::fillBatchInstances() {
     for (RenderBatch& bucket : batches) {
         bucket.instances.clear();
         for (GameObjectHandle& handle : bucket.objects) {
-            GameObject* obj = world->getGameObject(handle);;
+            GameObject* obj = world->getGameObject(handle);
             bucket.instances.emplace_back(obj->transform.modelMatrix, obj->color);
         }
     }
