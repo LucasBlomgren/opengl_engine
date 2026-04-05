@@ -176,19 +176,19 @@ void SceneBuilder::terrainScene() {
 
 void SceneBuilder::containerScene() {
 
-    int floorWidth = 2;
-    int floorHeight = 2;
+    int floorWidth = 1;
+    int floorHeight = 1;
 
     const float baseX = 0.0f;
     const float baseZ = -30.0f;
 
-    float yOffset = 250.0f;
+    float yOffset = 0.0f;
 
     // bottom floor
     for (int i = 0; i < floorWidth; i++) {
         for (int j = 0; j < floorHeight; j++) {
             glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-            world.createGameObject("uvmap", "cube", ColliderType::CUBOID, BodyType::Static, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, orientation, 99, false, {}, true);
+            world.createGameObject("uvmap", "cube", ColliderType::CUBOID, BodyType::Static, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, orientation, 99, false, {}, false);
         }
     }
 
@@ -199,8 +199,8 @@ void SceneBuilder::containerScene() {
     const int   w = floorWidth;
     const int   h = floorHeight;
 
-    const float wallH = 100.0f;                  // höjd
-    const float thick = 20.0f;                   // tjocklek
+    const float wallH = 25.0f;                  // höjd
+    const float thick = 5.0f;                   // tjocklek
 
     // world-bounds för golvet
     const float xMin = baseX - halfTile;
@@ -217,22 +217,22 @@ void SceneBuilder::containerScene() {
     // syd (zMin)
     world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static,
         glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
-        glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), true);
+        glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
         // nord (zMax)
         world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static,
             glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
-            glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), true);
+            glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
             // väst (xMin)
             world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static,
                 glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
-                glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), true);
+                glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
                 // öst (xMax)
                 world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Static,
                     glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
-                    glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), true);
+                    glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
                     //// top floor
                     //for (int i = 0; i < floorWidth; i++) {
@@ -243,6 +243,10 @@ void SceneBuilder::containerScene() {
                     //        floorTile.seeThrough = true;
                     //    }
                     //}
+
+    world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Kinematic,
+        glm::vec3(xMax + thick * 0.5f, y+100, (zMin + zMax) * 0.5f),
+        glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 }
 
 
@@ -491,12 +495,8 @@ void SceneBuilder::mainScene() {
         glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
         glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, false, glm::vec3(190, 255, 255), false);
 
-    // ___________________________________________________________
-    // ------------------------ Halos ----------------------------
-        //createHalo(50.0f, 5.0f, 90.0f, glm::vec3(0, 0, 1), glm::vec3(0, 1, 0), 5.05f, glm::vec3(125, 0, 125), 72, glm::vec3(0, 255, 0), false);
-        //createHalo(50.0f, 5.0f, 100.0f, glm::vec3(0, 0, 1), glm::vec3(1, 0, 0), 5.05f, glm::vec3(125, 0, 125), 72, glm::vec3(255, 0, 0), false);
-        //createHalo(50.0f, 5.0f, 110.0f, glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), 5.05f, glm::vec3(125, 0, 125), 72, glm::vec3(0, 0, 255), false);
 
+    createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(250.0, 0.5, 155.0), 50, 50, 1.0, 1.0, 1.0, 0.0, 1, true);
 
     // ___________________________________________________________
     // ------------------------ bridge----------------------------
@@ -688,10 +688,8 @@ void SceneBuilder::mainScene() {
     createBrickWall(glm::vec3(10, 0, 195), 1, 50, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
 
 
-    //orientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    //world.createGameObject("plain", "girl", ColliderType::CUBOID, glm::vec3(-20, 0, 0), glm::vec3(0.0135), 1, 0, orientation, 3.5f, 0, glm::vec3(-1,-1,-1));
-    //GameObject& girlObj = dynamicObjects.back();
-    //girlObj.useRandomColor = true;
+    orientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    world.createGameObject("plain", "girl", ColliderType::CUBOID, BodyType::Static, glm::vec3(-20, 0, 0), glm::vec3(0.0135), 1, orientation, 3.5f, false, glm::vec3(255.0f), false);
 
     world.createGameObject("plain", "tank", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(-20, 0, 0), glm::vec3(1), 1, orientation, 3.5f, false, glm::vec3(255.0f), false);
 }

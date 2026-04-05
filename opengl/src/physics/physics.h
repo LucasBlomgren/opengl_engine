@@ -15,6 +15,7 @@
 #include "bvh/treetree_query.h"
 #include "broadphase/broadphase_manager.h"
 #include "broadphase/broadphase_pairs.h"
+#include "narrowphase/narrowphase_manager.h"
 
 #include "tri.h"
 
@@ -24,22 +25,6 @@ struct DebugData {
     size_t Static = 0;
     size_t terrainTris = 0;
     size_t collisions = 0;
-};
-
-struct ExternalMotionContact {
-    RigidBodyHandle bodyA{};
-    RigidBodyHandle bodyB{};
-    glm::vec3 normal{};
-    float penetration = 0.0f;
-
-    ExternalMotionContact(const RigidBodyHandle& bodyA,
-        const RigidBodyHandle& bodyB,
-        const glm::vec3& normal,
-        float penetration)
-        : bodyA(bodyA), bodyB(bodyB), normal(normal), penetration(penetration) {
-    }
-
-    ExternalMotionContact() = default;
 };
 
 class PhysicsEngine {
@@ -56,11 +41,11 @@ public:
     void sleepAllObjects();
     void awakenAllObjects();
 
-    void queueAdd(ColliderHandle& handle, BroadphaseBucket& target);
-    void queueRemove(ColliderHandle& handle);
-    void queueMove(ColliderHandle& handle, BroadphaseBucket& target);
+    void queueAdd(RigidBodyHandle& handle, BroadphaseBucket& target);
+    void queueRemove(RigidBodyHandle& handle);
+    void queueMove(RigidBodyHandle& handle, BroadphaseBucket& target);
 
-    void setBVHDirty(ColliderHandle& handle);
+    void setBVHDirty(RigidBodyHandle& handle);
     RaycastHit performRaycast(Ray& ray);
 
     // #TODO: fix better public API 
@@ -68,7 +53,7 @@ public:
     //        Getters
     //------------------------
     PhysicsWorld* getPhysicsWorld();
-    const std::vector<ExternalMotionContact>& getExternalMotionContacts() const;
+    std::vector<ExternalMotionContact>& getExternalMotionContacts();
     const DebugData getDebugData();
     const BVHTree& getDynamicAwakeBvh() const;
     const BVHTree& getDynamicAsleepBvh() const;
@@ -96,7 +81,7 @@ private:
     //-----------------------------
     struct PhysCmd {
         enum class Type { Add, Remove, Move } type;
-        ColliderHandle handle;
+        RigidBodyHandle handle;
         BroadphaseBucket dst = BroadphaseBucket::None;
     };
     std::vector<PhysCmd> pending;
@@ -117,6 +102,7 @@ private:
     //  Collision detection 
     //------------------------
     BroadphaseManager broadphaseManager;
+    NarrowphaseManager narrowphaseManager;
 
     // cache for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
     PointerCache<GameObject, GameObjectHandle> gameObjectPtrCache;
@@ -137,21 +123,15 @@ private:
     //  Collision Resolution
     //------------------------
     void resolveCollisions();
-    void pushAwayPlayer(GameObject& playerObj, bool playerIsA, glm::vec3& n, float d);
 
     //------------------------
     //       Sleeping
     //------------------------
-    std::vector<RigidBody*> toWake;
-    std::vector<RigidBody*> toSleep;
+    std::vector<RigidBodyHandle> toWake;
+    std::vector<RigidBodyHandle> toSleep;
     void decideSleep();
     void updateSleepThresholds();
 
     struct WakeUpInfo { bool A, B; };
-    WakeUpInfo wakeUpCheck(RigidBody& A, RigidBody& B);
-
-    //-------------------------
-    // External motion control
-    //-------------------------
-    std::vector<ExternalMotionContact> externalContacts;
+    WakeUpInfo wakeUpCheck(RigidBody& A, RigidBody& B, const RigidBodyHandle& handleA, const RigidBodyHandle& handleB);
 };

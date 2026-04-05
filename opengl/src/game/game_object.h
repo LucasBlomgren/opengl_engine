@@ -21,6 +21,26 @@ inline bool approxEqual(float a, float b, float epsilon = 0.0001f) {
     return fabs(a - b) < epsilon;
 }
 
+struct SubPart {
+    std::string name = "part";
+    int parent = -1;
+
+    Transform localTransform;
+
+    // physics
+    ColliderHandle collider;
+
+    // render
+    Shader* shader = nullptr;
+    Mesh* mesh = nullptr;
+    GLuint textureId;
+    glm::vec3 color;
+    bool seeThrough = false;
+    bool isInsideShadowFrustum = true;
+    int batchIdx = -1;
+    int batchInstanceIdx = -1;
+};
+
 // #TODO: decide what is private/public in GameObject
 class GameObject {
 public:
@@ -34,7 +54,6 @@ public:
     Mesh* mesh = nullptr;
     GLuint textureId;
     glm::vec3 color;
-    bool useRandomColor = false;
     bool seeThrough = false;
     bool isInsideShadowFrustum = true;
     int batchIdx = -1;

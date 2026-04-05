@@ -2,11 +2,17 @@
 #include "bvh.h"
 #include "game_object.h"
 #include "tri.h"
-
 #include "world.h"
 
-void BVHTree::init(SlotMap<Collider, ColliderHandle>* s, int allocSize) {
-    slotMap = s;
+#define FUNC_NAME __FUNCTION__
+
+void BVHTree::init(
+    PointerCache<RigidBody, RigidBodyHandle>* bodyCache,
+    PointerCache<Collider, ColliderHandle>* colliderCache,
+    int allocSize) 
+{
+    this->colliderCache = colliderCache;
+    this->bodyCache = bodyCache;
 
     nodes.clear();
     nodes.reserve(allocSize * 2);
@@ -20,7 +26,7 @@ void BVHTree::init(SlotMap<Collider, ColliderHandle>* s, int allocSize) {
 //------------------------------
 //        Single Query
 //------------------------------
-void BVHTree::singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) const {
+void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const {
     if (nodes.empty()) return;
 
     out.clear();
@@ -49,16 +55,16 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) co
 //------------------------------------------------------------------
 //      Insert Leaf
 //------------------------------------------------------------------
-int BVHTree::insertLeaf(ColliderHandle handle) {
-    Collider* collider = slotMap->try_get(handle);
+int BVHTree::insertLeaf(RigidBodyHandle handle) {
+    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
 
-    if (collider->broadphaseHandle.leafIdx != -1) {
+    if (body->broadphaseHandle.leafIdx != -1) {
         // already in tree
         return -1;
     }
 
     // create leaf node
-    int leafIdx = createLeaf(handle, collider);
+    int leafIdx = createLeaf(handle, body);
 
     // if tree is empty, set rootIdx. Leaf becomes root.
     if (rootIdx == -1) {
@@ -107,16 +113,18 @@ int BVHTree::insertLeaf(ColliderHandle handle) {
     return leaf.selfIdx;
 }
 
-int BVHTree::createLeaf(ColliderHandle handle, Collider* collider) {
+int BVHTree::createLeaf(RigidBodyHandle handle, RigidBody* body) {
+    AABB aabb = colliderCache->get(body->colliderHandle, FUNC_NAME)->getAABB();
+
     Node& leaf = nodes.emplace_back();
     leaf.selfIdx = nodes.size() - 1;
     leaf.isLeaf = true;
     leaf.element = handle;
-    leaf.tightBox = collider->getAABB();
+    leaf.tightBox = aabb;
     leaf.fatBox = leaf.tightBox;
     leaf.fatBox.grow(fatBoxMargin);
 
-    collider->broadphaseHandle.leafIdx = leaf.selfIdx;
+    body->broadphaseHandle.leafIdx = leaf.selfIdx;
 
     updateRenderData(leaf);
 
@@ -177,8 +185,8 @@ void BVHTree::removeLeaf(int leafIdx)
 
     // root is leaf, clear tree
     if (leafIdx == rootIdx) {
-        Collider* collider = slotMap->try_get(leaf.element);
-        collider->broadphaseHandle.leafIdx = -1;
+        RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
+        body->broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
         nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
@@ -214,10 +222,10 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.alive = false;
     leaf.parentIdx = -1;
 
-    Collider* collider = slotMap->try_get(leaf.element);
+    RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
 
-    collider->broadphaseHandle.leafIdx = -1;
-    leaf.element = ColliderHandle{};
+    body->broadphaseHandle.leafIdx = -1;
+    leaf.element = RigidBodyHandle{};
 
     parent.alive = false;
     parent.parentIdx = -1;
@@ -228,7 +236,7 @@ void BVHTree::removeLeaf(int leafIdx)
 //------------------------------------------------------------------
 //      Update
 //------------------------------------------------------------------
-void BVHTree::update(std::vector<ColliderHandle>& handles) {
+void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
     if (numRefits > rebuildThreshold) {
         // för många refits, bygg om trädet
         build(handles);
@@ -252,7 +260,8 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        Collider* collider = slotMap->try_get(n.element);
+        RigidBody* body = bodyCache->get(n.element, FUNC_NAME);
+        Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
 
         n.tightBox = collider->getAABB();
         if (n.fatBox.contains(n.tightBox)) {
@@ -305,7 +314,7 @@ void BVHTree::refitNode(int nodeIdx) {
 //------------------------------------------------------------------
 //      Build
 //------------------------------------------------------------------
-void BVHTree::build(std::vector<ColliderHandle>& handles) {
+void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     nodes.clear();
     // Fyll primitives
     createPrimitives(handles);
@@ -351,14 +360,15 @@ void BVHTree::build(std::vector<ColliderHandle>& handles) {
     if (rootIdx != -1) refitNode(rootIdx);
 }
 
-void BVHTree::createPrimitives(std::vector<ColliderHandle>& handles) {
+void BVHTree::createPrimitives(std::vector<RigidBodyHandle>& handles) {
     prims.clear();
     prims.reserve(handles.size());
 
-    for (ColliderHandle& handle : handles) {
-        Collider* collider = slotMap->try_get(handle);
+    for (RigidBodyHandle& handle : handles) {
+        RigidBody* body = bodyCache->get(handle, FUNC_NAME);
+        Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
 
-        collider->broadphaseHandle.leafIdx = -1;
+        body->broadphaseHandle.leafIdx = -1;
         AABB box = collider->getAABB();
 
         BVHPrimitive prim;
@@ -439,9 +449,10 @@ void BVHTree::makeLeaf(int nodeIdx) {
     leaf.isLeaf = true;
     leaf.element = prims[leaf.start].element;
 
-    Collider* collider = slotMap->try_get(leaf.element);
+    RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
+    Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
 
-    collider->broadphaseHandle.leafIdx = leaf.selfIdx;
+    body->broadphaseHandle.leafIdx = leaf.selfIdx;
     leaf.tightBox = collider->getAABB();
     leaf.fatBox = leaf.tightBox;
 }

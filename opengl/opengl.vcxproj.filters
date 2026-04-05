@@ -63,6 +63,7 @@
     <ClCompile Include="src\physics\physics_world.cpp" />
     <ClCompile Include="src\physics\rigid_body.cpp" />
     <ClCompile Include="src\graphics\renderer\debug_renderer.cpp" />
+    <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -158,6 +159,7 @@
     <ClInclude Include="src\core\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
+    <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

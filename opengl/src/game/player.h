@@ -62,7 +62,7 @@ private:
     constexpr static float MOVE_ACCELERATION = 3.0f; // meters per second
     constexpr static float MAX_MOVE_SPEED = 15.0f;
     constexpr static float JUMP_HEIGHT = 10.5f;
-    constexpr static float SHOOT_VELOCITY = 100.0f;
+    constexpr static float SHOOT_VELOCITY = 1000.0f;
     constexpr static float ON_GROUND_ANGLE_THRESHOLD = 0.7f; // cos(45 degrees)
     constexpr static float GRAVITY = -9.81f;    
     constexpr static float GRAVITY_MULTIPLIER = 3.0f;

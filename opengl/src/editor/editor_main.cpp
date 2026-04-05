@@ -157,8 +157,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     dropObject();
                 }
                 else {
-                    Collider* hitCollider = world->getCollider(hitData.colliderHandle);
-                    GameObjectHandle hitObjHandle = hitCollider->gameObjectHandle;
+                    RigidBody* hitBody = world->getRigidBody(hitData.bodyHandle);
+                    GameObjectHandle hitObjHandle = hitBody->gameObjectHandle;
                     if (hitObjHandle.slot != selectedObjectHandle.slot) {
                         dropObject();
                         rayCast(SELECT_RANGE);
@@ -386,9 +386,9 @@ void Editor::EditorMain::update(Shader& shader) {
 
     // set new hover state
     if (raycast.hit && !selectedObjectIsBeingMoved) {
-        GameObject* hoveredObj = world->getGameObject(raycast.colliderHandle);
-        Collider* hoveredCollider = world->getCollider(raycast.colliderHandle);
-        GameObjectHandle hoveredHandle = hoveredCollider->gameObjectHandle;
+        RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
+        GameObject* hoveredObj = world->getGameObject(rb->gameObjectHandle);
+        GameObjectHandle hoveredHandle = rb->gameObjectHandle;
         hoveredObj->hoveredByEditor = true;
         hoveredObjectHandle = hoveredHandle;
         objectIsHovered = true;
@@ -422,8 +422,8 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     }
 
     objectIsSelected = true;
-    Collider* selectedCollider = world->getCollider(raycast.colliderHandle);
-    GameObjectHandle selectedHandle = selectedCollider->gameObjectHandle;
+    RigidBody* selectedBody = world->getRigidBody(raycast.bodyHandle);
+    GameObjectHandle selectedHandle = selectedBody->gameObjectHandle;
     selectedObjectHandle = selectedHandle;
 
     // set selected and hovered states, and calculate selection offset
@@ -469,7 +469,7 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     selectedCollider->updateAABB(selectedObject->transform);
     selectedCollider->updateCollider(selectedObject->transform);
 
-    physicsEngine->setBVHDirty(selectedObject->colliderHandle);
+    physicsEngine->setBVHDirty(selectedObject->rigidBodyHandle);
 }
 
 // drop selected object
@@ -577,7 +577,7 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<ColliderHandle> collisions;
+        std::vector<RigidBodyHandle> collisions;
         collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
@@ -588,8 +588,9 @@ void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
         // min depth collision
         float min = std::numeric_limits<float>::max();
         Collider* minDepthCollider = nullptr;
-        for (ColliderHandle& handle : collisions) {
-            Collider* collider = world->getCollider(handle);
+        for (RigidBodyHandle& handle : collisions) {
+            RigidBody* rb = world->getRigidBody(handle);
+            Collider* collider = world->getCollider(rb->colliderHandle);
 
             float depth = aabb.getMinOverlapDepth(collider->aabb);
             if (depth < min) {

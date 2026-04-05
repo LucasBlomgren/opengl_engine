@@ -4,10 +4,10 @@
 struct Tri;
 
 struct TerrainPair {
-    ColliderHandle colliderHandle;
+    RigidBodyHandle body;
     std::vector<Tri*> tris;
 };
 struct DynamicPair {
-    ColliderHandle A;
-    ColliderHandle B;
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
 };

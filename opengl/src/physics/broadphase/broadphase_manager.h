@@ -8,15 +8,15 @@
 #include "broadphase_types.h"
 #include "broadphase_pairs.h"
 
-class Collider;
+class RigidBody;
 struct Tri;
 
 class BroadphaseManager {
 public:
     void init(
         PointerCache<GameObject, GameObjectHandle>* gameObjectPtrCache,
-        PointerCache<Collider, ColliderHandle>* colliderPtrCache,
         PointerCache<RigidBody, RigidBodyHandle>* bodyPtrCache,
+        PointerCache<Collider, ColliderHandle>* colliderPtrCache,
         std::vector<Tri>* terrainTris
     );
 
@@ -29,20 +29,20 @@ public:
     const std::vector<DynamicPair>& getDynamicPairs() const { return dynamicPairs; }
 
     // add/remove from current list
-    void add(ColliderHandle& handle, BroadphaseBucket dst);
-    void remove(ColliderHandle& handle);
+    void add(RigidBodyHandle& handle, BroadphaseBucket dst);
+    void remove(RigidBodyHandle& handle);
 
     // move between lists
-    void moveToAwake(ColliderHandle& handle);
-    void moveToAsleep(ColliderHandle& handle);
-    void moveToStatic(ColliderHandle& handle);
+    void moveToAwake(RigidBodyHandle& handle);
+    void moveToAsleep(RigidBodyHandle& handle);
+    void moveToStatic(RigidBodyHandle& handle);
 
-    void setBVHDirty(ColliderHandle& handle);
+    void setBVHDirty(RigidBodyHandle& handle);
 
     // get lists of indices
-    const std::vector<ColliderHandle>& getAwakeList()  const { return awakeHandles; }
-    const std::vector<ColliderHandle>& getAsleepList() const { return asleepHandles; }
-    const std::vector<ColliderHandle>& getStaticList() const { return staticHandles; }
+    const std::vector<RigidBodyHandle>& getAwakeList()  const { return awakeHandles; }
+    const std::vector<RigidBodyHandle>& getAsleepList() const { return asleepHandles; }
+    const std::vector<RigidBodyHandle>& getStaticList() const { return staticHandles; }
 
     // get bvhs
     const BVHTree& getAwakeBVH()  const { return awakeBvh; }
@@ -53,14 +53,14 @@ public:
 private:
     // references to pointer caches and terrain triangles
     PointerCache<GameObject, GameObjectHandle>* gameObjectCache;
-    PointerCache<Collider, ColliderHandle>* colliderCache;
+    PointerCache<RigidBody, RigidBodyHandle>* colliderCache;
     PointerCache<RigidBody, RigidBodyHandle>* bodyCache;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects
-    std::vector<ColliderHandle> awakeHandles;
-    std::vector<ColliderHandle> asleepHandles;
-    std::vector<ColliderHandle> staticHandles;
+    std::vector<RigidBodyHandle> awakeHandles;
+    std::vector<RigidBodyHandle> asleepHandles;
+    std::vector<RigidBodyHandle> staticHandles;
 
     // trees 
     BVHTree awakeBvh;
@@ -73,11 +73,11 @@ private:
     std::vector<DynamicPair> dynamicPairs;
 
     // pairs buffers
-    std::vector<std::pair<ColliderHandle, Tri*>> pairsBufTerrain;
-    std::vector<std::pair<ColliderHandle, ColliderHandle>> pairsBufDynamic;
+    std::vector<std::pair<RigidBodyHandle, Tri*>> pairsBufTerrain;
+    std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>> pairsBufDynamic;
 
     // helpers
-    void swapAndPop(ColliderHandle& handle, std::vector<ColliderHandle>& list);
+    void swapAndPop(RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list);
     BVHTree& bvhFor(BroadphaseBucket b);
-    std::vector<ColliderHandle>& listFor(BroadphaseBucket b);
+    std::vector<RigidBodyHandle>& listFor(BroadphaseBucket b);
 };

@@ -23,7 +23,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
         if (in.mousePressed[GLFW_MOUSE_BUTTON_2])  { placeObject();  c.mouse = true; }
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3]) {
-            GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, (camera->position + camera->front * 3.0f), glm::vec3(1), 1, {}, 1.5f, false, {}, false);
+            GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, (camera->position + camera->front * 3.0f), glm::vec3(1), 100, {}, 1.5f, false, {}, false);
             GameObject* newObj = world->getGameObject(handle);
             RigidBody* rb = world->getRigidBody(handle);
             rb->linearVelocity = camera->front * SHOOT_VELOCITY;
@@ -119,7 +119,7 @@ void Player::createPlayerObject() {
 
 void Player::destroyPlayerObject() {
     GameObject* player = world->getGameObject(playerHandle);
-    physicsEngine->queueRemove(player->colliderHandle);
+    physicsEngine->queueRemove(player->rigidBodyHandle);
     world->deleteGameObject(playerHandle);
     playerHandle = GameObjectHandle{};
 }
@@ -172,11 +172,10 @@ void Player::updateObjectSelection(Shader& shader) {
 
     // set new hover state
     if (raycast.hit && !objectIsSelected) {
-        Collider* collider = world->getCollider(raycast.colliderHandle);
-        RigidBody* rb = world->getRigidBody(collider->rigidBodyHandle);
-        GameObject* hoveredObj = world->getGameObject(collider->gameObjectHandle);
+        RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
+        GameObject* hoveredObj = world->getGameObject(rb->gameObjectHandle);
         hoveredObj->hoveredByEditor = true;
-        hoveredObjectHandle = collider->gameObjectHandle;
+        hoveredObjectHandle = rb->gameObjectHandle;
         objectIsHovered = true;
     }
 }
@@ -308,6 +307,8 @@ void Player::moveSelectedObject(float dt) {
     selectedObject->transform.lastPosition = newPos;
 
     selectedObject->transform.updateCache();
+
+    // #rigidbody vector: loop over all the colliders
     selectedCollider->updateAABB(selectedObject->transform);
     selectedCollider->updateCollider(selectedObject->transform);
 }
@@ -325,13 +326,12 @@ void Player::selectObject() {
     // no hit return
     if (!raycast.hit) return;
 
-    Collider* selectedCollider = world->getCollider(raycast.colliderHandle);
-    RigidBody* rb = world->getRigidBody(selectedCollider->rigidBodyHandle);
+    RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
 
     if (rb->type == BodyType::Static) return;
 
     objectIsSelected = true;
-    GameObjectHandle handle = selectedCollider->gameObjectHandle;
+    GameObjectHandle handle = rb->gameObjectHandle;
     selectedObjectHandle = handle;
 
     GameObject* obj = world->getGameObject(handle);
@@ -341,7 +341,7 @@ void Player::selectObject() {
 
     BroadphaseBucket bpBucket;
     bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueMove(raycast.colliderHandle, bpBucket);
+    physicsEngine->queueMove(raycast.bodyHandle, bpBucket);
 
     rb->allowSleep = false;
     obj->transform.lastPosition = obj->transform.position;
@@ -413,7 +413,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<ColliderHandle> collisions;
+        std::vector<RigidBodyHandle> collisions;
         collisions.reserve(100);
         dynamicAwakeBvh.singleQuery(aabb, collisions);
 
@@ -424,8 +424,9 @@ void Player::createPlaceObjectAABB(Shader& shader) {
         // min depth collision
         float min = std::numeric_limits<float>::max();
         Collider* minDepthCollider = nullptr;
-        for (ColliderHandle& handle : collisions) {
-            Collider* collider = world->getCollider(handle);
+        for (RigidBodyHandle& handle : collisions) {
+            RigidBody* rb = world->getRigidBody(handle);
+            Collider* collider = world->getCollider(rb->colliderHandle);
 
             float depth = aabb.getMinOverlapDepth(collider->aabb);
             if (depth < min) {

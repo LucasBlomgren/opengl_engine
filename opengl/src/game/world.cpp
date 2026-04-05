@@ -70,7 +70,6 @@ GameObjectHandle World::createGameObject(
     transform.orientation = orientation;
     transform.scale = size;
     transform.updateCache();
-
     transform.lastPosition = pos;
 
     GameObjectHandle gameObjectHandle = m_gameObjects.create(
@@ -106,6 +105,21 @@ GameObjectHandle World::createGameObject(
     body.anchorPoint = pos;
     body.invRadius = 1.0f / (0.5f * glm::length(gameObject.transform.scale));
 
+    // broadphase bucket
+    BroadphaseBucket target;
+    switch (bodyType) {
+    case BodyType::Dynamic:
+        target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
+        break;
+    case BodyType::Kinematic:
+        target = BroadphaseBucket::Awake;
+        break;
+    case BodyType::Static:
+        target = BroadphaseBucket::Static;
+        break;
+    }
+    body.broadphaseHandle.bucket = target;
+
     // create collider
     ColliderHandle colliderHandle = physicsWorld->createCollider();
     Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
@@ -134,28 +148,17 @@ GameObjectHandle World::createGameObject(
     // inertia init
     body.calculateInverseInertia(colliderType, collider, gameObject.transform);
 
-    // collider broadphase bucket
-    BroadphaseBucket target;
-    switch (bodyType) {
-    case BodyType::Dynamic:
-        target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
-        break;
-    case BodyType::Kinematic:
-        target = BroadphaseBucket::Awake;
-        break;
-    case BodyType::Static:
-        target = BroadphaseBucket::Static;
-        break;
-    }
-    collider.broadphaseHandle.bucket = target;
 
     // link game object, collider and rigid body
+    // #rigidbody vector: add all the colliders to the body (only one in this case, but will be multiple for compound objects)
     body.colliderHandle = colliderHandle;
+
     gameObject.colliderHandle = colliderHandle;
     gameObject.rigidBodyHandle = bodyHandle;
 
     // add to broadphase
-    m_physicsEngine.queueAdd(colliderHandle, collider.broadphaseHandle.bucket);
+    // #rigidbody vector: loop over all the colliders and add them to the broadphase (only one in this case, but will be multiple for compound objects)
+    m_physicsEngine.queueAdd(bodyHandle, body.broadphaseHandle.bucket);
 
     objectId++;
     return gameObjectHandle;
@@ -164,7 +167,7 @@ GameObjectHandle World::createGameObject(
 void World::deleteGameObject(GameObjectHandle handle) {
     GameObject* obj = m_gameObjects.try_get(handle);
     if (obj) {
-        m_physicsEngine.queueRemove(obj->colliderHandle);
+        m_physicsEngine.queueRemove(obj->rigidBodyHandle);
         if (!obj->seeThrough) {
             m_renderer.removeObjectFromBatch(handle);
         }

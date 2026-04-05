@@ -8,21 +8,20 @@
 
 void BroadphaseManager::init(
     PointerCache<GameObject, GameObjectHandle>* goCache,
-    PointerCache<Collider, ColliderHandle>* colCache,
     PointerCache<RigidBody, RigidBodyHandle>* bodCache,
+    PointerCache<Collider, ColliderHandle>* colCache,
     std::vector<Tri>* terrainTris
 ) {
     gameObjectCache = goCache;
-    colliderCache = colCache;
     bodyCache = bodCache;
     terrainTriangles = terrainTris;
 
-    SlotMap<Collider, ColliderHandle>* cMap = colCache->sm; // sm=slotmap
-    uint32_t slotCap = cMap->dense().capacity();
+    SlotMap<RigidBody, RigidBodyHandle>* bMap = bodCache->sm; // sm=slotmap
+    uint32_t slotCap = bMap->dense().capacity();
 
-    awakeBvh.init(cMap, slotCap);
-    asleepBvh.init(cMap, slotCap);
-    staticBvh.init(cMap, slotCap);
+    awakeBvh.init(bodCache, colCache, slotCap);
+    asleepBvh.init(bodCache, colCache, slotCap);
+    staticBvh.init(bodCache, colCache, slotCap);
 
     awakeHandles.clear();
     asleepHandles.clear();
@@ -64,15 +63,15 @@ void BroadphaseManager::computePairs() {
         pairsBufTerrain.clear();
         treeVsTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
-        // Sort terrain pairs by Collider to avoid duplicates 
-        std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
+        // Sort terrain pairs by RigidBody to avoid duplicates 
+        std::unordered_map<RigidBodyHandle, std::vector<Tri*>> temp;
         temp.reserve(pairsBufTerrain.size());
         if (temp.bucket_count() < pairsBufTerrain.size())
             temp.reserve(pairsBufTerrain.size());
 
         for (int i = 0; i < pairsBufTerrain.size(); i++) {
-            auto [collider, tri] = pairsBufTerrain[i];
-            temp[collider].push_back(tri);
+            auto [rigidBody, tri] = pairsBufTerrain[i];
+            temp[rigidBody].push_back(tri);
         }
 
         // Finalize terrain pairs
@@ -81,8 +80,8 @@ void BroadphaseManager::computePairs() {
         terrainPairs.resize(cap);
         int sp = 0;
 
-        for (auto& [colliderHandle, trisVec] : temp) {
-            terrainPairs[sp++] = TerrainPair{ colliderHandle, std::move(trisVec) };
+        for (auto& [bodyHandle, trisVec] : temp) {
+            terrainPairs[sp++] = TerrainPair{ bodyHandle, std::move(trisVec) };
         }
         terrainPairs.resize(sp);
     }
@@ -134,9 +133,9 @@ void BroadphaseManager::computePairs() {
 }
 
 // Add to list
-void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    auto& h = collider->broadphaseHandle;
+void BroadphaseManager::add(RigidBodyHandle& handle, BroadphaseBucket dst) {
+    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    auto& h = rigidBody->broadphaseHandle;
 
     auto& list = listFor(dst);
     list.push_back(handle);
@@ -150,9 +149,9 @@ void BroadphaseManager::add(ColliderHandle& handle, BroadphaseBucket dst) {
 }
 
 // Remove from current list
-void BroadphaseManager::remove(ColliderHandle& handle) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    auto& h = collider->broadphaseHandle;
+void BroadphaseManager::remove(RigidBodyHandle& handle) {
+    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    auto& h = rigidBody->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
     // remove from list
@@ -167,11 +166,10 @@ void BroadphaseManager::remove(ColliderHandle& handle) {
 }
 
 // Move to awake
-void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
+void BroadphaseManager::moveToAwake(RigidBodyHandle& handle) {
+    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
 
-    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+    if (body->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         body->setAwake();
         return;
     }
@@ -182,12 +180,11 @@ void BroadphaseManager::moveToAwake(ColliderHandle& handle) {
     awakeBvh.dirty = true;
 }
 // Move to asleep
-void BroadphaseManager::moveToAsleep(ColliderHandle& handle) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
+void BroadphaseManager::moveToAsleep(RigidBodyHandle& handle) {
+    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
     Transform* transform = &gameObjectCache->get(body->gameObjectHandle, FUNC_NAME)->transform;
 
-    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+    if (body->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         body->setAsleep(*transform);
         return;
     }
@@ -198,11 +195,10 @@ void BroadphaseManager::moveToAsleep(ColliderHandle& handle) {
     asleepBvh.dirty = true;
 }
 // Move to static
-void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    RigidBody* body = bodyCache->get(collider->rigidBodyHandle, FUNC_NAME);
+void BroadphaseManager::moveToStatic(RigidBodyHandle& handle) {
+    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
 
-    if (collider->broadphaseHandle.bucket == BroadphaseBucket::Static)
+    if (body->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
 
     remove(handle);
@@ -211,9 +207,9 @@ void BroadphaseManager::moveToStatic(ColliderHandle& handle) {
     staticBvh.dirty = true;
 }
 
-void BroadphaseManager::setBVHDirty(ColliderHandle& handle) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
-    auto& h = collider->broadphaseHandle;
+void BroadphaseManager::setBVHDirty(RigidBodyHandle& handle) {
+    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    auto& h = rigidBody->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
     bvhFor(h.bucket).dirty = true;
 }
@@ -223,23 +219,23 @@ void BroadphaseManager::setBVHDirty(ColliderHandle& handle) {
 // ---------------------------------
 
 // Swap and pop from list
-void BroadphaseManager::swapAndPop(ColliderHandle& handle, std::vector<ColliderHandle>& list) {
-    Collider* collider = colliderCache->get(handle, FUNC_NAME);
+void BroadphaseManager::swapAndPop(RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list) {
+    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
 
-    int i = collider->broadphaseHandle.listIdx;
+    int i = rigidBody->broadphaseHandle.listIdx;
     if (i == -1) return;
 
     int lastPos = (int)list.size() - 1;
     if (i != lastPos) {
-        ColliderHandle movedHandle = list[lastPos];
+        RigidBodyHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        Collider* moved = colliderCache->get(movedHandle, FUNC_NAME);
+        RigidBody* moved = bodyCache->get(movedHandle, FUNC_NAME);
         moved->broadphaseHandle.listIdx = i;
     }
 
     list.pop_back();
-    collider->broadphaseHandle.listIdx = -1;
+    rigidBody->broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket
@@ -250,7 +246,7 @@ BVHTree& BroadphaseManager::bvhFor(BroadphaseBucket b) {
 }
 
 // Get list for bucket
-std::vector<ColliderHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
+std::vector<RigidBodyHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
     if (b == BroadphaseBucket::Awake)  return awakeHandles;
     if (b == BroadphaseBucket::Asleep) return asleepHandles;
     return staticHandles;

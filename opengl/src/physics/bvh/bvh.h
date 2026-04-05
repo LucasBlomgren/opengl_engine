@@ -1,14 +1,20 @@
 ﻿#pragma once
+#include "rigid_body.h"
 #include "colliders/aabb.h"
-#include "slot_map.h"
+#include "pointer_cache.h"
 #include "world.h"
 
 class BVHTree {
 public:
     BVHTree() = default;
-    using Element = ColliderHandle;
 
-    void init(SlotMap<Collider, ColliderHandle>* s, int allocSize);
+    // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
+    using Element = RigidBodyHandle;
+    void init(
+        PointerCache<RigidBody, RigidBodyHandle>* bodyCache,
+        PointerCache<Collider, ColliderHandle>* colliderCache,
+        int allocSize
+    );
 
     bool dirty = false;
     int rootIdx = -1;
@@ -37,19 +43,21 @@ public:
     static constexpr int MaxStackSize = 256;
     static constexpr int MaxCollisionBuf = 25000;
 
-    void build(std::vector<ColliderHandle>& objects);
-    void update(std::vector<ColliderHandle>& objects);
-    void singleQuery(const AABB& qBox, std::vector<ColliderHandle>& out) const;
+    void build(std::vector<RigidBodyHandle>& objects);
+    void update(std::vector<RigidBodyHandle>& objects);
+    void singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const;
 
-    int insertLeaf(ColliderHandle handle);
+    int insertLeaf(RigidBodyHandle handle);
     int findBestSibling(AABB& box);
-    int createLeaf(ColliderHandle handle, Collider* objPtr);
+    int createLeaf(RigidBodyHandle handle, RigidBody* body);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
 
 private:
-    SlotMap<Collider, ColliderHandle>* slotMap;
+    PointerCache<RigidBody, RigidBodyHandle>* bodyCache;
+    PointerCache<Collider, ColliderHandle>* colliderCache;
+
     int   leafThreshold = 1;
     int   numRefits = 0;
     int   rebuildThreshold = 0;        // räknas om i build()
@@ -66,7 +74,7 @@ private:
     std::vector<BVHPrimitive> prims;
 
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
-    void createPrimitives(std::vector<ColliderHandle>& objectHandles);
+    void createPrimitives(std::vector<RigidBodyHandle>& objectHandles);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();

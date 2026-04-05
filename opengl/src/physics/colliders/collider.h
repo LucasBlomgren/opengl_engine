@@ -28,7 +28,6 @@ struct Collider {
 
     GameObjectHandle gameObjectHandle;
     RigidBodyHandle rigidBodyHandle;
-    BroadphaseHandle broadphaseHandle;
 
     AABB& getAABB();
     void updateCollider(const Transform& t);

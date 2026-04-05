@@ -346,7 +346,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 			obj->transform.updateCache();
 			rb->calculateInverseInertia(collider->type, *collider, obj->transform);
 			rb->updateInertiaWorld(obj->transform);
-			ctx.physicsEngine->queueMove(obj->colliderHandle, target);
+			ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
 		}
 	}
 
@@ -361,7 +361,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
 				if (!rb->allowSleep) {
 					BroadphaseBucket target = BroadphaseBucket::Awake;
-					ctx.physicsEngine->queueMove(obj->colliderHandle, target);
+					ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
 				}
 			}
 		}
@@ -384,7 +384,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 					target = BroadphaseBucket::Awake;
 				}
 
-				ctx.physicsEngine->queueMove(obj->colliderHandle, target);
+				ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
 			}
 			ImGui::EndDisabled();
 		}

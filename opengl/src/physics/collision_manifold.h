@@ -31,7 +31,7 @@ struct ContactPoint {
 };
 
 enum class ContactPartnerType {
-    Collider,
+    RigidBody,
     Terrain
 };
 
@@ -55,12 +55,12 @@ struct Contact {
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
-    ContactPartnerType partnerTypeA = ContactPartnerType::Collider;
-    ContactPartnerType partnerTypeB = ContactPartnerType::Collider;
-    ColliderHandle colliderA{};
-    ColliderHandle colliderB{};
-
     ContactRuntime runtimeData;
+
+    ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
+    ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
+    RigidBodyHandle bodyA{};
+    RigidBodyHandle bodyB{};
 
     bool noSolverResponseA = false; 
     bool noSolverResponseB = true;      // default true for terrain
@@ -75,23 +75,23 @@ struct Contact {
     std::vector<glm::vec3> incidentFace;
     glm::vec3 referenceFaceNormal;
 
-    // collider vs collider
-    Contact(ColliderHandle handleA, ColliderHandle handleB, ContactRuntime& data, glm::vec3& normal) :
-        partnerTypeA(ContactPartnerType::Collider),
-        partnerTypeB(ContactPartnerType::Collider),
-        colliderA(handleA),
-        colliderB(handleB),
+    // body vs body
+    Contact(RigidBodyHandle handleA, RigidBodyHandle handleB, ContactRuntime& data, glm::vec3& normal) :
+        partnerTypeA(ContactPartnerType::RigidBody),
+        partnerTypeB(ContactPartnerType::RigidBody),
+        bodyA(handleA),
+        bodyB(handleB),
         runtimeData(data),
         normal(normal)
     {
         points.reserve(8);
     }
 
-    // collider vs terrain
-    Contact(ColliderHandle handleA, ContactRuntime& data, glm::vec3& normal) :
-        partnerTypeA(ContactPartnerType::Collider),
+    // body vs terrain
+    Contact(RigidBodyHandle handleA, ContactRuntime& data, glm::vec3& normal) :
+        partnerTypeA(ContactPartnerType::RigidBody),
         partnerTypeB(ContactPartnerType::Terrain),
-        colliderA(handleA),
+        bodyA(handleA),
         runtimeData(data),   
         normal(normal)
     {
@@ -105,11 +105,11 @@ class CollisionManifold {
 public:
     void init(
         PointerCache<GameObject, GameObjectHandle>* objectCache,
-        PointerCache<Collider, ColliderHandle>* colliderCache,
-        PointerCache<RigidBody, RigidBodyHandle>* bodyCache) {
-        gameObjectPtrCache = objectCache;
-        colliderPtrCache = colliderCache;
-        bodyPtrCache = bodyCache;
+        PointerCache<Collider, ColliderHandle>* colCache,
+        PointerCache<RigidBody, RigidBodyHandle>* bodCache) {
+        gameObjectCache = objectCache;
+        colliderCache = colCache;
+        bodyCache = bodCache;
     }
 
     void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
@@ -121,9 +121,9 @@ public:
     size_t generateKey(int idA, int idB);
 
 private:
-    PointerCache<GameObject, GameObjectHandle>* gameObjectPtrCache = nullptr;
-    PointerCache<Collider, ColliderHandle>* colliderPtrCache = nullptr;
-    PointerCache<RigidBody, RigidBodyHandle>* bodyPtrCache = nullptr;
+    PointerCache<GameObject, GameObjectHandle>* gameObjectCache = nullptr;
+    PointerCache<Collider, ColliderHandle>* colliderCache = nullptr;
+    PointerCache<RigidBody, RigidBodyHandle>* bodyCache = nullptr;
 
     std::vector<glm::vec3> selectedFace;
     void selectCollisionFace(const Collider* collider, const GameObject* go, const glm::vec3& normal);

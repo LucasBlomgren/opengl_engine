@@ -32,6 +32,7 @@ public:
 
     GameObjectHandle gameObjectHandle;
     ColliderHandle colliderHandle;
+    BroadphaseHandle broadphaseHandle;
 
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };

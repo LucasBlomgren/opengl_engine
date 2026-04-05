@@ -86,21 +86,21 @@ void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world
         glm::vec3 pos;
 
         PhysicsWorld* pw = physics.getPhysicsWorld();
-        Collider* colA = pw->getCollider(c->colliderA);
-        Collider* colB = pw->getCollider(c->colliderB);
+        RigidBody* bodyA = pw->getRigidBody(c->bodyA);
+        RigidBody* bodyB = pw->getRigidBody(c->bodyB);
 
-        RigidBody* bodyA = nullptr;
+        Collider* colA = nullptr;
         Transform* tA = nullptr;
 
-        RigidBody* bodyB = nullptr;
+        Collider* colB = nullptr;
         Transform* tB = nullptr;
 
-        if (c->partnerTypeA == ContactPartnerType::Collider) {
-            bodyA = pw->getRigidBody(colA->rigidBodyHandle);
+        if (c->partnerTypeA == ContactPartnerType::RigidBody) {
+            colA = pw->getCollider(bodyA->colliderHandle);
             tA = &world.getGameObject(colA->gameObjectHandle)->transform;
         }
-        if (c->partnerTypeB == ContactPartnerType::Collider) {
-            bodyB = pw->getRigidBody(colB->rigidBodyHandle);
+        if (c->partnerTypeB == ContactPartnerType::RigidBody) {
+            colB = pw->getCollider(bodyB->colliderHandle);
             tB = &world.getGameObject(colB->gameObjectHandle)->transform;
         }
 
@@ -113,7 +113,7 @@ void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world
         }
 
         // Om båda objekten är vanliga GameObjects, placera pilen på den dynamiska kroppens AABB-sida som vetter mot den andra kroppen
-        if (c->partnerTypeA == ContactPartnerType::Collider && c->partnerTypeB == ContactPartnerType::Collider) {
+        if (c->partnerTypeA == ContactPartnerType::RigidBody && c->partnerTypeB == ContactPartnerType::RigidBody) {
             // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
             if (bodyA->type != BodyType::Static && bodyB->type != BodyType::Static) {
                 pos = 0.5f * (tA->position + tB->position);

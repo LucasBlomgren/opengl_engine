@@ -3,6 +3,8 @@
 #include "slot_map.h"
 #include "bvh/bvh.h"
 #include "game_object.h"
+#include "colliders/collider.h"
+#include "rigid_body.h"
 
 struct Ray {
     float length;
@@ -21,10 +23,16 @@ struct Ray {
 
 struct RaycastHit {
     bool hit = false;
-    ColliderHandle colliderHandle;
+    RigidBodyHandle bodyHandle;
     glm::vec3 point;  
     glm::vec3 normal;
     float t;    
 };
 
-RaycastHit raycast(Ray& ray, const BVHTree& tree, SlotMap<Collider, ColliderHandle>* colliderMap, SlotMap<GameObject, GameObjectHandle>* goMap);
+RaycastHit raycast(
+    Ray& ray, 
+    const BVHTree& tree, 
+    SlotMap<RigidBody, RigidBodyHandle>* bodyMap, 
+    SlotMap<Collider, ColliderHandle>* colliderMap,
+    SlotMap<GameObject, GameObjectHandle>* goMap
+);

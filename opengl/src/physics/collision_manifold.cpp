@@ -381,7 +381,7 @@ void CollisionManifold::clipPoints(std::vector<glm::vec3>& referenceFace, std::v
 
 void CollisionManifold::createLocalCoordinates(Contact& contact) {
     glm::mat4* invM;
-    if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
+    if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
         GameObject* objB = contact.runtimeData.objB;
         invM = &objB->transform.invModelMatrix;
     } else {
@@ -678,7 +678,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     // iterera över alla nya contact points och se om någon är nära en existerande
     glm::mat3 M3; 
     glm::vec3 T3; 
-    if (cachedContact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
+    if (cachedContact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
         M3 = glm::mat3(objB->transform.modelMatrix);
         T3 = glm::vec3(objB->transform.modelMatrix[3]);
     } else {
@@ -731,7 +731,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     }
 
     // can only skip if objB isn't terrain triangle
-    if (contact.partnerTypeB == ContactPartnerType::Collider)
+    if (contact.partnerTypeB == ContactPartnerType::RigidBody)
     {
         // sphere vs box
         if ((colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID) or
@@ -756,7 +756,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
 
         glm::mat3 M3; 
         glm::vec3 T3; 
-        if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
+        if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
             M3 = glm::mat3(objB->transform.modelMatrix);
             T3 = glm::vec3(objB->transform.modelMatrix[3]);
         }
@@ -798,7 +798,7 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             cachedPoint.globalCoord = projP;
 
             glm::mat4* invM;
-            if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::Collider) {
+            if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
                 invM = &objB->transform.invModelMatrix;
             } else {
                 invM = &objA->transform.invModelMatrix;

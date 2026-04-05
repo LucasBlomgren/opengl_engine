@@ -2,28 +2,36 @@
 #include "raycast.h"
 #include "aabb.h"
 
-RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<Collider, ColliderHandle>* colliderMap, SlotMap<GameObject, GameObjectHandle>* goMap)
+RaycastHit raycast(
+    Ray& ray, 
+    const BVHTree& bvh, 
+    SlotMap<RigidBody, RigidBodyHandle>* bodyMap, 
+    SlotMap<Collider, ColliderHandle>* colliderMap,
+    SlotMap<GameObject, GameObjectHandle>* goMap
+)
 {
     AABB rayAABB;
     rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
     rayAABB.wMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
 
-    ColliderHandle bestColliderHandle;
+    RigidBodyHandle bestBody;
     float bestT = std::numeric_limits<float>::max();
 
-    std::vector<ColliderHandle> collisions;
+    std::vector<RigidBodyHandle> collisions;
     bvh.singleQuery(rayAABB, collisions);
 
     bool noHit = true;
-    for (ColliderHandle& handle : collisions) {
-        Collider* collider = colliderMap->try_get(handle);
-        GameObject* obj = goMap->try_get(collider->gameObjectHandle);
+    for (RigidBodyHandle& handle : collisions) {
+        RigidBody* body = bodyMap->try_get(handle);
+        GameObject* obj = goMap->try_get(body->gameObjectHandle);
 
         if (!obj) {
-            std::cout << "[Raycast] Error: Collider with handle " << handle.slot << " has no associated GameObject." << std::endl;
+            std::cout << "[Raycast] Error: RigidBody with handle " << handle.slot << " has no associated GameObject." << std::endl;
             continue;
         }
         if (obj->player) continue;
+
+        Collider* collider = colliderMap->try_get(body->colliderHandle);
 
         glm::vec3 min = collider->aabb.wMin;
         glm::vec3 max = collider->aabb.wMax;
@@ -40,7 +48,7 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<Collider, ColliderHandl
         if (!(tNear > tFar || tFar < 0.0f)) {
             if (tNear < bestT) {
                 bestT = tNear;
-                bestColliderHandle = handle;
+                bestBody = handle;
                 noHit = false;
             }
         }
@@ -56,11 +64,12 @@ RaycastHit raycast(Ray& ray, const BVHTree& bvh, SlotMap<Collider, ColliderHandl
     RaycastHit hitData;
     hitData.hit = true;
     hitData.point = ray.start + ray.direction * bestT;
-    hitData.colliderHandle = bestColliderHandle;
+    hitData.bodyHandle = bestBody;
     hitData.t = bestT;
 
     // Åter­beräkna t1 per axel
-    Collider* bestColliderPtr = colliderMap->try_get(bestColliderHandle);
+    RigidBody* body = bodyMap->try_get(bestBody);
+    Collider* bestColliderPtr = colliderMap->try_get(body->colliderHandle);
     glm::vec3 min = bestColliderPtr->aabb.wMin;
     glm::vec3 max = bestColliderPtr->aabb.wMax;
     glm::vec3 tMin = (min - ray.start) / ray.direction;
