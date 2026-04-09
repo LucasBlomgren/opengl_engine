@@ -261,8 +261,6 @@ void PhysicsEngine::updateBodiesAndColliders() {
 
         // once per body
         if (!body->colliderHandles.empty()) {
-            Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
-            
             // for solo spheres
             if (body->colliderHandles.size() == 1) {
                 body->applyRollingFriction(mainCollider->type, dt);
@@ -289,7 +287,6 @@ void PhysicsEngine::updateBodiesAndColliders() {
             collider->updateCollider(globalTransform);
         }
 
-        Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
         body->aabb = mainCollider->getAABB();
 
         // update compound body AABB

@@ -3,7 +3,7 @@
 #include "pch.h"
 #include "transform.h"
 
-Transform combineTransforms(const Transform& root, const Transform& local) {
+inline Transform combineTransforms(const Transform& root, const Transform& local) {
     Transform out;
 
     out.orientation = root.orientation * local.orientation;

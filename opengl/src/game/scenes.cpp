@@ -6,37 +6,85 @@
 
 void SceneBuilder::emptyFloorScene() {
 
-    GameObjectDesc obj;
-    glm::vec3 position = { 0,0,0 };
-    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    glm::vec3 scale = { 1,1,1 };
-    obj.rootTransformHandle = world.createTransform(position, orientation, scale);
-    obj.bodyType = BodyType::Dynamic;
-    obj.mass = 2.0f;
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < 10; j++) {
+            GameObjectDesc obj;
+            // change pos with i and j
+            glm::vec3 position = { i * 15.0f, 150, j * 15.0f };
+            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            glm::vec3 scale = { 5.0f, 5.0f, 5.0f };
+            obj.rootTransformHandle = world.createTransform(position, orientation, scale);
+            obj.bodyType = BodyType::Dynamic;
+            obj.mass = 2.0f;
 
-    SubPartDesc base;
-    glm::vec3 positionBase = { 0,0,0 };
-    glm::quat orientationBase = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    glm::vec3 scaleBase = { 1,1,1 };
-    base.localTransformHandle = world.createTransform(positionBase, orientationBase, scaleBase);
-    base.meshName = "cube";
-    base.textureName = "crate";
-    base.colliderType = ColliderType::CUBOID;
+            SubPartDesc base;
+            glm::vec3 positionBase = { 0,0,0 };
+            glm::quat orientationBase = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            glm::vec3 scaleBase{ 1.0f };
+            base.localTransformHandle = world.createTransform(positionBase, orientationBase, scaleBase);
+            base.meshName = "cube";
+            base.textureName = "crate";
+            base.shaderName = "default";
+            base.colliderType = ColliderType::CUBOID;
 
-    SubPartDesc top;
-    glm::vec3 positionTop = { 0,0,0 };
-    glm::quat orientationTop = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    glm::vec3 scaleTop = { 1,1,1 };
-    top.localTransformHandle = world.createTransform(positionTop, orientationTop, scaleTop);
-    top.meshName = "cube";
-    top.textureName = "plain";
-    top.color = { 255, 0, 0 };
-    top.colliderType = ColliderType::CUBOID;
+            SubPartDesc mid;
+            glm::vec3 positionMid = { 0,1,0 };
+            glm::quat orientationMid = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            glm::vec3 scaleMid{ 0.5f };
+            mid.localTransformHandle = world.createTransform(positionMid, orientationMid, scaleMid);
+            mid.meshName = "sphere";
+            mid.textureName = "uvmap";
+            mid.shaderName = "default";
+            mid.color = { 255, 255, 255 };
+            mid.colliderType = ColliderType::SPHERE;
 
-    obj.parts.push_back(base);
-    obj.parts.push_back(top);
+            SubPartDesc top;
+            glm::vec3 positionTop = { 0,1.75f,0 };
+            glm::quat orientationTop = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            glm::vec3 scaleTop{ 0.5f };
+            top.localTransformHandle = world.createTransform(positionTop, orientationTop, scaleTop);
+            top.meshName = "cube";
+            top.textureName = "plain";
+            top.shaderName = "default";
+            // random color
+            glm::vec3 randomColor = { static_cast<float>(rand() % 256) / 255.0f, static_cast<float>(rand() % 256) / 255.0f, static_cast<float>(rand() % 256) / 255.0f };
+            top.color = randomColor;
+            top.colliderType = ColliderType::CUBOID;
 
-    GameObjectHandle h = world.createGameObject(obj);
+            obj.parts.push_back(base);
+
+            GameObjectHandle h = world.createGameObject(obj);
+        }
+    }
+
+
+
+    GameObjectDesc obj2;
+    glm::vec3 position2 = { 0,0,0 };
+    glm::quat orientation2 = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    glm::vec3 scale2 = { 100.0f, 10.0f, 100.0f };
+    obj2.rootTransformHandle = world.createTransform(position2, orientation2, scale2);
+    obj2.bodyType = BodyType::Static;
+    obj2.mass = 2.0f;
+
+    SubPartDesc base2;
+    glm::vec3 positionBase2 = { 0,-20,0 };
+    glm::quat orientationBase2 = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    glm::vec3 scaleBase2 = { 10.0f, 10.0f, 10.0f };
+    base2.localTransformHandle = world.createTransform(positionBase2, orientationBase2, scaleBase2);
+    base2.meshName = "cube";
+    base2.textureName = "crate";
+    base2.colliderType = ColliderType::CUBOID;
+    obj2.parts.push_back(base2);
+    GameObjectHandle h2 = world.createGameObject(obj2);
+
+    generateFlatTerrain(
+        /*offset*/glm::vec3(-50.0, 0.0, -50.0),
+        /*gridX=*/144,
+        /*gridZ=*/144,
+        /*cellSize=*/3.0,
+        /*maxHeight=*/30.0
+    );
 
     //int floorWidth = 1;
     //int floorHeight = 1;

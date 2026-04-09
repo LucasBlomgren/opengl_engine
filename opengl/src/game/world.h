@@ -47,7 +47,7 @@ public:
     SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() { return gameObjects; }
     SlotMap<Transform, TransformHandle>& getTransformsMap() { return transforms; }
     GameObject* getGameObject(const GameObjectHandle& handle);
-    GameObject* getGameObject(const ColliderHandle& handle);
+    Transform* getTransform(const TransformHandle& handle); 
     RigidBody* getRigidBody(const GameObjectHandle& handle);
     RigidBody* getRigidBody(const RigidBodyHandle& handle);
     Collider* getCollider(const ColliderHandle& handle);

@@ -80,118 +80,117 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 // Prepare collisions normals, object local normals and XYZ axes
 //-----------------------------------------------------------------
 void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
-    if (!engineState->getShowCollisionNormals()) return; 
+    //if (!engineState->getShowCollisionNormals()) return; 
 
-    for (Contact* c : physics.contactsToSolve) {
-        glm::vec3 pos;
+    //for (Contact* c : physics.contactsToSolve) {
+    //    glm::vec3 pos;
 
-        PhysicsWorld* pw = physics.getPhysicsWorld();
-        RigidBody* bodyA = pw->getRigidBody(c->bodyA);
-        RigidBody* bodyB = pw->getRigidBody(c->bodyB);
+    //    PhysicsWorld* pw = physics.getPhysicsWorld();
 
-        Collider* colA = nullptr;
-        Transform* tA = nullptr;
+    //    RigidBody* bodyA = pw->getRigidBody(c->bodyA);
+    //    RigidBody* bodyB = pw->getRigidBody(c->bodyB);
+    //    Collider* colA = nullptr;
+    //    Collider* colB = nullptr;
+    //    Transform* tA = nullptr;
+    //    Transform* tB = nullptr;
 
-        Collider* colB = nullptr;
-        Transform* tB = nullptr;
+    //    if (c->partnerTypeA == ContactPartnerType::RigidBody) {
+    //        colA = pw->getCollider(bodyA->colliderHandle);
+    //        tA = &world.getGameObject(colA->gameObjectHandle)->transform;
+    //    }
+    //    if (c->partnerTypeB == ContactPartnerType::RigidBody) {
+    //        colB = pw->getCollider(bodyB->colliderHandle);
+    //        tB = &world.getGameObject(colB->gameObjectHandle)->transform;
+    //    }
 
-        if (c->partnerTypeA == ContactPartnerType::RigidBody) {
-            colA = pw->getCollider(bodyA->colliderHandle);
-            tA = &world.getGameObject(colA->gameObjectHandle)->transform;
-        }
-        if (c->partnerTypeB == ContactPartnerType::RigidBody) {
-            colB = pw->getCollider(bodyB->colliderHandle);
-            tB = &world.getGameObject(colB->gameObjectHandle)->transform;
-        }
+    //    // Om ett av objekten är terrain triangle (objA eller objB är nullptr), placera pilen på det andra objektets position
+    //    if (c->partnerTypeA == ContactPartnerType::Terrain) {
+    //        pos = tB->position;
+    //    }
+    //    else if (c->partnerTypeB == ContactPartnerType::Terrain) {
+    //        pos = tA->position;
+    //    }
 
-        // Om ett av objekten är terrain triangle (objA eller objB är nullptr), placera pilen på det andra objektets position
-        if (c->partnerTypeA == ContactPartnerType::Terrain) {
-            pos = tB->position;
-        }
-        else if (c->partnerTypeB == ContactPartnerType::Terrain) {
-            pos = tA->position;
-        }
+    //    // Om båda objekten är vanliga GameObjects, placera pilen på den dynamiska kroppens AABB-sida som vetter mot den andra kroppen
+    //    if (c->partnerTypeA == ContactPartnerType::RigidBody && c->partnerTypeB == ContactPartnerType::RigidBody) {
+    //        // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
+    //        if (bodyA->type != BodyType::Static && bodyB->type != BodyType::Static) {
+    //            pos = 0.5f * (tA->position + tB->position);
+    //        }
+    //        else {
+    //            // 2) hitta dynamiska objektet (det som INTE är static)
+    //            RigidBody* dynBody = nullptr;
+    //            Collider* dynCol = nullptr;
+    //            Transform* dynT = nullptr;
 
-        // Om båda objekten är vanliga GameObjects, placera pilen på den dynamiska kroppens AABB-sida som vetter mot den andra kroppen
-        if (c->partnerTypeA == ContactPartnerType::RigidBody && c->partnerTypeB == ContactPartnerType::RigidBody) {
-            // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
-            if (bodyA->type != BodyType::Static && bodyB->type != BodyType::Static) {
-                pos = 0.5f * (tA->position + tB->position);
-            }
-            else {
-                // 2) hitta dynamiska objektet (det som INTE är static)
-                RigidBody* dynBody = nullptr;
-                Collider* dynCol = nullptr;
-                Transform* dynT = nullptr;
+    //            if (bodyA->type != BodyType::Static) {
+    //                dynBody = bodyA;
+    //                dynCol = colA;
+    //                dynT = tA;
+    //            } else {
+    //                dynBody = bodyB;
+    //                dynCol = colB;
+    //                dynT = tB;
+    //            }
 
-                if (bodyA->type != BodyType::Static) {
-                    dynBody = bodyA;
-                    dynCol = colA;
-                    dynT = tA;
-                } else {
-                    dynBody = bodyB;
-                    dynCol = colB;
-                    dynT = tB;
-                }
+    //            // 3) välj d så att den pekar från dyn MOT den andra kroppen
+    //            // antag: c->normal pekar från A -> B
+    //            glm::vec3 d = (dynBody == bodyA) ? c->normal : -c->normal;
 
-                // 3) välj d så att den pekar från dyn MOT den andra kroppen
-                // antag: c->normal pekar från A -> B
-                glm::vec3 d = (dynBody == bodyA) ? c->normal : -c->normal;
+    //            // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
+    //            pos = dynT->position;
+    //            float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
+    //            AABB* aabb = &dynCol->getAABB(); // se till att denna är world-space halfExtents
 
-                // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
-                pos = dynT->position;
-                float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
-                AABB* aabb = &dynCol->getAABB(); // se till att denna är world-space halfExtents
+    //            if (ax >= ay && ax >= az) {
+    //                pos.x += (d.x >= 0 ? aabb->worldHalfExtents.x : -aabb->worldHalfExtents.x);
+    //            }
+    //            else if (ay >= ax && ay >= az) {
+    //                pos.y += (d.y >= 0 ? aabb->worldHalfExtents.y : -aabb->worldHalfExtents.y);
+    //            }
+    //            else { pos.z += (d.z >= 0 ? aabb->worldHalfExtents.z : -aabb->worldHalfExtents.z); }
 
-                if (ax >= ay && ax >= az) {
-                    pos.x += (d.x >= 0 ? aabb->halfExtents.x : -aabb->halfExtents.x);
-                }
-                else if (ay >= ax && ay >= az) {
-                    pos.y += (d.y >= 0 ? aabb->halfExtents.y : -aabb->halfExtents.y);
-                }
-                else { pos.z += (d.z >= 0 ? aabb->halfExtents.z : -aabb->halfExtents.z); }
+    //            // liten offset så pilen syns ovanpå ytan
+    //            pos += c->normal * 0.01f;
+    //        }
+    //    }
 
-                // liten offset så pilen syns ovanpå ytan
-                pos += c->normal * 0.01f;
-            }
-        }
-
-        // push arrow mesh with model matrix oriented along the contact normal
-        sceneDebugMeshes.push_back({
-            arrowRenderer.mesh,
-            arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
-            glm::vec3(1, 0, 1),
-            false
-            });
-    }
+    //    // push arrow mesh with model matrix oriented along the contact normal
+    //    sceneDebugMeshes.push_back({
+    //        arrowRenderer.mesh,
+    //        arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
+    //        glm::vec3(1, 0, 1),
+    //        false
+    //        });
+    //}
 }
 void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& objects) {
-    if (!engineState->getShowObjectLocalNormals()) return;
+    //if (!engineState->getShowObjectLocalNormals()) return;
 
-    for (const GameObject& obj : objects) {
-        Mesh* m = arrowRenderer.mesh;
+    //for (const GameObject& obj : objects) {
+    //    Mesh* m = arrowRenderer.mesh;
 
-        // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
-        glm::vec3 pos = glm::vec3(obj.transform.modelMatrix[3]);
+    //    // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
+    //    glm::vec3 pos = glm::vec3(obj.transform.modelMatrix[3]);
 
-        glm::mat3 R = glm::mat3(obj.transform.modelMatrix);
-        R[0] = glm::normalize(R[0]);
-        R[1] = glm::normalize(R[1]);
-        R[2] = glm::normalize(R[2]);
+    //    glm::mat3 R = glm::mat3(obj.transform.modelMatrix);
+    //    R[0] = glm::normalize(R[0]);
+    //    R[1] = glm::normalize(R[1]);
+    //    R[2] = glm::normalize(R[2]);
 
-        glm::mat4 baseTR(1.0f);
-        baseTR[0] = glm::vec4(R[0], 0.0f);
-        baseTR[1] = glm::vec4(R[1], 0.0f);
-        baseTR[2] = glm::vec4(R[2], 0.0f);
-        baseTR[3] = glm::vec4(pos, 1.0f);
+    //    glm::mat4 baseTR(1.0f);
+    //    baseTR[0] = glm::vec4(R[0], 0.0f);
+    //    baseTR[1] = glm::vec4(R[1], 0.0f);
+    //    baseTR[2] = glm::vec4(R[2], 0.0f);
+    //    baseTR[3] = glm::vec4(pos, 1.0f);
 
-        // valfri debug-skala (konstant i world)
-        glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
+    //    // valfri debug-skala (konstant i world)
+    //    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
 
-        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
-        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
-        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
-    }
+    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
+    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
+    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
+    //}
 }
 void DebugRenderer::prepareXYZAxes() {
     if (!engineState->getShowObjectLocalNormals() and !engineState->getShowCollisionNormals()) return;
@@ -213,7 +212,7 @@ void DebugRenderer::prepareXYZAxes() {
 //  Render AABBs, Colliders & Contact Points
 // ----------------------------------------------
 void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& world) {
-    if (!engineState->getShowAABB()) return;
+    /*if (!engineState->getShowAABB()) return;
 
     glLineWidth(2.0f);
     glBindVertexArray(aabbRenderer.sVAO);
@@ -223,10 +222,10 @@ void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& w
         Collider* col = world.getCollider(obj.colliderHandle);
         aabbRenderer.updateModel(col->aabb, false);
         aabbRenderer.render(color, *debugShapeShader);
-    }
+    }*/
 }
 void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) {
-    if (!engineState->getShowColliders()) return;
+    /*if (!engineState->getShowColliders()) return;
 
     glLineWidth(2.0f);
     debugShapeShader->setBool("debug.useUniformColor", true);
@@ -245,7 +244,7 @@ void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, cons
             const Sphere& sphere = std::get<Sphere>(col->shape);
             sphereOutlineRenderer.render(*debugShapeShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, false, false);
         }
-    }
+    }*/
 }
 void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const {
     if (!engineState->getShowContactPoints()) return;
@@ -310,8 +309,8 @@ void DebugRenderer::renderBVH(const Tree& tree, const glm::vec3& nodeColor, cons
         if (node.isLeaf) {
             glLineWidth(4.0f);
             toDraw = node.tightBox;
-            toDraw.centroid = (toDraw.wMin + toDraw.wMax) * 0.5f;
-            toDraw.halfExtents = (toDraw.wMax - toDraw.wMin) * 0.5f;
+            toDraw.worldCenter = (toDraw.worldMin + toDraw.worldMax) * 0.5f;
+            toDraw.worldHalfExtents = (toDraw.worldMax - toDraw.worldMin) * 0.5f;
             color = leafColor;
         }
         else {

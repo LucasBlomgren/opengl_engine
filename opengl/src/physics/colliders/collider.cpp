@@ -11,10 +11,10 @@ void Collider::updateAABB(const Transform& t) {
 	}
 	else if (type == ColliderType::SPHERE) {
 		float radius = t.scale.x; // assuming uniform scaling, can also store the radius in the Sphere struct if needed
-		aabb.wMin = t.position - glm::vec3(radius);
-		aabb.wMax = t.position + glm::vec3(radius);
-		aabb.centroid = (aabb.wMin + aabb.wMax) * 0.5f;
-		aabb.halfExtents = (aabb.wMax - aabb.wMin) * 0.5f;
+		aabb.worldMin = t.position - glm::vec3(radius);
+		aabb.worldMax = t.position + glm::vec3(radius);
+		aabb.worldCenter = (aabb.worldMin + aabb.worldMax) * 0.5f;
+		aabb.worldHalfExtents = (aabb.worldMax - aabb.worldMin) * 0.5f;
 	}
 }
 

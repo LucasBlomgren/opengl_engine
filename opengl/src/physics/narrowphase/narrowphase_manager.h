@@ -1,12 +1,10 @@
 #pragma once
 
-#include "physics.h"
 #include "bvh/bvh.h"
 #include "broadphase/broadphase_pairs.h"
 #include "collision_manifold.h"
 #include "sat.h"
-
-class PhysicsEngine;
+#include "runtime_caches.h"
 
 struct ExternalMotionContact {
     RigidBodyHandle bodyA{};

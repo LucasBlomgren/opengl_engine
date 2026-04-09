@@ -37,11 +37,11 @@ void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {
 }
 
 void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) {
-    M[0] = glm::vec4(box.axesWorld[0] * (box.halfExtentsLocal.x * 2.0f * box.scale.x), 0.0f);
-    M[1] = glm::vec4(box.axesWorld[1] * (box.halfExtentsLocal.y * 2.0f * box.scale.y), 0.0f);
-    M[2] = glm::vec4(box.axesWorld[2] * (box.halfExtentsLocal.z * 2.0f * box.scale.z), 0.0f);
+    M[0] = glm::vec4(box.worldAxes[0] * (box.localHalfExtents.x * 2.0f * box.scale.x), 0.0f);
+    M[1] = glm::vec4(box.worldAxes[1] * (box.localHalfExtents.y * 2.0f * box.scale.y), 0.0f);
+    M[2] = glm::vec4(box.worldAxes[2] * (box.localHalfExtents.z * 2.0f * box.scale.z), 0.0f);
 
-    M[3] = glm::vec4(box.centerWorld, 1.0f);
+    M[3] = glm::vec4(box.worldCenter, 1.0f);
 }
 
 void OOBBRenderer::setupWireframeBox() {

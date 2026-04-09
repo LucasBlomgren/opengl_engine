@@ -181,6 +181,6 @@ void RigidBody::inertiaSphere(const glm::vec3& s) {
 		glm::vec3(0.0f, 0.0f, invI));
 }
 
-inline bool RigidBody::approxEqual(float a, float b, float epsilon = 0.0001f) {
+inline bool RigidBody::approxEqual(float a, float b, float epsilon) {
 	return fabs(a - b) < epsilon;
 }

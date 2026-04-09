@@ -25,6 +25,8 @@ void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::ve
     staticHandles.reserve(slotCap * 2);
 
     terrainBvh.build(*terrainTriangles);
+
+    std::cout << terrainBvh.nodes.size() << " terrain nodes.\n";
 }
 
 // -----------------------------------
@@ -41,7 +43,6 @@ void BroadphaseManager::updateBVHs() {
     }
 
     staticBvh.update(staticHandles);
-
 
     //std::cout << awakeBvh.nodes.size() << " awake nodes, "
     //          << asleepBvh.nodes.size() << " asleep nodes, "

@@ -2,6 +2,7 @@
 #include "renderer.h"
 #include "debug/draw_line.h"
 #include "mesh/mesh_manager.h"
+#include "transform_utils.h"
 
 //-----------------------------
 //           Init
@@ -56,37 +57,55 @@ void Renderer::clearRenderBatches() {
 //-----------------------------
 //    Add Object to Batch
 //----------------------------- 
-void Renderer::addObjectToBatch(GameObjectHandle handle) {
-    GameObject* obj = world->getGameObject(handle);   
+void Renderer::addObjectToBatch(GameObjectHandle objectH) {
+    GameObject* obj = world->getGameObject(objectH);  
+    Transform* rootT = world->getTransform(obj->rootTransformHandle);
 
-    // check existing buckets
-    for (RenderBatch& bucket : batches) {
-        if (bucket.mesh == obj->mesh &&
-            bucket.shader == defaultShader &&
-            bucket.textureId == obj->textureId)
-        {
-            bucket.objects.push_back(handle);
-            bucket.instances.emplace_back(obj->transform.modelMatrix, obj->color);
+    for (int i = 0; i < (int)obj->parts.size(); ++i) {
+        SubPart& part = obj->parts[i];
 
-            obj->batchIdx = static_cast<int>(&bucket - &batches[0]);
-            obj->batchInstanceIdx = static_cast<int>(bucket.objects.size()) - 1;
-            return;
+        // collider-only part
+        if (part.mesh == nullptr || part.shader == nullptr) {
+            continue;
+        }
+
+        Transform* localT = world->getTransform(part.localTransformHandle);
+        Transform worldT = combineTransforms(*rootT, *localT);
+
+        bool addedToBatch = false;
+
+        // check existing buckets
+        for (RenderBatch& bucket : batches) {
+            if (bucket.mesh == part.mesh &&
+                bucket.shader == part.shader &&
+                bucket.textureId == part.textureId)
+            {
+                bucket.parts.push_back({ objectH, i });
+                bucket.instances.emplace_back(worldT.modelMatrix, part.color);
+
+                part.batchIdx = static_cast<int>(&bucket - &batches[0]);
+                part.batchInstanceIdx = static_cast<int>(bucket.parts.size()) - 1;
+                addedToBatch = true;
+                break;
+            }
+        }
+
+        // if no existing bucket found, create a new one
+        if (!addedToBatch) {
+            RenderBatch newBatch;
+            newBatch.mesh = part.mesh;
+            newBatch.shader = part.shader;
+            newBatch.textureId = part.textureId;
+            newBatch.parts.push_back({ objectH, i });
+            newBatch.instances.emplace_back(worldT.modelMatrix, part.color);
+
+            // new batch & instance
+            part.batchIdx = static_cast<int>(batches.size());
+            part.batchInstanceIdx = 0;
+
+            batches.push_back(std::move(newBatch));
         }
     }
-
-    // no existing bucket found, create a new one
-    RenderBatch newBatch;
-    newBatch.mesh = obj->mesh;
-    newBatch.shader = defaultShader;
-    newBatch.textureId = obj->textureId;
-    newBatch.objects.push_back(handle);
-    newBatch.instances.emplace_back(obj->transform.modelMatrix, obj->color);
-
-    // new batch & instance
-    obj->batchIdx = static_cast<int>(batches.size());
-    obj->batchInstanceIdx = 0;
-
-    batches.push_back(std::move(newBatch));
 }
 
 //-----------------------------
@@ -95,25 +114,38 @@ void Renderer::addObjectToBatch(GameObjectHandle handle) {
 void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
     GameObject* obj = world->getGameObject(handle);
 
-    if (obj->batchIdx == -1) return; // not in a batch
+    for (int i = 0; i < (int)obj->parts.size(); ++i) {
+        SubPart& part = obj->parts[i];
 
-    RenderBatch& batch = batches[obj->batchIdx];
-    int lastIdx = static_cast<int>(batch.objects.size()) - 1;
+        if (part.batchIdx == -1 || part.batchInstanceIdx == -1) {
+            continue; // part not in a batch
+        }
 
-    if (obj->batchInstanceIdx != lastIdx) {
-        // swap with last object
-        GameObjectHandle lastObjHandle = batch.objects[lastIdx];
-        GameObject* lastObjPtr = world->getGameObject(lastObjHandle);
+        RenderBatch& batch = batches[part.batchIdx];
+        int removeIdx = part.batchInstanceIdx;
+        int lastIdx = static_cast<int>(batch.parts.size()) - 1;
 
-        batch.objects[obj->batchInstanceIdx] = lastObjHandle;
-        batch.instances[obj->batchInstanceIdx] = batch.instances[lastIdx];
-        lastObjPtr->batchInstanceIdx = obj->batchInstanceIdx;
+        if (removeIdx != lastIdx) {
+            // move last part into the removed slot
+            RenderRef movedRef = batch.parts[lastIdx];
+
+            batch.parts[removeIdx] = movedRef;
+            batch.instances[removeIdx] = batch.instances[lastIdx];
+
+            GameObject* movedObj = world->getGameObject(movedRef.objectH);
+            if (movedObj) {
+                SubPart& movedPart = movedObj->parts[movedRef.partIndex];
+                movedPart.batchIdx = part.batchIdx;
+                movedPart.batchInstanceIdx = removeIdx;
+            }
+        }
+
+        batch.parts.pop_back();
+        batch.instances.pop_back();
+
+        part.batchIdx = -1;
+        part.batchInstanceIdx = -1;
     }
-
-    batch.objects.pop_back();
-    batch.instances.pop_back();
-    obj->batchIdx = -1;
-    obj->batchInstanceIdx = -1;
 }
 
 //-----------------------------
@@ -285,9 +317,15 @@ void Renderer::render(
 void Renderer::fillBatchInstances() {
     for (RenderBatch& bucket : batches) {
         bucket.instances.clear();
-        for (GameObjectHandle& handle : bucket.objects) {
-            GameObject* obj = world->getGameObject(handle);
-            bucket.instances.emplace_back(obj->transform.modelMatrix, obj->color);
+        for (RenderRef& ref : bucket.parts) {
+            GameObject* obj = world->getGameObject(ref.objectH);
+            SubPart& part = obj->parts[ref.partIndex];
+
+            Transform* rootT = world->getTransform(obj->rootTransformHandle);
+            Transform* localT = world->getTransform(part.localTransformHandle);
+            Transform worldT = combineTransforms(*rootT, *localT);
+
+            bucket.instances.emplace_back(worldT.modelMatrix, part.color);
         }
     }
 }
@@ -555,15 +593,20 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
     // beräkna min/max för dynamiska objekt
     else if (dData.size() > 0) {
         for (const GameObject& obj : dData) {
+            for (const SubPart& part : obj.parts) {
+                if (part.mesh == nullptr) {
+                    continue; // skip collider-only parts
+                }
 
-            Collider* col = world->getCollider(obj.colliderHandle);
-            const AABB& aabb = col->aabb;
-            minY = std::min(minY, aabb.wMin.y); 
-            maxY = std::max(maxY, aabb.wMax.y); 
-            minX = std::min(minX, aabb.wMin.x); 
-            maxX = std::max(maxX, aabb.wMax.x); 
-            minZ = std::min(minZ, aabb.wMin.z); 
-            maxZ = std::max(maxZ, aabb.wMax.z); 
+                Collider* col = world->getCollider(part.colliderHandle);
+                const AABB& aabb = col->aabb;
+                minY = std::min(minY, aabb.worldMin.y);
+                maxY = std::max(maxY, aabb.worldMax.y);
+                minX = std::min(minX, aabb.worldMin.x);
+                maxX = std::max(maxX, aabb.worldMax.x);
+                minZ = std::min(minZ, aabb.worldMin.z);
+                maxZ = std::max(maxZ, aabb.worldMax.z);
+            }
         }
     }
 
@@ -660,32 +703,32 @@ void Renderer::renderLights() const {
 //     Render Raycast Hit
 //----------------------------
 void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
-    // #TODO: fix logic for selected vs hovered
+    //// #TODO: fix logic for selected vs hovered
 
-    GameObject* obj = world->getGameObject(handle);
-    if (obj == nullptr) {
-        return;
-    }
+    //GameObject* obj = world->getGameObject(handle);
+    //if (obj == nullptr) {
+    //    return;
+    //}
 
-    Collider* col = world->getCollider(obj->colliderHandle);
-    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
+    //Collider* col = world->getCollider(obj->colliderHandle);
+    //RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
 
-    debugShader->use();
-    debugShader->setBool("debug.useUniformColor", true);
+    //debugShader->use();
+    //debugShader->setBool("debug.useUniformColor", true);
 
-    bool selected;
-    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
-    else if (obj->hoveredByEditor) { selected = false; }
-    else return;
+    //bool selected;
+    //if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
+    //else if (obj->hoveredByEditor) { selected = false; }
+    //else return;
 
-    bool isStatic = (rb->type == BodyType::Static);
+    //bool isStatic = (rb->type == BodyType::Static);
 
-    if (col->type == ColliderType::CUBOID) {
-        const OOBB& box = std::get<OOBB>(col->shape);
-        debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
-    }
-    else if (col->type == ColliderType::SPHERE) {
-        Sphere& sphere = std::get<Sphere>(col->shape);
-        debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
-    }
+    //if (col->type == ColliderType::CUBOID) {
+    //    const OOBB& box = std::get<OOBB>(col->shape);
+    //    debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+    //}
+    //else if (col->type == ColliderType::SPHERE) {
+    //    Sphere& sphere = std::get<Sphere>(col->shape);
+    //    debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+    //}
 }

@@ -36,15 +36,15 @@ public:
     void update(const Transform& t);
     std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 
-    std::array<glm::vec3, 8> verticesWorld;
-    std::array<glm::vec3, 3> axesWorld;
-    glm::vec3 centerWorld;
-    glm::vec3 halfExtentsLocal;
+    std::array<glm::vec3, 8> worldVertices;
+    std::array<glm::vec3, 3> worldAxes;
+    glm::vec3 worldCenter;
+    glm::vec3 localHalfExtents;
     glm::vec3 scale;
 
 private:
-    glm::vec3 centerLocal;
-    std::array<glm::vec3, 8> verticesLocal;
+    glm::vec3 localCenter;
+    std::array<glm::vec3, 8> localVertices;
 
     static constexpr std::array<glm::vec3, 3>  localAxes = {
       glm::vec3( 1,  0,  0),

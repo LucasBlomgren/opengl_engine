@@ -53,8 +53,8 @@ void AABBRenderer::updateModel(const AABB& box, const bool asleep) {
     if (asleep) return;
 
     model =
-        glm::translate(glm::mat4(1.0f), box.centroid) * 
-        glm::scale(glm::mat4(1.0f), box.halfExtents * 2.0f);
+        glm::translate(glm::mat4(1.0f), box.worldCenter) * 
+        glm::scale(glm::mat4(1.0f), box.worldHalfExtents * 2.0f);
 }
 
 void AABBRenderer::destroy() {

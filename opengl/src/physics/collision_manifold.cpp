@@ -272,15 +272,19 @@ void CollisionManifold::selectOOBBCollisionFace(const Collider* collider, const 
     const OOBB& box = std::get<OOBB>(collider->shape);
 
     // Välj rätt lokala face
-    const std::array<glm::vec3, 4>* localFace;
+    std::array<glm::vec3, 4> localFace;
+
     if (absN.x >= absN.y && absN.x >= absN.z) {
-        localFace = (rotated.x > 0) ? &box.getLocalFace(FaceId::MaxX) : &box.getLocalFace(FaceId::MinX);
+        localFace = (rotated.x > 0) ? box.getLocalFace(FaceId::MaxX)
+            : box.getLocalFace(FaceId::MinX);
     }
     else if (absN.y >= absN.x && absN.y >= absN.z) {
-        localFace = (rotated.y > 0) ? &box.getLocalFace(FaceId::MaxY) : &box.getLocalFace(FaceId::MinY);
+        localFace = (rotated.y > 0) ? box.getLocalFace(FaceId::MaxY)
+            : box.getLocalFace(FaceId::MinY);
     }
     else {
-        localFace = (rotated.z > 0) ? &box.getLocalFace(FaceId::MaxZ) : &box.getLocalFace(FaceId::MinZ);
+        localFace = (rotated.z > 0) ? box.getLocalFace(FaceId::MaxZ)
+            : box.getLocalFace(FaceId::MinZ);
     }
 
     // Transformera precis de fyra lokala hörnen till world-space
@@ -290,7 +294,7 @@ void CollisionManifold::selectOOBBCollisionFace(const Collider* collider, const 
 
     selectedFace.clear();
     selectedFace.reserve(4);
-    for (const auto& p : *localFace) {
+    for (const auto& p : localFace) {
         // 9 mul + 6 add i stället för mat4×vec4
         selectedFace.push_back(M3 * p + T3);
     }

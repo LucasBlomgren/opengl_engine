@@ -15,6 +15,12 @@ void AABB::init(const std::vector<glm::vec3>& vertices) {
 
     localMin = mn;
     localMax = mx;
+
+    worldMin = localMin;
+    worldMax = localMax;
+    worldCenter = (worldMin + worldMax) * 0.5f;
+    worldHalfExtents = (worldMax - worldMin) * 0.5f;
+    setSurfaceArea();
 }
 
 //--------------------------------------------

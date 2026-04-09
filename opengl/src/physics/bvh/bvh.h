@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "physics.h"
+
+#include "runtime_caches.h"
 #include "physics_world.h"
 #include "rigid_body.h"
 #include "colliders/aabb.h"
@@ -12,11 +13,7 @@ public:
 
     // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
     using Element = RigidBodyHandle;
-    void init(
-        PhysicsWorld* world,
-        RuntimeCaches* caches,
-        int allocSize
-    );
+    void init(PhysicsWorld* world, RuntimeCaches* caches, int allocSize);
 
     bool dirty = false;
     int rootIdx = -1;

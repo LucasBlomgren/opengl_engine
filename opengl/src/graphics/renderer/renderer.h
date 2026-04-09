@@ -105,12 +105,17 @@ private:
     glm::vec3 sceneMax = { 0.0f, 0.0f, 0.0f };
     std::vector<glm::vec3> sceneCorners; 
 
+    struct RenderRef {
+        GameObjectHandle objectH;
+        int partIndex;
+    };
+
     struct RenderBatch {
         Mesh* mesh;
         Shader* shader;
         GLuint  textureId;
 
-        std::vector<GameObjectHandle> objects;  // vilka som använder detta
+        std::vector<RenderRef> parts;
         std::vector<InstanceData> instances;    // fylls varje frame
     };
     std::vector<RenderBatch> batches;

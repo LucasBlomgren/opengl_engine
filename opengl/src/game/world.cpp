@@ -19,6 +19,9 @@ void World::clear() {
 GameObject* World::getGameObject(const GameObjectHandle& h) {
     return gameObjects.try_get(h);
 }
+Transform* World::getTransform(const TransformHandle& h) {
+    return transforms.try_get(h);
+}
 
 // physics getters, #TODO: refactor to world only dependent on physics world, not physics engine
 RigidBody* World::getRigidBody(const GameObjectHandle& h) {
@@ -106,6 +109,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
         collider.rigidBodyHandle = bodyHandle;
         collider.type = partDesc.colliderType;
+        collider.localTransformHandle = partDesc.localTransformHandle;
 
         Transform partGlobalTransform = combineTransforms(*rootTransform, *partTransform);
 
@@ -135,6 +139,17 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
 
     if (body.colliderHandles.empty()) {
         std::cerr << "[World] Warning: Created GameObject with no colliders. GameObject ID: " << gameObject.id << "\n";
+    }
+
+    Collider* mainCollider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
+    body.aabb = mainCollider->getAABB();
+
+    if (body.isCompound()) {
+        for (size_t i = 1; i < body.colliderHandles.size(); ++i) {
+            Collider* c = physicsWorld->getCollidersMap().try_get(body.colliderHandles[i]);
+            body.aabb.growToInclude(c->getAABB().worldMin);
+            body.aabb.growToInclude(c->getAABB().worldMax);
+        }
     }
 
     // inertia init 

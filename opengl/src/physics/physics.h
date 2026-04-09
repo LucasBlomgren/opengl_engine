@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "runtime_caches.h"
 #include "game/transform_utils.h"
 #include "core/pointer_cache.h"
 #include "physics_world.h"
@@ -26,20 +27,6 @@ struct DebugData {
     size_t Static = 0;
     size_t terrainTris = 0;
     size_t collisions = 0;
-};
-
-struct RuntimeCaches {
-    PointerCache<Transform, TransformHandle> transforms;
-    PointerCache<Collider, ColliderHandle> colliders;
-    PointerCache<RigidBody, RigidBodyHandle> bodies;
-    std::vector<Transform> globalColliderTransforms;
-
-    void clear() {
-        transforms.clear();
-        colliders.clear();
-        bodies.clear();
-        globalColliderTransforms.clear();
-    }
 };
 
 class PhysicsEngine {
