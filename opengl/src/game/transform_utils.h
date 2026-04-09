@@ -16,5 +16,7 @@ inline Transform combineTransforms(const Transform& root, const Transform& local
     glm::mat4 S = glm::scale(glm::mat4(1.0f), out.scale);
     out.modelMatrix = T * R * S;
 
+    out.updateCache();
+
     return out;
 }
