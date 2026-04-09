@@ -6,7 +6,7 @@ void RigidBody::applyGravity(float dt) {
 		linearVelocity += g * dt;
 }
 
-void RigidBody::integrateVelocities(Transform& t, ColliderType colliderType, float dt) {
+void RigidBody::integrateVelocities(Transform& t, float dt) {
 	if (type == BodyType::Static || 
 		motionControl == MotionControl::External || 
 		asleep)
@@ -18,6 +18,7 @@ void RigidBody::integrateVelocities(Transform& t, ColliderType colliderType, flo
 		angularVelocity.x = 0.0f;
 		angularVelocity.y = 0.0f;
 	}
+
 
 	// update position and orientation
 	t.lastPosition = t.position;
@@ -130,7 +131,7 @@ void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const 
 
 	if (colliderType == ColliderType::CUBOID) {
 		const OOBB& box = std::get<OOBB>(collider.shape);
-		const glm::vec3 size = box.halfExtentsLocal * 2.0f * t.scale;
+		const glm::vec3 size = box.localHalfExtents * 2.0f * t.scale;
 		bool isUniform = approxEqual(size.x, size.y) and approxEqual(size.y, size.z);
 
 		if (isUniform) {
@@ -178,4 +179,8 @@ void RigidBody::inertiaSphere(const glm::vec3& s) {
 		glm::vec3(invI, 0.0f, 0.0f),
 		glm::vec3(0.0f, invI, 0.0f),
 		glm::vec3(0.0f, 0.0f, invI));
+}
+
+inline bool RigidBody::approxEqual(float a, float b, float epsilon = 0.0001f) {
+	return fabs(a - b) < epsilon;
 }

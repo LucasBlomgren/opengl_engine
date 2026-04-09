@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "physics.h"
+#include "physics_world.h"
 #include "rigid_body.h"
 #include "colliders/aabb.h"
 #include "pointer_cache.h"
@@ -11,8 +13,8 @@ public:
     // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
     using Element = RigidBodyHandle;
     void init(
-        PointerCache<RigidBody, RigidBodyHandle>* bodyCache,
-        PointerCache<Collider, ColliderHandle>* colliderCache,
+        PhysicsWorld* world,
+        RuntimeCaches* caches,
         int allocSize
     );
 
@@ -55,8 +57,8 @@ public:
     void refitParents(int leafIdx);
 
 private:
-    PointerCache<RigidBody, RigidBodyHandle>* bodyCache;
-    PointerCache<Collider, ColliderHandle>* colliderCache;
+    PhysicsWorld* world = nullptr;
+    RuntimeCaches* caches = nullptr;
 
     int   leafThreshold = 1;
     int   numRefits = 0;

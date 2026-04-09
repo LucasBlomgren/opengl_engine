@@ -350,14 +350,14 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             zVariance = randomRange(2.0, 5.0);
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
-            world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
+            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
         }
         // spheres
         else if (mode == 1) {
             glm::vec3 size{ 2.0f };
             float mass = (size.x * 3.0f) / 2.0f;
 
-            world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
+            //world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
         }
     }
 }
@@ -395,7 +395,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
+                //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
             }
         }
         pWidthCounter -= 1;
@@ -437,7 +437,7 @@ void SceneBuilder::createSpherePyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
+                //world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
             }
         }
         pWidthCounter -= 1;
@@ -490,7 +490,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -513,7 +513,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         // middle bricks
         for (int row = 1; row < wallWidth - 2; row++) {
             glm::vec3 pos = startPos;
@@ -534,7 +534,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         }
         // edge brick
         pos = startPos;
@@ -554,7 +554,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         brickWeight -= brickDecrease;
     }
 }

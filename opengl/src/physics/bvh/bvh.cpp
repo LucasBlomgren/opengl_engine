@@ -7,12 +7,12 @@
 #define FUNC_NAME __FUNCTION__
 
 void BVHTree::init(
-    PointerCache<RigidBody, RigidBodyHandle>* bodyCache,
-    PointerCache<Collider, ColliderHandle>* colliderCache,
+    PhysicsWorld* world,
+    RuntimeCaches* caches,
     int allocSize) 
 {
-    this->colliderCache = colliderCache;
-    this->bodyCache = bodyCache;
+    this->world = world;
+    this->caches = caches;
 
     nodes.clear();
     nodes.reserve(allocSize * 2);
@@ -56,7 +56,7 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
 //      Insert Leaf
 //------------------------------------------------------------------
 int BVHTree::insertLeaf(RigidBodyHandle handle) {
-    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
 
     if (body->broadphaseHandle.leafIdx != -1) {
         // already in tree
@@ -114,7 +114,7 @@ int BVHTree::insertLeaf(RigidBodyHandle handle) {
 }
 
 int BVHTree::createLeaf(RigidBodyHandle handle, RigidBody* body) {
-    AABB aabb = colliderCache->get(body->colliderHandle, FUNC_NAME)->getAABB();
+    AABB aabb = world->computeBodyAABB(*body);
 
     Node& leaf = nodes.emplace_back();
     leaf.selfIdx = nodes.size() - 1;
@@ -165,8 +165,8 @@ void BVHTree::refitParents(int parentIdx) {
         const AABB* boxA = &nodes[n.childAIdx].fatBox;
         const AABB* boxB = &nodes[n.childBIdx].fatBox;
 
-        n.fatBox.wMin = glm::min(boxA->wMin, boxB->wMin);
-        n.fatBox.wMax = glm::max(boxA->wMax, boxB->wMax);
+        n.fatBox.worldMin = glm::min(boxA->worldMin, boxB->worldMin);
+        n.fatBox.worldMax = glm::max(boxA->worldMax, boxB->worldMax);
 
         updateRenderData(n);
     }
@@ -185,7 +185,7 @@ void BVHTree::removeLeaf(int leafIdx)
 
     // root is leaf, clear tree
     if (leafIdx == rootIdx) {
-        RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
+        RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
         body->broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
@@ -222,7 +222,7 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.alive = false;
     leaf.parentIdx = -1;
 
-    RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
+    RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
 
     body->broadphaseHandle.leafIdx = -1;
     leaf.element = RigidBodyHandle{};
@@ -260,16 +260,15 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        RigidBody* body = bodyCache->get(n.element, FUNC_NAME);
-        Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
+        RigidBody* body = caches->bodies.get(n.element, FUNC_NAME);
+        n.tightBox = body->aabb;
 
-        n.tightBox = collider->getAABB();
         if (n.fatBox.contains(n.tightBox)) {
             continue;
         }
 
-        n.fatBox.wMin = n.tightBox.wMin;
-        n.fatBox.wMax = n.tightBox.wMax;
+        n.fatBox.worldMin = n.tightBox.worldMin;
+        n.fatBox.worldMax = n.tightBox.worldMax;
         n.fatBox.grow(fatBoxMargin);
         numRefits++;
 
@@ -302,8 +301,8 @@ void BVHTree::refitNode(int nodeIdx) {
 
     // när barnen är klara, unionera dem
     if (childA and childB) {
-        node.fatBox.wMin = glm::min(childA->fatBox.wMin, childB->fatBox.wMin);
-        node.fatBox.wMax = glm::max(childA->fatBox.wMax, childB->fatBox.wMax);
+        node.fatBox.worldMin = glm::min(childA->fatBox.worldMin, childB->fatBox.worldMin);
+        node.fatBox.worldMax = glm::max(childA->fatBox.worldMax, childB->fatBox.worldMax);
     }
 
     updateRenderData(node);
@@ -336,8 +335,8 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     root.count = prims.size();
 
     // Beräkna root->aabb som union av alla primitiva
-    root.fatBox.wMin = prims[0].min;
-    root.fatBox.wMax = prims[0].max;
+    root.fatBox.worldMin = prims[0].min;
+    root.fatBox.worldMax = prims[0].max;
     for (int i = 1; i < prims.size(); i++) {
         root.fatBox.growToInclude(prims[i].min);
         root.fatBox.growToInclude(prims[i].max);
@@ -364,18 +363,17 @@ void BVHTree::createPrimitives(std::vector<RigidBodyHandle>& handles) {
     prims.clear();
     prims.reserve(handles.size());
 
-    for (RigidBodyHandle& handle : handles) {
-        RigidBody* body = bodyCache->get(handle, FUNC_NAME);
-        Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
-
+    for (RigidBodyHandle& bodyH : handles) {
+        RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
         body->broadphaseHandle.leafIdx = -1;
-        AABB box = collider->getAABB();
+        
+        AABB box = body->aabb;
 
         BVHPrimitive prim;
-        prim.min = box.wMin;
-        prim.max = box.wMax;
-        prim.centroid = box.centroid;
-        prim.element = handle;
+        prim.min = box.worldMin;
+        prim.max = box.worldMax;
+        prim.centroid = box.worldCenter;
+        prim.element = bodyH;
         prims.push_back(prim);
     }
 }
@@ -393,7 +391,7 @@ void BVHTree::split(int parentIdx, int depth) {
 
     // choose by largest extent axis to split
     int axis;
-    glm::vec3 extent = parent.fatBox.wMax - parent.fatBox.wMin;
+    glm::vec3 extent = parent.fatBox.worldMax - parent.fatBox.worldMin;
     axis = (extent.x > extent.y
         ? (extent.x > extent.z ? 0 : 2)
         : (extent.y > extent.z ? 1 : 2));
@@ -434,8 +432,8 @@ void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int
     else        parent.childBIdx = childIdx;
 
     // beräkna båda childs fatBox
-    child.fatBox.wMin = prims[start].min;
-    child.fatBox.wMax = prims[start].max;
+    child.fatBox.worldMin = prims[start].min;
+    child.fatBox.worldMax = prims[start].max;
     for (int i = start + 1; i < end; ++i) {
         child.fatBox.growToInclude(prims[i].min);
         child.fatBox.growToInclude(prims[i].max);
@@ -449,18 +447,17 @@ void BVHTree::makeLeaf(int nodeIdx) {
     leaf.isLeaf = true;
     leaf.element = prims[leaf.start].element;
 
-    RigidBody* body = bodyCache->get(leaf.element, FUNC_NAME);
-    Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
-
+    RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
     body->broadphaseHandle.leafIdx = leaf.selfIdx;
-    leaf.tightBox = collider->getAABB();
-    leaf.fatBox = leaf.tightBox;
+
+    leaf.tightBox = body->aabb;
+    leaf.fatBox = body->aabb;
 }
 
 //------------------------------------------------------------------
 //      Update Render Data
 //------------------------------------------------------------------
 void BVHTree::updateRenderData(Node& n) {
-    n.fatBox.centroid = (n.fatBox.wMin + n.fatBox.wMax) * 0.5f;
-    n.fatBox.halfExtents = (n.fatBox.wMax - n.fatBox.wMin) * 0.5f;
+    n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
+    n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;
 }

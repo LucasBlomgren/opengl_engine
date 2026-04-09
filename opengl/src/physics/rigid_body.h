@@ -1,7 +1,6 @@
 #pragma once
 
 #include "game/transform.h"
-#include "game/game_object.h"
 #include "core/ring_buffer.h"
 #include "core/slot_map.h"
 #include "physics/colliders/collider.h"
@@ -25,15 +24,20 @@ enum class ContactResponseMode {
 // #TODO: decide what is private/public in RigidBody
 class RigidBody {
 public:
-    int id;
+    int id = -1;
     BodyType type = BodyType::Dynamic;
     MotionControl motionControl = MotionControl::Physics;
     ContactResponseMode responseMode = ContactResponseMode::Normal;
 
+    // handles
     GameObjectHandle gameObjectHandle;
-    ColliderHandle colliderHandle;
     BroadphaseHandle broadphaseHandle;
+    TransformHandle rootTransformHandle;
+    std::vector<ColliderHandle> colliderHandles;
 
+    AABB aabb; // if compound, this is the AABB of the whole body, otherwise AABB of the single collider.
+
+    // physics properties
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
     glm::mat3 invInertiaLocal{ 0.0f };
@@ -61,7 +65,12 @@ public:
     float lastAvg = 0.0f;
     RingBuffer collisionHistory;
 
-    void integrateVelocities(Transform& t, ColliderType colliderType, float dt);
+
+    bool isCompound() const {
+        return colliderHandles.size() > 1;
+    }
+
+    void integrateVelocities(Transform& t, float dt);
     void applyGravity(float dt);
     void applyRollingFriction(ColliderType colliderType, float dt);
     void applyAntistuckFriction(float dt);
@@ -81,4 +90,6 @@ public:
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);
+
+    bool approxEqual(float a, float b, float epsilon = 0.0001f);
 };

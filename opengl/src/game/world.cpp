@@ -9,107 +9,71 @@
 #include "physics.h"
 
 void World::clear() {
-    m_gameObjects = SlotMap<GameObject, GameObjectHandle>();
+    gameObjects = SlotMap<GameObject, GameObjectHandle>();
     objectId = 0;
 }
 
-// getters
+//----------------------------------
+//  Getters
+//----------------------------------
 GameObject* World::getGameObject(const GameObjectHandle& h) {
-    return m_gameObjects.try_get(h);
-}
-GameObject* World::getGameObject(const ColliderHandle& h) {
-    Collider* collider = m_physicsEngine.getPhysicsWorld()->getCollidersMap().try_get(h);
-    if (!collider) return nullptr;
-    return m_gameObjects.try_get(collider->gameObjectHandle);
+    return gameObjects.try_get(h);
 }
 
-// physics getters, #TODO: refactor to only use physics world instead
+// physics getters, #TODO: refactor to world only dependent on physics world, not physics engine
 RigidBody* World::getRigidBody(const GameObjectHandle& h) {
-    GameObject* obj = m_gameObjects.try_get(h);
+    GameObject* obj = gameObjects.try_get(h);
     if (!obj) return nullptr;
-    return m_physicsEngine.getPhysicsWorld()->getRigidBodiesMap().try_get(obj->rigidBodyHandle);
+    return physicsEngine.getPhysicsWorld()->getRigidBodiesMap().try_get(obj->rigidBodyHandle);
 }
 RigidBody* World::getRigidBody(const RigidBodyHandle& h) {
-    return m_physicsEngine.getPhysicsWorld()->getRigidBodiesMap().try_get(h);
+    return physicsEngine.getPhysicsWorld()->getRigidBodiesMap().try_get(h);
 }
-Collider* World::getCollider(const GameObjectHandle& h) {
-    GameObject* obj = m_gameObjects.try_get(h);
-    if (!obj) return nullptr;
-    return m_physicsEngine.getPhysicsWorld()->getCollidersMap().try_get(obj->colliderHandle);
-}
+
 Collider* World::getCollider(const ColliderHandle& h) {
-    return m_physicsEngine.getPhysicsWorld()->getCollidersMap().try_get(h);
+    return physicsEngine.getPhysicsWorld()->getCollidersMap().try_get(h);
 }
 
-GameObjectHandle World::createGameObject(
-    const std::string& textureName,
-    const std::string& meshName,
-    ColliderType colliderType,
-    BodyType bodyType,
-    const glm::vec3& pos,
-    const glm::vec3& size,
-    float mass,
-    const glm::quat& orientation,
-    float sleepCounterThreshold,
-    bool asleep,
-    const glm::vec3& color,
-    const bool seeThrough)
-{
-    Shader* shader = m_shaderManager.getShader("default");
-    Mesh* mesh = m_meshManager.getMesh(meshName);
-    unsigned int textureId;
+//----------------------------------
+//  Creation
+//----------------------------------
+TransformHandle World::createTransform(const glm::vec3& position, const glm::quat& orientation, const glm::vec3& scale) {
+    return transforms.create(position, orientation, scale);
+}
 
-    if (textureName == "plain") {
-        textureId = 999;
-    } else {
-        textureId = m_textureManager.getTexture(textureName);
-    }
+GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
+    GameObjectHandle gameObjectHandle = gameObjects.create(objectId, objDesc.rootTransformHandle);
+    GameObject& gameObject = *gameObjects.try_get(gameObjectHandle);
 
-    Transform transform;
-    transform.position = pos;
-    transform.orientation = orientation;
-    transform.scale = size;
-    transform.updateCache();
-    transform.lastPosition = pos;
-
-    GameObjectHandle gameObjectHandle = m_gameObjects.create(
-        objectId,
-        transform,
-        shader,
-        mesh,
-        textureId,
-        color,
-        seeThrough
-    );
-
-    // ------ rendering initialization ----------
-    if (!seeThrough) {
-        m_renderer.addObjectToBatch(gameObjectHandle);
-    }
-
-    // ------ physics initialization ---------
-    PhysicsWorld* physicsWorld = m_physicsEngine.getPhysicsWorld();
-
-    // temporay solution to get the inverse inertia from the game object, will be refactored when physics instead works with PhysicsWorld and Collider/RigidBody handles
-    GameObject& gameObject = *m_gameObjects.try_get(gameObjectHandle);
+    PhysicsWorld* physicsWorld = physicsEngine.getPhysicsWorld();
+    Transform* rootTransform = transforms.try_get(objDesc.rootTransformHandle);
 
     // create rigid body
     RigidBodyHandle bodyHandle = physicsWorld->createRigidBody();
+    gameObject.rigidBodyHandle = bodyHandle;
+
     RigidBody& body = *physicsWorld->getRigidBodiesMap().try_get(bodyHandle);
     body.gameObjectHandle = gameObjectHandle;
-    body.type = bodyType;
-    body.mass = mass;
-    body.invMass = bodyType == BodyType::Static ? 0.0f : 1.0f / mass;
-    body.asleep = asleep;
-    body.sleepCounterThreshold = sleepCounterThreshold;
-    body.anchorPoint = pos;
-    body.invRadius = 1.0f / (0.5f * glm::length(gameObject.transform.scale));
+    body.rootTransformHandle = objDesc.rootTransformHandle;
+    body.type = objDesc.bodyType;
+    body.mass = objDesc.mass;
+
+    if (objDesc.bodyType == BodyType::Static || objDesc.bodyType == BodyType::Kinematic) {
+        body.invMass = 0.0f;
+    } else {
+        body.invMass = 1.0f / objDesc.mass;
+    }
+
+    body.asleep = objDesc.asleep;
+    body.sleepCounterThreshold = objDesc.sleepCounterThreshold;
+    body.anchorPoint = rootTransform->position;
+    body.invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));
 
     // broadphase bucket
     BroadphaseBucket target;
-    switch (bodyType) {
+    switch (objDesc.bodyType) {
     case BodyType::Dynamic:
-        target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
+        target = objDesc.asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
         break;
     case BodyType::Kinematic:
         target = BroadphaseBucket::Awake;
@@ -120,58 +84,85 @@ GameObjectHandle World::createGameObject(
     }
     body.broadphaseHandle.bucket = target;
 
-    // create collider
-    ColliderHandle colliderHandle = physicsWorld->createCollider();
-    Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
-    collider.rigidBodyHandle = bodyHandle;
-    collider.gameObjectHandle = gameObjectHandle;
-    collider.type = colliderType;
+    // create parts
+    for (const SubPartDesc& partDesc : objDesc.parts) {
+        Transform* partTransform = transforms.try_get(partDesc.localTransformHandle);
+        SubPart part;
+        part.localTransformHandle = partDesc.localTransformHandle;
+        part.shader = shaderManager.getShader(partDesc.shaderName);
+        part.mesh = meshManager.getMesh(partDesc.meshName);
 
-    // aabb init
-    std::vector<glm::vec3> verticesPositions;   
-    for (const Vertex& vertex : mesh->vertices) {
-        verticesPositions.push_back(vertex.position);
+        if (partDesc.textureName == "plain") {
+            part.textureId = 999;
+        } else {
+            part.textureId = textureManager.getTexture(partDesc.textureName);
+        }
+
+        part.color = partDesc.color;
+        part.seeThrough = partDesc.seeThrough;
+
+        // create collider
+        ColliderHandle colliderHandle = physicsWorld->createCollider();
+        Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
+        collider.rigidBodyHandle = bodyHandle;
+        collider.type = partDesc.colliderType;
+
+        Transform partGlobalTransform = combineTransforms(*rootTransform, *partTransform);
+
+        // aabb init
+        std::vector<glm::vec3> verticesPositions;
+        for (const Vertex& vertex : part.mesh->vertices) {
+            verticesPositions.push_back(vertex.position);
+        }
+        collider.aabb.init(verticesPositions);
+        collider.aabb.update(partGlobalTransform);
+
+        // collider shape init
+        if (partDesc.colliderType == ColliderType::CUBOID) {
+            OOBB box(verticesPositions, partGlobalTransform);
+            collider.shape = box;
+        }
+        else if (partDesc.colliderType == ColliderType::SPHERE) {
+            Sphere sphere(partGlobalTransform);
+            collider.shape = sphere;
+        }
+
+        part.colliderHandle = colliderHandle;
+
+        gameObject.parts.push_back(part);
+        body.colliderHandles.push_back(colliderHandle);
     }
-    collider.aabb.init(verticesPositions);
-    collider.aabb.update(gameObject.transform);
 
-    // collider shape init
-    if (colliderType == ColliderType::CUBOID) {
-        OOBB box(verticesPositions, gameObject.transform);
-        collider.shape = box;
-    }
-    else if (colliderType == ColliderType::SPHERE) {
-        Sphere sphere(gameObject.transform);
-        collider.shape = sphere;
+    if (body.colliderHandles.empty()) {
+        std::cerr << "[World] Warning: Created GameObject with no colliders. GameObject ID: " << gameObject.id << "\n";
     }
 
-    // inertia init
-    body.calculateInverseInertia(colliderType, collider, gameObject.transform);
+    // inertia init 
+    // #TODO: refactor to support multiple colliders per rigid body (compound objects)
+    Collider* collider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
+    body.calculateInverseInertia(objDesc.parts[0].colliderType, *collider, *rootTransform);
+
+    // add body to broadphase
+    physicsEngine.queueAdd(bodyHandle, body.broadphaseHandle.bucket);
 
 
-    // link game object, collider and rigid body
-    // #rigidbody vector: add all the colliders to the body (only one in this case, but will be multiple for compound objects)
-    body.colliderHandle = colliderHandle;
+    // #TODO: should add parts instead of whole game object
+    renderer.addObjectToBatch(gameObjectHandle);
 
-    gameObject.colliderHandle = colliderHandle;
-    gameObject.rigidBodyHandle = bodyHandle;
-
-    // add to broadphase
-    // #rigidbody vector: loop over all the colliders and add them to the broadphase (only one in this case, but will be multiple for compound objects)
-    m_physicsEngine.queueAdd(bodyHandle, body.broadphaseHandle.bucket);
 
     objectId++;
     return gameObjectHandle;
 }
 
+//----------------------------------
+//  Deletion
+//----------------------------------
 void World::deleteGameObject(GameObjectHandle handle) {
-    GameObject* obj = m_gameObjects.try_get(handle);
+    GameObject* obj = gameObjects.try_get(handle);
     if (obj) {
-        m_physicsEngine.queueRemove(obj->rigidBodyHandle);
-        if (!obj->seeThrough) {
-            m_renderer.removeObjectFromBatch(handle);
-        }
-        m_gameObjects.destroy(handle);
+        physicsEngine.queueRemove(obj->rigidBodyHandle);
+        renderer.removeObjectFromBatch(handle);
+        gameObjects.destroy(handle);
     }
     else {
         std::cerr << "[World] Warning: Tried to delete non-existing GameObject with handle (slot: " << handle.slot << ", gen: " << handle.gen << ")\n";

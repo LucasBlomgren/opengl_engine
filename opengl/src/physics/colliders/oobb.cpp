@@ -3,16 +3,17 @@
 #include "game/game_object.h"
 
 void OOBB::update(const Transform& t) {
+    //  transform world axes
     for (int i = 0; i < 3; i++) {
-        axesWorld[i] = glm::normalize(t.rotationMatrix * lAxes[i]);
+        worldAxes[i] = glm::normalize(t.rotationMatrix * localAxes[i]);
     }
 
+    // transform world corners
     for (int i = 0; i < 8; ++i) {
-        verticesWorld[i] = glm::vec3(t.modelMatrix * glm::vec4(verticesLocal[i], 1.0f));
+        worldVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(localVertices[i], 1.0f));
     }
 
-    centerWorld = glm::vec3(t.modelMatrix * glm::vec4(centerLocal, 1.0f));
-
+    worldCenter = glm::vec3(t.modelMatrix * glm::vec4(localCenter, 1.0f));
     scale = t.scale;
 }
 
@@ -23,11 +24,11 @@ void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
         lMax = glm::max(lMax, v); 
     }
 
-    halfExtentsLocal = (lMax - lMin) * 0.5f;
+    localHalfExtents = (lMax - lMin) * 0.5f;
 
-    centerLocal = (lMin + lMax) * 0.5f;
+    localCenter = (lMin + lMax) * 0.5f;
 
-    verticesLocal = {
+    localVertices = {
         glm::vec3(lMin.x, lMin.y, lMin.z), 
         glm::vec3(lMax.x, lMin.y, lMin.z),
         glm::vec3(lMax.x, lMax.y, lMin.z), 
@@ -39,7 +40,7 @@ void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
         glm::vec3(lMin.x, lMax.y, lMax.z)  
     };
 
-    axesWorld = {
+    worldAxes = {
         glm::vec3(1,  0,  0),
         glm::vec3(0,  1,  0),
         glm::vec3(0,  0,  1),
@@ -47,6 +48,16 @@ void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
 
     // transform world corners
     for (int i = 0; i < 8; ++i) {
-        verticesWorld[i] = glm::vec3(t.modelMatrix * glm::vec4(verticesLocal[i], 1.0f));
+        worldVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(localVertices[i], 1.0f));
     }
+}
+
+std::array<glm::vec3, 4> OOBB::getLocalFace(FaceId face) const {
+    const auto& idx = FACE_INDICES[static_cast<int>(face)];
+    return {
+        localVertices[idx[0]],
+        localVertices[idx[1]],
+        localVertices[idx[2]],
+        localVertices[idx[3]]
+    };
 }

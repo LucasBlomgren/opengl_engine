@@ -77,7 +77,7 @@ bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
     OOBB& boxA = std::get<OOBB>(A.shape);
     OOBB& boxB = std::get<OOBB>(B.shape);
 
-    return intersectPolygons(boxA.verticesWorld, boxB.verticesWorld, boxA.axesWorld, boxB.axesWorld, out);
+    return intersectPolygons(boxA.worldVertices, boxB.worldVertices, boxA.worldAxes, boxB.worldAxes, out);
 
     // #TODO: Korrekt hantering av face vs edge-edge för BoxBox
     // 
@@ -125,9 +125,9 @@ bool SAT::boxSphere(Collider& A, Collider& B, const Transform& transformA, Resul
 
     // Clamp i lokal AABB
     glm::vec3 clamped;
-    clamped.x = glm::clamp(localC.x, -box->halfExtentsLocal.x, +box->halfExtentsLocal.x);
-    clamped.y = glm::clamp(localC.y, -box->halfExtentsLocal.y, +box->halfExtentsLocal.y);
-    clamped.z = glm::clamp(localC.z, -box->halfExtentsLocal.z, +box->halfExtentsLocal.z);
+    clamped.x = glm::clamp(localC.x, -box->localHalfExtents.x, +box->localHalfExtents.x);
+    clamped.y = glm::clamp(localC.y, -box->localHalfExtents.y, +box->localHalfExtents.y);
+    clamped.z = glm::clamp(localC.z, -box->localHalfExtents.z, +box->localHalfExtents.z);
 
     // Transformera local → world
     glm::vec3 closestWorld = glm::vec3(M * glm::vec4(clamped, 1.0f));
@@ -175,7 +175,7 @@ bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
     OOBB& box = std::get<OOBB>(A.shape);
     out.tri_ptr = &tri;
 
-    return intersectPolygons(box.verticesWorld, tri.vertices, box.axesWorld, tri.axes, out);
+    return intersectPolygons(box.worldVertices, tri.vertices, box.worldAxes, tri.axes, out);
 }
 
 bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {

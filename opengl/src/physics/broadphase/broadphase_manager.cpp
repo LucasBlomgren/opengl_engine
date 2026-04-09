@@ -6,23 +6,16 @@
 
 #define FUNC_NAME __FUNCTION__
 
-void BroadphaseManager::init(
-    PointerCache<GameObject, GameObjectHandle>* goCache,
-    PointerCache<RigidBody, RigidBodyHandle>* bodCache,
-    PointerCache<Collider, ColliderHandle>* colCache,
-    std::vector<Tri>* terrainTris
-) {
-    gameObjectCache = goCache;
-    bodyCache = bodCache;
-    terrainTriangles = terrainTris;
+void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris) {
+    this->caches = caches;
+    this->terrainTriangles = terrainTris;
 
-    SlotMap<RigidBody, RigidBodyHandle>* bMap = bodCache->sm; // sm=slotmap
+    SlotMap<RigidBody, RigidBodyHandle>* bMap = caches->bodies.sm; // sm=slotmap
     uint32_t slotCap = bMap->dense().capacity();
 
-    awakeBvh.init(bodCache, colCache, slotCap);
-    asleepBvh.init(bodCache, colCache, slotCap);
-    staticBvh.init(bodCache, colCache, slotCap);
-
+    awakeBvh.init(world, caches, slotCap);
+    asleepBvh.init(world, caches, slotCap);
+    staticBvh.init(world, caches, slotCap);
     awakeHandles.clear();
     asleepHandles.clear();
     staticHandles.clear();
@@ -134,7 +127,7 @@ void BroadphaseManager::computePairs() {
 
 // Add to list
 void BroadphaseManager::add(RigidBodyHandle& handle, BroadphaseBucket dst) {
-    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
     auto& h = rigidBody->broadphaseHandle;
 
     auto& list = listFor(dst);
@@ -150,7 +143,7 @@ void BroadphaseManager::add(RigidBodyHandle& handle, BroadphaseBucket dst) {
 
 // Remove from current list
 void BroadphaseManager::remove(RigidBodyHandle& handle) {
-    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
     auto& h = rigidBody->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
@@ -167,36 +160,34 @@ void BroadphaseManager::remove(RigidBodyHandle& handle) {
 
 // Move to awake
 void BroadphaseManager::moveToAwake(RigidBodyHandle& handle) {
-    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
+    body->setAwake();
 
     if (body->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
-        body->setAwake();
         return;
     }
 
     remove(handle);
-    body->setAwake();
     add(handle, BroadphaseBucket::Awake);
     awakeBvh.dirty = true;
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(RigidBodyHandle& handle) {
-    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
-    Transform* transform = &gameObjectCache->get(body->gameObjectHandle, FUNC_NAME)->transform;
+    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
+    Transform* transform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
+    body->setAsleep(*transform);
 
     if (body->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        body->setAsleep(*transform);
         return;
     }
 
     remove(handle);
-    body->setAsleep(*transform);
     add(handle, BroadphaseBucket::Asleep);
     asleepBvh.dirty = true;
 }
 // Move to static
 void BroadphaseManager::moveToStatic(RigidBodyHandle& handle) {
-    RigidBody* body = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
 
     if (body->broadphaseHandle.bucket == BroadphaseBucket::Static)
         return;
@@ -208,7 +199,7 @@ void BroadphaseManager::moveToStatic(RigidBodyHandle& handle) {
 }
 
 void BroadphaseManager::setBVHDirty(RigidBodyHandle& handle) {
-    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
     auto& h = rigidBody->broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
     bvhFor(h.bucket).dirty = true;
@@ -220,7 +211,7 @@ void BroadphaseManager::setBVHDirty(RigidBodyHandle& handle) {
 
 // Swap and pop from list
 void BroadphaseManager::swapAndPop(RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list) {
-    RigidBody* rigidBody = bodyCache->get(handle, FUNC_NAME);
+    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
 
     int i = rigidBody->broadphaseHandle.listIdx;
     if (i == -1) return;
@@ -230,7 +221,7 @@ void BroadphaseManager::swapAndPop(RigidBodyHandle& handle, std::vector<RigidBod
         RigidBodyHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        RigidBody* moved = bodyCache->get(movedHandle, FUNC_NAME);
+        RigidBody* moved = caches->bodies.get(movedHandle, FUNC_NAME);
         moved->broadphaseHandle.listIdx = i;
     }
 

@@ -17,6 +17,15 @@ struct Transform {
     glm::mat3 rotationMatrix{ 1.0f };
     glm::mat3 invRotationMatrix{ 1.0f };
 
+    Transform(const glm::vec3& position, const glm::quat& orientation, const glm::vec3& scale) {
+        this->position = position;
+        this->orientation = orientation;
+        this->scale = scale;
+        updateCache();
+    }
+
+    Transform() = default;
+
     void updateCache() {
         rotationMatrix = glm::mat3_cast(orientation);
         invRotationMatrix = glm::transpose(rotationMatrix);
@@ -27,5 +36,7 @@ struct Transform {
 
         modelMatrix = T * R * S;
         invModelMatrix = glm::inverse(modelMatrix);
+
+        lastPosition = position;
     }
 };

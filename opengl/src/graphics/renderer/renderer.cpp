@@ -555,9 +555,6 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
     // beräkna min/max för dynamiska objekt
     else if (dData.size() > 0) {
         for (const GameObject& obj : dData) {
-            if (!obj.isInsideShadowFrustum) {
-                continue;
-            }
 
             Collider* col = world->getCollider(obj.colliderHandle);
             const AABB& aabb = col->aabb;

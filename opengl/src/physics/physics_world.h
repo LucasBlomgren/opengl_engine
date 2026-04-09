@@ -14,6 +14,7 @@ public:
     // getters
     RigidBody* getRigidBody(RigidBodyHandle& handle);
     Collider* getCollider(ColliderHandle& handle);
+    AABB computeBodyAABB(const RigidBody& body);
 
     SlotMap<Collider, ColliderHandle>& getCollidersMap();
     SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap();
@@ -28,6 +29,6 @@ public:
 private:
     int colliderId = 0;
     int rigidBodyId = 0;
-    SlotMap<Collider, ColliderHandle> m_colliders;
-    SlotMap<RigidBody, RigidBodyHandle> m_rigidBodies;
+    SlotMap<Collider, ColliderHandle> colliders;
+    SlotMap<RigidBody, RigidBodyHandle> rigidBodies;
 };

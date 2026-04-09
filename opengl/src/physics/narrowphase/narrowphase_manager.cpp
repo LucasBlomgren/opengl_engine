@@ -6,15 +6,11 @@
 void NarrowphaseManager::init(
     CollisionManifold* collisionManifold,
     std::unordered_map<size_t, Contact>* contactCache,
-    PointerCache<GameObject, GameObjectHandle>* gameObjectPtrCache,
-    PointerCache<Collider, ColliderHandle>* colliderPtrCache,
-    PointerCache<RigidBody, RigidBodyHandle>* bodyPtrCache
+    RuntimeCaches* caches
 ) {
     this->collisionManifold = collisionManifold;
     this->contactCache = contactCache;
-    this->gameObjectCache = gameObjectPtrCache;
-    this->colliderCache = colliderPtrCache;
-    this->bodyCache = bodyPtrCache;
+    this->caches = caches;
 }
 
 void NarrowphaseManager::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
@@ -30,78 +26,94 @@ void NarrowphaseManager::narrowPhase(const std::vector<TerrainPair>& terrainHits
 }
 
 void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
-    RigidBody* body = bodyCache->get(pair.body, FUNC_NAME);
-    Collider* collider = colliderCache->get(body->colliderHandle, FUNC_NAME);
+    RigidBody* body = caches->bodies.get(pair.body, FUNC_NAME);
+    if (body->asleep || body->type == BodyType::Kinematic) return;
 
-    if (body->asleep || body->type == BodyType::Kinematic) {
-        return;
+    for (const ColliderHandle& colH : body->colliderHandles) {
+        Collider* collider = caches->colliders.get(colH, FUNC_NAME);
+        Transform* globalColliderTransform = &caches->globalColliderTransforms[colH.slot];
+
+        terrainTriCandidates.clear();
+        terrainTriCandidates.reserve(pair.tris.size());
+        collectTerrainTriCandidates(collider, pair.tris, terrainTriCandidates);
+
+        if (terrainTriCandidates.empty()) {
+            continue;
+        }
+
+        SAT_resultsList.clear();
+        SAT_resultsList.reserve(terrainTriCandidates.size());
+
+        switch (collider->type) {
+        case ColliderType::CUBOID:
+            processTerrainTriBox(collider->rigidBodyHandle, collider, body, globalColliderTransform);
+            break;
+
+        case ColliderType::SPHERE:
+            processTerrainTriSphere(collider->rigidBodyHandle, collider , body, globalColliderTransform);
+            break;
+        }
     }
+}
 
-    GameObject* obj = gameObjectCache->get(body->gameObjectHandle, FUNC_NAME);
+void NarrowphaseManager::collectTerrainTriCandidates(
+    Collider* collider, 
+    const std::vector<Tri*>& inputTris,
+    std::vector<Tri*>& outCandidates) 
+{
+    outCandidates.clear();
 
-    int reserveSize = pair.tris.size() * 2; // worst case
-    SAT_resultsList.clear();
-    SAT_resultsList.reserve(reserveSize);
-
-    switch (collider->type) {
-    case ColliderType::CUBOID:
-        processTerrainBox(pair, collider, body, obj);
-        break;
-
-    case ColliderType::SPHERE:
-        processTerrainSphere(pair, collider, body, obj);
-        break;
-
-    default:
-        break;
+    const AABB& colAABB = collider->getAABB();
+    for (Tri* tri : inputTris) {
+        if (tri->getAABB().intersects(colAABB)) {
+            outCandidates.push_back(tri);
+        }
     }
 }
 
 void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
-    RigidBody* bodyA = bodyCache->get(pair.bodyA, FUNC_NAME);
-    RigidBody* bodyB = bodyCache->get(pair.bodyB, FUNC_NAME);
+    //RigidBody* bodyA = bodyCache->get(pair.bodyA, FUNC_NAME);
+    //RigidBody* bodyB = bodyCache->get(pair.bodyB, FUNC_NAME);
 
-    Collider* colliderA = colliderCache->get(bodyA->colliderHandle, FUNC_NAME);
-    Collider* colliderB = colliderCache->get(bodyB->colliderHandle, FUNC_NAME);
+    //Collider* colliderA = colliderCache->get(bodyA->colliderHandle, FUNC_NAME);
+    //Collider* colliderB = colliderCache->get(bodyB->colliderHandle, FUNC_NAME);
 
-    if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) and
-        (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) 
-    {
-        return;
-    }
-
-    GameObject* objA = gameObjectCache->get(bodyA->gameObjectHandle, FUNC_NAME);
-    GameObject* objB = gameObjectCache->get(bodyB->gameObjectHandle, FUNC_NAME);
-
-    //if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
-    //    processBoxBox();
+    //if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) and
+    //    (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) 
+    //{
+    //    return;
     //}
-    //else if ((colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
-    //    (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID)) {
-    //    processBoxSphere();
-    //}
-    //else if (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::SPHERE) {
-    //    processSphereSphere();
-    //}
+
+    //GameObject* objA = gameObjectCache->get(bodyA->gameObjectHandle, FUNC_NAME);
+    //GameObject* objB = gameObjectCache->get(bodyB->gameObjectHandle, FUNC_NAME);
+
+    ////if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
+    ////    processBoxBox();
+    ////}
+    ////else if ((colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
+    ////    (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID)) {
+    ////    processBoxSphere();
+    ////}
+    ////else if (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::SPHERE) {
+    ////    processSphereSphere();
+    ////}
 }
 
-void NarrowphaseManager::processTerrainBox(const TerrainPair& pair, Collider* collider, RigidBody* body, GameObject* obj) {
+void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, Transform* colliderWorldTransform) {
     // SAT for each tri
-    for (Tri* tri : pair.tris) {
+    for (Tri* tri : terrainTriCandidates) {
         SAT::Result SAT_result;
         if (!SAT::boxTri(*collider, *tri, SAT_result)) {
             continue;
         }
 
-        glm::vec3& centerBox = std::get<OOBB>(collider->shape).centerWorld;
+        glm::vec3& centerBox = std::get<OOBB>(collider->shape).worldCenter;
         SAT::reverseNormal(centerBox, SAT_result.tri_ptr->centroid, SAT_result.normal);
         SAT_resultsList.push_back(SAT_result);
     }
 
     if (SAT_resultsList.size() == 0) return;
 
-    body->updateInertiaWorld(obj->transform);
-
     // export to character controller
     if (body->motionControl == MotionControl::External) {
         externalContacts.emplace_back(
@@ -117,26 +129,25 @@ void NarrowphaseManager::processTerrainBox(const TerrainPair& pair, Collider* co
     glm::vec3 avgNormal = getAvgNormal(SAT_resultsList);
     SAT::findBestTriangles(SAT_resultsList);
 
-    ContactRuntime runtimeData = makeRuntimeData(body, collider, obj);
-    Contact contact(pair.body, runtimeData, avgNormal);
+    Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
+    ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform, colliderWorldTransform);
+    Contact contact(bodyH, runtimeData, avgNormal);
     collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
 }
 
-void NarrowphaseManager::processTerrainSphere(const TerrainPair& pair, Collider* collider, RigidBody* body, GameObject* obj) {
+void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, Transform* colliderWorldTransform) {
     // SAT for each tri
-    for (Tri* tri : pair.tris) {
+    for (Tri* tri : terrainTriCandidates) {
         SAT::Result SAT_result;
         if (!SAT::sphereTri(*collider, *tri, SAT_result)) {
             continue;
         }
 
-        SAT::reverseNormal(obj->transform.position, tri->centroid, SAT_result.normal);
+        SAT::reverseNormal(colliderWorldTransform->position, tri->centroid, SAT_result.normal);
         SAT_resultsList.push_back(SAT_result);
     }
 
     if (SAT_resultsList.size() == 0) return;
-
-    body->updateInertiaWorld(obj->transform);
 
     // export to character controller
     if (body->motionControl == MotionControl::External) {
@@ -154,20 +165,21 @@ void NarrowphaseManager::processTerrainSphere(const TerrainPair& pair, Collider*
     glm::vec3 avgNormal = getAvgNormal(SAT_resultsList);
     SAT::findBestTriangles(SAT_resultsList);
 
-    ContactRuntime runtimeData = makeRuntimeData(body, collider, obj);
-    Contact contact(pair.body, runtimeData, avgNormal);
+    Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
+    ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform, colliderWorldTransform);
+    Contact contact(bodyH, runtimeData, avgNormal);
     collisionManifold->sphereMesh(contact, *contactCache, SAT_resultsList);
 }
 
-void NarrowphaseManager::processBoxBox(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, GameObject* objA, GameObject* objB) {
+void NarrowphaseManager::processBoxBox(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB) {
     // TODO
 }
 
-void NarrowphaseManager::processBoxSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, GameObject* objA, GameObject* objB) {
+void NarrowphaseManager::processBoxSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB) {
     // TODO
 }
 
-void NarrowphaseManager::processSphereSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, GameObject* objA, GameObject* objB) {
+void NarrowphaseManager::processSphereSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB) {
     // TODO
 }
 
@@ -190,26 +202,31 @@ glm::vec3 NarrowphaseManager::getAvgNormal(const std::vector<SAT::Result>& resul
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA, RigidBody* bodyB,
     Collider* colliderA, Collider* colliderB,
-    GameObject* objA, GameObject* objB) const
+    Transform* bodyRootA, Transform* bodyRootB,
+    Transform* colliderWorldA, Transform* colliderWorldB) const
 {
     ContactRuntime rt;
     rt.bodyA = bodyA;
     rt.bodyB = bodyB;
     rt.colliderA = colliderA;
     rt.colliderB = colliderB;
-    rt.objA = objA;
-    rt.objB = objB;
+    rt.bodyRootA = bodyRootA;
+    rt.bodyRootB = bodyRootB;
+    rt.colliderWorldA = colliderWorldA;
+    rt.colliderWorldB = colliderWorldB;
     return rt;
 }
 
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA,
     Collider* colliderA,
-    GameObject* objA) const
+    Transform* bodyRootA,
+    Transform* colliderWorldA) const
 {
     ContactRuntime rt;
     rt.bodyA = bodyA;
     rt.colliderA = colliderA;
-    rt.objA = objA;
+    rt.bodyRootA = bodyRootA;
+    rt.colliderWorldA = colliderWorldA;
     return rt;
 }

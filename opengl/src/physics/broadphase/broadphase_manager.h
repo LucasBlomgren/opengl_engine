@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-#include "pointer_cache.h"
+#include "physics.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "bvh/treetree_query.h"
@@ -13,12 +13,7 @@ struct Tri;
 
 class BroadphaseManager {
 public:
-    void init(
-        PointerCache<GameObject, GameObjectHandle>* gameObjectPtrCache,
-        PointerCache<RigidBody, RigidBodyHandle>* bodyPtrCache,
-        PointerCache<Collider, ColliderHandle>* colliderPtrCache,
-        std::vector<Tri>* terrainTris
-    );
+    void init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris);
 
     // update BVHs if dirty
     void updateBVHs();
@@ -52,9 +47,7 @@ public:
 
 private:
     // references to pointer caches and terrain triangles
-    PointerCache<GameObject, GameObjectHandle>* gameObjectCache;
-    PointerCache<RigidBody, RigidBodyHandle>* colliderCache;
-    PointerCache<RigidBody, RigidBodyHandle>* bodyCache;
+    RuntimeCaches* caches = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects

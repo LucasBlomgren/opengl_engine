@@ -7,6 +7,7 @@
 #include "sphere.h"
 #include "core/slot_map.h"
 #include "broadphase/broadphase_types.h"
+#include "game/transform_utils.h"
 
 class GameObject;
 class TriMesh;
@@ -26,8 +27,8 @@ struct Collider {
     AABB aabb;
     bool aabbDirty = true;
 
-    GameObjectHandle gameObjectHandle;
     RigidBodyHandle rigidBodyHandle;
+    TransformHandle localTransformHandle; 
 
     AABB& getAABB();
     void updateCollider(const Transform& t);

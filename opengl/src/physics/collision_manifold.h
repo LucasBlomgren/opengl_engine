@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "rigid_body.h"
-#include "pointer_cache.h"
+#include "physics.h"
 #include "game_object.h"
 #include "sat.h"
 
@@ -40,8 +40,10 @@ struct ContactRuntime {
     RigidBody* bodyB = nullptr;
     Collider* colliderA = nullptr;
     Collider* colliderB = nullptr;
-    GameObject* objA = nullptr;
-    GameObject* objB = nullptr;
+    Transform* bodyRootA = nullptr;
+    Transform* bodyRootB = nullptr;
+    Transform* colliderWorldA = nullptr;
+    Transform* colliderWorldB = nullptr;
 };
 
 struct Contact {
@@ -103,14 +105,7 @@ struct Contact {
 
 class CollisionManifold {
 public:
-    void init(
-        PointerCache<GameObject, GameObjectHandle>* objectCache,
-        PointerCache<Collider, ColliderHandle>* colCache,
-        PointerCache<RigidBody, RigidBodyHandle>* bodCache) {
-        gameObjectCache = objectCache;
-        colliderCache = colCache;
-        bodyCache = bodCache;
-    }
+    void init(RuntimeCaches* caches) { this->caches = caches; }
 
     void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
@@ -121,12 +116,10 @@ public:
     size_t generateKey(int idA, int idB);
 
 private:
-    PointerCache<GameObject, GameObjectHandle>* gameObjectCache = nullptr;
-    PointerCache<Collider, ColliderHandle>* colliderCache = nullptr;
-    PointerCache<RigidBody, RigidBodyHandle>* bodyCache = nullptr;
+    RuntimeCaches* caches = nullptr;
 
     std::vector<glm::vec3> selectedFace;
-    void selectCollisionFace(const Collider* collider, const GameObject* go, const glm::vec3& normal);
+    void selectOOBBCollisionFace(const Collider* collider, const Transform* worldColliderTransform, const glm::vec3& normal);
 
     std::vector<glm::vec3> furthestPoints; // uses allClippedPoints
     std::vector<int> indices; // indices of furthestPoints in allClippedPoints

@@ -9,7 +9,7 @@ void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
     this->frameTimers = ft;
     collisionManifold = new CollisionManifold();
-    collisionManifold->init(&gameObjectPtrCache, &colliderPtrCache, &bodyPtrCache);
+    collisionManifold->init(&caches);
 }
 
 //-----------------------------
@@ -18,16 +18,16 @@ void PhysicsEngine::init(World* world, FrameTimers* ft) {
 void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
     this->terrainTriangles = terrainTris;
 
-    gameObjectPtrCache.init(world->getGameObjectsMap(), "GameObject");
-    colliderPtrCache.init(physicsWorld.getCollidersMap(), "Collider");
-    bodyPtrCache.init(physicsWorld.getRigidBodiesMap(), "RigidBody");
+    caches.transforms.init(world->getTransformsMap(), "Transform");
+    caches.colliders.init(physicsWorld.getCollidersMap(), "Collider");
+    caches.bodies.init(physicsWorld.getRigidBodiesMap(), "RigidBody");
 
     uint32_t slotCap = physicsWorld.getCollidersMap().slot_capacity();
     toWake.reserve(slotCap);
     toSleep.reserve(slotCap);
 
-    broadphaseManager.init(&gameObjectPtrCache, &bodyPtrCache, &colliderPtrCache, terrainTris);
-    narrowphaseManager.init(collisionManifold, &contactCache, &gameObjectPtrCache, &colliderPtrCache, &bodyPtrCache);
+    broadphaseManager.init(&physicsWorld, &caches, terrainTris);
+    narrowphaseManager.init(collisionManifold, &contactCache, &caches);
 
     flushBroadphaseCommands();
 }
@@ -203,15 +203,15 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         this->dt = deltaTime;
 
         // prepare for this frame
-        uint32_t slotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
-        toWake.reserve(slotCap);
-        toSleep.reserve(slotCap);
+        uint32_t bodiesSlotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
+        uint32_t collidersSlotCap = physicsWorld.getCollidersMap().slot_capacity();
+        toWake.reserve(bodiesSlotCap);
+        toSleep.reserve(bodiesSlotCap);
         toWake.clear();
         toSleep.clear();
 
-        colliderPtrCache.clear();
-        bodyPtrCache.clear();
-        gameObjectPtrCache.clear();
+        caches.clear();
+        caches.globalColliderTransforms.resize(collidersSlotCap);
         //externalContacts.clear();
 
         // add/remove objects to the BVH trees
@@ -225,8 +225,8 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
             }
         }
 
-        // Update object states (position, orientation, AABB, collider)
-        updateStates();
+        // Update (position, orientation, AABB, collider, inertia, etc.)
+        updateBodiesAndColliders();
     }
 
     // Update BVH trees
@@ -253,20 +253,53 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
 //-----------------------------
 //       Update methods
 //-----------------------------
-void PhysicsEngine::updateStates() {
-    for (const RigidBodyHandle& handle : broadphaseManager.getAwakeList()) {
-        RigidBody* body = bodyPtrCache.get(handle, FUNC_NAME);
-        Collider* collider = colliderPtrCache.get(body->colliderHandle, FUNC_NAME);
-        GameObject* obj = gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME);
+void PhysicsEngine::updateBodiesAndColliders() {
+    for (const RigidBodyHandle& bodyH : broadphaseManager.getAwakeList()) {
+        RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+        Transform* rootTransform = caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
+        Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
 
-        body->applyGravity(this->dt);
-        body->applyRollingFriction(collider->type, this->dt);
-        body->applyAntistuckFriction(this->dt);
-        body->integrateVelocities(obj->transform, collider->type, this->dt);
+        // once per body
+        if (!body->colliderHandles.empty()) {
+            Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+            
+            // for solo spheres
+            if (body->colliderHandles.size() == 1) {
+                body->applyRollingFriction(mainCollider->type, dt);
+            }
 
-        obj->transform.updateCache();
-        collider->updateAABB(obj->transform);
-        collider->updateCollider(obj->transform);
+            body->applyGravity(dt);
+            body->applyAntistuckFriction(dt);
+            body->integrateVelocities(*rootTransform, dt);
+            rootTransform->updateCache();
+            body->updateInertiaWorld(*rootTransform);
+        }
+
+        // per collider
+        for (const ColliderHandle& colH : body->colliderHandles) {
+            Collider* collider = caches.colliders.get(colH, FUNC_NAME);
+            Transform* localTransform = caches.transforms.get(collider->localTransformHandle, FUNC_NAME);
+
+            // cache for narrow phase and contact generation to avoid multiple lookups in the slot map
+            Transform globalTransform = combineTransforms(*rootTransform, *localTransform);
+            caches.globalColliderTransforms[colH.slot] = globalTransform;
+
+            // update
+            collider->updateAABB(globalTransform);
+            collider->updateCollider(globalTransform);
+        }
+
+        Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+        body->aabb = mainCollider->getAABB();
+
+        // update compound body AABB
+        if (body->isCompound()) {
+            for (size_t i = 1; i < body->colliderHandles.size(); ++i) {
+                Collider* c = caches.colliders.get(body->colliderHandles[i], FUNC_NAME);
+                body->aabb.growToInclude(c->getAABB().worldMin);
+                body->aabb.growToInclude(c->getAABB().worldMax);
+            }
+        }
     }
 }
 
@@ -294,257 +327,257 @@ void PhysicsEngine::detectAndSolveCollisions()
 void PhysicsEngine::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
     ScopedTimer t(*frameTimers, "Narrowphase");
 
-    // ----- Dynamic vs dynamic -----
-    for (const DynamicPair& dh : dynamicHits) {
-        RigidBody* bodyA = bodyPtrCache.get(dh.bodyA, FUNC_NAME);
-        RigidBody* bodyB = bodyPtrCache.get(dh.bodyB, FUNC_NAME);
+    //// ----- Dynamic vs dynamic -----
+    //for (const DynamicPair& dh : dynamicHits) {
+    //    RigidBody* bodyA = caches.bodies.get(dh.bodyA, FUNC_NAME);
+    //    RigidBody* bodyB = caches.bodies.get(dh.bodyB, FUNC_NAME);
 
-        Collider* colliderA = colliderPtrCache.get(bodyA->colliderHandle, FUNC_NAME);
-        Collider* colliderB = colliderPtrCache.get(bodyB->colliderHandle, FUNC_NAME);
+    //    Collider* colliderA = caches.colliders.get(bodyA->colliderHandle, FUNC_NAME);
+    //    Collider* colliderB = caches.colliders.get(bodyB->colliderHandle, FUNC_NAME);
 
-        if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) and
-            (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
-            continue;
-        }
+    //    if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) and
+    //        (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
+    //        continue;
+    //    }
 
-        GameObject* objA = gameObjectPtrCache.get(bodyA->gameObjectHandle, FUNC_NAME);
-        GameObject* objB = gameObjectPtrCache.get(bodyB->gameObjectHandle, FUNC_NAME);
+    //    GameObject* objA = caches.gameObjects.get(bodyA->gameObjectHandle, FUNC_NAME);
+    //    GameObject* objB = caches.gameObjects.get(bodyB->gameObjectHandle, FUNC_NAME);
 
-        // CUBE vs CUBE
-        if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
-            SAT::Result satResult;
-            if (!SAT::boxBox(*colliderA, *colliderB, satResult)) {
-                continue;
-            }
-            bodyA->totalCollisionCount++;
-            bodyB->totalCollisionCount++;
+    //    // CUBE vs CUBE
+    //    if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
+    //        SAT::Result satResult;
+    //        if (!SAT::boxBox(*colliderA, *colliderB, satResult)) {
+    //            continue;
+    //        }
+    //        bodyA->totalCollisionCount++;
+    //        bodyB->totalCollisionCount++;
 
-            glm::vec3& centerA = std::get<OOBB>(colliderA->shape).centerWorld;
-            glm::vec3& centerB = std::get<OOBB>(colliderB->shape).centerWorld;
-            SAT::reverseNormal(centerA, centerB, satResult.normal);
+    //        glm::vec3& centerA = std::get<OOBB>(colliderA->shape).centerWorld;
+    //        glm::vec3& centerB = std::get<OOBB>(colliderB->shape).centerWorld;
+    //        SAT::reverseNormal(centerA, centerB, satResult.normal);
 
-            bodyA->updateInertiaWorld(objA->transform);
-            bodyB->updateInertiaWorld(objB->transform);
+    //        bodyA->updateInertiaWorld(objA->transform);
+    //        bodyB->updateInertiaWorld(objB->transform);
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, dh.bodyA, dh.bodyB);
+    //        PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, dh.bodyA, dh.bodyB);
 
-            // export to character controller
-            bool aCharacter = bodyA->motionControl == MotionControl::External &&
-                bodyA->responseMode == ContactResponseMode::Character;
+    //        // export to character controller
+    //        bool aCharacter = bodyA->motionControl == MotionControl::External &&
+    //            bodyA->responseMode == ContactResponseMode::Character;
 
-            bool bCharacter = bodyB->motionControl == MotionControl::External &&
-                bodyB->responseMode == ContactResponseMode::Character;
+    //        bool bCharacter = bodyB->motionControl == MotionControl::External &&
+    //            bodyB->responseMode == ContactResponseMode::Character;
 
-            std::vector<ExternalMotionContact>* externalContactsPtr = &narrowphaseManager.getExternalContacts();
-            if (aCharacter || bCharacter) {
-                externalContactsPtr->emplace_back(
-                    colliderA->rigidBodyHandle,
-                    colliderB->rigidBodyHandle,
-                    satResult.normal,
-                    satResult.depth
-                );
-                continue;
-            }
+    //        std::vector<ExternalMotionContact>* externalContacts = &narrowphaseManager.getExternalContacts();
+    //        if (aCharacter || bCharacter) {
+    //            externalContacts->emplace_back(
+    //                colliderA->rigidBodyHandle,
+    //                colliderB->rigidBodyHandle,
+    //                satResult.normal,
+    //                satResult.depth
+    //            );
+    //            continue;
+    //        }
 
-            bool noSolverResponseA =
-                bodyA->motionControl == MotionControl::External ||
-                bodyA->type == BodyType::Static ||
-                bodyA->type == BodyType::Kinematic ||
-                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+    //        bool noSolverResponseA =
+    //            bodyA->motionControl == MotionControl::External ||
+    //            bodyA->type == BodyType::Static ||
+    //            bodyA->type == BodyType::Kinematic ||
+    //            (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
-            bool noSolverResponseB =
-                bodyB->motionControl == MotionControl::External ||
-                bodyB->type == BodyType::Static ||
-                bodyB->type == BodyType::Kinematic ||
-                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+    //        bool noSolverResponseB =
+    //            bodyB->motionControl == MotionControl::External ||
+    //            bodyB->type == BodyType::Static ||
+    //            bodyB->type == BodyType::Kinematic ||
+    //            (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
-            // pointer data for solver
-            ContactRuntime runtimeData;
-            runtimeData.bodyA = bodyA;
-            runtimeData.bodyB = bodyB;
-            runtimeData.colliderA = colliderA;
-            runtimeData.colliderB = colliderB;
-            runtimeData.objA = objA;
-            runtimeData.objB = objB;
+    //        // pointer data for solver
+    //        ContactRuntime runtimeData;
+    //        runtimeData.bodyA = bodyA;
+    //        runtimeData.bodyB = bodyB;
+    //        runtimeData.colliderA = colliderA;
+    //        runtimeData.colliderB = colliderB;
+    //        runtimeData.objA = objA;
+    //        runtimeData.objB = objB;
 
-            // collision manifold generation
-            Contact contact(dh.bodyA, dh.bodyB, runtimeData, satResult.normal);
-            contact.noSolverResponseA = noSolverResponseA;
-            contact.noSolverResponseB = noSolverResponseB;
+    //        // collision manifold generation
+    //        Contact contact(dh.bodyA, dh.bodyB, runtimeData, satResult.normal);
+    //        contact.noSolverResponseA = noSolverResponseA;
+    //        contact.noSolverResponseB = noSolverResponseB;
 
-            bool contributesMotionA =
-                contact.partnerTypeA == ContactPartnerType::RigidBody &&
-                (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
+    //        bool contributesMotionA =
+    //            contact.partnerTypeA == ContactPartnerType::RigidBody &&
+    //            (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
 
-            bool contributesMotionB =
-                contact.partnerTypeB == ContactPartnerType::RigidBody &&
-                (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
+    //        bool contributesMotionB =
+    //            contact.partnerTypeB == ContactPartnerType::RigidBody &&
+    //            (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
 
-            contact.contributesMotionA = contributesMotionA;
-            contact.contributesMotionB = contributesMotionB;
+    //        contact.contributesMotionA = contributesMotionA;
+    //        contact.contributesMotionB = contributesMotionB;
 
-            collisionManifold->boxBox(contact, contactCache, satResult);
-        }
-        // CUBE vs SPHERE
-        else if (
-            (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
-            (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID))
-        {
-            // swap if A is not cuboid
-            RigidBodyHandle handleA = dh.bodyA;
-            RigidBodyHandle handleB = dh.bodyB;
+    //        collisionManifold->boxBox(contact, contactCache, satResult);
+    //    }
+    //    // CUBE vs SPHERE
+    //    else if (
+    //        (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
+    //        (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID))
+    //    {
+    //        // swap if A is not cuboid
+    //        RigidBodyHandle handleA = dh.bodyA;
+    //        RigidBodyHandle handleB = dh.bodyB;
 
-            if (colliderA->type != ColliderType::CUBOID) {
-                std::swap(objA, objB);
-                std::swap(bodyA, bodyB);
-                std::swap(colliderA, colliderB);
-                std::swap(handleA, handleB);
-            }
+    //        if (colliderA->type != ColliderType::CUBOID) {
+    //            std::swap(objA, objB);
+    //            std::swap(bodyA, bodyB);
+    //            std::swap(colliderA, colliderB);
+    //            std::swap(handleA, handleB);
+    //        }
 
-            // used in SAT
-            bodyA->updateInertiaWorld(objA->transform);
-            bodyB->updateInertiaWorld(objB->transform);
+    //        // used in SAT
+    //        bodyA->updateInertiaWorld(objA->transform);
+    //        bodyB->updateInertiaWorld(objB->transform);
 
-            SAT::Result satResult;
-            if (!SAT::boxSphere(*colliderA, *colliderB, objA->transform, satResult)) {
-                continue;
-            }
+    //        SAT::Result satResult;
+    //        if (!SAT::boxSphere(*colliderA, *colliderB, objA->transform, satResult)) {
+    //            continue;
+    //        }
 
-            bodyA->totalCollisionCount++;
-            bodyB->totalCollisionCount++;
+    //        bodyA->totalCollisionCount++;
+    //        bodyB->totalCollisionCount++;
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, handleA, handleB);
+    //        PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, handleA, handleB);
 
-            // export to character controller
-            bool aCharacter = bodyA->motionControl == MotionControl::External &&
-                bodyA->responseMode == ContactResponseMode::Character;
+    //        // export to character controller
+    //        bool aCharacter = bodyA->motionControl == MotionControl::External &&
+    //            bodyA->responseMode == ContactResponseMode::Character;
 
-            bool bCharacter = bodyB->motionControl == MotionControl::External &&
-                bodyB->responseMode == ContactResponseMode::Character;
+    //        bool bCharacter = bodyB->motionControl == MotionControl::External &&
+    //            bodyB->responseMode == ContactResponseMode::Character;
 
-            std::vector<ExternalMotionContact>* externalContactsPtr = &narrowphaseManager.getExternalContacts();
-            if (aCharacter || bCharacter) {
-                externalContactsPtr->emplace_back(
-                    colliderA->rigidBodyHandle,
-                    colliderB->rigidBodyHandle,
-                    satResult.normal,
-                    satResult.depth
-                );
-                continue;
-            }
+    //        std::vector<ExternalMotionContact>* externalContacts = &narrowphaseManager.getExternalContacts();
+    //        if (aCharacter || bCharacter) {
+    //            externalContacts->emplace_back(
+    //                colliderA->rigidBodyHandle,
+    //                colliderB->rigidBodyHandle,
+    //                satResult.normal,
+    //                satResult.depth
+    //            );
+    //            continue;
+    //        }
 
-            bool noSolverResponseA =
-                bodyA->motionControl == MotionControl::External ||
-                bodyA->type == BodyType::Static ||
-                bodyA->type == BodyType::Kinematic ||
-                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+    //        bool noSolverResponseA =
+    //            bodyA->motionControl == MotionControl::External ||
+    //            bodyA->type == BodyType::Static ||
+    //            bodyA->type == BodyType::Kinematic ||
+    //            (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
-            bool noSolverResponseB =
-                bodyB->motionControl == MotionControl::External ||
-                bodyB->type == BodyType::Static ||
-                bodyB->type == BodyType::Kinematic ||
-                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+    //        bool noSolverResponseB =
+    //            bodyB->motionControl == MotionControl::External ||
+    //            bodyB->type == BodyType::Static ||
+    //            bodyB->type == BodyType::Kinematic ||
+    //            (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
-            // pointer data for solver
-            ContactRuntime runtimeData;
-            runtimeData.bodyA = bodyA;
-            runtimeData.bodyB = bodyB;
-            runtimeData.colliderA = colliderA;
-            runtimeData.colliderB = colliderB;
-            runtimeData.objA = objA;
-            runtimeData.objB = objB;
+    //        // pointer data for solver
+    //        ContactRuntime runtimeData;
+    //        runtimeData.bodyA = bodyA;
+    //        runtimeData.bodyB = bodyB;
+    //        runtimeData.colliderA = colliderA;
+    //        runtimeData.colliderB = colliderB;
+    //        runtimeData.objA = objA;
+    //        runtimeData.objB = objB;
 
-            // collision manifold generation
-            Contact contact(handleA, handleB, runtimeData, satResult.normal);
-            contact.noSolverResponseA = noSolverResponseA;
-            contact.noSolverResponseB = noSolverResponseB;
+    //        // collision manifold generation
+    //        Contact contact(handleA, handleB, runtimeData, satResult.normal);
+    //        contact.noSolverResponseA = noSolverResponseA;
+    //        contact.noSolverResponseB = noSolverResponseB;
 
-            bool contributesMotionA =
-                contact.partnerTypeA == ContactPartnerType::RigidBody &&
-                (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
+    //        bool contributesMotionA =
+    //            contact.partnerTypeA == ContactPartnerType::RigidBody &&
+    //            (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
 
-            bool contributesMotionB =
-                contact.partnerTypeB == ContactPartnerType::RigidBody &&
-                (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
+    //        bool contributesMotionB =
+    //            contact.partnerTypeB == ContactPartnerType::RigidBody &&
+    //            (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
 
-            contact.contributesMotionA = contributesMotionA;
-            contact.contributesMotionB = contributesMotionB;
+    //        contact.contributesMotionA = contributesMotionA;
+    //        contact.contributesMotionB = contributesMotionB;
 
-            collisionManifold->boxSphere(contact, contactCache, satResult);
-        }
-        // SPHERE vs SPHERE
-        else if (
-            colliderA->type == ColliderType::SPHERE and
-            colliderB->type == ColliderType::SPHERE)
-        {
-            SAT::Result satResult;
-            if (!SAT::sphereSphere(*colliderA, *colliderB, satResult)) {
-                continue;
-            }
+    //        collisionManifold->boxSphere(contact, contactCache, satResult);
+    //    }
+    //    // SPHERE vs SPHERE
+    //    else if (
+    //        colliderA->type == ColliderType::SPHERE and
+    //        colliderB->type == ColliderType::SPHERE)
+    //    {
+    //        SAT::Result satResult;
+    //        if (!SAT::sphereSphere(*colliderA, *colliderB, satResult)) {
+    //            continue;
+    //        }
 
-            bodyA->totalCollisionCount++;
-            bodyB->totalCollisionCount++;
+    //        bodyA->totalCollisionCount++;
+    //        bodyB->totalCollisionCount++;
 
-            PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, dh.bodyA, dh.bodyB);
+    //        PhysicsEngine::WakeUpInfo wakeInfo = wakeUpCheck(*bodyA, *bodyB, dh.bodyA, dh.bodyB);
 
-            // export to character controller
-            bool aCharacter = bodyA->motionControl == MotionControl::External &&
-                bodyA->responseMode == ContactResponseMode::Character;
+    //        // export to character controller
+    //        bool aCharacter = bodyA->motionControl == MotionControl::External &&
+    //            bodyA->responseMode == ContactResponseMode::Character;
 
-            bool bCharacter = bodyB->motionControl == MotionControl::External &&
-                bodyB->responseMode == ContactResponseMode::Character;
+    //        bool bCharacter = bodyB->motionControl == MotionControl::External &&
+    //            bodyB->responseMode == ContactResponseMode::Character;
 
-            std::vector<ExternalMotionContact>* externalContactsPtr = &narrowphaseManager.getExternalContacts();
-            if (aCharacter || bCharacter) {
-                externalContactsPtr->emplace_back(
-                    colliderA->rigidBodyHandle,
-                    colliderB->rigidBodyHandle,
-                    satResult.normal,
-                    satResult.depth
-                );
-                continue;
-            }
+    //        std::vector<ExternalMotionContact>* externalContacts = &narrowphaseManager.getExternalContacts();
+    //        if (aCharacter || bCharacter) {
+    //            externalContacts->emplace_back(
+    //                colliderA->rigidBodyHandle,
+    //                colliderB->rigidBodyHandle,
+    //                satResult.normal,
+    //                satResult.depth
+    //            );
+    //            continue;
+    //        }
 
-            bool noSolverResponseA =
-                bodyA->motionControl == MotionControl::External ||
-                bodyA->type == BodyType::Static ||
-                bodyA->type == BodyType::Kinematic ||
-                (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
+    //        bool noSolverResponseA =
+    //            bodyA->motionControl == MotionControl::External ||
+    //            bodyA->type == BodyType::Static ||
+    //            bodyA->type == BodyType::Kinematic ||
+    //            (bodyA->type == BodyType::Dynamic && bodyA->asleep && !wakeInfo.A);
 
-            bool noSolverResponseB =
-                bodyB->motionControl == MotionControl::External ||
-                bodyB->type == BodyType::Static ||
-                bodyB->type == BodyType::Kinematic ||
-                (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
+    //        bool noSolverResponseB =
+    //            bodyB->motionControl == MotionControl::External ||
+    //            bodyB->type == BodyType::Static ||
+    //            bodyB->type == BodyType::Kinematic ||
+    //            (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
-            // pointer data for solver
-            ContactRuntime runtimeData;
-            runtimeData.bodyA = bodyA;
-            runtimeData.bodyB = bodyB;
-            runtimeData.colliderA = colliderA;
-            runtimeData.colliderB = colliderB;
-            runtimeData.objA = objA;
-            runtimeData.objB = objB;
+    //        // pointer data for solver
+    //        ContactRuntime runtimeData;
+    //        runtimeData.bodyA = bodyA;
+    //        runtimeData.bodyB = bodyB;
+    //        runtimeData.colliderA = colliderA;
+    //        runtimeData.colliderB = colliderB;
+    //        runtimeData.objA = objA;
+    //        runtimeData.objB = objB;
 
-            // collision manifold generation
-            Contact contact(dh.bodyA, dh.bodyB, runtimeData, satResult.normal);
-            contact.noSolverResponseA = noSolverResponseA;
-            contact.noSolverResponseB = noSolverResponseB;
+    //        // collision manifold generation
+    //        Contact contact(dh.bodyA, dh.bodyB, runtimeData, satResult.normal);
+    //        contact.noSolverResponseA = noSolverResponseA;
+    //        contact.noSolverResponseB = noSolverResponseB;
 
-            bool contributesMotionA =
-                contact.partnerTypeA == ContactPartnerType::RigidBody &&
-                (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
+    //        bool contributesMotionA =
+    //            contact.partnerTypeA == ContactPartnerType::RigidBody &&
+    //            (bodyA->type == BodyType::Kinematic || (bodyA->type == BodyType::Dynamic && (!bodyA->asleep || wakeInfo.A)));
 
-            bool contributesMotionB =
-                contact.partnerTypeB == ContactPartnerType::RigidBody &&
-                (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
+    //        bool contributesMotionB =
+    //            contact.partnerTypeB == ContactPartnerType::RigidBody &&
+    //            (bodyB->type == BodyType::Kinematic || (bodyB->type == BodyType::Dynamic && (!bodyB->asleep || wakeInfo.B)));
 
-            contact.contributesMotionA = contributesMotionA;
-            contact.contributesMotionB = contributesMotionB;
+    //        contact.contributesMotionA = contributesMotionA;
+    //        contact.contributesMotionB = contributesMotionB;
 
-            collisionManifold->sphereSphere(contact, contactCache, satResult);  
-        }
-    }
+    //        collisionManifold->sphereSphere(contact, contactCache, satResult);  
+    //    }
+    //}
 }
 
 //---------------------------------------------
@@ -914,7 +947,7 @@ PhysicsEngine::WakeUpInfo PhysicsEngine::wakeUpCheck(RigidBody& A, RigidBody& B,
 void PhysicsEngine::updateSleepThresholds() {
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const RigidBodyHandle& handle : awakeHandles) {
-        RigidBody* body = bodyPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
 
         if (body->asleep || !body->allowSleep || 
             body->motionControl == MotionControl::External || body->type != BodyType::Dynamic)
@@ -954,7 +987,7 @@ void PhysicsEngine::decideSleep() {
 
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const RigidBodyHandle& handle : awakeHandles) {
-        RigidBody* body = bodyPtrCache.get(handle, FUNC_NAME);
+        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
 
         if (body->type != BodyType::Dynamic) continue;
         if (body->motionControl == MotionControl::External) continue;
@@ -962,7 +995,7 @@ void PhysicsEngine::decideSleep() {
         if (!body->allowSleep) continue;
         if (body->inSleepTransition) continue;
 
-        Transform* transform = &gameObjectPtrCache.get(body->gameObjectHandle, FUNC_NAME)->transform;
+        Transform* transform = caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
 
         bool goingToSleep = false;
 
@@ -1016,7 +1049,7 @@ void PhysicsEngine::decideSleep() {
     for (RigidBodyHandle rb : toWake) {
         broadphaseManager.moveToAwake(rb);
 
-        RigidBody* body = bodyPtrCache.get(rb, FUNC_NAME);
+        RigidBody* body = caches.bodies.get(rb, FUNC_NAME);
         body->inSleepTransition = false;
     }
 }

@@ -11,8 +11,8 @@ RaycastHit raycast(
 )
 {
     AABB rayAABB;
-    rayAABB.wMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
-    rayAABB.wMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
+    rayAABB.worldMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
+    rayAABB.worldMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
 
     RigidBodyHandle bestBody;
     float bestT = std::numeric_limits<float>::max();
@@ -33,8 +33,8 @@ RaycastHit raycast(
 
         Collider* collider = colliderMap->try_get(body->colliderHandle);
 
-        glm::vec3 min = collider->aabb.wMin;
-        glm::vec3 max = collider->aabb.wMax;
+        glm::vec3 min = collider->aabb.worldMin;
+        glm::vec3 max = collider->aabb.worldMax;
 
         glm::vec3 tMin = (min - ray.start) / ray.direction;
         glm::vec3 tMax = (max - ray.start) / ray.direction;
@@ -70,8 +70,8 @@ RaycastHit raycast(
     // Åter­beräkna t1 per axel
     RigidBody* body = bodyMap->try_get(bestBody);
     Collider* bestColliderPtr = colliderMap->try_get(body->colliderHandle);
-    glm::vec3 min = bestColliderPtr->aabb.wMin;
-    glm::vec3 max = bestColliderPtr->aabb.wMax;
+    glm::vec3 min = bestColliderPtr->aabb.worldMin;
+    glm::vec3 max = bestColliderPtr->aabb.worldMax;
     glm::vec3 tMin = (min - ray.start) / ray.direction;
     glm::vec3 tMax = (max - ray.start) / ray.direction;
     glm::vec3 t1 = glm::min(tMin, tMax);  // entry‐tider

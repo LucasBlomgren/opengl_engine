@@ -14,6 +14,7 @@ public:
     glm::vec3 normal;
     glm::vec3 centroid;
 
+    AABB aabb;
 
     // constructor
     Tri(const int id_, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
@@ -36,12 +37,15 @@ public:
 
         normal = glm::normalize(glm::cross(edgeA, edgeB)); 
         axes = { normal, edgeA, edgeB, edgeC };
+
+        aabb.init(vertices);
     }
 
     Tri(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
     {
         vertices = { v0, v1, v2 };
+        aabb.init(vertices);
     }
 
-    AABB getAABB() const;
+    AABB& getAABB();
 };

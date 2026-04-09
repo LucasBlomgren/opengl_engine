@@ -17,18 +17,17 @@ struct HandleT {
     }
 };
 
-namespace std {
-    template<class Tag>
-    struct hash<HandleT<Tag>> {
-        size_t operator()(const HandleT<Tag>& h) const noexcept {
-            // kombinera slot+gen till 64-bit och hash:a
-            uint64_t x = (uint64_t(h.gen) << 32) | uint64_t(h.slot);
-            return std::hash<uint64_t>{}(x);
-        }
-    };
-}
+template<class Tag>
+struct std::hash<HandleT<Tag>> {
+    size_t operator()(const HandleT<Tag>& h) const noexcept {
+        // kombinera slot+gen till 64-bit och hash:a
+        uint64_t x = (uint64_t(h.gen) << 32) | uint64_t(h.slot);
+        return std::hash<uint64_t>{}(x);
+    }
+};
 
 using GameObjectHandle = HandleT<struct GameObjectTag>;
+using TransformHandle = HandleT<struct TransformTag>;
 using ColliderHandle = HandleT<struct ColliderTag>;
 using RigidBodyHandle = HandleT<struct RigidBodyTag>;
 

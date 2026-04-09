@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "game/transform_utils.h"
 #include "core/pointer_cache.h"
 #include "physics_world.h"
 #include "world.h"
@@ -25,6 +26,20 @@ struct DebugData {
     size_t Static = 0;
     size_t terrainTris = 0;
     size_t collisions = 0;
+};
+
+struct RuntimeCaches {
+    PointerCache<Transform, TransformHandle> transforms;
+    PointerCache<Collider, ColliderHandle> colliders;
+    PointerCache<RigidBody, RigidBodyHandle> bodies;
+    std::vector<Transform> globalColliderTransforms;
+
+    void clear() {
+        transforms.clear();
+        colliders.clear();
+        bodies.clear();
+        globalColliderTransforms.clear();
+    }
 };
 
 class PhysicsEngine {
@@ -95,7 +110,7 @@ private:
     //------------------------
     //    Update functions
     //------------------------
-    void updateStates();
+    void updateBodiesAndColliders();
     void updateContactCache();
 
     //------------------------
@@ -104,10 +119,8 @@ private:
     BroadphaseManager broadphaseManager;
     NarrowphaseManager narrowphaseManager;
 
-    // cache for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
-    PointerCache<GameObject, GameObjectHandle> gameObjectPtrCache;
-    PointerCache<Collider, ColliderHandle> colliderPtrCache;
-    PointerCache<RigidBody, RigidBodyHandle> bodyPtrCache;
+    // caches for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
+    RuntimeCaches caches;
 
     void detectAndSolveCollisions();
     void narrowPhase(const std::vector<TerrainPair>& tHits, const std::vector<DynamicPair>& dHits);

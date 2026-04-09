@@ -3,52 +3,42 @@
 #include <array>
 #include <vector>
 
+#include "game/transform_utils.h"
 #include "shaders/shader.h"
 #include "vertex.h"
 #include "game/transform.h"
 
-struct Faces {
-    std::array<glm::vec3, 4> minX, maxX;
-    std::array<glm::vec3, 4> minY, maxY;
-    std::array<glm::vec3, 4> minZ, maxZ;
-};
-
 class AABB {
 public:
-    Faces lFaces;
-    Faces wFaces;
-
     // local
-    glm::vec3 lMin; 
-    glm::vec3 lMax;
+    glm::vec3 localMin; 
+    glm::vec3 localMax;
     // world
-    glm::vec3 wMin; 
-    glm::vec3 wMax;
+    glm::vec3 worldMin; 
+    glm::vec3 worldMax;
 
-    glm::vec3 centroid;
-    glm::vec3 halfExtents;
+    glm::vec3 worldCenter;
+    glm::vec3 worldHalfExtents;
     float surfaceArea = 0.0f;
 
     void init(const std::vector<glm::vec3>& vertices);
     void update(const Transform& t);
     bool intersects(const AABB& b) const;
 
-    // ----- bvh funktioner -----
+    // BVH functions
     bool contains(const AABB& other) const;
     void grow(glm::vec3 m);
     void growToInclude(const glm::vec3& p);
     float getMergedSurfaceArea(const AABB& a, const AABB& b);
     void setSurfaceArea();
 
-    // ----- editor funktioner -----
+    // Editor functions
     glm::vec3 getCollisionNormal(const AABB& other) const;
     glm::vec3 getOverlapDepth(const AABB& other) const;
     float getMinOverlapDepth(const AABB& other) const;
 
 private:
-    // ----- transformations -----
+    // Transformations
     void transform_noRotation(const glm::mat4& M, const glm::vec3& T, const glm::vec3 S);
     void transform_withRotation(const glm::mat3& M, const glm::vec3& T);
-    void computeFromVertices(const std::vector<glm::vec3>& vertices);
-    void setLocalFaces();
 };

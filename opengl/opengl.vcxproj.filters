@@ -16,7 +16,6 @@
     <ClCompile Include="src\graphics\debug\render_contact_points.cpp" />
     <ClCompile Include="src\graphics\debug\draw_line.cpp" />
     <ClCompile Include="src\graphics\debug\xyz_object.cpp" />
-    <ClCompile Include="src\game\game_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
     <ClCompile Include="src\physics\raycast.cpp" />
@@ -24,7 +23,6 @@
     <ClCompile Include="src\graphics\debug\aabb_renderer.cpp" />
     <ClCompile Include="src\physics\bvh\bvh.cpp" />
     <ClCompile Include="src\physics\colliders\collider.cpp" />
-    <ClCompile Include="src\physics\colliders\sphere.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp" />
     <ClCompile Include="src\physics\colliders\oobb.cpp" />
     <ClCompile Include="src\physics\colliders\tri.cpp" />
@@ -160,6 +158,7 @@
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
+    <ClInclude Include="src\game\transform_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />
