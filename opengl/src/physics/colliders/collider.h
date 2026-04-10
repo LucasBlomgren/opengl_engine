@@ -21,14 +21,15 @@ using ColliderShape = std::variant<OOBB, Sphere>;
 
 // #TODO: decide what is private/public in Collider
 struct Collider {
-    int id;
-    ColliderType type;
-    ColliderShape shape;
-    AABB aabb;
+    int id = -1;
+    ColliderType type = ColliderType::CUBOID;
+    ColliderShape shape{};
+    AABB aabb{};
     bool aabbDirty = true;
 
-    RigidBodyHandle rigidBodyHandle;
-    TransformHandle localTransformHandle; 
+    RigidBodyHandle rigidBodyHandle{};
+    TransformHandle localTransformHandle{};
+    Transform globalTransform;
 
     AABB& getAABB();
     void updateCollider(const Transform& t);

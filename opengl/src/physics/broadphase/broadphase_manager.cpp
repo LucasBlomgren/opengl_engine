@@ -4,8 +4,6 @@
 #include "rigid_body.h"
 #include "tri.h"
 
-#define FUNC_NAME __FUNCTION__
-
 void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris) {
     this->caches = caches;
     this->terrainTriangles = terrainTris;

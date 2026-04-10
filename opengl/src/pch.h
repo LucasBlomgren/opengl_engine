@@ -32,6 +32,9 @@
 #include <atomic>
 
 
+#define FUNC_NAME __FUNCTION__
+
+
 namespace glcount {
     inline std::atomic<int> vaos{ 0 }, vbos{ 0 }, ebos{ 0 }, ibos{ 0 };
 

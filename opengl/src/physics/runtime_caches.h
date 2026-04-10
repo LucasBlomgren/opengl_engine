@@ -11,12 +11,10 @@ struct RuntimeCaches {
     PointerCache<Transform, TransformHandle> transforms;
     PointerCache<Collider, ColliderHandle> colliders;
     PointerCache<RigidBody, RigidBodyHandle> bodies;
-    std::vector<Transform> globalColliderTransforms;
 
     void clear() {
         transforms.clear();
         colliders.clear();
         bodies.clear();
-        globalColliderTransforms.clear();
     }
 };

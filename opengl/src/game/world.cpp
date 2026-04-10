@@ -104,7 +104,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         part.color = partDesc.color;
         part.seeThrough = partDesc.seeThrough;
 
-        // create collider
+        // create collider for part
         ColliderHandle colliderHandle = physicsWorld->createCollider();
         Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
         collider.rigidBodyHandle = bodyHandle;
@@ -112,6 +112,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         collider.localTransformHandle = partDesc.localTransformHandle;
 
         Transform partGlobalTransform = combineTransforms(*rootTransform, *partTransform);
+        collider.globalTransform = partGlobalTransform;
 
         // aabb init
         std::vector<glm::vec3> verticesPositions;
@@ -119,15 +120,15 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
             verticesPositions.push_back(vertex.position);
         }
         collider.aabb.init(verticesPositions);
-        collider.aabb.update(partGlobalTransform);
+        collider.aabb.update(collider.globalTransform);
 
         // collider shape init
         if (partDesc.colliderType == ColliderType::CUBOID) {
-            OOBB box(verticesPositions, partGlobalTransform);
+            OOBB box(verticesPositions, collider.globalTransform);
             collider.shape = box;
         }
         else if (partDesc.colliderType == ColliderType::SPHERE) {
-            Sphere sphere(partGlobalTransform);
+            Sphere sphere(collider.globalTransform);
             collider.shape = sphere;
         }
 
@@ -147,6 +148,8 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
     if (body.isCompound()) {
         for (size_t i = 1; i < body.colliderHandles.size(); ++i) {
             Collider* c = physicsWorld->getCollidersMap().try_get(body.colliderHandles[i]);
+
+            // grow body AABB to include all colliders
             body.aabb.growToInclude(c->getAABB().worldMin);
             body.aabb.growToInclude(c->getAABB().worldMax);
         }

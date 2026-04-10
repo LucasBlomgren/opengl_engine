@@ -110,7 +110,6 @@ private:
     RuntimeCaches caches;
 
     void detectAndSolveCollisions();
-    void narrowPhase(const std::vector<TerrainPair>& tHits, const std::vector<DynamicPair>& dHits);
     void collectActiveContacts();
 
     //------------------------
@@ -131,7 +130,4 @@ private:
     std::vector<RigidBodyHandle> toSleep;
     void decideSleep();
     void updateSleepThresholds();
-
-    struct WakeUpInfo { bool A, B; };
-    WakeUpInfo wakeUpCheck(RigidBody& A, RigidBody& B, const RigidBodyHandle& handleA, const RigidBodyHandle& handleB);
 };

@@ -5,6 +5,7 @@
 #include "collision_manifold.h"
 #include "sat.h"
 #include "runtime_caches.h"
+#include "wake_sleep_utils.h"
 
 struct ExternalMotionContact {
     RigidBodyHandle bodyA{};
@@ -26,45 +27,16 @@ public:
     void init(
         CollisionManifold* collisionManifold,
         std::unordered_map<size_t, Contact>* contactCache,
-        RuntimeCaches* caches
+        RuntimeCaches* caches,
+        std::vector<RigidBodyHandle>* toWake
     );
 
     std::vector<ExternalMotionContact>& getExternalContacts() {
         return externalContacts;
     }
 
-    void collectTerrainTriCandidates(
-        Collider* collider,
-        const std::vector<Tri*>& inputTris,
-        std::vector<Tri*>& outCandidates
-    );
-    std::vector<Tri*> terrainTriCandidates;
-
+    // main function
     void narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits);
-
-    void processTerrainPair(const TerrainPair& terrainPair);
-    void processDynamicPair(const DynamicPair& dynamicPair);
-
-    void processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, Transform* colliderWorldTransform);
-    void processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, Transform* colliderWorldTransform);
-
-    void processBoxBox(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB);
-    void processBoxSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB);
-    void processSphereSphere(RigidBody* bodyA, RigidBody* bodyB, Collider* colliderA, Collider* colliderB, Transform* transformA, Transform* transformB);
-
-    // dynamic vs dynamic contact runtime data
-    ContactRuntime makeRuntimeData(
-        RigidBody* bodyA, RigidBody* bodyB,
-        Collider* colliderA, Collider* colliderB,
-        Transform* bodyRootA, Transform* bodyRootB,
-        Transform* colliderWorldA, Transform* colliderWorldB) const;
-
-    // dynamic vs terrain contact runtime data
-    ContactRuntime makeRuntimeData(
-        RigidBody* bodyA,
-        Collider* colliderA,
-        Transform* bodyRootA,
-        Transform* colliderWorldA) const;
 
 private:
     // references to pointer caches
@@ -72,8 +44,80 @@ private:
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;
 
-    std::vector<SAT::Result> SAT_resultsList;
-    std::vector<ExternalMotionContact> externalContacts;
+    void processTerrainPair(const TerrainPair& terrainPair);
+    void processDynamicPair(const DynamicPair& dynamicPair);
 
+    void processTerrainTriBox(
+        RigidBodyHandle bodyH, 
+        Collider* collider, 
+        RigidBody* body
+    );
+
+    void processTerrainTriSphere(
+        RigidBodyHandle bodyH, 
+        Collider* collider, 
+        RigidBody* body
+    );
+
+    void processBoxBox(
+        RigidBodyHandle bodyHandleA,
+        RigidBodyHandle bodyHandleB,
+        ColliderHandle colliderHandleA,
+        ColliderHandle colliderHandleB,
+        RigidBody* bodyA,
+        RigidBody* bodyB,
+        Collider* colliderA,
+        Collider* colliderB
+    );
+
+    void processBoxSphere(
+        RigidBodyHandle bodyHandleA,
+        RigidBodyHandle bodyHandleB,
+        ColliderHandle colliderHandleA,
+        ColliderHandle colliderHandleB,
+        RigidBody* bodyA,
+        RigidBody* bodyB,
+        Collider* colliderA,
+        Collider* colliderB
+    );
+
+    void processSphereSphere(
+        RigidBodyHandle bodyHandleA,
+        RigidBodyHandle bodyHandleB,
+        ColliderHandle colliderHandleA,
+        ColliderHandle colliderHandleB,
+        RigidBody* bodyA,
+        RigidBody* bodyB,
+        Collider* colliderA,
+        Collider* colliderB
+    );
+
+    // dynamic vs dynamic contact runtime data
+    ContactRuntime makeRuntimeData(
+        RigidBody* bodyA, RigidBody* bodyB,
+        Collider* colliderA, Collider* colliderB,
+        Transform* bodyRootA, Transform* bodyRootB
+    ) const;
+
+    // dynamic vs terrain contact runtime data
+    ContactRuntime makeRuntimeData(
+        RigidBody* bodyA,
+        Collider* colliderA,
+        Transform* bodyRootA
+    ) const;
+
+    std::vector<RigidBodyHandle>* toWake = nullptr; // for wake-up requests for bodies that should be woken up after processing dynamic pairs
+
+    std::vector<SAT::Result> SAT_resultsList; // for storing multiple SAT results for a single collider vs terrain pair
+    std::vector<ExternalMotionContact> externalContacts; // contacts to be sent to character controller for external motion handling
+
+    // Helpers
     glm::vec3 getAvgNormal(const std::vector<SAT::Result>& SAT_resultsList) const;
+
+    void collectTerrainTriCandidates(
+        Collider* collider,
+        const std::vector<Tri*>& inputTris,
+        std::vector<Tri*>& outCandidates
+    );
+    std::vector<Tri*> terrainTriCandidates;
 };

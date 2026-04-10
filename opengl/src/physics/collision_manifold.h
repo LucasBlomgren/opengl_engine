@@ -42,8 +42,6 @@ struct ContactRuntime {
     Collider* colliderB = nullptr;
     Transform* bodyRootA = nullptr;
     Transform* bodyRootB = nullptr;
-    Transform* colliderWorldA = nullptr;
-    Transform* colliderWorldB = nullptr;
 };
 
 struct Contact {

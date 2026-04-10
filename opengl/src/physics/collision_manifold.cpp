@@ -10,8 +10,6 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     Collider* colliderB = rt.colliderB;
     Transform* bodyRootA = rt.bodyRootA;
     Transform* bodyRootB = rt.bodyRootB;
-    Transform* colliderWorldA = rt.colliderWorldA;
-    Transform* colliderWorldB = rt.colliderWorldB;
 
     static std::vector<glm::vec3> referenceFace;
     static std::vector<glm::vec3> incidentFace;
@@ -26,12 +24,12 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     //std::cout << "Reference face on object ID: " << (contact.objBisReference ? contact.objB_ptr->id : contact.objA_ptr->id) << std::endl;
 
     if (contact.objBisReference) {
-        selectOOBBCollisionFace(colliderB, colliderWorldB, -satResult.normal); referenceFace = this->selectedFace;
-        selectOOBBCollisionFace(colliderA, colliderWorldA, satResult.normal);  incidentFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderB, &colliderB->globalTransform, -satResult.normal); referenceFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);  incidentFace = this->selectedFace;
     }
     else {
-        selectOOBBCollisionFace(colliderA, colliderWorldA, satResult.normal);  referenceFace = this->selectedFace;
-        selectOOBBCollisionFace(colliderB, colliderWorldB, -satResult.normal); incidentFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);  referenceFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderB, &colliderB->globalTransform, -satResult.normal); incidentFace = this->selectedFace;
     }
 
     // räkna ut normalen för referensface
@@ -87,7 +85,6 @@ void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, C
 void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
     ContactRuntime& rt = contact.runtimeData;
     Collider* colliderA = rt.colliderA;
-    Transform* colliderWorldA = rt.colliderWorldA;
 
     std::vector<glm::vec3> referenceFace;
     std::vector<glm::vec3> incidentFace;
@@ -97,7 +94,7 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
     this->allClippedPoints.reserve(8 * allResults.size());
 
     // set ref face for contact (for penetration depth calculation etc.)
-    selectOOBBCollisionFace(colliderA, colliderWorldA, allResults[0].normal);
+    selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, allResults[0].normal);
 
     referenceFace = this->selectedFace;
     glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
@@ -111,7 +108,7 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
 
     for (const SAT::Result& satResult : allResults)
     {
-        selectOOBBCollisionFace(colliderA, colliderWorldA, satResult.normal);
+        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);
         referenceFace = this->selectedFace;
         incidentFace = satResult.tri_ptr->vertices;
 

@@ -2,21 +2,6 @@
 #include "oobb.h"
 #include "game/game_object.h"
 
-void OOBB::update(const Transform& t) {
-    //  transform world axes
-    for (int i = 0; i < 3; i++) {
-        worldAxes[i] = glm::normalize(t.rotationMatrix * localAxes[i]);
-    }
-
-    // transform world corners
-    for (int i = 0; i < 8; ++i) {
-        worldVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(localVertices[i], 1.0f));
-    }
-
-    worldCenter = glm::vec3(t.modelMatrix * glm::vec4(localCenter, 1.0f));
-    scale = t.scale;
-}
-
 void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
     glm::vec3 lMin(+FLT_MAX), lMax(-FLT_MAX); 
     for (auto const& v : verts) { 
@@ -50,6 +35,21 @@ void OOBB::init(const std::vector<glm::vec3>& verts, const Transform& t) {
     for (int i = 0; i < 8; ++i) {
         worldVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(localVertices[i], 1.0f));
     }
+}
+
+void OOBB::update(const Transform& t) {
+    //  transform world axes
+    for (int i = 0; i < 3; i++) {
+        worldAxes[i] = glm::normalize(t.rotationMatrix * localAxes[i]);
+    }
+
+    // transform world corners
+    for (int i = 0; i < 8; ++i) {
+        worldVertices[i] = glm::vec3(t.modelMatrix * glm::vec4(localVertices[i], 1.0f));
+    }
+
+    worldCenter = glm::vec3(t.modelMatrix * glm::vec4(localCenter, 1.0f));
+    scale = t.scale;
 }
 
 std::array<glm::vec3, 4> OOBB::getLocalFace(FaceId face) const {

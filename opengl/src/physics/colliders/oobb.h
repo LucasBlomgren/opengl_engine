@@ -22,6 +22,12 @@ static constexpr std::array<std::array<int, 4>, 6> FACE_INDICES = { {
     {{4, 5, 6, 7}}  // MaxZ
 } };
 
+static constexpr std::array<glm::vec3, 3>  localAxes = {
+  glm::vec3(1,  0,  0),
+  glm::vec3(0,  1,  0),
+  glm::vec3(0,  0,  1),
+};
+
 class OOBB {
 public:
     //constructor
@@ -45,10 +51,4 @@ public:
 private:
     glm::vec3 localCenter;
     std::array<glm::vec3, 8> localVertices;
-
-    static constexpr std::array<glm::vec3, 3>  localAxes = {
-      glm::vec3( 1,  0,  0),
-      glm::vec3( 0,  1,  0),  
-      glm::vec3( 0,  0,  1), 
-    };
 };
