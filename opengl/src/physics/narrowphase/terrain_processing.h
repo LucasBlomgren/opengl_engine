@@ -3,9 +3,9 @@
 
 #define FUNC_NAME __FUNCTION__
 
-void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body) {
+void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
-    for (Tri* tri : terrainTriCandidates) {
+    for (Tri* tri : candidates) {
         SAT::Result SAT_result;
         if (!SAT::boxTri(*collider, *tri, SAT_result)) {
             continue;
@@ -39,9 +39,9 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
     collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
 }
 
-void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body) {
+void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
-    for (Tri* tri : terrainTriCandidates) {
+    for (Tri* tri : candidates) {
         SAT::Result SAT_result;
         if (!SAT::sphereTri(*collider, *tri, SAT_result)) {
             continue;

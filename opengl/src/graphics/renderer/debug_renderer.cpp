@@ -29,7 +29,7 @@ void DebugRenderer::init(const EngineState& engineState, const MeshManager& mesh
 void DebugRenderer::prepareFrame(PhysicsEngine& physics, const std::vector<GameObject>& objects, World& world) {
     sceneDebugMeshes.clear();
 
-    prepareObjectLocalNormals(objects);
+    prepareObjectLocalNormals(objects, world);
     prepareCollisionNormals(physics, world);
     prepareXYZAxes();
 }
@@ -80,117 +80,81 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 // Prepare collisions normals, object local normals and XYZ axes
 //-----------------------------------------------------------------
 void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
-    //if (!engineState->getShowCollisionNormals()) return; 
+    if (!engineState->getShowCollisionNormals()) return;
 
-    //for (Contact* c : physics.contactsToSolve) {
-    //    glm::vec3 pos;
+    for (Contact* c : physics.contactsToSolve) {
+        glm::vec3 pos(0.0f);
 
-    //    PhysicsWorld* pw = physics.getPhysicsWorld();
+        if (!c->points.empty()) {
+            for (const ContactPoint& cp : c->points) {
+                pos += cp.globalCoord;
+            }
+            pos /= static_cast<float>(c->points.size());
+        }
+        else {
+            // fallback om inga kontaktpunkter finns
+            if (c->partnerTypeA == ContactPartnerType::RigidBody &&
+                c->runtimeData.colliderA != nullptr) {
+                if (c->runtimeData.colliderA->type == ColliderType::CUBOID) {
+                    pos = std::get<OOBB>(c->runtimeData.colliderA->shape).worldCenter;
+                }
+                else {
+                    pos = std::get<Sphere>(c->runtimeData.colliderA->shape).centerWorld;
+                }
+            }
+            else if (c->partnerTypeB == ContactPartnerType::RigidBody &&
+                c->runtimeData.colliderB != nullptr) {
+                if (c->runtimeData.colliderB->type == ColliderType::CUBOID) {
+                    pos = std::get<OOBB>(c->runtimeData.colliderB->shape).worldCenter;
+                }
+                else {
+                    pos = std::get<Sphere>(c->runtimeData.colliderB->shape).centerWorld;
+                }
+            }
+            else {
+                continue;
+            }
+        }
 
-    //    RigidBody* bodyA = pw->getRigidBody(c->bodyA);
-    //    RigidBody* bodyB = pw->getRigidBody(c->bodyB);
-    //    Collider* colA = nullptr;
-    //    Collider* colB = nullptr;
-    //    Transform* tA = nullptr;
-    //    Transform* tB = nullptr;
+        pos += c->normal * 0.01f;
 
-    //    if (c->partnerTypeA == ContactPartnerType::RigidBody) {
-    //        colA = pw->getCollider(bodyA->colliderHandle);
-    //        tA = &world.getGameObject(colA->gameObjectHandle)->transform;
-    //    }
-    //    if (c->partnerTypeB == ContactPartnerType::RigidBody) {
-    //        colB = pw->getCollider(bodyB->colliderHandle);
-    //        tB = &world.getGameObject(colB->gameObjectHandle)->transform;
-    //    }
-
-    //    // Om ett av objekten är terrain triangle (objA eller objB är nullptr), placera pilen på det andra objektets position
-    //    if (c->partnerTypeA == ContactPartnerType::Terrain) {
-    //        pos = tB->position;
-    //    }
-    //    else if (c->partnerTypeB == ContactPartnerType::Terrain) {
-    //        pos = tA->position;
-    //    }
-
-    //    // Om båda objekten är vanliga GameObjects, placera pilen på den dynamiska kroppens AABB-sida som vetter mot den andra kroppen
-    //    if (c->partnerTypeA == ContactPartnerType::RigidBody && c->partnerTypeB == ContactPartnerType::RigidBody) {
-    //        // 1) dynamic vs dynamic: enklast (du kan senare byta till support-midpoint)
-    //        if (bodyA->type != BodyType::Static && bodyB->type != BodyType::Static) {
-    //            pos = 0.5f * (tA->position + tB->position);
-    //        }
-    //        else {
-    //            // 2) hitta dynamiska objektet (det som INTE är static)
-    //            RigidBody* dynBody = nullptr;
-    //            Collider* dynCol = nullptr;
-    //            Transform* dynT = nullptr;
-
-    //            if (bodyA->type != BodyType::Static) {
-    //                dynBody = bodyA;
-    //                dynCol = colA;
-    //                dynT = tA;
-    //            } else {
-    //                dynBody = bodyB;
-    //                dynCol = colB;
-    //                dynT = tB;
-    //            }
-
-    //            // 3) välj d så att den pekar från dyn MOT den andra kroppen
-    //            // antag: c->normal pekar från A -> B
-    //            glm::vec3 d = (dynBody == bodyA) ? c->normal : -c->normal;
-
-    //            // 4) flytta pos till dyn-AABB sidan som vetter mot den andra
-    //            pos = dynT->position;
-    //            float ax = std::abs(d.x), ay = std::abs(d.y), az = std::abs(d.z);
-    //            AABB* aabb = &dynCol->getAABB(); // se till att denna är world-space halfExtents
-
-    //            if (ax >= ay && ax >= az) {
-    //                pos.x += (d.x >= 0 ? aabb->worldHalfExtents.x : -aabb->worldHalfExtents.x);
-    //            }
-    //            else if (ay >= ax && ay >= az) {
-    //                pos.y += (d.y >= 0 ? aabb->worldHalfExtents.y : -aabb->worldHalfExtents.y);
-    //            }
-    //            else { pos.z += (d.z >= 0 ? aabb->worldHalfExtents.z : -aabb->worldHalfExtents.z); }
-
-    //            // liten offset så pilen syns ovanpå ytan
-    //            pos += c->normal * 0.01f;
-    //        }
-    //    }
-
-    //    // push arrow mesh with model matrix oriented along the contact normal
-    //    sceneDebugMeshes.push_back({
-    //        arrowRenderer.mesh,
-    //        arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
-    //        glm::vec3(1, 0, 1),
-    //        false
-    //        });
-    //}
+        sceneDebugMeshes.push_back({
+            arrowRenderer.mesh,
+            arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
+            glm::vec3(1, 0, 1),
+            false
+            });
+    }
 }
-void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& objects) {
-    //if (!engineState->getShowObjectLocalNormals()) return;
+void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world) {
+    if (!engineState->getShowObjectLocalNormals()) return;
 
-    //for (const GameObject& obj : objects) {
-    //    Mesh* m = arrowRenderer.mesh;
+    for (const GameObject& obj : objects) {
+        Mesh* m = arrowRenderer.mesh;
 
-    //    // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
-    //    glm::vec3 pos = glm::vec3(obj.transform.modelMatrix[3]);
+        RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
+        Transform* t = world.getTransform(rb->rootTransformHandle);
 
-    //    glm::mat3 R = glm::mat3(obj.transform.modelMatrix);
-    //    R[0] = glm::normalize(R[0]);
-    //    R[1] = glm::normalize(R[1]);
-    //    R[2] = glm::normalize(R[2]);
+        // bygg baseTR från obj.modelMatrix: samma position + rotation, men ingen skala
+        glm::vec3 pos = t->position;
+        glm::mat3 R = glm::mat3_cast(t->orientation);
+        R[0] = glm::normalize(R[0]);
+        R[1] = glm::normalize(R[1]);
+        R[2] = glm::normalize(R[2]);
 
-    //    glm::mat4 baseTR(1.0f);
-    //    baseTR[0] = glm::vec4(R[0], 0.0f);
-    //    baseTR[1] = glm::vec4(R[1], 0.0f);
-    //    baseTR[2] = glm::vec4(R[2], 0.0f);
-    //    baseTR[3] = glm::vec4(pos, 1.0f);
+        glm::mat4 baseTR(1.0f);
+        baseTR[0] = glm::vec4(R[0], 0.0f);
+        baseTR[1] = glm::vec4(R[1], 0.0f);
+        baseTR[2] = glm::vec4(R[2], 0.0f);
+        baseTR[3] = glm::vec4(pos, 1.0f);
 
-    //    // valfri debug-skala (konstant i world)
-    //    glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
+        // valfri debug-skala (konstant i world)
+        glm::mat4 S = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
 
-    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
-    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
-    //    sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
-    //}
+        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelX * S, glm::vec3(1,0,0), false });
+        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelY * S, glm::vec3(0,1,0), false });
+        sceneDebugMeshes.push_back({ m, baseTR * normalsRenderer.modelZ * S, glm::vec3(0,0,1), false });
+    }
 }
 void DebugRenderer::prepareXYZAxes() {
     if (!engineState->getShowObjectLocalNormals() and !engineState->getShowCollisionNormals()) return;
@@ -212,39 +176,57 @@ void DebugRenderer::prepareXYZAxes() {
 //  Render AABBs, Colliders & Contact Points
 // ----------------------------------------------
 void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& world) {
-    /*if (!engineState->getShowAABB()) return;
+    if (!engineState->getShowAABB()) return;
 
     glLineWidth(2.0f);
     glBindVertexArray(aabbRenderer.sVAO);
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };
 
     for (const GameObject& obj : objects) {
-        Collider* col = world.getCollider(obj.colliderHandle);
-        aabbRenderer.updateModel(col->aabb, false);
+        RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
+        aabbRenderer.updateModel(rb->aabb, false);
         aabbRenderer.render(color, *debugShapeShader);
-    }*/
+    }
 }
 void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) {
-    /*if (!engineState->getShowColliders()) return;
+    if (!engineState->getShowColliders()) return;
 
     glLineWidth(2.0f);
     debugShapeShader->setBool("debug.useUniformColor", true);
 
     for (const GameObject& obj : objects) {
-        Collider* col = world.getCollider(obj.colliderHandle);
         RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
-
         bool isStatic = (rb->type == BodyType::Static);
 
-        if (col->type == ColliderType::CUBOID) {
-            const OOBB& box = std::get<OOBB>(col->shape);
-            oobbRenderer.renderBox(*debugShapeShader, box, rb->asleep, isStatic, false, false);
+        for (size_t i = 0; i < rb->colliderHandles.size(); ++i) {
+            Collider* col = world.getCollider(rb->colliderHandles[i]);
+
+            if (col->type == ColliderType::CUBOID) {
+                const OOBB& box = std::get<OOBB>(col->shape);
+                oobbRenderer.renderBox(
+                    *debugShapeShader,
+                    box,
+                    rb->asleep,
+                    isStatic,
+                    obj.selectedByEditor || obj.selectedByPlayer,
+                    obj.hoveredByEditor
+                );
+            }
+            else if (col->type == ColliderType::SPHERE) {
+                const Sphere& sphere = std::get<Sphere>(col->shape);
+                sphereOutlineRenderer.render(
+                    *debugShapeShader,
+                    camera.position,
+                    sphere.centerWorld,
+                    sphere.radiusWorld,
+                    rb->asleep,
+                    isStatic,
+                    obj.selectedByEditor || obj.selectedByPlayer,
+                    obj.hoveredByEditor
+                );
+            }
         }
-        else if (col->type == ColliderType::SPHERE) {
-            const Sphere& sphere = std::get<Sphere>(col->shape);
-            sphereOutlineRenderer.render(*debugShapeShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, false, false);
-        }
-    }*/
+    }
 }
 void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const {
     if (!engineState->getShowContactPoints()) return;

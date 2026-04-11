@@ -222,15 +222,22 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     + right * (glm::linearRand(-jitter, jitter))
                     + camera->up * (glm::linearRand(-jitter, jitter));
 
-                //GameObjectHandle newObject = world->createGameObject(
-                //    "uvmap", "sphere", ColliderType::SPHERE, BodyType::Dynamic,
-                //    camera->position + camera->front * 5.0f + offset,
-                //    glm::vec3(1), 1, {}, 1.5f, false, {}, false
-                //);
+                // create new object description
+                GameObjectDesc newObj;
+                glm::vec3 position = { camera->position + camera->front * 5.0f + offset };
+                newObj.rootTransformHandle = world->createTransform(position);
 
-                //GameObject* objPtr = world->getGameObject(newObject);
-                //RigidBody* rb = world->getRigidBody(newObject);
-                //rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+                SubPartDesc part;
+                part.localTransformHandle = world->createTransform();
+                part.colliderType = ColliderType::SPHERE;
+                part.textureName = "uvmap";
+                part.meshName = "sphere";
+                newObj.parts.push_back(part);
+
+                // create new object & apply shoot velocity
+                GameObjectHandle newObject = world->createGameObject(newObj);
+                RigidBody* rb = world->getRigidBody(newObject);
+                rb->linearVelocity = camera->front * SHOOT_VELOCITY;
             }
         }
         else {

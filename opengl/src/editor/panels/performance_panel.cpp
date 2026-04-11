@@ -190,6 +190,8 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 
             if (ImGui::BeginTable(tableId, 2, flags))
             {
+                // column 1: total objects, static, terrain
+                // column 2: awake, asleep, collisions
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGui::Text("Objects: %zu", ctx.amountObjects);
@@ -198,15 +200,19 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Static: %zu", ctx.amountStaticObjects);
+                ImGui::Text("Terrain: %zu", ctx.amountTerrainTris);
                 ImGui::TableNextColumn();
                 ImGui::Text("Asleep: %zu", ctx.amountAsleepObjects);
 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Terrain: %zu", ctx.amountTerrainTris);
+                ImGui::Text("Contacts: %zu", ctx.amountContacts);
                 ImGui::TableNextColumn();
-                ImGui::Text("Collisions: %zu", ctx.amountCollisions);
+                ImGui::Text("Static: %zu", ctx.amountStaticObjects);
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("Colliders: %zu", ctx.amountColliders);
 
                 ImGui::EndTable();
             }
@@ -363,7 +369,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
     TotalTooltip();
 
     ImGui::TextDisabled("CPU %.2f   GPU %.2f", cpu_total_ms, gpu_total_ms);
-    ImGui::TextDisabled("Obj %s   Col %zu", objCompact.c_str(), ctx.amountCollisions);
+    ImGui::TextDisabled("Obj %s   Col %zu", objCompact.c_str(), ctx.amountContacts);
 
     DrawSparkline(190.0f, 18.0f);
 

@@ -26,7 +26,8 @@ struct PanelContext {
 	size_t amountAsleepObjects = 0;
 	size_t amountStaticObjects = 0;
 	size_t amountTerrainTris = 0;
-	size_t amountCollisions = 0;
+	size_t amountContacts = 0;
+	size_t amountColliders = 0;
 	GameObjectHandle selectedObjectHandle;
 	bool objectIsSelected = false;
 

@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "physics.h"
 #include "aabb.h"
-#include "sat.h"
 
 void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
@@ -71,8 +70,9 @@ const DebugData PhysicsEngine::getDebugData() {
     debugData.awake = broadphaseManager.getAwakeList().size();
     debugData.asleep = broadphaseManager.getAsleepList().size();
     debugData.Static = broadphaseManager.getStaticList().size();
+    debugData.colliders = physicsWorld.getCollidersMap().dense().size();
     debugData.terrainTris = terrainTriangles->size();
-    debugData.collisions = contactCache.size();
+    debugData.contacts = contactCache.size();
     return debugData;
 }
 
@@ -289,6 +289,10 @@ void PhysicsEngine::updateBodiesAndColliders() {
                 body->aabb.growToInclude(c->getAABB().worldMin);
                 body->aabb.growToInclude(c->getAABB().worldMax);
             }
+
+            body->aabb.worldCenter = (body->aabb.worldMin + body->aabb.worldMax) * 0.5f;
+            body->aabb.worldHalfExtents = (body->aabb.worldMax - body->aabb.worldMin) * 0.5f;
+            body->aabb.setSurfaceArea();
         }
     }
 }
@@ -354,7 +358,7 @@ void PhysicsEngine::collectActiveContacts() {
             return a->hashKey < b->hashKey;
         });
 
-    debugData.collisions = contactsToSolve.size();
+    debugData.contacts = contactsToSolve.size();
 }
 
 //---------------------------------------------

@@ -44,7 +44,7 @@ private:
     };
     std::vector<SceneDebugMesh> sceneDebugMeshes;
     void prepareCollisionNormals(PhysicsEngine& physics, World& world);
-    void prepareObjectLocalNormals(const std::vector<GameObject>& objects);
+    void prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world);
     void prepareXYZAxes();
 
     // unlit debug shapes

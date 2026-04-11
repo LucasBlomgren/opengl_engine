@@ -88,6 +88,8 @@ void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
     for (const ColliderHandle& colH : body->colliderHandles) {
         Collider* collider = caches->colliders.get(colH, FUNC_NAME);
 
+        const std::vector<Tri*>* candidates = &pair.tris;
+
         // if compound, do mid phase AABB tests to filter terrain tris before SAT, otherwise just send all terrain tris to SAT
         if (body->isCompound()) {
             terrainTriCandidates.clear();
@@ -97,18 +99,20 @@ void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
             if (terrainTriCandidates.empty()) {
                 continue;
             }
+
+            candidates = &terrainTriCandidates;
         }
 
         SAT_resultsList.clear();
-        SAT_resultsList.reserve(terrainTriCandidates.size());
+        SAT_resultsList.reserve(candidates->size());
 
         switch (collider->type) {
         case ColliderType::CUBOID:
-            processTerrainTriBox(collider->rigidBodyHandle, collider, body);
+            processTerrainTriBox(collider->rigidBodyHandle, collider, body, *candidates);
             break;
 
         case ColliderType::SPHERE:
-            processTerrainTriSphere(collider->rigidBodyHandle, collider , body);
+            processTerrainTriSphere(collider->rigidBodyHandle, collider , body , *candidates);
             break;
         }
     }

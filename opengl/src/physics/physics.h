@@ -9,7 +9,7 @@
 #include "world.h"
 #include "timer.h"
 #include "engine_state.h"
-#include "collision_manifold.h"
+#include "narrowphase/collision_manifold.h"
 #include "raycast.h"
 #include "game_object.h"
 #include "bvh/bvh.h"
@@ -25,8 +25,9 @@ struct DebugData {
     size_t awake = 0;
     size_t asleep = 0;
     size_t Static = 0;
+    size_t colliders = 0;
     size_t terrainTris = 0;
-    size_t collisions = 0;
+    size_t contacts = 0;
 };
 
 class PhysicsEngine {

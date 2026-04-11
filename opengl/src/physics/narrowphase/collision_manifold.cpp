@@ -531,7 +531,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     }
     // bodyA motion behavior
     if (contact.contributesMotionA) {
-        rA = cp.globalCoord - tA->position;
+        rA = cp.globalCoord - tA->position; // #TODO: ska vara rA = contactPoint - body.comWorld;
         linearVelocityA = bodyA->linearVelocity;
         angularVelocityA = bodyA->angularVelocity;
     }
@@ -557,7 +557,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         angularVelocityB = glm::vec3(0.0f);
     }
     else {
-        rB = cp.globalCoord - tB->position;
+        rB = cp.globalCoord - tB->position; // #TODO: ska vara rB = contactPoint - body.comWorld;
         linearVelocityB = bodyB->linearVelocity;
         angularVelocityB = bodyB->angularVelocity;
     }

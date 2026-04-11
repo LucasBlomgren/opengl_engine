@@ -703,32 +703,35 @@ void Renderer::renderLights() const {
 //     Render Raycast Hit
 //----------------------------
 void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
-    //// #TODO: fix logic for selected vs hovered
+    // #TODO: fix logic for selected vs hovered
 
-    //GameObject* obj = world->getGameObject(handle);
-    //if (obj == nullptr) {
-    //    return;
-    //}
+    GameObject* obj = world->getGameObject(handle);
+    if (obj == nullptr) {
+        return;
+    }
 
-    //Collider* col = world->getCollider(obj->colliderHandle);
-    //RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
+    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
 
-    //debugShader->use();
-    //debugShader->setBool("debug.useUniformColor", true);
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true);
 
-    //bool selected;
-    //if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
-    //else if (obj->hoveredByEditor) { selected = false; }
-    //else return;
+    bool selected;
+    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
+    else if (obj->hoveredByEditor) { selected = false; }
+    else return;
 
-    //bool isStatic = (rb->type == BodyType::Static);
+    bool isStatic = (rb->type == BodyType::Static);
 
-    //if (col->type == ColliderType::CUBOID) {
-    //    const OOBB& box = std::get<OOBB>(col->shape);
-    //    debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
-    //}
-    //else if (col->type == ColliderType::SPHERE) {
-    //    Sphere& sphere = std::get<Sphere>(col->shape);
-    //    debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
-    //}
+    for (ColliderHandle& handle : rb->colliderHandles) {
+        Collider* col = world->getCollider(handle);
+
+        if (col->type == ColliderType::CUBOID) {
+            const OOBB& box = std::get<OOBB>(col->shape);
+            debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+        }
+        else if (col->type == ColliderType::SPHERE) {
+            Sphere& sphere = std::get<Sphere>(col->shape);
+            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+        }
+    }
 }

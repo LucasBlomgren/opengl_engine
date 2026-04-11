@@ -29,6 +29,9 @@ public:
     MotionControl motionControl = MotionControl::Physics;
     ContactResponseMode responseMode = ContactResponseMode::Normal;
 
+    // #TODO: lägga till COM
+    // annars fungerar fysiken bara om collidernas lokala transform är centrerade runt COM
+
     // handles
     GameObjectHandle gameObjectHandle;
     BroadphaseHandle broadphaseHandle;

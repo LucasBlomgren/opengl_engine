@@ -6,9 +6,9 @@
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\core\engine_state.cpp" />
-    <ClCompile Include="src\physics\collision_manifold.cpp" />
+    <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
     <ClCompile Include="src\physics\physics.cpp" />
-    <ClCompile Include="src\physics\sat.cpp" />
+    <ClCompile Include="src\physics\narrowphase\sat.cpp" />
     <ClCompile Include="src\graphics\lighting\light.cpp" />
     <ClCompile Include="src\graphics\lighting\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer\renderer.cpp" />
@@ -98,9 +98,9 @@
     <ClInclude Include="src\core\engine_state.h" />
     <ClInclude Include="src\core\init_opengl.h" />
     <ClInclude Include="src\core\input.h" />
-    <ClInclude Include="src\physics\collision_manifold.h" />
+    <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
     <ClInclude Include="src\physics\physics.h" />
-    <ClInclude Include="src\physics\sat.h" />
+    <ClInclude Include="src\physics\narrowphase\sat.h" />
     <ClInclude Include="src\graphics\lighting\light.h" />
     <ClInclude Include="src\graphics\lighting\light_manager.h" />
     <ClInclude Include="src\graphics\renderer\renderer.h" />
@@ -164,6 +164,7 @@
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
     <ClInclude Include="src\physics\narrowphase\dynamic_processing.h" />
     <ClInclude Include="src\physics\wake_sleep_utils.h" />
+    <ClInclude Include="src\physics\colliders\collider_pose.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -13,7 +13,7 @@ class MeshManager;
 class Renderer;
 
 struct SubPartDesc {
-    TransformHandle localTransformHandle;
+    TransformHandle localTransformHandle{};
     ColliderType colliderType = ColliderType::CUBOID;
 
     // render
@@ -26,7 +26,7 @@ struct SubPartDesc {
 
 struct GameObjectDesc {
     std::vector<SubPartDesc> parts;
-    TransformHandle rootTransformHandle;
+    TransformHandle rootTransformHandle{};
 
     // rigid body
     BodyType bodyType = BodyType::Dynamic;
@@ -53,7 +53,11 @@ public:
     Collider* getCollider(const ColliderHandle& handle);
 
     GameObjectHandle createGameObject(GameObjectDesc& obj);
-    TransformHandle createTransform(const glm::vec3& position, const glm::quat& orientation, const glm::vec3& scale);
+    TransformHandle createTransform(
+        const glm::vec3& position = glm::vec3{ 0.0f },
+        const glm::quat& orientation = glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f },
+        const glm::vec3& scale = glm::vec3{ 1.0f }
+    );
 
     void deleteGameObject(GameObjectHandle handle);
 

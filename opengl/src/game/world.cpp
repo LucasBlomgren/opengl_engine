@@ -153,6 +153,10 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
             body.aabb.growToInclude(c->getAABB().worldMin);
             body.aabb.growToInclude(c->getAABB().worldMax);
         }
+
+        body.aabb.worldCenter = (body.aabb.worldMin + body.aabb.worldMax) * 0.5f;
+        body.aabb.worldHalfExtents = (body.aabb.worldMax - body.aabb.worldMin) * 0.5f;
+        body.aabb.setSurfaceArea();
     }
 
     // inertia init 

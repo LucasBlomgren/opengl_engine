@@ -50,13 +50,15 @@ private:
     void processTerrainTriBox(
         RigidBodyHandle bodyH, 
         Collider* collider, 
-        RigidBody* body
+        RigidBody* body,
+        const std::vector<Tri*>& candidates
     );
 
     void processTerrainTriSphere(
         RigidBodyHandle bodyH, 
         Collider* collider, 
-        RigidBody* body
+        RigidBody* body,
+        const std::vector<Tri*>& candidates
     );
 
     void processBoxBox(

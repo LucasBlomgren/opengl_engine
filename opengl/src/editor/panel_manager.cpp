@@ -27,7 +27,8 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	ctx.amountAsleepObjects = data.asleep;
 	ctx.amountStaticObjects = data.Static;
 	ctx.amountTerrainTris = data.terrainTris;
-	ctx.amountCollisions = data.collisions;
+	ctx.amountContacts = data.contacts;
+	ctx.amountColliders = data.colliders;
 
 	for (const auto& panel : panels) {
 		panel->OnImGuiRender(ctx);
