@@ -31,6 +31,21 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
 
     // collision manifold generation
     glm::vec3 avgNormal = getAvgNormal(SAT_resultsList);
+    if (glm::length2(avgNormal) < 1e-8f) {
+        std::cerr << "BAD avgNormal for terrain contact. body="
+            << bodyH.slot
+            << " results=" << SAT_resultsList.size() << "\n";
+
+        for (const auto& r : SAT_resultsList) {
+            std::cerr << "  tri normal: "
+                << r.normal.x << ", "
+                << r.normal.y << ", "
+                << r.normal.z << "\n";
+        }
+
+        avgNormal = SAT_resultsList[0].normal; // tillfällig fallback
+    }
+
     SAT::findBestTriangles(SAT_resultsList);
 
     Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
@@ -47,7 +62,7 @@ void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider
             continue;
         }
 
-        SAT::reverseNormal(collider->globalTransform.position, tri->centroid, SAT_result.normal);
+        SAT::reverseNormal(collider->pose.position, tri->centroid, SAT_result.normal);
         SAT_resultsList.push_back(SAT_result);
     }
 

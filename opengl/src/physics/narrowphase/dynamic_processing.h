@@ -105,8 +105,10 @@ void NarrowphaseManager::processBoxSphere(
         std::swap(colliderA, colliderB);
     }
 
+    colliderA->pose.ensureInvModelMatrix();
+
     SAT::Result satResult;
-    if (!SAT::boxSphere(*colliderA, *colliderB, colliderA->globalTransform, satResult)) {
+    if (!SAT::boxSphere(*colliderA, *colliderB, colliderA->pose, satResult)) {
         return;
     }
 

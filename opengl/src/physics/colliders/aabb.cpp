@@ -26,9 +26,9 @@ void AABB::init(const std::vector<glm::vec3>& vertices) {
 //--------------------------------------------
 // Standard AABB functions
 //--------------------------------------------
-void AABB::update(const Transform& t) {
-    glm::mat3 model3x3 = glm::mat3(t.modelMatrix);
-    transform_withRotation(model3x3, t.position);
+void AABB::update(const ColliderPose& pose) {
+    glm::mat3 model3x3 = glm::mat3(pose.modelMatrix);
+    transform_withRotation(model3x3, pose.position);
 
     worldCenter = (worldMin + worldMax) * 0.5f;
     worldHalfExtents = (worldMax - worldMin) * 0.5f;

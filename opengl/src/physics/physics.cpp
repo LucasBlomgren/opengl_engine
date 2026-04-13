@@ -275,9 +275,10 @@ void PhysicsEngine::updateBodiesAndColliders() {
             Collider* collider = caches.colliders.get(colH, FUNC_NAME);
             Transform* localTransform = caches.transforms.get(collider->localTransformHandle, FUNC_NAME);
 
-            collider->globalTransform = combineTransforms(*rootTransform, *localTransform);
-            collider->updateAABB(collider->globalTransform);
-            collider->updateCollider(collider->globalTransform);
+            collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
+            collider->pose.ensureModelMatrix();
+            collider->updateAABB(collider->pose);
+            collider->updateCollider(collider->pose);
         }
 
         body->aabb = mainCollider->getAABB();

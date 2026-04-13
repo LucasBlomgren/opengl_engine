@@ -24,12 +24,12 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     //std::cout << "Reference face on object ID: " << (contact.objBisReference ? contact.objB_ptr->id : contact.objA_ptr->id) << std::endl;
 
     if (contact.objBisReference) {
-        selectOOBBCollisionFace(colliderB, &colliderB->globalTransform, -satResult.normal); referenceFace = this->selectedFace;
-        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);  incidentFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderB, colliderB->pose, -satResult.normal); referenceFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderA, colliderA->pose, satResult.normal);  incidentFace = this->selectedFace;
     }
     else {
-        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);  referenceFace = this->selectedFace;
-        selectOOBBCollisionFace(colliderB, &colliderB->globalTransform, -satResult.normal); incidentFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderA, colliderA->pose, satResult.normal);  referenceFace = this->selectedFace;
+        selectOOBBCollisionFace(colliderB, colliderB->pose, -satResult.normal); incidentFace = this->selectedFace;
     }
 
     // räkna ut normalen för referensface
@@ -94,7 +94,7 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
     this->allClippedPoints.reserve(8 * allResults.size());
 
     // set ref face for contact (for penetration depth calculation etc.)
-    selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, allResults[0].normal);
+    selectOOBBCollisionFace(colliderA, colliderA->pose, allResults[0].normal);
 
     referenceFace = this->selectedFace;
     glm::vec3 edgeA = referenceFace[0] - referenceFace[1];
@@ -108,7 +108,7 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
 
     for (const SAT::Result& satResult : allResults)
     {
-        selectOOBBCollisionFace(colliderA, &colliderA->globalTransform, satResult.normal);
+        selectOOBBCollisionFace(colliderA, colliderA->pose, satResult.normal);
         referenceFace = this->selectedFace;
         incidentFace = satResult.tri_ptr->vertices;
 
@@ -261,9 +261,12 @@ void CollisionManifold::addFurthestPoint(std::vector<int>& indices) {
     indices.push_back(bestIdx);
 }
 
-void CollisionManifold::selectOOBBCollisionFace(const Collider* collider, const Transform* worldColliderTransform, const glm::vec3& normal) {
+void CollisionManifold::selectOOBBCollisionFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal) {
+    pose.ensureInvRotationMatrix();
+    pose.ensureModelMatrix();
+
     // Rotera kontaktnormalen in i lokalspace
-    glm::vec3 rotated = worldColliderTransform->invRotationMatrix * normal;
+    glm::vec3 rotated = pose.invRotationMatrix * normal;
     glm::vec3 absN = glm::abs(rotated);
 
     const OOBB& box = std::get<OOBB>(collider->shape);
@@ -286,8 +289,8 @@ void CollisionManifold::selectOOBBCollisionFace(const Collider* collider, const 
 
     // Transformera precis de fyra lokala hörnen till world-space
     // (R = obj.rotationMatrix, T = obj.translationVector)
-    glm::mat3 M3 = glm::mat3(worldColliderTransform->modelMatrix);         // innehåller både rot+skala
-    glm::vec3 T3 = glm::vec3(worldColliderTransform->modelMatrix[3]);
+    glm::mat3 M3 = glm::mat3(pose.modelMatrix);         // innehåller både rot+skala
+    glm::vec3 T3 = glm::vec3(pose.modelMatrix[3]);
 
     selectedFace.clear();
     selectedFace.reserve(4);
@@ -397,18 +400,17 @@ void CollisionManifold::clipPoints(std::vector<glm::vec3>& referenceFace, std::v
 }
 
 void CollisionManifold::createLocalCoordinates(Contact& contact) {
-    glm::mat4* invM = nullptr;
+    Transform* root = nullptr;
 
     if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
-        invM = &contact.runtimeData.bodyRootB->invModelMatrix;
+        root = contact.runtimeData.bodyRootB;
     }
     else {
-        invM = &contact.runtimeData.bodyRootA->invModelMatrix;
+        root = contact.runtimeData.bodyRootA;
     }
 
     for (int i = 0; i < contact.points.size(); i++) {
-        glm::vec4 local = *invM * glm::vec4(contact.points[i].globalCoord, 1.0f);
-        contact.points[i].localCoord = glm::vec3(local);
+        contact.points[i].localCoord = root->worldToLocalPoint(contact.points[i].globalCoord);
     }
 }
 
@@ -820,16 +822,14 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             glm::vec3 projP = transformedPoint - dn * referenceFaceNormal;
             cachedPoint.globalCoord = projP;
 
-            glm::mat4* invM;
+            Transform* root;
             if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
-                invM = &tB->invModelMatrix;
+                root = contact.runtimeData.bodyRootB;
             } else {
-                invM = &tA->invModelMatrix;
+                root = contact.runtimeData.bodyRootA;
             }
 
-            glm::vec4 loc = *invM * glm::vec4(cachedPoint.globalCoord, 1.0f);
-            cachedPoint.localCoord = glm::vec3(loc);
-
+            cachedPoint.localCoord = root->worldToLocalPoint(cachedPoint.globalCoord);
             cachedPoint.depth = -glm::dot(cachedPoint.globalCoord - contact.referenceFace[0], contact.referenceFaceNormal);
 
             PreComputePointData(cachedPoint, contact);

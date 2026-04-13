@@ -111,8 +111,11 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         collider.type = partDesc.colliderType;
         collider.localTransformHandle = partDesc.localTransformHandle;
 
-        Transform partGlobalTransform = combineTransforms(*rootTransform, *partTransform);
-        collider.globalTransform = partGlobalTransform;
+        collider.pose.position = partTransform->position;
+        collider.pose.orientation = partTransform->orientation;
+        collider.pose.scale = partTransform->scale;
+        collider.pose.combineIntoColliderPose(*rootTransform, *partTransform);
+        collider.pose.ensureModelMatrix();
 
         // aabb init
         std::vector<glm::vec3> verticesPositions;
@@ -120,15 +123,15 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
             verticesPositions.push_back(vertex.position);
         }
         collider.aabb.init(verticesPositions);
-        collider.aabb.update(collider.globalTransform);
+        collider.aabb.update(collider.pose);
 
         // collider shape init
         if (partDesc.colliderType == ColliderType::CUBOID) {
-            OOBB box(verticesPositions, collider.globalTransform);
+            OOBB box(verticesPositions, collider.pose);
             collider.shape = box;
         }
         else if (partDesc.colliderType == ColliderType::SPHERE) {
-            Sphere sphere(collider.globalTransform);
+            Sphere sphere(collider.pose);
             collider.shape = sphere;
         }
 

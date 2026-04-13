@@ -6,6 +6,7 @@
 #include "rigid_body.h"
 #include "game_object.h"
 #include "sat.h"
+#include "collider_pose.h"
 
 struct Plane {
     glm::vec3 normal;
@@ -117,7 +118,7 @@ private:
     RuntimeCaches* caches = nullptr;
 
     std::vector<glm::vec3> selectedFace;
-    void selectOOBBCollisionFace(const Collider* collider, const Transform* worldColliderTransform, const glm::vec3& normal);
+    void selectOOBBCollisionFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal);
 
     std::vector<glm::vec3> furthestPoints; // uses allClippedPoints
     std::vector<int> indices; // indices of furthestPoints in allClippedPoints

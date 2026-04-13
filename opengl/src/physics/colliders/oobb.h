@@ -3,9 +3,9 @@
 #include <array>
 #include <vector>
 
-#include "game/transform_utils.h"
 #include "shaders/shader.h"
 #include "vertex.h"
+#include "collider_pose.h"
 
 enum class FaceId {
     MinX, MaxX,
@@ -32,14 +32,14 @@ class OOBB {
 public:
     //constructor
     OOBB() = default;
-    OOBB(const std::vector<glm::vec3>& verts, const Transform& t) {
-        init(verts, t);
-        update(t);
+    OOBB(const std::vector<glm::vec3>& verts, const ColliderPose& pose) {
+        init(verts, pose);
+        update(pose);
     };
 
-    void init(const std::vector<glm::vec3>& verts, const Transform& t);
+    void init(const std::vector<glm::vec3>& verts, const ColliderPose& pose);
 
-    void update(const Transform& t);
+    void update(const ColliderPose& pose);
     std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 
     std::array<glm::vec3, 8> worldVertices;

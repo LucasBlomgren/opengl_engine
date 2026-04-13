@@ -2,7 +2,6 @@
 #include "renderer.h"
 #include "debug/draw_line.h"
 #include "mesh/mesh_manager.h"
-#include "transform_utils.h"
 
 //-----------------------------
 //           Init
@@ -70,7 +69,6 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
         }
 
         Transform* localT = world->getTransform(part.localTransformHandle);
-        Transform worldT = combineTransforms(*rootT, *localT);
 
         bool addedToBatch = false;
 
@@ -81,7 +79,7 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
                 bucket.textureId == part.textureId)
             {
                 bucket.parts.push_back({ objectH, i });
-                bucket.instances.emplace_back(worldT.modelMatrix, part.color);
+                bucket.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
 
                 part.batchIdx = static_cast<int>(&bucket - &batches[0]);
                 part.batchInstanceIdx = static_cast<int>(bucket.parts.size()) - 1;
@@ -97,7 +95,7 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
             newBatch.shader = part.shader;
             newBatch.textureId = part.textureId;
             newBatch.parts.push_back({ objectH, i });
-            newBatch.instances.emplace_back(worldT.modelMatrix, part.color);
+            newBatch.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
 
             // new batch & instance
             part.batchIdx = static_cast<int>(batches.size());
@@ -323,9 +321,8 @@ void Renderer::fillBatchInstances() {
 
             Transform* rootT = world->getTransform(obj->rootTransformHandle);
             Transform* localT = world->getTransform(part.localTransformHandle);
-            Transform worldT = combineTransforms(*rootT, *localT);
 
-            bucket.instances.emplace_back(worldT.modelMatrix, part.color);
+            bucket.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
         }
     }
 }

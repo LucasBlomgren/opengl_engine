@@ -406,77 +406,103 @@ void Editor::EditorMain::update(Shader& shader) {
 // OBJECT SELECTION AND PLACEMENT
 //------------------------------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
-    //if (!objectIsSelected) return;
+    if (!objectIsSelected) return;
 
-    //GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    //glm::vec3 worldOffset = selectedObject->transform.position - camera->position;
-    //selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
-    //selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
-    //selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
+    glm::vec3 worldOffset = transform->position - camera->position;
+    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    //selectedObject->transform.lastPosition = selectedObject->transform.position;
+    transform->lastPosition = transform->position;
 }
 
 // select object
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
-    //if (objectIsSelected) return;
+    if (objectIsSelected) return;
 
-    //RaycastHit raycast = rayCast(SELECT_RANGE);
+    RaycastHit raycast = rayCast(SELECT_RANGE);
 
-    //// no hit return
-    //if (!raycast.hit) {
-    //    return;
-    //}
+    // no hit return
+    if (!raycast.hit) {
+        return;
+    }
 
-    //objectIsSelected = true;
-    //RigidBody* selectedBody = world->getRigidBody(raycast.bodyHandle);
-    //GameObjectHandle selectedHandle = selectedBody->gameObjectHandle;
-    //selectedObjectHandle = selectedHandle;
+    objectIsSelected = true;
+    RigidBody* selectedBody = world->getRigidBody(raycast.bodyHandle);
+    GameObjectHandle selectedHandle = selectedBody->gameObjectHandle;
+    selectedObjectHandle = selectedHandle;
 
-    //// set selected and hovered states, and calculate selection offset
-    //GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    //selectedObject->selectedByEditor = true;
-    //selectedObject->hoveredByEditor = false;
-    //selectedObject->transform.lastPosition = selectedObject->transform.position;
+    // set selected and hovered states, and calculate selection offset
+    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
+    selectedObject->selectedByEditor = true;
+    selectedObject->hoveredByEditor = false;
+    transform->lastPosition = transform->position;
 
-    //// Project worldofset onto cameras local axes
-    //glm::vec3 worldOffset = selectedObject->transform.position - camera->position;
-    //selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
-    //selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
-    //selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+    // Project worldofset onto cameras local axes
+    glm::vec3 worldOffset = transform->position - camera->position;
+    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    //// set body to kinematic so it can be moved without physics interference, and store original body type to restore later
-    //RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-    //rb->setExternalControl(true);
-    //rb->linearVelocity = glm::vec3(0.0f);
-    //rb->angularVelocity = glm::vec3(0.0f);
+    // set body to kinematic so it can be moved without physics interference, and store original body type to restore later
+    RigidBody* rb = world->getRigidBody(selectedObjectHandle);
+    rb->setExternalControl(true);
+    rb->linearVelocity = glm::vec3(0.0f);
+    rb->angularVelocity = glm::vec3(0.0f);
 
-    //panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
-    //panelManager->ctx.objectIsSelected = true;
+    panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
+    panelManager->ctx.objectIsSelected = true;
 }
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-    //if (!objectIsSelected)
-    //    return;
+    if (!objectIsSelected)
+        return;
 
-    //GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    //Collider* selectedCollider = world->getCollider(selectedObjectHandle);
+    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+    RigidBody* rb = world->getRigidBody(selectedObjectHandle);
 
-    //// position
-    //glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
-    //glm::vec3 newPos = camera->position + worldOffset;
-    //selectedObject->transform.position = newPos;
-    //selectedObject->transform.lastPosition = newPos;
+    // position
+    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
 
-    //// velocity
-    ////selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
+    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
+    glm::vec3 newPos = camera->position + worldOffset;
 
-    //selectedObject->transform.updateCache();
-    //selectedCollider->updateAABB(selectedObject->transform);
-    //selectedCollider->updateCollider(selectedObject->transform);
+    transform->position = newPos;
+    transform->lastPosition = newPos;
+    transform->updateCache();
 
-    //physicsEngine->setBVHDirty(selectedObject->rigidBodyHandle);
+    // velocity
+    //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
+
+    for (ColliderHandle& handle : rb->colliderHandles) {
+        Collider* collider = world->getCollider(handle);
+        Transform* localTransform = world->getTransform(collider->localTransformHandle);
+        collider->pose.ensureModelMatrix();
+        collider->updateAABB(collider->pose);
+        collider->updateCollider(collider->pose);
+    }
+
+    Collider* mainCollider = world->getCollider(rb->colliderHandles[0]);
+    rb->aabb = mainCollider->getAABB();
+
+    // update compound body AABB
+    if (rb->isCompound()) {
+        for (size_t i = 1; i < rb->colliderHandles.size(); ++i) {
+            Collider* c = world->getCollider(rb->colliderHandles[i]);
+            rb->aabb.growToInclude(c->getAABB().worldMin);
+            rb->aabb.growToInclude(c->getAABB().worldMax);
+        }
+
+        rb->aabb.worldCenter = (rb->aabb.worldMin + rb->aabb.worldMax) * 0.5f;
+        rb->aabb.worldHalfExtents = (rb->aabb.worldMax - rb->aabb.worldMin) * 0.5f;
+        rb->aabb.setSurfaceArea();
+    }
+
+    physicsEngine->setBVHDirty(selectedObject->rigidBodyHandle);
 }
 
 // drop selected object
@@ -496,20 +522,6 @@ void Editor::EditorMain::dropObject() {
     hoveredObjectHandle = {};
     panelManager->ctx.objectIsSelected = false;
     panelManager->ctx.selectedObjectHandle = {};
-}
-
-// place object at placement AABB position
-void Editor::EditorMain::placeObject() {
-    //if (placementObstructed)
-    //    return;
-
-    //glm::vec3 size{ OBJ_PLACE_SIZE };
-    //glm::vec3 spawnPos = aabbToPlace.centroid;
-    //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-    //GameObjectHandle handle = world->createGameObject("crate", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, 1, orientation, 1.5f, false, {}, false);
-    //GameObject* newObject = world->getGameObject(handle);
-    //RigidBody* rb = world->getRigidBody(handle);
-    //rb->linearVelocity = glm::vec3(0.0f);
 }
 
 // Raycast from camera through mouse cursor into world
@@ -554,121 +566,4 @@ RaycastHit Editor::EditorMain::rayCast(float length)
     RaycastHit hitData = physicsEngine->performRaycast(r);
 
     return hitData;
-}
-
-// create placement AABB in front of camera, adjusted for collisions
-void Editor::EditorMain::createPlaceObjectAABB(Shader& shader) {
-    //glm::vec3 size{ OBJ_PLACE_SIZE };
-
-    //AABB aabb;
-    //aabb.centroid = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-    //aabb.halfExtents = glm::vec3(size / 2.0f);
-
-    //RaycastHit hitData = rayCast(OBJ_PLACE_DISTANCE);
-    //glm::vec3 normal = hitData.normal;
-    //if (hitData.hit) {
-    //    if (glm::dot(hitData.normal, camera->front) > 0.0f)
-    //        normal = -normal;
-
-    //    glm::vec3 absN = glm::abs(normal);
-    //    float extentOnN = glm::dot(aabb.halfExtents, absN);
-
-    //    float margin = 0.1f;
-    //    aabb.centroid = hitData.point + normal * (extentOnN - margin);
-    //}
-
-    //aabb.wMin = aabb.centroid - aabb.halfExtents;
-    //aabb.wMax = aabb.centroid + aabb.halfExtents;
-
-    //const BVHTree& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
-    //int maxIter = 8;
-    //int iter = 0;
-    //for (int i = 0; i < maxIter; i++) {
-    //    std::vector<RigidBodyHandle> collisions;
-    //    collisions.reserve(100);
-    //    dynamicAwakeBvh.singleQuery(aabb, collisions);
-
-    //    if (collisions.size() == 0) {
-    //        break;
-    //    }
-
-    //    // min depth collision
-    //    float min = std::numeric_limits<float>::max();
-    //    Collider* minDepthCollider = nullptr;
-    //    for (RigidBodyHandle& handle : collisions) {
-    //        RigidBody* rb = world->getRigidBody(handle);
-    //        Collider* collider = world->getCollider(rb->colliderHandle);
-
-    //        float depth = aabb.getMinOverlapDepth(collider->aabb);
-    //        if (depth < min) {
-    //            min = depth;
-    //            minDepthCollider = collider;
-    //        }
-    //    }
-
-    //    // move AABB away from collision
-    //    glm::vec3 normal = aabb.getCollisionNormal(minDepthCollider->aabb);
-    //    aabb.centroid += normal * min * 1.2f;
-    //    aabb.wMin = aabb.centroid - aabb.halfExtents;
-    //    aabb.wMax = aabb.centroid + aabb.halfExtents;
-
-    //    iter++;
-    //}
-
-    //glm::vec3 color;
-    //if (iter >= maxIter) {
-    //    this->placementObstructed = true;
-    //    color = glm::vec3{ 1,0,0 };
-    //}
-    //else {
-    //    this->placementObstructed = false;
-    //    aabbToPlace = aabb;
-    //    color = glm::vec3{ 0.9f, 0.7f, 0.2f };
-    //}
-
-    //if (drawPlacementAABB)
-    //    drawAABB(aabb, shader, color);
-}
-
-// draw selection/placement AABB
-void Editor::EditorMain::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {
-    /*glm::vec3 min = aabb.wMin;
-    glm::vec3 max = aabb.wMax;
-
-    std::array<float, 72> buf = {
-        min.x,min.y,min.z,  max.x,min.y,min.z,
-        min.x,min.y,min.z,  min.x,max.y,min.z,
-        min.x,min.y,min.z,  min.x,min.y,max.z,
-        max.x,max.y,min.z,  max.x,min.y,min.z,
-        max.x,max.y,min.z,  min.x,max.y,min.z,
-        max.x,max.y,min.z,  max.x,max.y,max.z,
-        min.x,max.y,max.z,  min.x,min.y,max.z,
-        min.x,max.y,max.z,  min.x,max.y,min.z,
-        min.x,max.y,max.z,  max.x,max.y,max.z,
-        max.x,min.y,max.z,  max.x,max.y,max.z,
-        max.x,min.y,max.z,  min.x,min.y,max.z,
-        max.x,min.y,max.z,  max.x,min.y,min.z
-    };
-
-    static GLuint vao = 0, vbo = 0;
-    if (vao == 0) {
-        glGenVertexArrays(1, &vao); glcount::incVAO();
-        glGenBuffers(1, &vbo); glcount::incVBO();
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(0);
-    }
-
-    shader.use();
-    shader.setMat4("model", glm::mat4(1.0f));
-    shader.setBool("debug.useUniformColor", true);
-    shader.setVec3("debug.uColor", color);
-  
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf.data(), GL_DYNAMIC_DRAW);
-
-    glLineWidth(2.0f);
-    glDrawArrays(GL_LINES, 0, 24);*/
 }

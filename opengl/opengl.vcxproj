@@ -294,7 +294,6 @@
     <ClInclude Include="src\game\player.h" />
     <ClInclude Include="src\core\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
-    <ClInclude Include="src\game\transform_utils.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />

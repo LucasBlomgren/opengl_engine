@@ -72,13 +72,8 @@ public:
     void dropObject();
     void updateSelectedObject(float fixedTimeStep);
 
-    // raycast for placement/selection/etc
+    // raycast for selection
     RaycastHit rayCast(float length);
-    AABB aabbToPlace;
-    bool placementObstructed = true;
-    void placeObject();
-    void createPlaceObjectAABB(Shader& shader);
-    void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
 
     glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
     bool objectRainBlocks = false;

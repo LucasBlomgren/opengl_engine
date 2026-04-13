@@ -37,6 +37,13 @@ public:
     void emptyFloorScene();
     void shapePileScene();
 
+    void createGridFloor(
+        glm::vec3& offset,
+        glm::vec3& cellSize,
+        int gridWidth,
+        int gridLength
+    );
+
     void createBlockPyramid(
         const std::string& textureName,
         glm::vec3 color,

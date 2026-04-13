@@ -463,8 +463,8 @@ RaycastHit Player::rayCast(float length) {
 //    float rLength = length;
 //    Ray r(camera->position, camera->front, rLength);
 //    RaycastHit hitData = physicsEngine->performRaycast(r);
-//
-//    return hitData;
+    RaycastHit hitData;
+    return hitData;
 }
 //
 void Player::drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color) {

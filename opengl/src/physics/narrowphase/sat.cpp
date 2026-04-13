@@ -109,14 +109,14 @@ bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
     //glm::vec3 e1 = base - U[i] * he[i];
 }
 
-bool SAT::boxSphere(Collider& A, Collider& B, const Transform& transformA, Result& out) {
+bool SAT::boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& out) {
     // Plocka alltid ut cuboid i A och sphere i B
     OOBB*   box  = std::get_if<OOBB>(&A.shape);
     Sphere* sph  = std::get_if<Sphere>(&B.shape);
 
     // Matriser från GameObject (samma som du använder för rendering och OOBB/AABB)
-    const glm::mat4& M  = transformA.modelMatrix;
-    const glm::mat4& iM = transformA.invModelMatrix;
+    const glm::mat4& M  = pose.modelMatrix;
+    const glm::mat4& iM = pose.invModelMatrix;
 
     // Sphere center i värld
     glm::vec3 worldC = sph->centerWorld;

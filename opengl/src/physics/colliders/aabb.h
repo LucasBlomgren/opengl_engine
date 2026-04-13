@@ -3,10 +3,10 @@
 #include <array>
 #include <vector>
 
-#include "game/transform_utils.h"
 #include "shaders/shader.h"
 #include "vertex.h"
 #include "game/transform.h"
+#include "collider_pose.h"
 
 class AABB {
 public:
@@ -22,7 +22,7 @@ public:
     float surfaceArea = 0.0f;
 
     void init(const std::vector<glm::vec3>& vertices);
-    void update(const Transform& t);
+    void update(const ColliderPose& pose);
     bool intersects(const AABB& b) const;
 
     // BVH functions

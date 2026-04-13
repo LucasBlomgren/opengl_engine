@@ -86,7 +86,6 @@ public:
     void setAsleep(Transform& t);
     void setAwake();
     void setStatic();
-
     void setExternalControl(bool controlled);
 
     void calculateInverseInertia(const ColliderType& type, const Collider& collider, Transform& t);

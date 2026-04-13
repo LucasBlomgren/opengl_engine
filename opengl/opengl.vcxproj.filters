@@ -159,7 +159,6 @@
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
-    <ClInclude Include="src\game\transform_utils.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
     <ClInclude Include="src\physics\narrowphase\dynamic_processing.h" />
