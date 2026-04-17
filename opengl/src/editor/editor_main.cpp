@@ -112,6 +112,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         flag_drawUI = !flag_drawUI;
     }
 
+    std::cout << consumed.mouse << " " << consumed.keyboard << std::endl;
+
     // LMB/RMB drag capture only if started in viewport
     if (!viewportCapturedLMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_1])
         viewportCapturedLMB = true;
@@ -403,7 +405,7 @@ void Editor::EditorMain::update(Shader& shader) {
 }
 
 //------------------------------------------------------
-// OBJECT SELECTION AND PLACEMENT
+// OBJECT SELECTION AND MANIPULATION
 //------------------------------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
     if (!objectIsSelected) return;
@@ -466,14 +468,14 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     RigidBody* rb = world->getRigidBody(selectedObjectHandle);
 
     // position
-    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
+    Transform* rootTransform = world->getTransform(selectedObject->rootTransformHandle);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
     glm::vec3 newPos = camera->position + worldOffset;
 
-    transform->position = newPos;
-    transform->lastPosition = newPos;
-    transform->updateCache();
+    rootTransform->position = newPos;
+    rootTransform->lastPosition = newPos;
+    rootTransform->updateCache();
 
     // velocity
     //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
@@ -481,6 +483,7 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     for (ColliderHandle& handle : rb->colliderHandles) {
         Collider* collider = world->getCollider(handle);
         Transform* localTransform = world->getTransform(collider->localTransformHandle);
+        collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
         collider->pose.ensureModelMatrix();
         collider->updateAABB(collider->pose);
         collider->updateCollider(collider->pose);

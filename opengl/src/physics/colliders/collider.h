@@ -20,14 +20,14 @@ enum class ColliderType {
 struct Collider {
     int id = -1;
     ColliderType type = ColliderType::CUBOID;
-    ColliderShape shape{};
-    AABB aabb{};
+    ColliderShape shape;
+    AABB aabb;
     bool aabbDirty = true;
 
     ColliderPose pose{}; // physics runtime cache for global pose
 
-    RigidBodyHandle rigidBodyHandle{};
-    TransformHandle localTransformHandle{};
+    RigidBodyHandle rigidBodyHandle;
+    TransformHandle localTransformHandle;
 
     AABB& getAABB();
     void updateCollider(ColliderPose& pose);

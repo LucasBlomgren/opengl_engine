@@ -315,7 +315,7 @@ void BVHTree::refitNode(int nodeIdx) {
 //------------------------------------------------------------------
 void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     nodes.clear();
-    // Fyll primitives
+    // Fill prims vector with primitives from handles
     createPrimitives(handles);
 
     if (prims.empty()) return;
@@ -323,10 +323,10 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     numRefits = 0;
     rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
 
-    // Förallokera nod-poolen
+    // Pre-allocate nodes, max number of nodes is 2n-1 (full binary tree)
     nodes.reserve(prims.size() * 2);
 
-    // Skapa root-nod
+    // Create root node
     rootIdx = 0;
     nodes.emplace_back();
     Node& root = nodes[rootIdx];
@@ -334,7 +334,7 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     root.start = 0;
     root.count = prims.size();
 
-    // Beräkna root->aabb som union av alla primitiva
+    // Calculate root AABB as union of all primitives
     root.fatBox.worldMin = prims[0].min;
     root.fatBox.worldMax = prims[0].max;
     for (int i = 1; i < prims.size(); i++) {
@@ -342,7 +342,7 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
         root.fatBox.growToInclude(prims[i].max);
     }
 
-    // Splittra in i children
+    // split into children
     int depth = 0;
     split(rootIdx, depth);
 
@@ -397,14 +397,14 @@ void BVHTree::split(int parentIdx, int depth) {
         : (extent.y > extent.z ? 1 : 2));
 
     // median‐partition of primitives
-    int mid = start + count / 2;
+    int mid = start + (count / 2);
     std::nth_element(
         prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
         [&](auto const& a, auto const& b) {
             return a.centroid[axis] < b.centroid[axis];
         });
 
-    // skapa child-nodes och initiera dem
+    // create child nodes and init them
     Node* A = &nodes.emplace_back();
     A->selfIdx = nodes.size() - 1;
 
@@ -414,7 +414,7 @@ void BVHTree::split(int parentIdx, int depth) {
     initChild(parentIdx, A->selfIdx, true, start, mid, mid - start);
     initChild(parentIdx, B->selfIdx, false, mid, start + count, start + count - mid);
 
-    // rekursivt splitta vidare
+    // recursive split
     split(A->selfIdx, depth + 1);
     split(B->selfIdx, depth + 1);
 }
@@ -431,7 +431,7 @@ void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int
     if (isLeft) parent.childAIdx = childIdx;
     else        parent.childBIdx = childIdx;
 
-    // beräkna båda childs fatBox
+    // calculate both child's fatBox
     child.fatBox.worldMin = prims[start].min;
     child.fatBox.worldMax = prims[start].max;
     for (int i = start + 1; i < end; ++i) {

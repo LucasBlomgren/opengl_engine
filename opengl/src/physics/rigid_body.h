@@ -50,9 +50,9 @@ public:
 
     bool allowGravity = true;
     bool canMoveLinearly = true;
-    glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
     float radius = 0.0f;
     float invRadius = 0.0f;
+    static constexpr glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
 
     // sleep
     bool asleep = false;
@@ -63,7 +63,7 @@ public:
     float velocityThreshold = 0;
     float angularVelocityThreshold = 0;
     float anchorTimer = 0.0f;
-    glm::vec3 anchorPoint;
+    glm::vec3 anchorPoint{ 0.0f };
     int totalCollisionCount = 0;
     float lastAvg = 0.0f;
     RingBuffer collisionHistory;

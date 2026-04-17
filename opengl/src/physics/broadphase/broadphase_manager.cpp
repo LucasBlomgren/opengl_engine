@@ -120,9 +120,6 @@ void BroadphaseManager::computePairs() {
             dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
         }
     }
-
-    std::cout << "pairsBufTerrain.size(): " << pairsBufTerrain.size() << "\n";
-    std::cout << "terrainPairs.size(): " << terrainPairs.size() << "\n";
 }
 
 // Add to list
