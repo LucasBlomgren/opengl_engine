@@ -1,8 +1,5 @@
 ﻿#include "pch.h"
 #include "bvh.h"
-#include "game_object.h"
-#include "tri.h"
-#include "world.h"
 
 #define FUNC_NAME __FUNCTION__
 

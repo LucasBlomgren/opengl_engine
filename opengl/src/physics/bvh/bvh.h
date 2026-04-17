@@ -4,8 +4,6 @@
 #include "physics_world.h"
 #include "rigid_body.h"
 #include "colliders/aabb.h"
-#include "pointer_cache.h"
-#include "world.h"
 
 class BVHTree {
 public:
@@ -28,13 +26,13 @@ public:
         int childAIdx = -1;
         int childBIdx = -1;
 
-        int   start;
-        int   count;
-        bool  dirty;
+        int   start = -1;
+        int   count = -1;
+        bool  dirty = false;
 
         Element element;
-        AABB  tightBox;     // endast för lövnoder
-        AABB  fatBox;       // för alla noder
+        AABB  tightBox;     // only for leaf nodes
+        AABB  fatBox;       // for all nodes
     };
     std::vector<Node> nodes;
 
@@ -59,15 +57,15 @@ private:
 
     int   leafThreshold = 1;
     int   numRefits = 0;
-    int   rebuildThreshold = 0;        // räknas om i build()
-    int   minRebuildThreshold = 5;        // min refits innan rebuild
-    float rebuildRatio = 0.40f;    // % av lövkorrektioner innan rebuild
+    int   rebuildThreshold = 0;         // recalculated in build() as log2(n) * rebuildRatio
+    int   minRebuildThreshold = 5;      // min refits before rebuild, to avoid rebuilding too early when n is small
+    float rebuildRatio = 0.40f;         // % of leaf corrections before rebuild
     glm::vec3 fatBoxMargin{ 0.2f };
 
     struct BVHPrimitive {
-        glm::vec3 min;
-        glm::vec3 max;
-        glm::vec3 centroid;
+        glm::vec3 min{ 0.0f };
+        glm::vec3 max{ 0.0f };
+        glm::vec3 centroid{ 0.0f };
         Element element;
     };
     std::vector<BVHPrimitive> prims;

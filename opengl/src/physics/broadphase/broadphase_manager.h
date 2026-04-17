@@ -1,15 +1,15 @@
 #pragma once
 #include <vector>
 
+#include "core/slot_map.h"
 #include "runtime_caches.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
-#include "bvh/treetree_query.h"
 #include "broadphase_types.h"
 #include "broadphase_pairs.h"
 
 class RigidBody;
-struct Tri;
+class Tri;
 
 class BroadphaseManager {
 public:

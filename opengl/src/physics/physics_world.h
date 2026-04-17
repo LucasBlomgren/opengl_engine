@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/slot_map.h"
-#include "game/game_object.h"
 #include "physics/rigid_body.h"
 #include "physics/colliders/collider.h"
 

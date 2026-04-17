@@ -14,13 +14,14 @@ public:
         bool isLeaf = false;
         int childAIdx = -1;
         int childBIdx = -1;
-        int   start;
-        int   count;
-        bool  dirty;
+
+        int   start = -1;
+        int   count = -1;
+        bool  dirty = false;
 
         Element element;
-        AABB  tightBox;     // endast för lövnoder
-        AABB  fatBox;       // för alla noder
+        AABB  tightBox;     // only for leaf nodes
+        AABB  fatBox;       // for all nodes
     };
     std::vector<Node> nodes;
 
@@ -33,9 +34,9 @@ public:
 
 private:
     struct BVHPrimitive {
-        glm::vec3 min;
-        glm::vec3 max;
-        glm::vec3 centroid;
+        glm::vec3 min{ 0.0f };
+        glm::vec3 max{ 0.0f };
+        glm::vec3 centroid{ 0.0f };
         Element element;
     };
 

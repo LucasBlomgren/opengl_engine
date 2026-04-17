@@ -1,24 +1,19 @@
 ﻿#pragma once
 
-#include <array>
 #include <vector>
-
-#include "shaders/shader.h"
-#include "vertex.h"
-#include "game/transform.h"
 #include "collider_pose.h"
 
 class AABB {
 public:
     // local
-    glm::vec3 localMin; 
-    glm::vec3 localMax;
+    glm::vec3 localMin{ 0.0f };
+    glm::vec3 localMax{ 0.0f };
     // world
-    glm::vec3 worldMin; 
-    glm::vec3 worldMax;
+    glm::vec3 worldMin{ 0.0f };
+    glm::vec3 worldMax{ 0.0f };
 
-    glm::vec3 worldCenter;
-    glm::vec3 worldHalfExtents;
+    glm::vec3 worldCenter{ 0.0f };
+    glm::vec3 worldHalfExtents{ 0.0f };
     float surfaceArea = 0.0f;
 
     void init(const std::vector<glm::vec3>& vertices);

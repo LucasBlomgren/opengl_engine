@@ -3,8 +3,6 @@
 #include <array>
 #include <vector>
 
-#include "shaders/shader.h"
-#include "vertex.h"
 #include "collider_pose.h"
 
 enum class FaceId {

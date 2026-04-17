@@ -2,18 +2,9 @@
 
 #include "pch.h"
 
-#define GLM_ENABLE_EXPERIMENTAL
-
+#include "core/slot_map.h"
 #include "shaders/shader.h"
 #include "mesh/mesh.h"
-#include "colliders/collider.h"
-#include "colliders/aabb.h"
-#include "colliders/oobb.h"
-#include "colliders/sphere.h"
-#include "debug/oobb_renderer.h"
-#include "debug/aabb_renderer.h"
-#include "broadphase/broadphase_types.h"
-#include "game/transform.h"
 
 struct SubPart {
     TransformHandle localTransformHandle;

@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "oobb.h"
-#include "game/game_object.h"
 
 void OOBB::init(const std::vector<glm::vec3>& verts, const ColliderPose& pose) {
     glm::vec3 lMin(+FLT_MAX), lMax(-FLT_MAX); 

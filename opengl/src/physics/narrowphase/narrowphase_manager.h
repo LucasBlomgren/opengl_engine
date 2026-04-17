@@ -5,7 +5,6 @@
 #include "collision_manifold.h"
 #include "sat.h"
 #include "runtime_caches.h"
-#include "wake_sleep_utils.h"
 
 struct ExternalMotionContact {
     RigidBodyHandle bodyA{};

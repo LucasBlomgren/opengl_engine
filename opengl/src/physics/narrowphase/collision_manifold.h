@@ -4,28 +4,28 @@
 
 #include "runtime_caches.h"
 #include "rigid_body.h"
-#include "game_object.h"
 #include "sat.h"
 #include "collider_pose.h"
 
 struct Plane {
-    glm::vec3 normal;
-    glm::vec3 point;
+    glm::vec3 normal{ 0.0f };
+    glm::vec3 point{ 0.0f };
 };
 
 struct ContactPoint {
-    glm::vec3 globalCoord;
-    glm::vec3 localCoord;
+    glm::vec3 globalCoord{ 0.0f };
+    glm::vec3 localCoord{ 0.0f };
     float accumulatedImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
-    float m_eff;
-    glm::vec3 rA, rB;
-    float depth;
-    float targetBounceVelocity;
-    float biasVelocity;
+    float m_eff = 0.0f;
+    glm::vec3 rA{ 0.0f };
+    glm::vec3 rB{ 0.0f };
+    float depth = 0.0f;
+    float targetBounceVelocity = 0.0f;
+    float biasVelocity = 0.0f;
 
-    float invMassT1, invMassT2;
+    float invMassT1, invMassT2 = 0.0f;
 
     bool wasUsedThisFrame = true;
     bool wasWarmStarted = false;
@@ -46,13 +46,14 @@ struct ContactRuntime {
 };
 
 struct Contact {
-    size_t hashKey;
+    size_t hashKey = -1;
     std::vector<ContactPoint> points;
-    glm::vec3 normal;
-    glm::vec3 t1, t2;
+    glm::vec3 normal{ 0.0f };
+    glm::vec3 t1{ 0.0f };
+    glm::vec3 t2{ 0.0f };
 
-    glm::mat3 invInertiaA;
-    glm::mat3 invInertiaB;
+    glm::mat3 invInertiaA{ 0.0f };
+    glm::mat3 invInertiaB{ 0.0f };
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
@@ -60,8 +61,8 @@ struct Contact {
 
     ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
     ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
-    RigidBodyHandle bodyA{};
-    RigidBodyHandle bodyB{};
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
 
     bool noSolverResponseA = false; 
     bool noSolverResponseB = true;      // default true for terrain
@@ -74,7 +75,7 @@ struct Contact {
     bool objBisReference = true; 
     std::vector<glm::vec3> referenceFace;
     std::vector<glm::vec3> incidentFace;
-    glm::vec3 referenceFaceNormal;
+    glm::vec3 referenceFaceNormal{ 0.0f };
 
     // body vs body
     Contact(RigidBodyHandle handleA, RigidBodyHandle handleB, ContactRuntime& data, glm::vec3& normal) :

@@ -1,7 +1,6 @@
 #pragma once
 
 #define GLM_FORCE_SIMD_AVX2 
-#define GLM_ENABLE_EXPERIMENTAL
 
 #include <stb/stb_image.h>
 

@@ -21,6 +21,11 @@ public:
     DirectionalLight& getDirectionalLight();
 
 private:
-    std::vector<Light> lights;
-    DirectionalLight directionalLight;
+    std::vector<Light> lights{};
+    DirectionalLight directionalLight{
+        .direction = glm::vec3(-0.2f, -1.0f, -0.3f),
+        .ambient = glm::vec3(0.05f),
+        .diffuse = glm::vec3(0.4f),
+        .specular = glm::vec3(0.5f)
+    };
 };

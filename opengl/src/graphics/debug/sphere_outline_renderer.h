@@ -19,6 +19,7 @@ public:
     void destroy();
 
 private:
-    unsigned int VAO, VBO;
-    std::vector<glm::vec3> unitCircle;
+    unsigned int VAO = 0;
+    unsigned int VBO = 0;
+    std::vector<glm::vec3> unitCircle{};
 };

@@ -1,28 +1,28 @@
 #pragma once
 
 #include <span>
-#include "game_object.h"
 #include "tri.h"
 #include "collider_pose.h"
+#include "collider.h"
 
 namespace SAT { 
     enum class AxisType { FaceA, FaceB, EdgeEdge };
 
     struct Result {
         float depth = std::numeric_limits<float>::infinity();
-        glm::vec3 normal;
-        AxisType axisType;
+        glm::vec3 normal{ 0.0f };
+        AxisType axisType = AxisType::FaceA;
 
         // #TODO: fixa så att faceIndex och edgeIndex används i SAT
-        int faceIndex;
-        int edgeIndexA;
-        int edgeIndexB;
+        int faceIndex = -1;
+        int edgeIndexA = -1;
+        int edgeIndexB = -1;
 
         float separationA = -std::numeric_limits<float>::infinity();
         float separationB = -std::numeric_limits<float>::infinity();
 
         Tri* tri_ptr = nullptr;
-        glm::vec3 point; // sphereCube or sphereTri
+        glm::vec3 point{}; // sphereCube or sphereTri
     };
 
     bool boxBox(Collider& A, Collider& B, Result& out);

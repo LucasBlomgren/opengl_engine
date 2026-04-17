@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "debug_renderer.h"
+#include "debug/render_contact_points.h"
 
 template void DebugRenderer::renderBVH<BVHTree>(const BVHTree&, const glm::vec3&, const glm::vec3&);
 template void DebugRenderer::renderBVH<TerrainBVH>(const TerrainBVH&, const glm::vec3&, const glm::vec3&);

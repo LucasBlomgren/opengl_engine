@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-struct Tri;
+class Tri;
 
 struct TerrainPair {
     RigidBodyHandle body;

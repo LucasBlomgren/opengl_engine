@@ -140,30 +140,30 @@ void SceneBuilder::testFloorScene() {
 
 
     // cube of cubes
-    for (int i = 0; i < 10; i++)
-    for (int j = 0; j < 7; j++)
-    for (int k = 0; k < 10; k++)
-    {
-        GameObjectDesc cube;
-        glm::vec3 position = { i * 2.0f, 25 + j * 2.0f, k * 2.0f };
-        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-        glm::vec3 scale{ 2.0f };
-        cube.rootTransformHandle = world.createTransform(position, orientation, scale);
-        cube.bodyType = BodyType::Dynamic;
-        cube.mass = 2.0f;
+    //for (int i = 0; i < 10; i++)
+    //for (int j = 0; j < 7; j++)
+    //for (int k = 0; k < 10; k++)
+    //{
+    //    GameObjectDesc cube;
+    //    glm::vec3 position = { i * 2.0f, 25 + j * 2.0f, k * 2.0f };
+    //    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //    glm::vec3 scale{ 2.0f };
+    //    cube.rootTransformHandle = world.createTransform(position, orientation, scale);
+    //    cube.bodyType = BodyType::Dynamic;
+    //    cube.mass = 2.0f;
 
-        SubPartDesc cubePart;
-        glm::vec3 positionPart = { 0,0,0 };
-        glm::quat orientationPart = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-        glm::vec3 scalePart{ 1.0f };
-        cubePart.localTransformHandle = world.createTransform(positionPart, orientationPart, scalePart);
-        cubePart.meshName = "cube";
-        cubePart.textureName = "crate";
-        cubePart.colliderType = ColliderType::CUBOID;
-        cube.parts.push_back(cubePart);
+    //    SubPartDesc cubePart;
+    //    glm::vec3 positionPart = { 0,0,0 };
+    //    glm::quat orientationPart = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //    glm::vec3 scalePart{ 1.0f };
+    //    cubePart.localTransformHandle = world.createTransform(positionPart, orientationPart, scalePart);
+    //    cubePart.meshName = "cube";
+    //    cubePart.textureName = "crate";
+    //    cubePart.colliderType = ColliderType::CUBOID;
+    //    cube.parts.push_back(cubePart);
 
-        GameObjectHandle h = world.createGameObject(cube);
-    }
+    //    GameObjectHandle h = world.createGameObject(cube);
+    //}
 
 
     // cube

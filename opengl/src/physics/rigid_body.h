@@ -1,5 +1,6 @@
 #pragma once
 
+#include "broadphase/broadphase_types.h"
 #include "game/transform.h"
 #include "core/ring_buffer.h"
 #include "core/slot_map.h"

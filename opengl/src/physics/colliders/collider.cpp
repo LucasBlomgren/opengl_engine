@@ -1,5 +1,4 @@
 #include "collider.h"
-#include "game_object.h"
 
 AABB& Collider::getAABB() {
 	return aabb;

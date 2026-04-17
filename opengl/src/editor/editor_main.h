@@ -80,8 +80,8 @@ public:
     bool objectRainSpheres = false;
 
 private:
-    float SCR_WIDTH;
-    float SCR_HEIGHT;
+    float SCR_WIDTH = 800.0f;
+    float SCR_HEIGHT = 600.0f;
     EngineState* engineState = nullptr;
     World* world = nullptr;
     SceneBuilder* sceneBuilder = nullptr;

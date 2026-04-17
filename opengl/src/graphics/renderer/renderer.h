@@ -83,8 +83,8 @@ public:
 private:
     DebugRenderer debugRenderer;
 
-    float screenWidth;
-    float screenHeight;
+    float screenWidth = 800.0f;
+    float screenHeight = 600.0f;
 
     World* world = nullptr;
     Editor::EditorMain* editor = nullptr;
@@ -111,9 +111,9 @@ private:
     };
 
     struct RenderBatch {
-        Mesh* mesh;
-        Shader* shader;
-        GLuint  textureId;
+        Mesh* mesh = nullptr;
+        Shader* shader = nullptr;
+        GLuint textureId = -1;
 
         std::vector<RenderRef> parts;
         std::vector<InstanceData> instances;    // fylls varje frame

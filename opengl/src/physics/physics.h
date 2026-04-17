@@ -3,21 +3,15 @@
 #include <random>
 
 #include "runtime_caches.h"
-#include "core/pointer_cache.h"
 #include "physics_world.h"
 #include "world.h"
 #include "timer.h"
-#include "engine_state.h"
 #include "narrowphase/collision_manifold.h"
 #include "raycast.h"
-#include "game_object.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
-#include "bvh/treetree_query.h"
 #include "broadphase/broadphase_manager.h"
-#include "broadphase/broadphase_pairs.h"
 #include "narrowphase/narrowphase_manager.h"
-
 #include "tri.h"
 
 struct DebugData {
@@ -68,7 +62,7 @@ public:
 private:
     float dt;
     PhysicsWorld physicsWorld;
-    World* world;
+    World* world = nullptr;
 
     FrameTimers* frameTimers;
 

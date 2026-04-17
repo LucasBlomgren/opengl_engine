@@ -112,8 +112,6 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         flag_drawUI = !flag_drawUI;
     }
 
-    std::cout << consumed.mouse << " " << consumed.keyboard << std::endl;
-
     // LMB/RMB drag capture only if started in viewport
     if (!viewportCapturedLMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_1])
         viewportCapturedLMB = true;

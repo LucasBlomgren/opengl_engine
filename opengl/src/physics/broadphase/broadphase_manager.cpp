@@ -1,15 +1,15 @@
 #include "pch.h"
 #include "broadphase_manager.h"
-#include "game_object.h"
 #include "rigid_body.h"
 #include "tri.h"
+#include "bvh/treetree_query.h"
 
 void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris) {
     this->caches = caches;
     this->terrainTriangles = terrainTris;
 
     SlotMap<RigidBody, RigidBodyHandle>* bMap = caches->bodies.sm; // sm=slotmap
-    uint32_t slotCap = bMap->dense().capacity();
+    size_t slotCap = bMap->dense().capacity();
 
     awakeBvh.init(world, caches, slotCap);
     asleepBvh.init(world, caches, slotCap);

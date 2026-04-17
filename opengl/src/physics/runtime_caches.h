@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include "core/pointer_cache.h"
 #include "core/slot_map.h"
 #include "game/transform.h"

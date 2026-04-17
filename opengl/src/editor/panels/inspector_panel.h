@@ -9,7 +9,7 @@ class Renderer;
 class SceneBuilder;
 class SkyboxManager;
 class FrameTimers;
-class GpuTimers;
+struct GpuTimers;
 
 namespace Editor
 {

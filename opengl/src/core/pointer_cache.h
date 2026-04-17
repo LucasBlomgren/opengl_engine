@@ -1,6 +1,6 @@
 #pragma once
 #include "pch.h"
-#include "core/slot_map.h";
+#include "core/slot_map.h"
 
 template<typename T, typename Handle>
 struct PointerCache {

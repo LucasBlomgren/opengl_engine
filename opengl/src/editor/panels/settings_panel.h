@@ -11,7 +11,7 @@ class SkyboxManager;
 class MeshManager;
 class TextureManager;
 class FrameTimers;
-class GpuTimers;
+struct GpuTimers;
 
 namespace Editor 
 {
