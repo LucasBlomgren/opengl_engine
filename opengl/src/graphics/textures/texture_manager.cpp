@@ -43,7 +43,7 @@ unsigned int TextureManager::getTexture(const std::string& name) {
     auto it = textures.find(name);
     if (it == textures.end()) {
         std::cerr << "[TextureManager] No texture called \"" << name << "\"\n";
-        return 0; // eller assert, eller fallback-texture-id
+        return 0;
     }
 
     return it->second;
@@ -88,5 +88,9 @@ unsigned int TextureManager::loadCubemap(const std::string& name, const std::vec
 }
 
 unsigned int TextureManager::getCubemap(const std::string& name) {
+    if (cubemaps.find(name) == cubemaps.end()) {
+        std::cerr << "[TextureManager] No cubemap called \"" << name << "\"\n";
+        return 0;
+    }
     return cubemaps.at(name);
 }

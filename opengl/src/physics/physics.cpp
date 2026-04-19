@@ -264,6 +264,7 @@ void PhysicsEngine::updateBodiesAndColliders() {
                 body->applyRollingFriction(mainCollider->type, dt);
             }
 
+            body->applyVelocityDamping();
             body->applyGravity(dt);
             body->applyAntistuckFriction(dt);
             body->integrateVelocities(*rootTransform, dt);

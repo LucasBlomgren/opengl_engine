@@ -1,11 +1,9 @@
 #include "pch.h"
 #include "rigid_body.h"
 
-void RigidBody::applyGravity(float dt) {
-	if (type == BodyType::Dynamic && allowGravity && motionControl == MotionControl::Physics)
-		linearVelocity += g * dt;
-}
-
+//--------------------------------------
+//   Velocity integration
+//--------------------------------------
 void RigidBody::integrateVelocities(Transform& t, float dt) {
 	if (type == BodyType::Static || 
 		motionControl == MotionControl::External || 
@@ -26,6 +24,35 @@ void RigidBody::integrateVelocities(Transform& t, float dt) {
 	updateOrientation(t.orientation, angularVelocity, dt);
 }
 
+//--------------------------------------
+//  Gravity and friction/damping
+//--------------------------------------
+void RigidBody::applyGravity(float dt) {
+	if (!allowGravity ||
+		asleep ||
+		type == BodyType::Static ||
+		type == BodyType::Kinematic ||
+		motionControl == MotionControl::External)
+		return;
+
+	linearVelocity += g * dt;
+}
+
+void RigidBody::applyVelocityDamping() {
+	if (type == BodyType::Static || 
+        type == BodyType::Kinematic ||
+		motionControl == MotionControl::External || 
+		asleep)
+		return;
+
+    // only apply damping if there have been recent collisions,
+    // no air resistance when flying freely
+	if (collisionHistory.average() > 0.0f) {
+		linearVelocity *= 0.99f;
+		angularVelocity *= 0.98f;
+    }
+}
+
 void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
 	if (colliderType != ColliderType::SPHERE || 
 		motionControl == MotionControl::External || 
@@ -36,23 +63,21 @@ void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
 	float aAng;
 	bool avgCollisions = collisionHistory.average() > 0;
 
-	if (colliderType == ColliderType::SPHERE) {
-		aLin = 0.1f; // konstant linjär retardation (m/s^2)
-		aAng = 1.0f; // konstant angulär retardation (rad/s^2)
+	aLin = 0.1f; // konstant linjär retardation (m/s^2)
+	aAng = 1.0f; // konstant angulär retardation (rad/s^2)
 
-		float vMag = glm::length(linearVelocity);
-		if (vMag > 0.0f and avgCollisions) {
-			float newMag = vMag - aLin * dt;
-			if (newMag < 0.0f) newMag = 0.0f;
-			linearVelocity *= (newMag / vMag); // behåll riktningen
-		}
+	float vMag = glm::length(linearVelocity);
+	if (vMag > 0.0f and avgCollisions) {
+		float newMag = vMag - aLin * dt;
+		if (newMag < 0.0f) newMag = 0.0f;
+		linearVelocity *= (newMag / vMag); // behåll riktningen
+	}
 
-		float wMag = glm::length(angularVelocity);
-		if (wMag > 0.0f and avgCollisions) {
-			float newMag = wMag - aAng * dt;
-			if (newMag < 0.0f) newMag = 0.0f;
-			angularVelocity *= (newMag / wMag);
-		}
+	float wMag = glm::length(angularVelocity);
+	if (wMag > 0.0f and avgCollisions) {
+		float newMag = wMag - aAng * dt;
+		if (newMag < 0.0f) newMag = 0.0f;
+		angularVelocity *= (newMag / wMag);
 	}
 }
 
@@ -71,6 +96,9 @@ void RigidBody::applyAntistuckFriction(float dt) {
 	}
 }
 
+//--------------------------------------
+//    Orientation and inertia updates
+//--------------------------------------
 void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
 	glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
 	orientation += 0.5f * dt * (omegaQuat * orientation);
@@ -82,6 +110,9 @@ void RigidBody::updateInertiaWorld(Transform& t) {
 	invInertiaWorld = R * invInertiaLocal * glm::transpose(R);
 }
 
+//---------------------------------
+//     Applying impulses
+//---------------------------------
 void RigidBody::applyImpulseLinear(const glm::vec3& j) {
 	linearVelocity += j;
 }
@@ -89,6 +120,9 @@ void RigidBody::applyImpulseAngular(const glm::vec3& j) {
 	angularVelocity += j;
 }
 
+//---------------------------------
+//     Asleep and awake
+//---------------------------------
 void RigidBody::setAsleep(Transform& t) {
 	if (type == BodyType::Static || type == BodyType::Kinematic)
 		return;
@@ -111,6 +145,9 @@ void RigidBody::setAwake() {
 	sleepCounter = 0.0f;
 }
 
+//---------------------------------
+//     State setters
+//---------------------------------
 void RigidBody::setStatic() {
 	type = BodyType::Static;
 	mass = 0.0f;
@@ -123,6 +160,9 @@ void RigidBody::setExternalControl(bool controlled) {
 	anchorTimer = 0.0f;
 }
 
+//---------------------------------
+//     Inertia calculations
+//---------------------------------
 void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const Collider& collider, Transform& t) {
 	if (type == BodyType::Static) {
 		invInertiaLocal = glm::mat3(0.0f);
@@ -179,8 +219,4 @@ void RigidBody::inertiaSphere(const glm::vec3& s) {
 		glm::vec3(invI, 0.0f, 0.0f),
 		glm::vec3(0.0f, invI, 0.0f),
 		glm::vec3(0.0f, 0.0f, invI));
-}
-
-inline bool RigidBody::approxEqual(float a, float b, float epsilon) {
-	return fabs(a - b) < epsilon;
 }

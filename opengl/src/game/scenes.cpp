@@ -39,20 +39,6 @@ void SceneBuilder::emptyFloorScene() {
     ////glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
     ////world.createGameObject("uvmap", "cube", ColliderType::CUBOID, pos, glm::vec3(50.0, 1.0, 50.0), 0, 1, orientation, 0, 0, {}, true);
 
-    ////createHalo(
-    ////    /*width*/          40.0f,
-    ////    /*height*/         3.0f,
-    ////    /*length*/         2.0f,
-    ////    /*baseRotation*/   glm::vec3(0, 0, 1),
-    ////    /*rotDir*/         glm::vec3(0, 1, 0),
-    ////    /*rotSpeed*/       0.0f,
-    ////    /*pos*/            glm::vec3(125, 0, 125),
-    ////    /*segments*/       72,
-    ////    /*color*/          glm::vec3(255, 215, 0), // 0–255 färg
-    ////    /*createsShadows*/ true,
-    ////    /*seeThrough*/     true
-    ////);
-
     ////world.createGameObject("plain", "cube", ColliderType::CUBOID, glm::vec3(0,10,0), glm::vec3(50.0, 30.0, 5.0), 0, 1, {});
 
     ////for (int i = 0; i < 100; i++) {
@@ -80,6 +66,50 @@ void SceneBuilder::testFloorScene() {
     glm::vec3 cellSize = { 50, 1, 50 };
     createGridFloor(offset, cellSize, 10, 10);
 
+
+    {
+        GameObjectDesc forkLift;
+        glm::vec3 position = { 0, 0, 0 };
+        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        glm::vec3 scale{ 3.0f };
+        forkLift.rootTransformHandle = world.createTransform(position, orientation, scale);
+        forkLift.bodyType = BodyType::Dynamic;
+        forkLift.mass = 10.0f;
+
+        // body
+        SubPartDesc body;
+        glm::vec3 positionBody = { 0,0,0 };
+        glm::quat orientationBody = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        glm::vec3 scaleBody{ 1.0f, 1.5f, 1.5f };
+        body.localTransformHandle = world.createTransform(positionBody, orientationBody, scaleBody);
+        body.textureName = "uvmap";
+        forkLift.parts.push_back(body);
+
+        // forks
+        glm::vec3 scaleFork{ 0.2f, 0.1f, 1.25f };
+        glm::quat orientationFork = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        float posForkX = positionBody.x;
+        float posForkY = positionBody.y + (-scaleBody.y / 2) + (scaleFork.y / 2);
+        float posForkZ = positionBody.z + (scaleBody.z / 2) + (scaleFork.z / 2);
+
+        SubPartDesc fork1;
+        float posForkX1 = posForkX - (scaleBody.x / 2) + (scaleFork.x / 2) + (scaleBody.x / 8);
+        glm::vec3 positionFork1 = { posForkX1, posForkY, posForkZ};
+        fork1.localTransformHandle = world.createTransform(positionFork1, orientationFork, scaleFork);
+        fork1.textureName = "uvmap";
+        forkLift.parts.push_back(fork1);
+
+        SubPartDesc fork2;
+        float posForkX2 = posForkX + (scaleBody.x / 2) - (scaleFork.x / 2) - (scaleBody.x / 8);
+        glm::vec3 positionFork2 = { posForkX2, posForkY, posForkZ };
+        fork2.localTransformHandle = world.createTransform(positionFork2, orientationFork, scaleFork);
+        fork2.textureName = "uvmap";
+        forkLift.parts.push_back(fork2);
+
+        world.createGameObject(forkLift);
+    }
+
+
        
     // create chairs in a grid pattern
     for (int i = 0; i < 10; i++) 
@@ -87,6 +117,7 @@ void SceneBuilder::testFloorScene() {
     for (int k = 0; k < 10; k++)
     {
         GameObjectDesc chair;
+        chair.name = "Chair";
         glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
         glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
         glm::vec3 scale{ 2.0f };
@@ -95,6 +126,7 @@ void SceneBuilder::testFloorScene() {
         chair.mass = 2.0f;
 
         SubPartDesc seat;
+        seat.name = "Seat";
         glm::vec3 positionSeat = { 0,0,0 };
         glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
         glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
@@ -113,6 +145,7 @@ void SceneBuilder::testFloorScene() {
         };
         for (int i = 0; i < 4; i++) {
             SubPartDesc leg;
+            leg.name = "Leg" + std::to_string(i);
             glm::vec3 positionLeg = legPositions[i];
             glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
@@ -125,6 +158,7 @@ void SceneBuilder::testFloorScene() {
         }
 
         SubPartDesc backrest;
+        backrest.name = "Backrest";
         glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
         glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
         glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };

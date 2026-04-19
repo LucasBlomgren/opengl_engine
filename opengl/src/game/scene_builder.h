@@ -83,29 +83,6 @@ public:
         bool fullColorRange
     );
 
-    void createHalo(
-        float width,
-        float height,
-        float length,
-        glm::vec3 baseRot,
-        glm::vec3 rotDir,
-        float rotSpeed,
-        glm::vec3 pos,
-        int segments,
-        glm::vec3 color,
-        bool createsShadows,
-        bool seeThrough
-    );
-
-    // halos
-    struct Halo { 
-        glm::vec3 center; 
-        glm::vec3 rotDir;  
-        float rotSpeed; 
-        std::vector<int> indices; 
-    };
-    std::vector<Halo> allHalos; 
-
     void generateFlatTerrain(
         glm::vec3 offset,
         int   gridSizeX,

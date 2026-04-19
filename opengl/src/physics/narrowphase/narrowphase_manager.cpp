@@ -41,6 +41,7 @@ void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
     RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
     RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
 
+    // both bodies static/kinematic, skip collision response
     if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) and
         (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
         return;
@@ -62,6 +63,7 @@ void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
             SAT_resultsList.clear();
             SAT_resultsList.reserve(terrainTriCandidates.size());
 
+            // box-box, box-sphere or sphere-sphere SAT + collision manifold generation depending on collider types
             if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
                 processBoxBox(pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
             }
@@ -118,6 +120,7 @@ void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
     }
 }
 
+// Collects terrain tris whose AABBs intersect with the collider's AABB as candidates for SAT testing
 void NarrowphaseManager::collectTerrainTriCandidates(
     Collider* collider,
     const std::vector<Tri*>& inputTris,

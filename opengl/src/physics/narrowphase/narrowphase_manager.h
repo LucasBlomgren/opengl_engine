@@ -7,9 +7,9 @@
 #include "runtime_caches.h"
 
 struct ExternalMotionContact {
-    RigidBodyHandle bodyA{};
-    RigidBodyHandle bodyB{};
-    glm::vec3 normal{};
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
+    glm::vec3 normal{ 0.0f };
     float penetration = 0.0f;
 
     ExternalMotionContact(const RigidBodyHandle& bodyA,
@@ -38,7 +38,7 @@ public:
     void narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits);
 
 private:
-    // references to pointer caches
+    // references to caches
     CollisionManifold* collisionManifold = nullptr;
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;

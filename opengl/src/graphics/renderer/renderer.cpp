@@ -63,6 +63,11 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
     for (int i = 0; i < (int)obj->parts.size(); ++i) {
         SubPart& part = obj->parts[i];
 
+        // invisible part, skip
+        if (part.seeThrough) {
+            continue;
+        }
+
         // collider-only part
         if (part.mesh == nullptr || part.shader == nullptr) {
             continue;

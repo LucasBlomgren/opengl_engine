@@ -3,6 +3,9 @@
 
 #define FUNC_NAME __FUNCTION__
 
+//----------------------------------------------
+//     Tris vs Box
+//----------------------------------------------
 void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {
@@ -32,18 +35,7 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
     // collision manifold generation
     glm::vec3 avgNormal = getAvgNormal(SAT_resultsList);
     if (glm::length2(avgNormal) < 1e-8f) {
-        std::cerr << "BAD avgNormal for terrain contact. body="
-            << bodyH.slot
-            << " results=" << SAT_resultsList.size() << "\n";
-
-        for (const auto& r : SAT_resultsList) {
-            std::cerr << "  tri normal: "
-                << r.normal.x << ", "
-                << r.normal.y << ", "
-                << r.normal.z << "\n";
-        }
-
-        avgNormal = SAT_resultsList[0].normal; // tillfällig fallback
+        avgNormal = SAT_resultsList[0].normal; // temporary fallback for degenerate cases where all SAT normals cancel each other out, resulting in zero avg normal.
     }
 
     SAT::findBestTriangles(SAT_resultsList);
@@ -54,6 +46,9 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
     collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
 }
 
+//----------------------------------------------
+//     Tris vs Sphere
+//----------------------------------------------
 void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {

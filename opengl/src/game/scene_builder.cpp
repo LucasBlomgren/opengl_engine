@@ -95,7 +95,6 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
     terrainData.indices.reserve(5000000); 
 
     setLights();
-    allHalos.clear();
 
     switch (sceneID) {
     case 0: mainScene(); break;
@@ -114,48 +113,6 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
 
     glcount::print();
 }
-
-////----------------------------------
-////        Create GameObject
-////----------------------------------
-//GameObject& SceneBuilder::world.createGameObject(
-//    const std::string& textureName,
-//    const std::string& meshName,
-//    ColliderType colliderType,
-//    const glm::vec3& pos,
-//    const glm::vec3& size,
-//    float mass,
-//    bool isStatic,
-//    const glm::quat& orientation,
-//    float sleepCounterThreshold,
-//    bool asleep,
-//    const glm::vec3& color,
-//    const bool seeThrough) 
-//{
-//    unsigned int textureId;
-//    if (textureName == "plain") {
-//        textureId = 999;
-//    } else {
-//        textureId = textureManager.getTexture(textureName);
-//    }
-//
-//    Mesh* mesh = meshManager.getMesh(meshName);
-//
-//    dynamicObjects.emplace_back(objectId, mesh, pos, size, colliderType, mass, isStatic, textureId, orientation, sleepCounterThreshold, asleep, color, seeThrough);
-//
-//    GameObject& newObject = dynamicObjects.back();
-//    newObject.dynamicObjectIdx = static_cast<int>(dynamicObjects.size()) - 1;
-//    newObject.shader = shaderManager.getShader("default");
-//
-//    physicsEngine.queueAdd(&newObject, newObject.broadphaseHandle.bucket);
-//
-//    if (!seeThrough) {
-//        renderer.addObjectToBatch(&newObject);
-//    }
-//
-//    objectId++;
-//    return dynamicObjects.back();
-//}
 
 //----------------------------------
 //           Heightmap
@@ -444,6 +401,9 @@ void SceneBuilder::createSpherePyramid(
     }
 }
 
+//----------------------------------
+//         Brick Wall
+//----------------------------------
 void SceneBuilder::createBrickWall(
     glm::vec3 startPos,
     int wallDirection,
@@ -558,69 +518,3 @@ void SceneBuilder::createBrickWall(
         brickWeight -= brickDecrease;
     }
 }
-
-////----------------------------------
-////              Halo
-////----------------------------------
-//void SceneBuilder::createHalo(
-//    float width,
-//    float height,
-//    float length,
-//    glm::vec3 baseRotation,
-//    glm::vec3 rotDir,
-//    float rotSpeed,
-//    glm::vec3 pos,
-//    int segments,
-//    glm::vec3 color,
-//    bool createsShadows,
-//    bool seeThrough)
-//{
-//    float baseRotAng = 90.0f;
-//    glm::quat baseRot = glm::angleAxis(glm::radians(baseRotAng), baseRotation);
-//    float halfDepth = length * 0.5f;
-//    glm::vec3 desiredCenter = glm::vec3(0, 5, 0);
-//    glm::vec3 lastPos = glm::vec3(0, 0, 0);
-//    float lastAngle = 45.0f;
-//    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(1, 0, 0));
-//
-//    float stepSize = 360.0f / segments;
-//
-//    Halo halo;
-//    halo.rotDir = rotDir;
-//    halo.rotSpeed = rotSpeed;
-//
-//    for (int i = 0; i < segments; ++i) {
-//        float newAngle = lastAngle - 5.0f;
-//        glm::quat newOrientLocal = glm::angleAxis(glm::radians(newAngle), glm::vec3(1, 0, 0));
-//        glm::vec3 frontTip1 = lastPos + lastOrient * glm::vec3(0, 0, halfDepth);
-//        glm::vec3 newPosLocal = frontTip1 + newOrientLocal * glm::vec3(0, 0, halfDepth);
-//        glm::vec3 newPos = baseRot * newPosLocal;
-//        glm::quat newOrient = baseRot * newOrientLocal;
-//
-//        GameObjectHandle handle = world.createGameObject("plain", "cube", ColliderType::CUBOID, newPos, glm::vec3(width, height, length), 0, 1, newOrient, 999, 0, color, seeThrough);
-//        GameObject* obj = world.getGameObjects().try_get(handle);
-//        obj->isInsideShadowFrustum = createsShadows;
-//
-//        lastAngle = newAngle;
-//        lastOrient = newOrientLocal;
-//        lastPos = newPosLocal;
-//
-//        halo.indices.push_back(dynamicObjects.back().id);
-//        halo.center = newPos;
-//    }
-//
-//    // calculate haloCenter
-//    glm::vec3 sum = glm::vec3(0.0f);
-//    for (int i = 0; i < halo.indices.size(); i++)
-//        sum += dynamicObjects[halo.indices[i]].position;
-//    halo.center = sum / static_cast<float>(halo.indices.size());
-//
-//    for (int i = 0; i < halo.indices.size(); i++) {
-//        GameObject& obj = dynamicObjects[halo.indices[i]];
-//        glm::vec3 relativePos = desiredCenter - halo.center;
-//        obj.position += relativePos;
-//    }
-//    halo.center = desiredCenter;
-//
-//    allHalos.push_back(halo);
-//}

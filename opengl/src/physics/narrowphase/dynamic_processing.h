@@ -2,6 +2,9 @@
 #include "narrowphase_manager.h"
 #include "physics/wake_sleep_utils.h"
 
+//----------------------------------------------
+//     Box vs Box
+//----------------------------------------------
 void NarrowphaseManager::processBoxBox(
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,
@@ -88,6 +91,9 @@ void NarrowphaseManager::processBoxBox(
     collisionManifold->boxBox(contact, *contactCache, satResult);
 }
 
+//----------------------------------------------
+//     Sphere vs Box
+//----------------------------------------------
 void NarrowphaseManager::processBoxSphere(
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,
@@ -181,6 +187,9 @@ void NarrowphaseManager::processBoxSphere(
     collisionManifold->boxSphere(contact, *contactCache, satResult);
 }
 
+//----------------------------------------------
+//     Sphere vs Sphere
+//----------------------------------------------
 void NarrowphaseManager::processSphereSphere(
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,

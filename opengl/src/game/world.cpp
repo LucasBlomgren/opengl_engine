@@ -47,6 +47,7 @@ TransformHandle World::createTransform(const glm::vec3& position, const glm::qua
 GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
     GameObjectHandle gameObjectHandle = gameObjects.create(objectId, objDesc.rootTransformHandle);
     GameObject& gameObject = *gameObjects.try_get(gameObjectHandle);
+    gameObject.name = objDesc.name;
 
     PhysicsWorld* physicsWorld = physicsEngine.getPhysicsWorld();
     Transform* rootTransform = transforms.try_get(objDesc.rootTransformHandle);
@@ -91,6 +92,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
     for (const SubPartDesc& partDesc : objDesc.parts) {
         Transform* partTransform = transforms.try_get(partDesc.localTransformHandle);
         SubPart part;
+        part.name = partDesc.name;
         part.localTransformHandle = partDesc.localTransformHandle;
         part.shader = shaderManager.getShader(partDesc.shaderName);
         part.mesh = meshManager.getMesh(partDesc.meshName);

@@ -13,7 +13,7 @@ public:
 		std::vector<Vertex> sphereVerts         = loadVerticesFromTxt("src/assets/sphere_vertices.txt");
 		std::vector<unsigned int> sphereIndices = loadIndicesFromTxt("src/assets/sphere_indices.txt");
 
-		std::vector<Vertex> teapotVerts         = loadVerticesFromTxt("src/assets/teapot_vertices.txt");
+		/*std::vector<Vertex> teapotVerts         = loadVerticesFromTxt("src/assets/teapot_vertices.txt");
 		std::vector<unsigned int> teapotIndices = loadIndicesFromTxt("src/assets/teapot_indices.txt");
 		recenterVertices(teapotVerts);
 
@@ -27,7 +27,7 @@ public:
 
 		std::vector<Vertex> tankVerts           = loadVerticesFromTxt("src/assets/tank_vertices.txt");
 		std::vector<unsigned int> tankIndices   = loadIndicesFromTxt("src/assets/tank_indices.txt");
-		recenterVertices(tankVerts);
+		recenterVertices(tankVerts);*/
 
 		std::vector<Vertex> debugArrowVerts			= loadVerticesFromTxt("src/assets/debugarrow_vertices.txt");
 		std::vector<unsigned int> debugArrowIndices	= loadIndicesFromTxt("src/assets/debugarrow_indices.txt");
@@ -35,10 +35,10 @@ public:
 
 		meshes.emplace("cube", Mesh(cubeVerts, cubeIndices));
 		meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
-		meshes.emplace("teapot", Mesh(teapotVerts, teapotIndices));
-		meshes.emplace("pylon", Mesh(pylonVerts, pylonIndices));
-		meshes.emplace("girl", Mesh(girlVerts, girlIndices));
-		meshes.emplace("tank", Mesh(tankVerts, tankIndices));
+		//meshes.emplace("teapot", Mesh(teapotVerts, teapotIndices));
+		//meshes.emplace("pylon", Mesh(pylonVerts, pylonIndices));
+		//meshes.emplace("girl", Mesh(girlVerts, girlIndices));
+		//meshes.emplace("tank", Mesh(tankVerts, tankIndices));
 		meshes.emplace("debug_arrow", Mesh(debugArrowVerts, debugArrowIndices));
 	};
 

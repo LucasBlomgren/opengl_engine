@@ -18,6 +18,8 @@
 #include "editor/editor_main.h"
 #include "player.h"
 
+float loadTimeStart = (float)glfwGetTime();
+
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
 	os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
@@ -119,15 +121,15 @@ int main() {
 	};
 	textureManager.loadCubemap("skybox_default", skyBoxFaces);
 
-	skyBoxFaces = {
-		std::string("src/assets/skyboxes/milkyway/right.png"),
-		std::string("src/assets/skyboxes/milkyway/left.png"),
-		std::string("src/assets/skyboxes/milkyway/top.png"),
-		std::string("src/assets/skyboxes/milkyway/bottom.png"),
-		std::string("src/assets/skyboxes/milkyway/front.png"),
-		std::string("src/assets/skyboxes/milkyway/back.png")
-	};
-	textureManager.loadCubemap("skybox_night", skyBoxFaces);
+	//skyBoxFaces = {
+	//	std::string("src/assets/skyboxes/milkyway/right.png"),
+	//	std::string("src/assets/skyboxes/milkyway/left.png"),
+	//	std::string("src/assets/skyboxes/milkyway/top.png"),
+	//	std::string("src/assets/skyboxes/milkyway/bottom.png"),
+	//	std::string("src/assets/skyboxes/milkyway/front.png"),
+	//	std::string("src/assets/skyboxes/milkyway/back.png")
+	//};
+	//textureManager.loadCubemap("skybox_night", skyBoxFaces);
 
 	// setup skybox
 	skyboxManager.init(); 
@@ -173,6 +175,9 @@ int main() {
 	inputManager.router.add(&editor);
 	inputManager.router.add(&player);
 	inputManager.router.add(&camera);
+
+	float loadTimeFinished = (float)glfwGetTime();
+	std::cout << "Load time: " << (loadTimeFinished - loadTimeStart) << " seconds\n";
 
 	//--------------------------------------------
 	// main loop

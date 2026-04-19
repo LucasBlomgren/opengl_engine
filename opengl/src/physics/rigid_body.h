@@ -74,25 +74,28 @@ public:
         return colliderHandles.size() > 1;
     }
 
-    void integrateVelocities(Transform& t, float dt);
-    void applyGravity(float dt);
-    void applyRollingFriction(ColliderType colliderType, float dt);
-    void applyAntistuckFriction(float dt);
-    void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
-    void updateInertiaWorld(Transform& t);
-
     void applyImpulseLinear(const glm::vec3& impulse);
     void applyImpulseAngular(const glm::vec3& impulse);
-
     void setAsleep(Transform& t);
     void setAwake();
     void setStatic();
     void setExternalControl(bool controlled);
+
+    void integrateVelocities(Transform& t, float dt);
+    void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
+    void updateInertiaWorld(Transform& t);
+
+    void applyGravity(float dt);
+    void applyVelocityDamping();
+    void applyRollingFriction(ColliderType colliderType, float dt);
+    void applyAntistuckFriction(float dt);
 
     void calculateInverseInertia(const ColliderType& type, const Collider& collider, Transform& t);
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);
 
-    bool approxEqual(float a, float b, float epsilon = 0.0001f);
+    bool approxEqual(float a, float b, float epsilon = 0.0001f) {
+        return fabs(a - b) < epsilon;
+    }
 };

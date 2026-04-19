@@ -7,6 +7,7 @@
 #include "mesh/mesh.h"
 
 struct SubPart {
+    std::string name = "SubPart";
     TransformHandle localTransformHandle;
     ColliderHandle colliderHandle;
 
@@ -24,6 +25,7 @@ struct SubPart {
 class GameObject {
 public:
     int id;
+    std::string name = "GameObject";
     TransformHandle rootTransformHandle;
     RigidBodyHandle rigidBodyHandle;
 

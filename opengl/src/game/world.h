@@ -13,7 +13,8 @@ class MeshManager;
 class Renderer;
 
 struct SubPartDesc {
-    TransformHandle localTransformHandle{};
+    std::string name = "SubPart";
+    TransformHandle localTransformHandle;
     ColliderType colliderType = ColliderType::CUBOID;
 
     // render
@@ -25,8 +26,9 @@ struct SubPartDesc {
 };
 
 struct GameObjectDesc {
+    std::string name = "GameObject";
     std::vector<SubPartDesc> parts;
-    TransformHandle rootTransformHandle{};
+    TransformHandle rootTransformHandle;
 
     // rigid body
     BodyType bodyType = BodyType::Dynamic;

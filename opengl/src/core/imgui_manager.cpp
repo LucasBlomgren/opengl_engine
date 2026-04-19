@@ -13,6 +13,8 @@ void ImGuiManager::init(GLFWwindow* window) {
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+	ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.12f, 1.0f);
 }
 
 void ImGuiManager::newFrame() {
