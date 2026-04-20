@@ -436,11 +436,11 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     RigidBody* rb = world->getRigidBody(selectedObjectHandle);
 
     if (selectedObjectIsBeingMoved) {
-        rb->setExternalControl(true);
+        //rb->setExternalControl(true);
         rb->linearVelocity = glm::vec3(0.0f);
         rb->angularVelocity = glm::vec3(0.0f);
     } else {
-        rb->setExternalControl(false);
+        //rb->setExternalControl(false);
     }
 
     // position

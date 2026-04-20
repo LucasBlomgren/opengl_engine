@@ -475,13 +475,15 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rb->linearVelocity = linVel;
                 }
 
-                glm::vec3 angVel = rb->angularVelocity;
-                //if (RowDragFloat3("Angular vel", "##ang_vel", angVel, 0.1f, -1000.f, 1000.f, 1))
+                glm::mat3 rotationMatrix = glm::mat3_cast(rootTransform->orientation);
+                glm::mat3 invRotationMatrix = glm::transpose(rotationMatrix);
+                glm::vec3 localAngVel = invRotationMatrix * rb->angularVelocity;
                 if (RowDragFloat3Colored("Angular vel",
                     "##ang_velx", "##ang_vely", "##ang_velz",
-                    angVel, 0.1f, -1000.f, 1000.f, "%.2f"))
+                    localAngVel, 0.1f, -1000.f, 1000.f, "%.2f"))
                 {
-                    rb->angularVelocity = angVel;
+                    // spara tillbaka i world space
+                    rb->angularVelocity = rotationMatrix * localAngVel;
                 }
             }
 
@@ -606,6 +608,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
         {
             SubPart& selectedPart = obj->parts[subPartIndex];
             Transform* localTransform = ctx.world->getTransform(selectedPart.localTransformHandle);
+            Collider* collider = ctx.world->getCollider(selectedPart.colliderHandle);
 
             //----------------------------------------
             // 3.1 SubPart Transform (Local)
@@ -655,7 +658,62 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             }
 
             //----------------------------------------
-            // 3.2 SubPart Render
+            // 3.2 SubPart Collider
+            //----------------------------------------
+            if (BeginPropertyTable("SubPartColliderTable"))
+            {
+                // Collider type
+                {
+                    int colliderChoice = 0;
+                    const char* colliderItems[] = { "Cuboid", "Sphere" };
+
+                    if (collider->type == ColliderType::CUBOID)        colliderChoice = 0;
+                    else if (collider->type == ColliderType::SPHERE)   colliderChoice = 1;
+
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextUnformatted("Collider");
+
+                    ImGui::TableSetColumnIndex(1);
+
+                    float avail = ImGui::GetContentRegionAvail().x;
+                    float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+                    float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+                    ImGui::SetNextItemWidth(avail - btnW - spacing);
+                    if (ImGui::Combo("##sub_collider", &colliderChoice, colliderItems, IM_ARRAYSIZE(colliderItems)))
+                    {
+                        if (selectedPart.mesh)
+                        {
+                            std::vector<glm::vec3> verticesPositions;
+                            for (const Vertex& vertex : selectedPart.mesh->vertices) {
+                                verticesPositions.push_back(vertex.position);
+                            }
+
+                            if (colliderChoice == 0) {
+                                OOBB box(verticesPositions, collider->pose);
+                                collider->type = ColliderType::CUBOID;
+                                collider->shape = box;
+                            }
+                            else if (colliderChoice == 1) {
+                                Sphere sphere(collider->pose);
+                                collider->type = ColliderType::SPHERE;
+                                collider->shape = sphere;
+                            }
+
+                            collider->aabb.init(verticesPositions);
+                            collider->updateAABB(collider->pose);
+                            collider->updateCollider(collider->pose);
+                            RebuildRigidBodyAABB();
+                        }
+                    }
+                }
+                ImGui::EndTable();
+            }
+
+            //----------------------------------------
+            // 3.3 SubPart Render
             //----------------------------------------
             if (BeginPropertyTable("SubPartRenderTable"))
             {
@@ -698,6 +756,29 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         {
                             selectedPart.mesh = mesh;
                             RebuildObjectRenderBatches();
+
+                            std::vector<glm::vec3> verticesPositions;
+                            for (const Vertex& vertex : mesh->vertices) {
+                                verticesPositions.push_back(vertex.position);
+                            }
+                            
+                            // rebuild collider shape based on new mesh vertices if collider exists
+                            if (collider)
+                            {
+                                if (collider->type == ColliderType::CUBOID) {
+                                    OOBB box(verticesPositions, collider->pose);
+                                    collider->shape = box;
+                                }
+                                else if (collider->type == ColliderType::SPHERE) {
+                                    Sphere sphere(collider->pose);
+                                    collider->shape = sphere;
+                                }
+                            }
+
+                            collider->aabb.init(verticesPositions);
+                            collider->updateAABB(collider->pose);
+                            collider->updateCollider(collider->pose);
+                            RebuildRigidBodyAABB();
                         }
                     }
                 }
