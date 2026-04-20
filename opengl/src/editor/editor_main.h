@@ -60,13 +60,12 @@ public:
     void update(Shader& shader);
 
     // select object
-    bool objectIsSelected = false;
     bool selectedObjectIsBeingMoved = false;
-    bool objectIsHovered = false;
     GameObjectHandle selectedObjectHandle;
     GameObjectHandle hoveredObjectHandle;
-
+    int selectedSubPartIndex = -1; // for compound colliders, -1 means whole object
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
+
     void syncSelectionOffset();
     void selectObject(const InputContext& ctx);
     void dropObject();

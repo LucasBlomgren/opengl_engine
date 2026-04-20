@@ -17,7 +17,14 @@ class DebugRenderer {
 public:
     void init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager);
 
-    void prepareFrame(PhysicsEngine& physics, const std::vector<GameObject>& objects, World& world);
+    void prepareFrame(
+        PhysicsEngine& physics, 
+        const std::vector<GameObject>& objects, 
+        World& world, 
+        GameObjectHandle& selectedObjectHandle, 
+        int selectedSubPartIndex
+    );
+
     void renderShadowPass() const;
     void renderOverlayPass(const PhysicsEngine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects, World& world);
 
@@ -44,7 +51,7 @@ private:
     };
     std::vector<SceneDebugMesh> sceneDebugMeshes;
     void prepareCollisionNormals(PhysicsEngine& physics, World& world);
-    void prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world);
+    void prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex);
     void prepareXYZAxes();
 
     // unlit debug shapes
@@ -65,5 +72,19 @@ private:
         glm::vec3 terrainNode{ 0.40f, 0.31f, 0.13f }; // brown 
         glm::vec3 terrainLeaf{ 0.70f, 0.50f, 0.25f };
     };
-    BVHColors bvhColors;
+    const BVHColors BVH_COLORS;
+
+    // outline colors for physics debug
+    const glm::vec3 STATIC_COLOR = glm::vec3(0.30f, 0.95f, 0.50f);  // light green
+    const glm::vec3 ASLEEP_COLOR = glm::vec3(0.0f, 0.0f, 1.0f);     // blue
+    const glm::vec3 AWAKE_COLOR = glm::vec3(1.0f, 0.0f, 0.0f);      // red
+
+    // debug shape line widths
+    const float FRUSTUM_LINE_WIDTH = 2.0f;
+    const float BVH_LEAF_LINE_WIDTH = 3.0f;
+    const float BVH_NODE_LINE_WIDTH = 2.0f;
+
+    const float AABB_LINE_WIDTH = 2.0f;
+    const float OOBB_LINE_WIDTH = 2.0f;
+    const float SPHERE_LINE_WIDTH = 4.0f;
 };

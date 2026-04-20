@@ -14,19 +14,14 @@ void OOBBRenderer::init() {
     setupNormals();
 }
 
-void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const bool asleep, const bool isStatic, const bool selected, const bool hovered) {
+void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const glm::vec3& color) {
     glm::mat4 model(1.0f);
     makeOOBBModelMatrix(model, box);
 
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
-    if (selected) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
-    else if (hovered) { shader.setVec3("debug.uColor", glm::vec3(1.0f, 0.65f, 0.0f)); }
-    else if (isStatic) { shader.setVec3("debug.uColor", glm::vec3(0.30f, 0.95f, 0.50f)); }
-    else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
-    else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
+    shader.setVec3("debug.uColor", color);
 
-    glLineWidth(2.0f);
     glBindVertexArray(sVAO_box);
     glDrawArrays(GL_LINES, 0, 24);
 }

@@ -17,6 +17,8 @@ struct GpuTimers;
 
 namespace Editor 
 {
+class EditorMain;
+
 // Context which is passed to panels during rendering
 struct PanelContext {
 	float deltaTime = 0.0f;
@@ -31,6 +33,7 @@ struct PanelContext {
 	GameObjectHandle selectedObjectHandle;
 	bool objectIsSelected = false;
 
+	EditorMain* editorMain = nullptr;
 	::PhysicsEngine* physicsEngine = nullptr;
 	::EngineState* engineState = nullptr;
 	::Renderer* renderer = nullptr;

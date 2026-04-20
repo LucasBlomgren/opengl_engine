@@ -14,8 +14,8 @@ struct SubPart {
     // render
     Shader* shader = nullptr;
     Mesh* mesh = nullptr;
-    GLuint textureId;
-    glm::vec3 color;
+    GLuint textureId = 0;
+    glm::vec3 color{ 1.0f }; // white
     bool seeThrough = false;
     int batchIdx = -1;
     int batchInstanceIdx = -1;
@@ -31,11 +31,8 @@ public:
 
     std::vector<SubPart> parts;
 
-    // editor/player interaction
+    // to skip raycasting on player object
     bool player = false;
-    bool hoveredByEditor = false;
-    bool selectedByEditor = false;
-    bool selectedByPlayer = false;
 
     // constructor
     GameObject(int id, TransformHandle rootTransformHandle)

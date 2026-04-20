@@ -50,6 +50,7 @@ void Editor::EditorMain::init(
     this->window = window;
 
     panelManager = std::make_unique<Editor::PanelManager>(
+        this,
         physicsEngine,
         imguiManager,
         engineState,
@@ -67,8 +68,6 @@ void Editor::EditorMain::init(
 
 void Editor::EditorMain::resetState() {
     selectedObjectIsBeingMoved = false;
-    objectIsHovered = false;
-    objectIsSelected = false;
     hoveredObjectHandle = GameObjectHandle{};
     selectedObjectHandle = GameObjectHandle{};
 }
@@ -80,26 +79,9 @@ void Editor::EditorMain::activate() {
 void Editor::EditorMain::deactivate() {
     dropObject();
 
-    // clear hover/selection states on objects to avoid stuck states
-    if (objectIsSelected) {
-        GameObject* obj = world->getGameObject(selectedObjectHandle);
-        if (obj) {
-            obj->selectedByEditor = false;
-        }
-        objectIsSelected = false;
-        selectedObjectHandle = GameObjectHandle{};
-    }
-
-    if (objectIsHovered) {
-        GameObject* obj = world->getGameObject(hoveredObjectHandle);
-        if (obj) {
-            obj->hoveredByEditor = false;
-        }
-        objectIsHovered = false;
-        hoveredObjectHandle = GameObjectHandle{};
-    }
-
     selectedObjectIsBeingMoved = false;
+    selectedObjectHandle = GameObjectHandle{};
+    hoveredObjectHandle = GameObjectHandle{};
 }
 
 // -----------------------------------
@@ -146,7 +128,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         mouseYLastFrame = in.mousePos.y;
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-            if (!objectIsSelected) {
+            if (!selectedObjectHandle.isValid()) {
                 rayCast(SELECT_RANGE);
                 selectObject(ctx);
             }
@@ -184,7 +166,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         }
 
         selectedObjectIsBeingMoved = false;
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && in.mouseDown[GLFW_MOUSE_BUTTON_2] && objectIsSelected) {
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && in.mouseDown[GLFW_MOUSE_BUTTON_2] && selectedObjectHandle.isValid()) {
             selectedObjectIsBeingMoved = true;
         }
 
@@ -381,12 +363,6 @@ void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
 }
 
 void Editor::EditorMain::update(Shader& shader) {
-    // clear previous hover state
-    if (objectIsHovered) {
-        GameObject* hoveredObj = world->getGameObject(hoveredObjectHandle);
-        hoveredObj->hoveredByEditor = false;
-        objectIsHovered = false;
-    }
 
     // raycast for hover
     RaycastHit raycast = rayCast(SELECT_RANGE);
@@ -394,11 +370,7 @@ void Editor::EditorMain::update(Shader& shader) {
     // set new hover state
     if (raycast.hit && !selectedObjectIsBeingMoved) {
         RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
-        GameObject* hoveredObj = world->getGameObject(rb->gameObjectHandle);
-        GameObjectHandle hoveredHandle = rb->gameObjectHandle;
-        hoveredObj->hoveredByEditor = true;
-        hoveredObjectHandle = hoveredHandle;
-        objectIsHovered = true;
+        hoveredObjectHandle = rb->gameObjectHandle;
     }
 }
 
@@ -406,7 +378,7 @@ void Editor::EditorMain::update(Shader& shader) {
 // OBJECT SELECTION AND MANIPULATION
 //------------------------------------------------------
 void Editor::EditorMain::syncSelectionOffset() {
-    if (!objectIsSelected) return;
+    if (!selectedObjectHandle.isValid()) return;
 
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
@@ -420,7 +392,7 @@ void Editor::EditorMain::syncSelectionOffset() {
 
 // select object
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
-    if (objectIsSelected) return;
+    if (selectedObjectHandle.isValid()) return;
 
     RaycastHit raycast = rayCast(SELECT_RANGE);
 
@@ -429,7 +401,6 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
         return;
     }
 
-    objectIsSelected = true;
     RigidBody* selectedBody = world->getRigidBody(raycast.bodyHandle);
     GameObjectHandle selectedHandle = selectedBody->gameObjectHandle;
     selectedObjectHandle = selectedHandle;
@@ -437,8 +408,6 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     // set selected and hovered states, and calculate selection offset
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
-    selectedObject->selectedByEditor = true;
-    selectedObject->hoveredByEditor = false;
     transform->lastPosition = transform->position;
 
     // Project worldofset onto cameras local axes
@@ -447,11 +416,12 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    // set body to kinematic so it can be moved without physics interference, and store original body type to restore later
+    // set body parameters for editing
     RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-    rb->setExternalControl(true);
-    rb->linearVelocity = glm::vec3(0.0f);
-    rb->angularVelocity = glm::vec3(0.0f);
+    rb->sleepCounter = 0.0f; // reset sleep counter to avoid sleeping while moving
+    //rb->setExternalControl(true);
+    //rb->linearVelocity = glm::vec3(0.0f);
+    //rb->angularVelocity = glm::vec3(0.0f);
 
     panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
     panelManager->ctx.objectIsSelected = true;
@@ -459,11 +429,19 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-    if (!objectIsSelected)
+    if (!selectedObjectHandle.isValid())
         return;
 
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     RigidBody* rb = world->getRigidBody(selectedObjectHandle);
+
+    if (selectedObjectIsBeingMoved) {
+        rb->setExternalControl(true);
+        rb->linearVelocity = glm::vec3(0.0f);
+        rb->angularVelocity = glm::vec3(0.0f);
+    } else {
+        rb->setExternalControl(false);
+    }
 
     // position
     Transform* rootTransform = world->getTransform(selectedObject->rootTransformHandle);
@@ -508,16 +486,12 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
 
 // drop selected object
 void Editor::EditorMain::dropObject() {
-    if (objectIsSelected) {
-        GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-        selectedObject->selectedByEditor = false;
-
+    if (selectedObjectHandle.isValid()) {
         RigidBody* rb = world->getRigidBody(selectedObjectHandle);
         rb->setExternalControl(false);
-
-        objectIsSelected = false;
-        objectIsHovered = false;
     }
+
+    selectedSubPartIndex = -1;
 
     selectedObjectHandle = {};
     hoveredObjectHandle = {};

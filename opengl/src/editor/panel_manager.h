@@ -21,6 +21,7 @@ namespace Editor
 class PanelManager {
 public:
 	PanelManager(
+		::Editor::EditorMain* editorMain,
 		::PhysicsEngine* physicsEngine,
 		::ImGuiManager* imguiManager,
 		::EngineState* engineState,
@@ -32,7 +33,8 @@ public:
 		::TextureManager* textureManager,
 		::FrameTimers* frameTimers,
 		::GpuTimers* gpuTimers)
-		: physicsEngine(physicsEngine)
+		: editorMain(editorMain)
+		, physicsEngine(physicsEngine)
 		, imguiManager(imguiManager)
 		, engineState(engineState)
 		, renderer(renderer)
@@ -43,6 +45,7 @@ public:
 		, textureManager(textureManager)
 		, frameTimers(frameTimers)
 		, gpuTimers(gpuTimers) {
+		ctx.editorMain = editorMain;
 		ctx.physicsEngine = physicsEngine;
 		ctx.engineState = engineState;
 		ctx.renderer = renderer;
@@ -68,6 +71,7 @@ private:
 	std::vector<std::shared_ptr<Editor::IPanel>> panels;
 
 	// dependencies
+	::Editor::EditorMain* editorMain;
 	::PhysicsEngine* physicsEngine;
 	::ImGuiManager* imguiManager;
 	::EngineState* engineState;

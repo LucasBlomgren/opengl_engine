@@ -9,10 +9,7 @@ public:
     void renderBox(
         Shader& shader,
         const OOBB& box,
-        const bool asleep,
-        const bool isStatic,
-        const bool selected,
-        const bool hovered
+        const glm::vec3& color
     );
 
     void destroy();

@@ -2,9 +2,6 @@
 #include "inspector_panel.h"
 #include "editor/panel.h"
 #include "imgui.h"
-#include "imgui_manager.h"
-#include "time.h"
-#include "core/engine_state.h"
 #include "game/game_object.h"
 #include "graphics/mesh/mesh_manager.h"
 #include "graphics/mesh/mesh.h"
@@ -99,7 +96,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             if (!ImGui::BeginTable(id, 2, tblFlags))
                 return false;
 
-            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 115.0f);
+            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
             ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
             return true;
         };
@@ -146,7 +143,15 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            return ImGui::DragFloat(id, &v, speed, vmin, vmax);
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.16f, 0.17f, 0.20f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.21f, 0.24f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.22f, 0.23f, 0.26f, 1.0f));
+
+            bool changed = ImGui::DragFloat(id, &v, speed, vmin, vmax);
+
+            ImGui::PopStyleColor(3);
+            return changed;
         };
 
     auto RowDragFloat3 = [&](const char* label, const char* id, glm::vec3& v,
@@ -299,10 +304,6 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
             ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
         };
-
-    static int currentSubPartIndex = 0;
-    if (currentSubPartIndex >= (int)obj->parts.size())
-        currentSubPartIndex = 0;
 
     //----------------------------------------
     // 1. Transform
@@ -547,8 +548,14 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
     //----------------------------------------
     // 3. SubParts
     //----------------------------------------
-    if (DrawSection("SubParts"))
+    if (DrawSection("Parts"))
     {
+        int comboIndex = ctx.editorMain->selectedSubPartIndex + 1; // +1 because combo has "None" as first item, then actual parts start from index 1
+
+        int comboItemCount = (int)obj->parts.size() + 1; // +1 for "None"
+        if (comboIndex >= comboItemCount)
+            comboIndex = 0;
+
         if (BeginPropertyTable("SubPartsTable"))
         {
             std::vector<std::string> subPartNames;
@@ -557,12 +564,12 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 subPartNames.push_back(part.name);
 
             std::vector<const char*> itemPtrs;
-            itemPtrs.reserve(subPartNames.size());
+            std::string none = "None";
+            itemPtrs.reserve(obj->parts.size() + 1);
+
+            itemPtrs.push_back(none.c_str());
             for (const std::string& name : subPartNames)
                 itemPtrs.push_back(name.c_str());
-
-            if (currentSubPartIndex >= (int)itemPtrs.size())
-                currentSubPartIndex = 0;
 
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
@@ -578,48 +585,56 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             }
             else
             {
-                ImGui::Combo("##selected_subpart", &currentSubPartIndex, itemPtrs.data(), (int)itemPtrs.size());
+                if (ImGui::Combo("##selected_subpart", &comboIndex, itemPtrs.data(), (int)itemPtrs.size()))
+                {
+                    ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
+                }
             }
+
+            // keep EditorMain in sync even when combo didn't change this frame
+            ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
 
             ImGui::EndTable();
         }
 
-        //----------------------------------------
-        // 3.1 SubPart Transform (Local)
-        //----------------------------------------
-        if (!obj->parts.empty() && currentSubPartIndex < (int)obj->parts.size())
+        //-------------------------------------------------
+        // If a subpart is selected, show its properties
+        //-------------------------------------------------
+        int subPartIndex = comboIndex - 1; // -1 = None, 0..N-1 = actual part index
+
+        if (subPartIndex >= 0 && subPartIndex < (int)obj->parts.size())
         {
-            SubPart& selectedPart = obj->parts[currentSubPartIndex];
+            SubPart& selectedPart = obj->parts[subPartIndex];
             Transform* localTransform = ctx.world->getTransform(selectedPart.localTransformHandle);
 
+            //----------------------------------------
+            // 3.1 SubPart Transform (Local)
+            //----------------------------------------
             if (BeginPropertyTable("SubPartLocalTransformTable"))
             {
                 glm::vec3 localPos = localTransform->position;
-                //if (RowDragFloat3("Position", "##sub_local_pos", localPos, 0.1f, -1000.f, 1000.f, 2))
                 if (RowDragFloat3Colored("Position",
                     "##sub_local_posx", "##sub_local_posy", "##sub_local_posz",
                     localPos, 0.1f, -1000.f, 1000.f, "%.2f"))
                 {
                     localTransform->position = localPos;
                     localTransform->updateCache();
-                    SyncSingleSubPartCollider(currentSubPartIndex);
+                    SyncSingleSubPartCollider(subPartIndex);
                 }
 
                 glm::vec3 localScale = localTransform->scale;
-                //if (RowDragFloat3("Scale", "##sub_local_scale", localScale, 0.1f, 0.01f, 1000.f, 2))
                 if (RowDragFloat3Colored("Scale",
                     "##sub_local_scalex", "##sub_local_scaley", "##sub_local_scalez",
                     localScale, 0.1f, 0.01f, 1000.f, "%.2f"))
                 {
                     localTransform->scale = localScale;
                     localTransform->updateCache();
-                    SyncSingleSubPartCollider(currentSubPartIndex);
+                    SyncSingleSubPartCollider(subPartIndex);
                 }
 
                 glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(localTransform->orientation));
                 glm::vec3 lastUiDeg = uiDeg;
 
-                //if (RowDragFloat3("Rotation", "##sub_local_rot", uiDeg, 0.5f, -720.f, 720.f, 2))
                 if (RowDragFloat3Colored("Rotation",
                     "##sub_local_rotx", "##sub_local_roty", "##sub_local_rotz",
                     uiDeg, 0.5f, -720.f, 720.f, "%.2f"))
@@ -633,7 +648,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
                     localTransform->orientation = glm::normalize(localTransform->orientation * dq);
                     localTransform->updateCache();
-                    SyncSingleSubPartCollider(currentSubPartIndex);
+                    SyncSingleSubPartCollider(subPartIndex);
                 }
 
                 ImGui::EndTable();
@@ -646,8 +661,14 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             {
                 // Mesh
                 {
-                    static int meshChoice = 0;
+                    int meshChoice = 0;
                     const char* meshItems[] = { "Cube", "Sphere", "Teapot", "Pylon", "Tank" };
+
+                    if (selectedPart.mesh == ctx.meshManager->getMesh("cube"))          meshChoice = 0;
+                    else if (selectedPart.mesh == ctx.meshManager->getMesh("sphere"))   meshChoice = 1;
+                    else if (selectedPart.mesh == ctx.meshManager->getMesh("teapot"))   meshChoice = 2;
+                    else if (selectedPart.mesh == ctx.meshManager->getMesh("pylon"))    meshChoice = 3;
+                    else if (selectedPart.mesh == ctx.meshManager->getMesh("tank"))     meshChoice = 4;
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
@@ -661,10 +682,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     float spacing = ImGui::GetStyle().ItemSpacing.x;
 
                     ImGui::SetNextItemWidth(avail - btnW - spacing);
-                    ImGui::Combo("##sub_mesh", &meshChoice, meshItems, IM_ARRAYSIZE(meshItems));
-
-                    ImGui::SameLine();
-                    if (ImGui::Button("Load##sub_mesh"))
+                    if (ImGui::Combo("##sub_mesh", &meshChoice, meshItems, IM_ARRAYSIZE(meshItems)))
                     {
                         Mesh* mesh = nullptr;
                         switch (meshChoice)
@@ -686,8 +704,13 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
                 // Texture
                 {
-                    static int textureChoice = 0;
+                    int textureChoice = 0;
                     const char* textureItems[] = { "Plain", "Crate", "UVmap", "Terrain" };
+
+                    if (selectedPart.textureId == -1)                                               textureChoice = 0;
+                    else if (selectedPart.textureId == ctx.textureManager->getTexture("crate"))     textureChoice = 1;
+                    else if (selectedPart.textureId == ctx.textureManager->getTexture("uvmap"))     textureChoice = 2;
+                    else if (selectedPart.textureId == ctx.textureManager->getTexture("terrain2"))  textureChoice = 3;
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
@@ -701,10 +724,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     float spacing = ImGui::GetStyle().ItemSpacing.x;
 
                     ImGui::SetNextItemWidth(avail - btnW - spacing);
-                    ImGui::Combo("##sub_texture", &textureChoice, textureItems, IM_ARRAYSIZE(textureItems));
-
-                    ImGui::SameLine();
-                    if (ImGui::Button("Load##sub_texture"))
+                    if (ImGui::Combo("##sub_texture", &textureChoice, textureItems, IM_ARRAYSIZE(textureItems)))
                     {
                         int texId = -1;
                         switch (textureChoice)
@@ -746,7 +766,8 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 ImGui::EndTable();
             }
         }
-    EndSection();
+
+        EndSection();
     }
 
     ImGui::End();

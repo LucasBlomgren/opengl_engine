@@ -21,7 +21,7 @@ struct SubPartDesc {
     std::string shaderName = "default";
     std::string textureName = "plain";
     std::string meshName = "cube";
-    glm::vec3 color = glm::vec3(255.0f);
+    glm::vec3 color = glm::vec3(1.0f); // white by default
     bool seeThrough = false;
 };
 

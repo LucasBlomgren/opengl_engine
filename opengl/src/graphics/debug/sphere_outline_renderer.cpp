@@ -25,10 +25,8 @@ void SphereOutlineRenderer::render(
     const glm::vec3& cameraPos,
     const glm::vec3& sphereCenter, 
     float radius, 
-    const bool asleep, 
-    const bool isStatic, 
-    const bool selected, 
-    const bool hovered) const {
+    const glm::vec3& color) const
+{
     glm::vec3 viewDir = glm::normalize(cameraPos - sphereCenter);
 
     glm::vec3 up = glm::abs(glm::dot(viewDir, glm::vec3(0, 1, 0))) > 0.99f
@@ -39,17 +37,12 @@ void SphereOutlineRenderer::render(
     glm::vec3 V = glm::normalize(glm::cross(viewDir, U));
 
     shader.setInt("debug.objectType", 1);
-    if (selected) { shader.setVec3("debug.uColor", glm::vec3(0, 1, 0)); }
-    else if (hovered) { shader.setVec3("debug.uColor", glm::vec3(1.0f, 0.65f, 0.0f)); }
-    else if (isStatic) { shader.setVec3("debug.uColor", glm::vec3(0.30f, 0.95f, 0.50f)); }
-    else if (!asleep) { shader.setVec3("debug.uColor", glm::vec3(1, 0, 0)); }
-    else { shader.setVec3("debug.uColor", glm::vec3(0, 0, 1)); }
+    shader.setVec3("debug.uColor", color);
 
     shader.setVec3("debug.uCenter", sphereCenter);
     shader.setVec3("debug.uU", U * radius);
     shader.setVec3("debug.uV", V * radius);
 
-    glLineWidth(4.0f);
     glBindVertexArray(VAO);
     glDrawArrays(GL_LINE_LOOP, 0, unitCircle.size());
 }

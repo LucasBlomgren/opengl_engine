@@ -10,10 +10,7 @@ public:
         const glm::vec3& cameraPos,
         const glm::vec3& sphereCenter, 
         float radius, 
-        const bool asleep, 
-        const bool isStatic, 
-        const bool selected,
-        const bool hovered
+        const glm::vec3& color
     ) const;
 
     void destroy();

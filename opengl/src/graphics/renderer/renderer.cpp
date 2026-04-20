@@ -250,7 +250,7 @@ void Renderer::render(
     }
 
     fillBatchInstances();
-    debugRenderer.prepareFrame(physics, world->getGameObjectsMap().dense(), *world);
+    debugRenderer.prepareFrame(physics, world->getGameObjectsMap().dense(), *world, editor->selectedObjectHandle, editor->selectedSubPartIndex);
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -293,11 +293,11 @@ void Renderer::render(
 
     // render raycast hit for player/editor
     if (engineState->isPlayerMode()) {
-        renderRayCastHit(player->selectedObjectHandle, camera, builder);
-        renderRayCastHit(player->hoveredObjectHandle, camera, builder);
+        renderSelectedObjectOutline(player->selectedObjectHandle, camera, builder);
+        renderHoveredObjectOutline(player->hoveredObjectHandle, camera, builder);
     } else {
-        renderRayCastHit(editor->selectedObjectHandle, camera, builder);
-        renderRayCastHit(editor->hoveredObjectHandle, camera, builder);
+        renderSelectedObjectOutline(editor->selectedObjectHandle, camera, builder);
+        renderHoveredObjectOutline(editor->hoveredObjectHandle, camera, builder);
     }
 
     glDepthFunc(GL_LEQUAL);
@@ -521,7 +521,7 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
             glEnable(GL_POLYGON_OFFSET_LINE);
             glPolygonOffset(-1.0f, -1.0f);
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glLineWidth(3.f);
+            glLineWidth(TERRAIN_WIREFRAME_LINE_WIDTH);
         }
 
         glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
@@ -701,39 +701,72 @@ void Renderer::renderLights() const {
     }
 }
 
-//----------------------------
-//     Render Raycast Hit
-//----------------------------
-void Renderer::renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
-    // #TODO: fix logic for selected vs hovered
-
+//----------------------------------------
+//     Hovered Object Outline
+//----------------------------------------
+void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
     GameObject* obj = world->getGameObject(handle);
-    if (obj == nullptr) {
-        return;
-    }
-
+    if (!obj) return;
     RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
 
-    bool selected;
-    if (obj->selectedByEditor or obj->selectedByPlayer) { selected = true; }
-    else if (obj->hoveredByEditor) { selected = false; }
-    else return;
+    glLineWidth(OOBB_LINE_WIDTH);
+    glm::vec3 color = HOVERED_COLOR;
 
-    bool isStatic = (rb->type == BodyType::Static);
+    for (int i = 0; i < rb->colliderHandles.size(); ++i) {
+        Collider* col = world->getCollider(rb->colliderHandles[i]);
 
-    for (ColliderHandle& handle : rb->colliderHandles) {
-        Collider* col = world->getCollider(handle);
-
+        // render based on collider type
         if (col->type == ColliderType::CUBOID) {
             const OOBB& box = std::get<OOBB>(col->shape);
-            debugRenderer.oobbRenderer.renderBox(*debugShader, box, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+            debugRenderer.oobbRenderer.renderBox(*debugShader, box, color);
         }
         else if (col->type == ColliderType::SPHERE) {
             Sphere& sphere = std::get<Sphere>(col->shape);
-            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, rb->asleep, isStatic, selected, obj->hoveredByEditor);
+            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, color);
+        }
+    }
+}
+
+//----------------------------------------
+//     Selected Object Outline
+//----------------------------------------
+void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
+    GameObject* obj = world->getGameObject(handle);
+    if (!obj) return;
+    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
+
+    debugShader->use();
+    debugShader->setBool("debug.useUniformColor", true);
+
+    glLineWidth(OOBB_LINE_WIDTH);
+    glm::vec3 color = SELECTED_COLOR;
+
+    for (int i = 0; i < rb->colliderHandles.size(); ++i) {
+        Collider* col = world->getCollider(rb->colliderHandles[i]);
+
+        // editor mode: if this collider is part of the selected subpart, use subpart color and line width instead
+        if (!engineState->isPlayerMode()) {
+            if (i == editor->selectedSubPartIndex) {
+                glLineWidth(SUBPART_LINE_WIDTH);
+                color = SUBPART_SELECTED_COLOR;
+            }
+            else {
+                glLineWidth(OOBB_LINE_WIDTH);
+                color = SELECTED_COLOR;
+            }
+        }
+
+        // render based on collider type
+        if (col->type == ColliderType::CUBOID) {
+            const OOBB& box = std::get<OOBB>(col->shape);
+            debugRenderer.oobbRenderer.renderBox(*debugShader, box, color);
+        }
+        else if (col->type == ColliderType::SPHERE) {
+            Sphere& sphere = std::get<Sphere>(col->shape);
+            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, color);
         }
     }
 }

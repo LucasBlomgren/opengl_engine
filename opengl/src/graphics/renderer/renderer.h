@@ -16,8 +16,6 @@
 #include "scene_builder.h"
 #include "editor/editor_main.h"
 #include "player.h"
-#include "raycast.h"
-
 
 class Renderer {
 public:
@@ -65,9 +63,10 @@ public:
     void renderGameObjectsShadow();
     void renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, bool shadowPass);
     void renderLights() const; 
-    void renderRayCastHit(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder);
+    void renderHoveredObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder);
+    void renderSelectedObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder);
 
-    Shader* defaultShader;
+    Shader* defaultShader;  
     Shader* debugShader;
     Shader* shadowShader;
     Shader* skyboxShader;
@@ -121,4 +120,16 @@ private:
     std::vector<RenderBatch> batches;
 
     constexpr static int INSTANCING_THRESHOLD = 3;
+
+    // outline colors raycast hit
+    const glm::vec3 SELECTED_COLOR = glm::vec3(0.0f, 1.0f, 0.0f);   // green
+    const glm::vec3 HOVERED_COLOR = glm::vec3(1.0f, 0.65f, 0.0f);   // orange
+    const glm::vec3 SUBPART_SELECTED_COLOR = glm::vec3(1.0f, 1.0f, 0.0f); // yellow
+
+    // debug shape line widths
+    const float SUBPART_LINE_WIDTH = 3.0f;
+    const float OOBB_LINE_WIDTH = 2.0f;
+    const float SPHERE_LINE_WIDTH = 4.0f;
+
+    const float TERRAIN_WIREFRAME_LINE_WIDTH = 2.0f;
 };
