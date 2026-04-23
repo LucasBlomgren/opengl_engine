@@ -132,14 +132,14 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     bool playerMode = ctx.engineState->isPlayerMode();
     if (ImGui::Button("Load")) {
         switch (currentItem) {
-        case 0: ctx.sceneBuilder->createScene(6, playerMode); break;
-        case 1: ctx.sceneBuilder->createScene(7, playerMode); break;
-        case 2: ctx.sceneBuilder->createScene(0, playerMode); break;
-        case 3: ctx.sceneBuilder->createScene(1, playerMode); break;
-        case 4: ctx.sceneBuilder->createScene(2, playerMode); break;
-        case 5: ctx.sceneBuilder->createScene(3, playerMode); break;
-        case 6: ctx.sceneBuilder->createScene(4, playerMode); break;
-        case 7: ctx.sceneBuilder->createScene(5, playerMode); break;
+        case 0: ctx.sceneBuilder->createScene(0, playerMode); break;
+        case 1: ctx.sceneBuilder->createScene(1, playerMode); break;
+        case 2: ctx.sceneBuilder->createScene(2, playerMode); break;
+        case 3: ctx.sceneBuilder->createScene(3, playerMode); break;
+        case 4: ctx.sceneBuilder->createScene(4, playerMode); break;
+        case 5: ctx.sceneBuilder->createScene(5, playerMode); break;
+        case 6: ctx.sceneBuilder->createScene(6, playerMode); break;
+        case 7: ctx.sceneBuilder->createScene(7, playerMode); break;
         case 8: ctx.sceneBuilder->createScene(8, playerMode); break;
         default: break;
         }

@@ -3,9 +3,6 @@
 
 #include "geometry/vertex.h"
 #include "renderer/renderer.h"
-#include "textures/texture_manager.h"
-#include "mesh/mesh_manager.h"
-#include "shaders/shader_manager.h"
 #include "lighting/light_manager.h"
 #include "physics.h"
 
@@ -97,14 +94,13 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
     setLights();
 
     switch (sceneID) {
-    case 0: mainScene(); break;
-    case 1: terrainScene(); break;
+    case 0: testFloorScene(); break;
+    case 1: emptyFloorScene(); break;
     case 2: tallStructureScene(); break;
-    case 3: tumblerScene(); break;
-    case 4: castleScene(); break;
-    case 5: containerScene(); break;
-    case 6: testFloorScene(); break;
-    case 7: emptyFloorScene(); break;
+    case 3: mainScene(); break;
+    case 5: tallStructureScene(); break;
+    case 6: castleScene(); break;
+    case 7: containerScene(); break;
     case 8: shapePileScene(); break;
     default: break;
     }

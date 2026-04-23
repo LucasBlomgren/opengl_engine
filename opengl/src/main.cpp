@@ -33,8 +33,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
-const unsigned int SHADOW_WIDTH = 16384;
-const unsigned int SHADOW_HEIGHT = 16384;
+const unsigned int SHADOW_WIDTH = 4096; // 16384
+const unsigned int SHADOW_HEIGHT = 4096; // 16384
 
 // timing
 float deltaTime = 0.0f;	
@@ -135,7 +135,7 @@ int main() {
 	skyboxManager.init(); 
 
 	// create default scene 
-	sceneBuilder.createScene(6, engineState.isPlayerMode());
+	sceneBuilder.createScene(0, engineState.isPlayerMode());
 
 	//--------------------------------------------
 	// setup editor
@@ -350,6 +350,8 @@ int main() {
 			if (engineState.getAdvanceStep()) {
 				accumulator = fixedTimeStep;
 			}
+
+			physicsEngine.prepareStepLoop();
 
 			// stepping loop
 			int steps = 0;

@@ -32,7 +32,8 @@ public:
     //------------------------
     void setupScene(std::vector<Tri>* terrainTriangles);
     void clearPhysicsData();
-    void step(float deltaTime, std::mt19937 rng);
+    void prepareStepLoop();
+    void step(float deltaTime, std::mt19937& rng);
 
     void sleepAllObjects();
     void awakenAllObjects();

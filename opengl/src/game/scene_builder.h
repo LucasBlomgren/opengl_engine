@@ -4,7 +4,6 @@
 #include "editor/editor_main.h"
 #include "physics/physics.h"
 #include "game_object.h"
-#include "collider.h"
 #include "tri.h"
 
 class Player;
@@ -29,7 +28,6 @@ public:
     void createScene(int sceneID, bool isPlayerMode);
     void mainScene();
     void terrainScene();
-    void tumblerScene();
     void tallStructureScene();
     void castleScene();
     void containerScene();

@@ -191,17 +191,26 @@ void PhysicsEngine::flushBroadphaseCommands() {
     pending.clear();
 }
 
+//===================================
+// Prepare for stepping loop 
+//===================================
+void PhysicsEngine::prepareStepLoop() {
+    // only clear pointer caches before accumulator loop, since objects are not supposed to be added/removed during accumulator step loop,
+    // and if cache is cleared multiple times during the loop, it will cause redundant lookups in the slot maps and thus worse performance.
+    caches.clear();
+}
+
 //====================================
 //         Time step
 //====================================
-void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
+void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
     ScopedTimer t(*frameTimers, "Physics");
     // Pre-step preparations
     {
         ScopedTimer t(*frameTimers, "Pre step");
         this->dt = deltaTime;
 
-        // prepare for this frame
+        // prepare for this step: clear caches, reserve memory for toWake/toSleep lists, etc.
         uint32_t bodiesSlotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
         uint32_t collidersSlotCap = physicsWorld.getCollidersMap().slot_capacity();
         toWake.reserve(bodiesSlotCap);
@@ -209,13 +218,12 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
         toWake.clear();
         toSleep.clear();
 
-        caches.clear();
         //externalContacts.clear();
 
         // add/remove objects to the BVH trees
         flushBroadphaseCommands();
 
-        // Reset contact points for the current frame
+        // Reset contact points for the current step
         for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
             for (ContactPoint& cp : it->second.points) {
                 cp.wasUsedThisFrame = false;
@@ -436,7 +444,7 @@ void PhysicsEngine::resolveCollisions() {
     }
 
     // ------ PGS solver ------
-    int maxIterations = 8;
+    int maxIterations = 4;
     int iterCount = 0;
     for (int i = 0; i < maxIterations; i++) {
         float maxDelta = 0.0f;
