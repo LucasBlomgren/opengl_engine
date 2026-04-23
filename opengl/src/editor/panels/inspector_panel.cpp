@@ -270,6 +270,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 if (!localTransform) continue;
 
                 collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
+                collider->pose.ensureModelMatrix();
                 collider->updateAABB(collider->pose);
                 collider->updateCollider(collider->pose);
             }
@@ -344,6 +345,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         {
                             rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
                             rb->updateInertiaWorld(*rootTransform);
+                            rb->invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));
                         }
                     }
                 }

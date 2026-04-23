@@ -418,7 +418,6 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
 
     // set body parameters for editing
     RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-    rb->sleepCounter = 0.0f; // reset sleep counter to avoid sleeping while moving
     //rb->setExternalControl(true);
     //rb->linearVelocity = glm::vec3(0.0f);
     //rb->angularVelocity = glm::vec3(0.0f);

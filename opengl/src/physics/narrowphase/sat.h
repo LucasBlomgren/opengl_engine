@@ -27,9 +27,15 @@ namespace SAT {
 
     bool boxBox(Collider& A, Collider& B, Result& out);
     bool boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& out);
+
     bool boxTri(Collider& A, Tri& tri, Result& out);
+    bool boxTriSpecialized(Collider& A, Tri& tri, Result& out);
+
     bool sphereSphere(Collider& A, Collider& B, Result& out);
     bool sphereTri(Collider& A, Tri& tri, Result& out);
+
+    bool boxBoxOBB(Collider& ACol, Collider& BCol, Result& out);
+    bool boxBoxOBB_NoPrecompute(Collider& ACol, Collider& BCol, Result& out);
 
     std::pair<float, float> projectVertices(const std::span<const glm::vec3> vertices, const glm::vec3& axis);
     bool intersectPolygons(
@@ -42,4 +48,14 @@ namespace SAT {
     void reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal);
     void findBestTriangles(std::vector<SAT::Result>& results);
     void addFurthestTriangle(std::vector<SAT::Result>& results, std::vector<int>& addedIndices);
+
+    bool overlapIntervals(float minA, float maxA, float minB, float maxB, float& outOverlap);
+
+    void projectTriOntoAxisLocal(
+        const glm::vec3& p0,
+        const glm::vec3& p1,
+        const glm::vec3& p2,
+        const glm::vec3& axisLocal,
+        float& outMin,
+        float& outMax);
 }

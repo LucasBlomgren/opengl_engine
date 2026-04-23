@@ -64,13 +64,9 @@ void NarrowphaseManager::processBoxBox(
         (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
     // pointer data for solver
-    ContactRuntime runtimeData;
-    runtimeData.bodyA = bodyA;
-    runtimeData.bodyB = bodyB;
-    runtimeData.colliderA = colliderA;
-    runtimeData.colliderB = colliderB;
-    runtimeData.bodyRootA = caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME);
-    runtimeData.bodyRootB = caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME);
+    ContactRuntime runtimeData = makeRuntimeData(
+        bodyA, bodyB, colliderA, colliderB, caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME), caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME)
+    );
 
     // collision manifold generation
     Contact contact(bodyHandleA, bodyHandleB, runtimeData, satResult.normal);
@@ -160,13 +156,9 @@ void NarrowphaseManager::processBoxSphere(
         (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
     // pointer data for solver
-    ContactRuntime runtimeData;
-    runtimeData.bodyA = bodyA;
-    runtimeData.bodyB = bodyB;
-    runtimeData.colliderA = colliderA;
-    runtimeData.colliderB = colliderB;
-    runtimeData.bodyRootA = caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME);
-    runtimeData.bodyRootB = caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME);
+    ContactRuntime runtimeData = makeRuntimeData(
+        bodyA, bodyB, colliderA, colliderB, caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME), caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME)
+    );
 
     // collision manifold generation
     Contact contact(bodyHandleA, bodyHandleB, runtimeData, satResult.normal);
@@ -246,13 +238,9 @@ void NarrowphaseManager::processSphereSphere(
         (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
     // pointer data for solver
-    ContactRuntime runtimeData;
-    runtimeData.bodyA = bodyA;
-    runtimeData.bodyB = bodyB;
-    runtimeData.colliderA = colliderA;
-    runtimeData.colliderB = colliderB;
-    runtimeData.bodyRootA = caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME);
-    runtimeData.bodyRootB = caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME);
+    ContactRuntime runtimeData = makeRuntimeData(
+        bodyA, bodyB, colliderA, colliderB, caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME), caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME)
+    );
 
     // collision manifold generation
     Contact contact(bodyHandleA, bodyHandleB, runtimeData, satResult.normal);

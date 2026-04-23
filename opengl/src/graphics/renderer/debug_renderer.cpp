@@ -90,7 +90,7 @@ void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world
 
         if (!c->points.empty()) {
             for (const ContactPoint& cp : c->points) {
-                pos += cp.globalCoord;
+                pos += cp.worldPos;
             }
             pos /= static_cast<float>(c->points.size());
         }
@@ -263,7 +263,7 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
                 debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
             }
 
-            renderContactPoint(*debugShapeShader, VAO_contactPoint, contact.points[i].globalCoord);
+            renderContactPoint(*debugShapeShader, VAO_contactPoint, contact.points[i].worldPos);
         }
     }
     glEnable(GL_DEPTH_TEST);

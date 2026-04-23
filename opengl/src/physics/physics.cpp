@@ -10,9 +10,9 @@ void PhysicsEngine::init(World* world, FrameTimers* ft) {
     collisionManifold->init(&caches);
 }
 
-//-----------------------------
+//====================================
 //         Setup scene
-//-----------------------------
+//====================================
 void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
     this->terrainTriangles = terrainTris;
 
@@ -30,9 +30,9 @@ void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
     flushBroadphaseCommands();
 }
 
-//-----------------------------
+//====================================
 //         Clear scene
-//-----------------------------
+//====================================
 void PhysicsEngine::clearPhysicsData() {
     physicsWorld.getCollidersMap().clear();
     physicsWorld.getRigidBodiesMap().clear();
@@ -43,9 +43,9 @@ void PhysicsEngine::clearPhysicsData() {
     pending.reserve(10000);
 }
 
-//-----------------------------
+//====================================
 //          Getters
-//-----------------------------
+//====================================
 PhysicsWorld* PhysicsEngine::getPhysicsWorld() {
     return &physicsWorld;
 }
@@ -81,9 +81,9 @@ void PhysicsEngine::setBVHDirty(RigidBodyHandle& handle) {
     broadphaseManager.setBVHDirty(handle);
 }
 
-//-----------------------------
+//====================================
 //           Raycast
-//-----------------------------
+//====================================
 RaycastHit PhysicsEngine::performRaycast(Ray& r) {
     SlotMap<RigidBody, RigidBodyHandle>* bodyMap = &physicsWorld.getRigidBodiesMap();
     SlotMap<Collider, ColliderHandle>* colMap = &physicsWorld.getCollidersMap();
@@ -106,9 +106,9 @@ RaycastHit PhysicsEngine::performRaycast(Ray& r) {
     return bestHit;
 }
 
-//-----------------------------
+//====================================
 //         Sleep All
-//-----------------------------
+//====================================
 void PhysicsEngine::sleepAllObjects() {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
     auto& dense = bodyMap.dense();
@@ -128,9 +128,9 @@ void PhysicsEngine::sleepAllObjects() {
     }
 }
 
-//-----------------------------
+//====================================
 //         Wake All
-//-----------------------------
+//====================================
 void PhysicsEngine::awakenAllObjects() {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
     auto& dense = bodyMap.dense();
@@ -150,9 +150,9 @@ void PhysicsEngine::awakenAllObjects() {
     }
 }
 
-//-----------------------------
+//====================================
 //     Add/Remove commands
-//-----------------------------
+//====================================
 void PhysicsEngine::queueAdd(RigidBodyHandle& handle, BroadphaseBucket& target) {
     pending.push_back({ PhysCmd::Type::Add, handle, target });
 }
@@ -164,9 +164,9 @@ void PhysicsEngine::queueMove(RigidBodyHandle& handle, BroadphaseBucket& target)
     pending.push_back({ PhysCmd::Type::Move, handle, target });
 }
 
-//-------------------------------
+//====================================--
 //     Flush pending commands
-//-------------------------------
+//====================================--
 void PhysicsEngine::flushBroadphaseCommands() {
     for (auto& cmd : pending) {
         switch (cmd.type) {
@@ -191,9 +191,9 @@ void PhysicsEngine::flushBroadphaseCommands() {
     pending.clear();
 }
 
-//-----------------------------
+//====================================
 //         Time step
-//-----------------------------
+//====================================
 void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     ScopedTimer t(*frameTimers, "Physics");
     // Pre-step preparations
@@ -248,9 +248,9 @@ void PhysicsEngine::step(float deltaTime, std::mt19937 rng) {
     }
 }
 
-//-----------------------------
+//====================================
 //       Update methods
-//-----------------------------
+//====================================
 void PhysicsEngine::updateBodiesAndColliders() {
     for (const RigidBodyHandle& bodyH : broadphaseManager.getAwakeList()) {
         RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
@@ -264,7 +264,7 @@ void PhysicsEngine::updateBodiesAndColliders() {
                 body->applyRollingFriction(mainCollider->type, dt);
             }
 
-            body->applyVelocityDamping();
+            //body->applyVelocityDamping();
             body->applyGravity(dt);
             body->applyAntistuckFriction(dt);
             body->integrateVelocities(*rootTransform, dt);
@@ -300,9 +300,9 @@ void PhysicsEngine::updateBodiesAndColliders() {
     }
 }
 
-//---------------------------------------------
+//==============================================
 //      Collision detection & resolution
-//---------------------------------------------
+//==============================================
 void PhysicsEngine::detectAndSolveCollisions()
 {
     {
@@ -313,7 +313,7 @@ void PhysicsEngine::detectAndSolveCollisions()
     const auto& terrainPairs = broadphaseManager.getTerrainPairs();
     const auto& dynamicPairs = broadphaseManager.getDynamicPairs();
 
-    { 
+    {
         ScopedTimer t(*frameTimers, "Narrowphase");
         narrowphaseManager.narrowPhase(terrainPairs, dynamicPairs);
     }
@@ -322,9 +322,9 @@ void PhysicsEngine::detectAndSolveCollisions()
     resolveCollisions();                        // PGS + Baumgarte stabilization
 }
 
-//---------------------------------------------
+//==============================================
 //         Collect active contacts
-//---------------------------------------------
+//==============================================
 void PhysicsEngine::collectActiveContacts() {
     ScopedTimer t(*frameTimers, "Contact collection");
 
@@ -347,9 +347,9 @@ void PhysicsEngine::collectActiveContacts() {
         if (pts.empty()) return std::numeric_limits<float>::infinity();
         const auto it = std::min_element(pts.begin(), pts.end(),
             [](const ContactPoint& p1, const ContactPoint& p2) {
-                return p1.globalCoord.y < p2.globalCoord.y;
+                return p1.worldPos.y < p2.worldPos.y;
             });
-        return it->globalCoord.y;
+        return it->worldPos.y;
         };
 
     std::sort(contactsToSolve.begin(), contactsToSolve.end(),
@@ -364,41 +364,42 @@ void PhysicsEngine::collectActiveContacts() {
     debugData.contacts = contactsToSolve.size();
 }
 
-//---------------------------------------------
+//===============================================
 //            Resolve collisions
-//---------------------------------------------
+//===============================================
 void PhysicsEngine::resolveCollisions() {
     ScopedTimer t(*frameTimers, "Collision resolution");
 
     // Justera beroende på material
-    constexpr float staticFriction  = 0.6f;
+    constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
-    constexpr float twistFriction   = 0.1f;
+    constexpr float twistFriction = 0.1f;
 
     float lastResidualSq = 0.0f;
 
-    for (Contact* contact : contactsToSolve) { 
+    for (Contact* contact : contactsToSolve) {
         ContactRuntime& rt = contact->runtimeData;
         RigidBody* bodyA = rt.bodyA;
         RigidBody* bodyB = rt.bodyB;
 
         // ----- Baumgarte stabilization -----
-        float slop = 0.0005f; 
-        float baumgarteFactor = 0.15f; 
+        float slop = 0.0005f;
+        float baumgarteFactor = 0.15f;
         if (contact->noSolverResponseA or contact->noSolverResponseB) {
             baumgarteFactor = 0.30f;
             slop = 0.00005f;
         }
 
-        for (int j = 0; j < contact->points.size(); j++) { 
-            ContactPoint& cp = contact->points[j]; 
+        for (int j = 0; j < contact->points.size(); j++) {
+            ContactPoint& cp = contact->points[j];
 
-            float penetration = cp.depth; 
-            float allowed = penetration - slop; 
+            float penetration = cp.depth;
+            float allowed = penetration - slop;
 
             if (allowed > 0.0f) {
                 cp.biasVelocity = -((baumgarteFactor * allowed) / dt);
-            } else {
+            }
+            else {
                 cp.biasVelocity = 0.0f;
             }
         }
@@ -449,10 +450,12 @@ void PhysicsEngine::resolveCollisions() {
             for (int j = 0; j < contact->points.size(); j++) {
                 ContactPoint& cp = contact->points[j];
 
+                // --- Relative velocity before normal solve ---
                 glm::vec3 relVelA{ 0.0f };
                 glm::vec3 relVelB{ 0.0f };
                 glm::vec3 angVelA{ 0.0f };
                 glm::vec3 angVelB{ 0.0f };
+
                 if (contact->contributesMotionA) {
                     relVelA = bodyA->linearVelocity;
                     angVelA = bodyA->angularVelocity;
@@ -468,64 +471,72 @@ void PhysicsEngine::resolveCollisions() {
 
                 float normalVelocity = glm::dot(relativeVelocity, contact->normal);
 
-                // Baumgarte-bias built into target velocity
+                // ----- Normal impulse -----
                 float v_target = cp.targetBounceVelocity;
                 float v_bias = cp.biasVelocity;
 
-                // Condition: normalVelocity + v_bias = desired velocity at the contact
                 float J = -(normalVelocity - v_target + v_bias) * cp.m_eff;
 
-                // Clamp
-                float temp = cp.accumulatedImpulse;
-                cp.accumulatedImpulse = glm::max(temp + J, 0.0f);
-                float deltaImpulse = cp.accumulatedImpulse - temp;
+                float oldNormalImpulse = cp.accumulatedImpulse;
+                cp.accumulatedImpulse = glm::max(oldNormalImpulse + J, 0.0f);
+                float deltaImpulse = cp.accumulatedImpulse - oldNormalImpulse;
 
-                residualSq += deltaImpulse * deltaImpulse;
+                //residualSq += deltaImpulse * deltaImpulse;
 
-                // Add normal to impulse
                 glm::vec3 deltaNormalImpulse = deltaImpulse * contact->normal;
 
-                // Apply impulses
-                float deltaNormalImpulseLen = glm::dot(deltaNormalImpulse, deltaNormalImpulse);
-                if (deltaNormalImpulseLen > 1e-6f) {
-                    if (contact->partnerTypeA == ContactPartnerType::RigidBody and !contact->noSolverResponseA) {
+                if (glm::dot(deltaNormalImpulse, deltaNormalImpulse) > 1e-6f) {
+                    if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                         bodyA->applyImpulseLinear(-deltaNormalImpulse * bodyA->invMass);
                         bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
                     }
-                    if (contact->partnerTypeB == ContactPartnerType::RigidBody and !contact->noSolverResponseB) {
+                    if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
                         bodyB->applyImpulseLinear(deltaNormalImpulse * bodyB->invMass);
                         bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
                     }
                 }
+
                 maxDelta = std::max(maxDelta, std::abs(deltaImpulse));
 
-                //--------------- Pre-calculate for friction ----------------
-                relVelA = glm::vec3{ 0.0f };
-                relVelB = glm::vec3{ 0.0f };
-                angVelA = glm::vec3{ 0.0f };
-                angVelB = glm::vec3{ 0.0f };
-                if (contact->contributesMotionA) {
-                    relVelA = bodyA->linearVelocity;
-                    angVelA = bodyA->angularVelocity;
+                // ----- Friction -----
+                constexpr float recomputeThreshold = 1e-4f;
+
+                float v_t1, v_t2;
+
+                if (std::abs(deltaImpulse) > recomputeThreshold) {
+                    // Recompute relative velocity after normal impulse
+                    glm::vec3 relVelA2{ 0.0f };
+                    glm::vec3 relVelB2{ 0.0f };
+                    glm::vec3 angVelA2{ 0.0f };
+                    glm::vec3 angVelB2{ 0.0f };
+
+                    if (contact->contributesMotionA) {
+                        relVelA2 = bodyA->linearVelocity;
+                        angVelA2 = bodyA->angularVelocity;
+                    }
+                    if (contact->contributesMotionB) {
+                        relVelB2 = bodyB->linearVelocity;
+                        angVelB2 = bodyB->angularVelocity;
+                    }
+
+                    glm::vec3 relativeVelocity2 =
+                        (relVelB2 + glm::cross(angVelB2, cp.rB)) -
+                        (relVelA2 + glm::cross(angVelA2, cp.rA));
+
+                    v_t1 = glm::dot(relativeVelocity2, contact->t1);
+                    v_t2 = glm::dot(relativeVelocity2, contact->t2);
                 }
-                if (contact->contributesMotionB) {
-                    relVelB = bodyB->linearVelocity;
-                    angVelB = bodyB->angularVelocity;
+                else {
+                    // Reuse tangential velocity from old relative velocity
+                    v_t1 = glm::dot(relativeVelocity, contact->t1);
+                    v_t2 = glm::dot(relativeVelocity, contact->t2);
                 }
 
-                relativeVelocity =
-                    (relVelB + glm::cross(angVelB, cp.rB)) -
-                    (relVelA + glm::cross(angVelA, cp.rA));
-
-                // Project tangential velocity to the tangent plane
-                float v_t1 = glm::dot(relativeVelocity, contact->t1);
-                float v_t2 = glm::dot(relativeVelocity, contact->t2);
-
-                // Beräkna delta i tangentplanet
+                // Desired friction delta
                 float dF1 = -v_t1 * cp.invMassT1;
                 float dF2 = -v_t2 * cp.invMassT2;
 
-                // Kandidat: ny TOTAL friktionsimpuls (ackumulerad + delta)
+                // Candidate accumulated friction impulse
                 float newF1 = cp.accumulatedFrictionImpulse1 + dF1;
                 float newF2 = cp.accumulatedFrictionImpulse2 + dF2;
 
@@ -537,30 +548,29 @@ void PhysicsEngine::resolveCollisions() {
                 float dT = 0.0f;
 
                 if (newLen2 <= maxStatic2) {
-                    // Statisk friktion: acceptera hela delta
+                    // Static friction
                     cp.accumulatedFrictionImpulse1 = newF1;
                     cp.accumulatedFrictionImpulse2 = newF2;
+
                     glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
                     dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
 
-                    residualSq += dT * dT;
+                    //residualSq += dT * dT;
 
-                    // Applicera den statiska friktionsimpulsen:
-                    if (contact->partnerTypeA == ContactPartnerType::RigidBody and !contact->noSolverResponseA) {
+                    if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                         bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
                         bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
                     }
-                    if (contact->partnerTypeB == ContactPartnerType::RigidBody and !contact->noSolverResponseB) {
+                    if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
                         bodyB->applyImpulseLinear(dFt * bodyB->invMass);
                         bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
                     }
                 }
                 else {
-                    // ---------- Dynamic friction ----------
-                        // Dynamisk friktion: projektera TOTAL impuls till cirkeln μ_d * Jn
+                    // Dynamic friction
                     float maxDyn = dynamicFriction * Jn;
-
                     float len = std::sqrt(newLen2);
+
                     if (len > 1e-6f) {
                         float s = maxDyn / len;
                         float clampedF1 = newF1 * s;
@@ -569,25 +579,25 @@ void PhysicsEngine::resolveCollisions() {
                         float d1 = clampedF1 - cp.accumulatedFrictionImpulse1;
                         float d2 = clampedF2 - cp.accumulatedFrictionImpulse2;
 
-                        dT = std::sqrt(d1 * d1 + d2 * d2);
-
                         cp.accumulatedFrictionImpulse1 = clampedF1;
                         cp.accumulatedFrictionImpulse2 = clampedF2;
 
                         glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
-                        if (contact->partnerTypeA == ContactPartnerType::RigidBody and !contact->noSolverResponseA) {
+                        dT = std::sqrt(d1 * d1 + d2 * d2);
 
-                            residualSq += dT * dT;
+                        //residualSq += dT * dT;
 
+                        if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                             bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
                             bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
                         }
-                        if (contact->partnerTypeB == ContactPartnerType::RigidBody and !contact->noSolverResponseB) {
+                        if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
                             bodyB->applyImpulseLinear(dFt * bodyB->invMass);
                             bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
                         }
                     }
                 }
+
                 maxDelta = std::max(maxDelta, std::abs(dT));
             }
 
@@ -619,7 +629,7 @@ void PhysicsEngine::resolveCollisions() {
             glm::vec3 tau = delta * contact->normal;
             if (glm::dot(tau, tau) > 1e-6f) {
 
-                residualSq += delta * delta;
+                //residualSq += delta * delta;
 
                 if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                     bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * tau);
@@ -637,22 +647,21 @@ void PhysicsEngine::resolveCollisions() {
             break;
         }
     }
+
     //std::cout << "PGS iterations: " << iterCount << "\n";
-
-
     //float residual = std::sqrt(lastResidualSq);
     //std::cout << "Residual impulse: " << residual << "\n";
 }
 
-//-----------------------------
+//====================================
 //       Sleep Thresholds
-//-----------------------------
+//====================================
 void PhysicsEngine::updateSleepThresholds() {
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const RigidBodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
 
-        if (body->asleep || !body->allowSleep || 
+        if (body->asleep || !body->allowSleep ||
             body->motionControl == MotionControl::External || body->type != BodyType::Dynamic)
             continue;
 
@@ -681,9 +690,9 @@ void PhysicsEngine::updateSleepThresholds() {
     }
 }
 
-//-------------------------------
+//======================================
 //      Decide sleep/awake
-//-------------------------------
+//======================================
 void PhysicsEngine::decideSleep() {
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
 
@@ -721,9 +730,9 @@ void PhysicsEngine::decideSleep() {
     }
 }
 
-//-----------------------------
+//====================================
 //       Contact Cache
-//-----------------------------
+//====================================
 void PhysicsEngine::updateContactCache() {
     constexpr int maxFramesWithoutCollision = 5;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {

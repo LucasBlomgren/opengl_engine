@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bvh/bvh.h"
+#include "rigid_body.h"
 #include "broadphase/broadphase_pairs.h"
 #include "collision_manifold.h"
 #include "sat.h"

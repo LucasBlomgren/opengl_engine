@@ -15,7 +15,7 @@ void treeVsTreeQuery(
     out.clear();
     out.reserve((std::min)(a.nodes.size(), b.nodes.size()));
 
-    // same-tree duplicate guard bara om BVH-typen + elementtypen matchar
+    // same-tree duplicate guard only if BVH type + element type match
     constexpr bool sameType = std::is_same_v<EA, EB>&& std::is_same_v<BVHA, BVHB>;
     const bool sameTree = sameType && (static_cast<const void*>(&a) == static_cast<const void*>(&b));
     const bool needOrderCheck = sameType && sameTree;

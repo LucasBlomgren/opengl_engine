@@ -21,6 +21,8 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
 
     if (SAT_resultsList.size() == 0) return;
 
+    body->totalCollisionCount++;
+
     // export to character controller
     if (body->motionControl == MotionControl::External) {
         externalContacts.emplace_back(
@@ -62,6 +64,8 @@ void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider
     }
 
     if (SAT_resultsList.size() == 0) return;
+
+    body->totalCollisionCount++;
 
     // export to character controller
     if (body->motionControl == MotionControl::External) {

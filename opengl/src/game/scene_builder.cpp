@@ -314,7 +314,19 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             glm::vec3 size{ 2.0f };
             float mass = (size.x * 3.0f) / 2.0f;
 
-            //world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
+            GameObjectDesc sphere;
+            sphere.name = "sphere";
+            sphere.rootTransformHandle = world.createTransform(spawnPos, orientation, size);
+            sphere.mass = mass;
+
+            SubPartDesc part;
+            part.localTransformHandle = world.createTransform();
+            part.colliderType = ColliderType::SPHERE;
+            part.meshName = "sphere";
+            part.textureName = "plain";
+            part.color = color / 255.0f;
+            sphere.parts.push_back(part);
+            world.createGameObject(sphere);
         }
     }
 }

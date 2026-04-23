@@ -13,8 +13,8 @@ struct Plane {
 };
 
 struct ContactPoint {
-    glm::vec3 globalCoord{ 0.0f };
-    glm::vec3 localCoord{ 0.0f };
+    glm::vec3 worldPos{ 0.0f };
+    glm::vec3 localPos{ 0.0f };
     float accumulatedImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
@@ -25,7 +25,8 @@ struct ContactPoint {
     float targetBounceVelocity = 0.0f;
     float biasVelocity = 0.0f;
 
-    float invMassT1, invMassT2 = 0.0f;
+    float invMassT1{ 0.0f };
+    float invMassT2{ 0.0f };
 
     bool wasUsedThisFrame = true;
     bool wasWarmStarted = false;
@@ -73,8 +74,8 @@ struct Contact {
     int framesSinceUsed = 0;
 
     bool objBisReference = true; 
-    std::vector<glm::vec3> referenceFace;
-    std::vector<glm::vec3> incidentFace;
+    std::array<glm::vec3, 4> referenceFace{ glm::vec3(0.0f) };
+    std::array<glm::vec3, 4> incidentFace{ glm::vec3(0.0f) };
     glm::vec3 referenceFaceNormal{ 0.0f };
 
     // body vs body
@@ -106,6 +107,7 @@ struct Contact {
 class CollisionManifold {
 public:
     void init(RuntimeCaches* caches) { this->caches = caches; }
+    size_t generateKey(int idA, int idB);
 
     void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
@@ -113,35 +115,39 @@ public:
     void sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
     void sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
 
-    size_t generateKey(int idA, int idB);
-
 private:
     RuntimeCaches* caches = nullptr;
 
-    std::vector<glm::vec3> selectedFace;
-    void selectOOBBCollisionFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal);
+    // reference face selection for box-box and box-mesh collisions
+    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
+    void selectOOBBCollisionIncidentFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
 
-    std::vector<glm::vec3> furthestPoints; // uses allClippedPoints
-    std::vector<int> indices; // indices of furthestPoints in allClippedPoints
+    // furthest point selection for terrain collisions
+    std::vector<glm::vec3> furthestPoints;
+    std::vector<int> indices;
     void pickFourFurthestPoints();
     void addFurthestPoint(std::vector<int>& indices);
 
-    std::vector<Plane> clippingPlanes;
+    // Sutherland-Hodgman clipping
+    std::vector<float> allPointsDepthsScratch;
+    std::array<Plane, 4> clippingPlanes;
     std::array<glm::vec3, 16> contactPoints;
     std::array<glm::vec3, 16> nextContactPoints;
     std::array<bool, 16> clippingStatus;
     std::vector<glm::vec3> clippedPoints;
     std::vector<glm::vec3> allClippedPoints;
-    void createClippingPlanes(const std::vector<glm::vec3>& face, const glm::vec3& faceNormal);
+    void createClippingPlanes(const std::array<glm::vec3, 4>& face, const glm::vec3& faceNormal);
     void getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane, glm::vec3& outPoint, bool& outBool);
     bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3& planePoint, const float tolerance);
-    void clipPoints(std::vector<glm::vec3>& referenceFace, std::vector<glm::vec3>& incidentFace, glm::vec3& referenceFaceNormal);
+    void clipPoints(const std::array<glm::vec3, 4>& referenceFace, const std::array<glm::vec3, 4>& incidentFace, int incidentCount, const glm::vec3& referenceFaceNormal);
 
-    std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);
-
-    void createLocalCoordinates(Contact& contact);
+    // contact point reduction and penetration depth computation
     void contactPointReduction(Contact& contact);
-    void computePenetrationDepth(std::vector<glm::vec3>& points, std::vector<glm::vec3>& refFace, glm::vec3& refFaceNormal, std::vector<float>& out);
+    void computePenetrationDepth(std::vector<glm::vec3>& points, std::array<glm::vec3, 4>& refFace, glm::vec3& refFaceNormal, std::vector<float>& out);
     void PreComputePointData(ContactPoint& cp, Contact& contact);
+
+    // contact cache integration
     void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
+
+    //std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);
 };
