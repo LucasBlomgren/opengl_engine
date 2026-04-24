@@ -33,11 +33,13 @@ void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
 //====================================
 //         Clear scene
 //====================================
-void PhysicsEngine::clearPhysicsData() {
-    physicsWorld.getCollidersMap().clear();
-    physicsWorld.getRigidBodiesMap().clear();
-
+void PhysicsEngine::clear() {
+    toWake.clear();
     contactCache.clear();
+
+    physicsWorld.clear();
+    broadphaseManager.clear();
+    narrowphaseManager.clear();
     contactsToSolve.clear();
     pending.clear();
     pending.reserve(10000);
@@ -378,6 +380,10 @@ void PhysicsEngine::collectActiveContacts() {
 void PhysicsEngine::resolveCollisions() {
     ScopedTimer t(*frameTimers, "Collision resolution");
 
+    // #TODO: solver islands
+    // för att undvika att lösa stora staplar av kontakter som inte påverkar varandra, vilket kan hända i t.ex. en pyramid av boxar där varje box har kontakt med flera
+    // det påverkar också determinism 
+
     // Justera beroende på material
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
@@ -413,7 +419,7 @@ void PhysicsEngine::resolveCollisions() {
         }
 
         // ----- Warm start -----
-        constexpr float warmStartFactor = 0.9f;
+        constexpr float warmStartFactor = 0.95f;
         for (ContactPoint& cp : contact->points) {
             cp.accumulatedImpulse *= warmStartFactor;
             cp.accumulatedFrictionImpulse1 *= warmStartFactor;
@@ -444,11 +450,11 @@ void PhysicsEngine::resolveCollisions() {
     }
 
     // ------ PGS solver ------
-    int maxIterations = 4;
-    int iterCount = 0;
+    int maxIterations = 8;
+    //int iterCount = 0;
     for (int i = 0; i < maxIterations; i++) {
         float maxDelta = 0.0f;
-        float residualSq = 0.0f;
+        //float residualSq = 0.0f;
 
         for (Contact* contact : contactsToSolve) {
             ContactRuntime& rt = contact->runtimeData;
@@ -647,13 +653,13 @@ void PhysicsEngine::resolveCollisions() {
                 }
             }
         }
-        iterCount++;
+        //iterCount++;
 
-        lastResidualSq = residualSq;
+        //lastResidualSq = residualSq;
 
-        if (maxDelta < 1e-3f) {
-            break;
-        }
+        //if (maxDelta < 1e-3f) {
+        //    break;
+        //}
     }
 
     //std::cout << "PGS iterations: " << iterCount << "\n";

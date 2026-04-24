@@ -77,27 +77,90 @@ void SceneBuilder::testFloorScene() {
     //}
 
 
-
-    // create spheres in a grid pattern
+    // single stack of boxes and a single box with velocity
     {
-        for (int i = 0; i < 55; i++)
-        for (int j = 0; j < 1; j++)
-        for (int k = 0; k < 55; k++)
-        {
-            GameObjectDesc sphere;
-            sphere.name = "Sphere";
-            glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
-            sphere.rootTransformHandle = world.createTransform(position);
+        for (int i = 0; i < 2; i++)   // x
+        for (int j = 0; j < 8; j++)  // y
+        for (int k = 0; k < 2; k++) { // z
+            GameObjectDesc box;
+            box.name = "Box";
+            box.rootTransformHandle = world.createTransform(glm::vec3(0, -108 + j * 1.5f, 0));
+            box.allowSleep = true;
+
             SubPartDesc part;
             part.name = "MainPart";
             part.localTransformHandle = world.createTransform();
-            part.colliderType = ColliderType::SPHERE;
-            part.meshName = "sphere";
-            part.textureName = "plain";
-            sphere.parts.push_back(part);
-            world.createGameObject(sphere);
+            part.textureName = "crate";
+            box.parts.push_back(part);
+
+            world.createGameObject(box);
         }
+
+        GameObjectDesc box;
+        box.name = "Box";
+        box.rootTransformHandle = world.createTransform(glm::vec3(-10.0f, -108 + 13, 0.5f), glm::quat(), glm::vec3(2.0f));
+        box.mass = 5.0f;
+
+        SubPartDesc part;
+        part.name = "MainPart";
+        part.localTransformHandle = world.createTransform();
+        part.textureName = "crate";
+        box.parts.push_back(part);
+
+        GameObjectHandle handle = world.createGameObject(box);
+        RigidBody* body = world.getRigidBody(handle);
+        //body->linearVelocity = glm::vec3(8.0f, 0.0f, 0.0f);
     }
+
+
+    //// 2D pyramid of boxes
+    //{
+    //    for (int col = 0; col < 50; col++) {
+    //        for (int row = 50; row - col > 0; row--) {
+
+    //            float x = 54.5f;
+    //            float y = -109 + col;
+    //            float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+    //            GameObjectDesc box;
+    //            box.name = "Box";
+    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+    //            box.mass = 1.0f;
+
+    //            SubPartDesc part;
+    //            part.name = "MainPart";
+    //            part.localTransformHandle = world.createTransform();
+    //            part.textureName = "plain";
+    //            part.color = randomColor / 255.0f;
+    //            box.parts.push_back(part);
+
+    //            world.createGameObject(box);
+    //        }
+    //    }
+    //}
+
+
+    //// create spheres in a grid pattern
+    //{
+    //    for (int i = 0; i < 60; i++)
+    //    for (int j = 0; j < 1; j++)
+    //    for (int k = 0; k < 60; k++)
+    //    {
+    //        GameObjectDesc sphere;
+    //        sphere.name = "Sphere";
+    //        glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
+    //        sphere.rootTransformHandle = world.createTransform(position);
+    //        SubPartDesc part;
+    //        part.name = "MainPart";
+    //        part.localTransformHandle = world.createTransform();
+    //        part.colliderType = ColliderType::SPHERE;
+    //        part.meshName = "sphere";
+    //        part.textureName = "plain";
+    //        sphere.parts.push_back(part);
+    //        world.createGameObject(sphere);
+    //    }
+    //}
 
        
     // create chairs in a grid pattern

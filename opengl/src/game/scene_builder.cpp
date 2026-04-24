@@ -80,8 +80,8 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
     }
 
     sceneDirty = true;
-    physicsEngine.clearPhysicsData();
     world.clear();
+    physicsEngine.clear();
     renderer.clearRenderBatches();
 
     terrainData.triangles.clear(); 

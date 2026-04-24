@@ -322,6 +322,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
+                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
             }
 
@@ -334,6 +335,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
+                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
 
                 if (ImGui::IsItemDeactivatedAfterEdit())
@@ -370,6 +372,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rootTransform->orientation = glm::normalize(rootTransform->orientation * dq);
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
+                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
             }
 
@@ -463,6 +466,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     }
 
                     ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
+                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
             }
 

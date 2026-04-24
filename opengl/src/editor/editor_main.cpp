@@ -372,6 +372,9 @@ void Editor::EditorMain::update(Shader& shader) {
         RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
         hoveredObjectHandle = rb->gameObjectHandle;
     }
+    else {
+        hoveredObjectHandle = {};
+    }
 }
 
 //------------------------------------------------------
@@ -487,7 +490,6 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
 void Editor::EditorMain::dropObject() {
     if (selectedObjectHandle.isValid()) {
         RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-        rb->setExternalControl(false);
     }
 
     selectedSubPartIndex = -1;

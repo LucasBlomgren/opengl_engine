@@ -4,6 +4,9 @@
 #include "tri.h"
 #include "bvh/treetree_query.h"
 
+//=======================================
+//    Init & Clear
+//=======================================
 void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris) {
     this->caches = caches;
     this->terrainTriangles = terrainTris;
@@ -14,9 +17,6 @@ void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::ve
     awakeBvh.init(world, caches, slotCap);
     asleepBvh.init(world, caches, slotCap);
     staticBvh.init(world, caches, slotCap);
-    awakeHandles.clear();
-    asleepHandles.clear();
-    staticHandles.clear();
 
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);
@@ -25,11 +25,25 @@ void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::ve
     terrainBvh.build(*terrainTriangles);
 }
 
-// -----------------------------------
-//      Main functions
-// -----------------------------------
+void BroadphaseManager::clear() {
+    awakeHandles.clear();
+    asleepHandles.clear();
+    staticHandles.clear();
 
-// Update BVHs if dirty
+    awakeBvh.clear();
+    asleepBvh.clear();
+    staticBvh.clear();
+
+    terrainPairs.clear();
+    dynamicPairs.clear();
+
+    pairsBufDynamic.clear();
+    pairsBufTerrain.clear();
+}
+
+//==================================================
+//      Update BVHs
+//==================================================
 void BroadphaseManager::updateBVHs() {
     awakeBvh.update(awakeHandles);
 
@@ -38,14 +52,19 @@ void BroadphaseManager::updateBVHs() {
         asleepBvh.dirty = false;
     }
 
-    staticBvh.update(staticHandles);
+    if (staticBvh.dirty) {
+        staticBvh.build(staticHandles);
+        staticBvh.dirty = false;
+    }
 
     //std::cout << awakeBvh.nodes.size() << " awake nodes, "
     //          << asleepBvh.nodes.size() << " asleep nodes, "
     //    << staticBvh.nodes.size() << " static nodes.\n";
 }
 
-// Compute pairs for this frame
+//==================================================
+//     Broadphase queries
+//==================================================
 void BroadphaseManager::computePairs() {
     // ----- dynamic vs terrain -----
     if (terrainBvh.rootIdx != -1) {
@@ -122,7 +141,10 @@ void BroadphaseManager::computePairs() {
     }
 }
 
-// Add to list
+
+//==================================================
+//    List management
+//==================================================
 void BroadphaseManager::add(RigidBodyHandle& handle, BroadphaseBucket dst) {
     RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
     auto& h = rigidBody->broadphaseHandle;
@@ -202,10 +224,9 @@ void BroadphaseManager::setBVHDirty(RigidBodyHandle& handle) {
     bvhFor(h.bucket).dirty = true;
 }
 
-// ---------------------------------
+//==================================================
 //     Helpers
-// ---------------------------------
-
+//==================================================
 // Swap and pop from list
 void BroadphaseManager::swapAndPop(RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list) {
     RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);

@@ -29,6 +29,7 @@ public:
         RuntimeCaches* caches,
         std::vector<RigidBodyHandle>* toWake
     );
+    void clear();
 
     std::vector<ExternalMotionContact>& getExternalContacts() {
         return externalContacts;

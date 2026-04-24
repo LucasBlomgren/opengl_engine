@@ -7,6 +7,7 @@
 #include "sat.h"
 #include "collider_pose.h"
 
+// for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
 struct Plane {
     glm::vec3 normal{ 0.0f };
     glm::vec3 point{ 0.0f };
@@ -15,6 +16,8 @@ struct Plane {
 struct ContactPoint {
     glm::vec3 worldPos{ 0.0f };
     glm::vec3 localPos{ 0.0f };
+
+    // pre-computed data for impulse solving
     float accumulatedImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
@@ -24,7 +27,6 @@ struct ContactPoint {
     float depth = 0.0f;
     float targetBounceVelocity = 0.0f;
     float biasVelocity = 0.0f;
-
     float invMassT1{ 0.0f };
     float invMassT2{ 0.0f };
 
@@ -32,11 +34,13 @@ struct ContactPoint {
     bool wasWarmStarted = false;
 };
 
+// to distinguish between body vs body and body vs terrain contacts, since they have different response and contact point generation logic
 enum class ContactPartnerType {
     RigidBody,
     Terrain
 };
 
+// runtime data for contact point generation and impulse solving, not stored in contact cache
 struct ContactRuntime {
     RigidBody* bodyA = nullptr;
     RigidBody* bodyB = nullptr;
@@ -47,32 +51,44 @@ struct ContactRuntime {
 };
 
 struct Contact {
-    size_t hashKey = -1;
+    size_t hashKey = -1; // generated from collider IDs, used for caching
+
+    // contact points for this contact, can be up to 4 for box-box and box-mesh collisions, otherwise usually 1
     std::vector<ContactPoint> points;
+
+    // contact normal, precomputed from SAT result for warm starting and impulse solving
     glm::vec3 normal{ 0.0f };
+
+    // tangential basis vectors, precomputed from the contact normal for warm starting and impulse solving
     glm::vec3 t1{ 0.0f };
     glm::vec3 t2{ 0.0f };
 
+    // precomputed data for impulse solving
     glm::mat3 invInertiaA{ 0.0f };
     glm::mat3 invInertiaB{ 0.0f };
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
+    // runtime data for contact point generation and impulse solving, not stored in contact cache
     ContactRuntime runtimeData;
 
+    // to distinguish between body vs body and body vs terrain contacts, since they have different response and contact point generation logic
     ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
     ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
     RigidBodyHandle bodyA;
     RigidBodyHandle bodyB;
 
-    bool noSolverResponseA = false; 
+    // reference face and normal for box-box and box-mesh collisions, used for contact point generation and warm starting
+    bool noSolverResponseA = false;     // default false for dynamic bodies, true for static/kinematic bodies vs terrain
     bool noSolverResponseB = true;      // default true for terrain
     bool contributesMotionA = true;     // default true for dynamic bodies vs terrain
-    bool contributesMotionB = false;
+    bool contributesMotionB = false;    // default false for terrain
 
+    // for contact caching
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;
 
+    // for box-box and box-mesh collisions, to avoid redundant computations in contact point generation and warm starting
     bool objBisReference = true; 
     std::array<glm::vec3, 4> referenceFace{ glm::vec3(0.0f) };
     std::array<glm::vec3, 4> incidentFace{ glm::vec3(0.0f) };

@@ -5,11 +5,11 @@
 #include "textures/texture_manager.h"
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
-#include "lighting/light_manager.h"
 #include "physics.h"
 
 void World::clear() {
-    gameObjects = SlotMap<GameObject, GameObjectHandle>();
+    gameObjects.clear();
+    transforms.clear();
     objectId = 0;
 }
 
@@ -69,6 +69,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
     }
 
     body.asleep = objDesc.asleep;
+    body.allowSleep = objDesc.allowSleep;
     body.sleepCounterThreshold = objDesc.sleepCounterThreshold;
     body.anchorPoint = rootTransform->position;
     body.invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));

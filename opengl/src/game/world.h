@@ -35,6 +35,7 @@ struct GameObjectDesc {
     float mass = 1.0f;
     float sleepCounterThreshold = 1.5f;
     bool asleep = false;
+    bool allowSleep = true;
 };
 
 class World {

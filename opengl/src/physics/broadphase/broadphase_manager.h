@@ -14,6 +14,7 @@ class Tri;
 class BroadphaseManager {
 public:
     void init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris);
+    void clear();
 
     // update BVHs if dirty
     void updateBVHs();

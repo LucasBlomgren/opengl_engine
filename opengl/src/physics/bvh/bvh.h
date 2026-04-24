@@ -12,6 +12,7 @@ public:
     // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
     using Element = RigidBodyHandle;
     void init(PhysicsWorld* world, RuntimeCaches* caches, int allocSize);
+    void clear();
 
     bool dirty = false;
     int rootIdx = -1;
@@ -55,12 +56,14 @@ private:
     PhysicsWorld* world = nullptr;
     RuntimeCaches* caches = nullptr;
 
-    int   leafThreshold = 1;
     int   numRefits = 0;
-    int   rebuildThreshold = 0;         // recalculated in build() as log2(n) * rebuildRatio
-    int   minRebuildThreshold = 5;      // min refits before rebuild, to avoid rebuilding too early when n is small
-    float rebuildRatio = 0.40f;         // % of leaf corrections before rebuild
-    glm::vec3 fatBoxMargin{ 0.2f };
+    int   rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
+
+    // settings
+    const int   leafThreshold = 1;
+    const int   minRebuildThreshold = 5;      // min refits before rebuild, to avoid rebuilding too early when n is small
+    const float rebuildRatio = 0.40f;         // % of leaf corrections before rebuild
+    const glm::vec3 fatBoxMargin{ 0.2f };
 
     struct BVHPrimitive {
         glm::vec3 min{ 0.0f };

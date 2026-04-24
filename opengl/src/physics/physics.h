@@ -31,7 +31,7 @@ public:
     //     Main functions
     //------------------------
     void setupScene(std::vector<Tri>* terrainTriangles);
-    void clearPhysicsData();
+    void clear();
     void prepareStepLoop();
     void step(float deltaTime, std::mt19937& rng);
 

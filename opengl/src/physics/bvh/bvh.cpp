@@ -3,6 +3,9 @@
 
 #define FUNC_NAME __FUNCTION__
 
+//------------------------------
+//    Init & Clear
+//------------------------------
 void BVHTree::init(
     PhysicsWorld* world,
     RuntimeCaches* caches,
@@ -11,14 +14,18 @@ void BVHTree::init(
     this->world = world;
     this->caches = caches;
 
-    nodes.clear();
     nodes.reserve(allocSize * 2);
-
-    prims.clear();  
     prims.reserve(allocSize);
+}
 
+void BVHTree::clear() {
+    nodes.clear();
+    prims.clear();
     rootIdx = -1;
-}   
+
+    numRefits = 0;
+    rebuildThreshold = 0;
+}
 
 //------------------------------
 //        Single Query

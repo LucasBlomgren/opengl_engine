@@ -6,8 +6,8 @@
 // Clear all data
 //-------------------------------------------
 void PhysicsWorld::clear() {
-    colliders = SlotMap<Collider, ColliderHandle>();
-    rigidBodies = SlotMap<RigidBody, RigidBodyHandle>();
+    colliders.clear();
+    rigidBodies.clear();
     colliderId = 0;
     rigidBodyId = 0;
 }

@@ -4,9 +4,9 @@
 #include "dynamic_processing.h"
 #include "terrain_processing.h"
 
-//---------------------------------------------
+//=======================================================
 //              Initialization
-//---------------------------------------------
+//=======================================================
 void NarrowphaseManager::init(
     CollisionManifold* collisionManifold,
     std::unordered_map<size_t, Contact>* contactCache,
@@ -19,63 +19,26 @@ void NarrowphaseManager::init(
     this->toWake = toWake;
 }
 
-//---------------------------------------------
+void NarrowphaseManager::clear() {
+    externalContacts.clear();
+    terrainTriCandidates.clear();
+    SAT_resultsList.clear();
+}
+
+//=======================================================
 //               Narrow phase
-//---------------------------------------------
+//=======================================================
 void NarrowphaseManager::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
     externalContacts.clear();
     contactCache->reserve(contactCache->size() + dynamicHits.size());
 
-    for (const TerrainPair& pair : terrainHits) {
-        processTerrainPair(pair);
-    }
-
-    //std::vector<FrameTimers> debugTimersList;
-    //debugTimersList.reserve(dynamicHits.size());
-    for (const DynamicPair& pair : dynamicHits) {
-        processDynamicPair(pair);
-        //debugTimersList.push_back(*debugTimers);
-    }
-
-    //float totalBoxMeshTime = 0.0f;
-    //float totalPickFurthestPointsTime = 0.0f;
-    //float totalBoxBoxTime = 0.0f;
-    //float totalSelectFacesTime = 0.0f;
-    //float totalClipPointsTime = 0.0f;
-    //float totalPenDepthTime = 0.0f;
-    //float totalLocalCoordsTime = 0.0f;
-    //float totalContactReductionTime = 0.0f;
-    //float totalIntegrateContactTime = 0.0f;
-    //
-    //for (const FrameTimers& timers : debugTimersList) {
-    //    totalBoxMeshTime += timers.get("CM boxMesh total");
-    //    totalPickFurthestPointsTime += timers.get("CM pick furthest points");
-    //    totalBoxBoxTime += timers.get("CM boxBox total");
-    //    totalSelectFacesTime += timers.get("CM select faces");
-    //    totalClipPointsTime += timers.get("CM clip points");
-    //    totalPenDepthTime += timers.get("CM penetration depth");
-    //    totalLocalCoordsTime += timers.get("CM local coords");
-    //    totalContactReductionTime += timers.get("CM contact reduction");
-    //    totalIntegrateContactTime += timers.get("CM integrate contact");
-    //}
-    //
-    //int count = debugTimersList.size();
-    //if (count > 0) {
-    //    std::cout << "Average CM boxMesh time: " << (totalBoxMeshTime / count) << " ms" << std::endl;
-    //    std::cout << "Average CM pick furthest points time: " << (totalPickFurthestPointsTime / count) << " ms" << std::endl;
-    //    std::cout << "Average CM boxBox time: " << (totalBoxBoxTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average select faces time: " << (totalSelectFacesTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average clip points time: " << (totalClipPointsTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average penetration depth time: " << (totalPenDepthTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average local coords time: " << (totalLocalCoordsTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average contact reduction time: " << (totalContactReductionTime / count) << " ms" << std::endl;
-    //    std::cout << " - Average integrate contact time: " << (totalIntegrateContactTime / count) << " ms" << std::endl;
-    //}
+    for (const TerrainPair& pair : terrainHits) processTerrainPair(pair);
+    for (const DynamicPair& pair : dynamicHits) processDynamicPair(pair);
 }
 
-//----------------------------------------------
+//=======================================================
 //     Dynamic pair processing
-//----------------------------------------------
+//=======================================================
 void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
     RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
     RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
@@ -115,9 +78,9 @@ void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
 }
 
 
-//----------------------------------------------
+//=======================================================
 //     Terrain pair processing
-//----------------------------------------------
+//=======================================================
 void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
     RigidBody* body = caches->bodies.get(pair.body, FUNC_NAME);
     if (body->asleep || body->type == BodyType::Kinematic) return;
@@ -173,9 +136,9 @@ void NarrowphaseManager::collectTerrainTriCandidates(
 }
 
 
-//----------------------------------------------
+//=======================================================
 //      Helper functions
-//----------------------------------------------
+//=======================================================
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA, RigidBody* bodyB,
     Collider* colliderA, Collider* colliderB,
