@@ -21,6 +21,14 @@ public:
 		std::vector<unsigned int> pylonIndices  = loadIndicesFromTxt("src/assets/pylon_indices.txt");
 		recenterVertices(pylonVerts);
 
+		std::vector<Vertex> cylinder_renderVerts = loadVerticesFromTxt("src/assets/cylinder_render_vertices.txt");
+		std::vector<unsigned int> cylinder_renderIndices = loadIndicesFromTxt("src/assets/cylinder_render_indices.txt");
+		recenterVertices(cylinder_renderVerts);
+
+		std::vector<Vertex> cylinder_colliderVerts = loadVerticesFromTxt("src/assets/cylinder_collider_vertices.txt");
+		std::vector<unsigned int> cylinder_colliderIndices = loadIndicesFromTxt("src/assets/cylinder_collider_indices.txt");
+		recenterVertices(cylinder_colliderVerts);
+
 		//std::vector<Vertex> girlVerts           = loadVerticesFromTxt("src/assets/girl_vertices.txt");
 		//std::vector<unsigned int> girlIndices   = loadIndicesFromTxt("src/assets/girl_indices.txt");
 		//recenterVertices(girlVerts);
@@ -37,6 +45,8 @@ public:
 		meshes.emplace("sphere", Mesh(sphereVerts, sphereIndices));
 		meshes.emplace("teapot", Mesh(teapotVerts, teapotIndices));
 		meshes.emplace("pylon", Mesh(pylonVerts, pylonIndices));
+        meshes.emplace("cylinder_render", Mesh(cylinder_renderVerts, cylinder_renderIndices));
+		meshes.emplace("cylinder_collider", Mesh(cylinder_colliderVerts, cylinder_colliderIndices));
 		//meshes.emplace("girl", Mesh(girlVerts, girlIndices));
 		meshes.emplace("tank", Mesh(tankVerts, tankIndices));
 		meshes.emplace("debug_arrow", Mesh(debugArrowVerts, debugArrowIndices));

@@ -135,7 +135,7 @@ int main() {
 	skyboxManager.init(); 
 
 	// create default scene 
-	sceneBuilder.createScene(0, engineState.isPlayerMode());
+	sceneBuilder.createScene(1, engineState.isPlayerMode());
 
 	//--------------------------------------------
 	// setup editor

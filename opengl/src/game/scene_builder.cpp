@@ -97,11 +97,6 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
     case 0: testFloorScene(); break;
     case 1: emptyFloorScene(); break;
     case 2: tallStructureScene(); break;
-    case 3: mainScene(); break;
-    case 5: tallStructureScene(); break;
-    case 6: castleScene(); break;
-    case 7: containerScene(); break;
-    case 8: shapePileScene(); break;
     default: break;
     }
 

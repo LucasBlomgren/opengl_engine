@@ -15,6 +15,14 @@ void NarrowphaseManager::processBoxBox(
     Collider* colliderA,
     Collider* colliderB)
 {
+    if (colliderA->id > colliderB->id) {
+        std::swap(bodyHandleA, bodyHandleB);
+        std::swap(colliderHandleA, colliderHandleB);
+
+        std::swap(bodyA, bodyB);
+        std::swap(colliderA, colliderB);
+    }
+
     SAT::Result satResult;
     if (!SAT::boxBox(*colliderA, *colliderB, satResult)) {
         return;

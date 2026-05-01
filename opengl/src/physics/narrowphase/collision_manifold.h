@@ -17,10 +17,14 @@ struct ContactPoint {
     glm::vec3 worldPos{ 0.0f };
     glm::vec3 localPos{ 0.0f };
 
+    bool active = false;
+
     // pre-computed data for impulse solving
-    float accumulatedImpulse = 0.0f;
+    float accumulatedNormalImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
+    float accumulatedBiasImpulse = 0.0f;
+
     float m_eff = 0.0f;
     glm::vec3 rA{ 0.0f };
     glm::vec3 rB{ 0.0f };

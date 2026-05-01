@@ -30,6 +30,6 @@ namespace WakeSleep
         const Transform& transform,
         float dt,
         float jitterThreshold = 1.0f,
-        float anchorTimerThreshold = 5.0f
+        float anchorTimerThreshold = 6.0f
     );
 }

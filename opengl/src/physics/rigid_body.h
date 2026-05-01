@@ -44,6 +44,8 @@ public:
     // physics properties
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
+    glm::vec3 biasLinearVelocity{ 0.0f };
+    glm::vec3 biasAngularVelocity{ 0.0f };
     glm::mat3 invInertiaLocal{ 0.0f };
     glm::mat3 invInertiaWorld{ 0.0f };
     float mass = 0.0f;
@@ -74,8 +76,13 @@ public:
         return colliderHandles.size() > 1;
     }
 
+    void pushBiasImpulseLinear(const glm::vec3& impulse);
+    void pushBiasImpulseAngular(const glm::vec3& impulse);
+    void commitBiasImpulses(Transform& t, float dt);
+
     void applyImpulseLinear(const glm::vec3& impulse);
     void applyImpulseAngular(const glm::vec3& impulse);
+
     void setAsleep(Transform& t);
     void setAwake();
     void setStatic();

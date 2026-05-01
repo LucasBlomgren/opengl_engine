@@ -114,10 +114,23 @@ void RigidBody::updateInertiaWorld(Transform& t) {
 //     Applying impulses
 //---------------------------------
 void RigidBody::applyImpulseLinear(const glm::vec3& j) {
-	linearVelocity += j;
+    linearVelocity += j * invMass;
 }
 void RigidBody::applyImpulseAngular(const glm::vec3& j) {
-	angularVelocity += j;
+    angularVelocity += j * invInertiaWorld;
+}
+void RigidBody::pushBiasImpulseLinear(const glm::vec3& j) {
+    biasLinearVelocity += j * invMass;
+}
+void RigidBody::pushBiasImpulseAngular(const glm::vec3& j) {
+    biasAngularVelocity += j * invInertiaWorld;
+}
+void RigidBody::commitBiasImpulses(Transform& t, float dt) {
+	t.position += biasLinearVelocity * dt;
+	updateOrientation(t.orientation, biasAngularVelocity, dt);
+
+	biasLinearVelocity = glm::vec3(0.0f);
+	biasAngularVelocity = glm::vec3(0.0f);
 }
 
 //---------------------------------

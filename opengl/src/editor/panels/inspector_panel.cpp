@@ -93,7 +93,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
     auto BeginPropertyTable = [&](const char* id) -> bool
         {
-            if (!ImGui::BeginTable(id, 2, tblFlags))
+            if (!ImGui::BeginTable(id, 3, tblFlags))
                 return false;
 
             ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
@@ -501,6 +501,18 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rb->mass = mass;
                     rb->invMass = 1.0f / mass;
                 }
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                {
+                    if (!rb->colliderHandles.empty())
+                    {
+                        Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);
+                        if (collider)
+                        {
+                            rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
+                            rb->updateInertiaWorld(*rootTransform);
+                        }
+                    }
+                }
 
                 bool allowSleep = rb->allowSleep;
                 if (RowCheckbox("Allow sleep", "##allow_sleep", allowSleep))
@@ -508,6 +520,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rb->allowSleep = allowSleep;
                     if (!rb->allowSleep)
                     {
+                        rb->setAwake();
                         BroadphaseBucket target = rb->asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
                         ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
                     }
@@ -601,6 +614,82 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
             // keep EditorMain in sync even when combo didn't change this frame
             ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
+
+
+            // Add Part button
+            ImGui::TableSetColumnIndex(2);
+            if (ImGui::Button("Add Part", ImVec2(80, 0))) 
+            {
+                SubPart part;
+                TransformHandle partTransformHandle = ctx.world->createTransform();
+                Transform* partTransform = ctx.world->getTransform(partTransformHandle);
+                part.name = "Part " + std::to_string(obj->parts.size() + 1);
+                part.localTransformHandle = partTransformHandle;
+                part.shader = obj->parts[0].shader;
+                part.mesh = obj->parts[0].mesh;
+                part.textureId = 999; // plain
+
+                // create collider for part
+                PhysicsWorld* physicsWorld = ctx.physicsEngine->getPhysicsWorld();
+                ColliderHandle colliderHandle = physicsWorld->createCollider();
+                Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
+                collider.rigidBodyHandle = obj->rigidBodyHandle;
+                collider.type = ColliderType::CUBOID;
+                collider.localTransformHandle = partTransformHandle;
+
+                collider.pose.position = partTransform->position;
+                collider.pose.orientation = partTransform->orientation;
+                collider.pose.scale = partTransform->scale;
+                collider.pose.combineIntoColliderPose(*rootTransform, *partTransform);
+                collider.pose.ensureModelMatrix();
+
+                // aabb init
+                std::vector<glm::vec3> verticesPositions;
+                for (const Vertex& vertex : part.mesh->vertices) {
+                    verticesPositions.push_back(vertex.position);
+                }
+                collider.aabb.init(verticesPositions);
+                collider.aabb.update(collider.pose);
+
+                // collider shape init
+                OOBB box(verticesPositions, collider.pose);
+                collider.shape = box;
+
+                part.colliderHandle = colliderHandle;
+
+                obj->parts.push_back(part);
+                rb->colliderHandles.push_back(colliderHandle);
+
+                Collider* mainCollider = physicsWorld->getCollidersMap().try_get(rb->colliderHandles[0]);
+                rb->aabb = mainCollider->getAABB();
+
+                if (rb->isCompound()) {
+                    for (size_t i = 1; i < rb->colliderHandles.size(); ++i) {
+                        Collider* c = physicsWorld->getCollidersMap().try_get(rb->colliderHandles[i]);
+
+                        // grow body AABB to include all colliders
+                        rb->aabb.growToInclude(c->getAABB().worldMin);
+                        rb->aabb.growToInclude(c->getAABB().worldMax);
+                    }
+
+                    rb->aabb.worldCenter = (rb->aabb.worldMin + rb->aabb.worldMax) * 0.5f;
+                    rb->aabb.worldHalfExtents = (rb->aabb.worldMax - rb->aabb.worldMin) * 0.5f;
+                    rb->aabb.setSurfaceArea();
+                }
+
+                //// inertia init 
+                //// #TODO: refactor to support multiple colliders per rigid body (compound objects)
+                //Collider* collider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
+                //body.calculateInverseInertia(obj->parts[0].colliderType, *collider, *rootTransform);
+
+                // add body to broadphase
+                ctx.physicsEngine->queueRemove(obj->rigidBodyHandle);
+                ctx.physicsEngine->queueAdd(obj->rigidBodyHandle, rb->broadphaseHandle.bucket);
+
+                // #TODO: should add parts instead of whole game object
+                ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
+                ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
+            }
 
             ImGui::EndTable();
         }

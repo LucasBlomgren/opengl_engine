@@ -2,6 +2,7 @@
 #include "physics.h"
 #include "aabb.h"
 #include "wake_sleep_utils.h" 
+#include <unordered_set>
 
 void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
@@ -226,8 +227,10 @@ void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
         flushBroadphaseCommands();
 
         // Reset contact points for the current step
-        for (auto it = contactCache.begin(); it != contactCache.end(); ++it) {
-            for (ContactPoint& cp : it->second.points) {
+        for (auto& [key, contact] : contactCache) {
+            contact.wasUsedThisFrame = false;
+
+            for (ContactPoint& cp : contact.points) {
                 cp.wasUsedThisFrame = false;
                 cp.wasWarmStarted = false;
             }
@@ -329,7 +332,27 @@ void PhysicsEngine::detectAndSolveCollisions()
     }
 
     collectActiveContacts();                    // collect contacts to solve
-    resolveCollisions();                        // PGS + Baumgarte stabilization
+
+
+
+    //for (RigidBody& rb : physicsWorld.getRigidBodiesMap().dense()) {
+    //    if (rb.type != BodyType::Static) {
+    //        std::cout << "BEFORE solve body " << rb.gameObjectHandle.slot
+    //            << " w=(" << rb.angularVelocity.x << ", "
+    //            << rb.angularVelocity.y << ", "
+    //            << rb.angularVelocity.z << ")\n";
+    //    }
+    //}
+    resolveCollisions(); // PGS + Baumgarte stabilization
+
+    //for (RigidBody& rb : physicsWorld.getRigidBodiesMap().dense()) {
+    //    if (rb.type != BodyType::Static) {
+    //        std::cout << "AFTER solve body " << rb.gameObjectHandle.slot
+    //            << " w=(" << rb.angularVelocity.x << ", "
+    //            << rb.angularVelocity.y << ", "
+    //            << rb.angularVelocity.z << ")\n";
+    //    }
+    //}
 }
 
 //==============================================
@@ -384,68 +407,97 @@ void PhysicsEngine::resolveCollisions() {
     // för att undvika att lösa stora staplar av kontakter som inte påverkar varandra, vilket kan hända i t.ex. en pyramid av boxar där varje box har kontakt med flera
     // det påverkar också determinism 
 
-    // Justera beroende på material
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.1f;
 
-    float lastResidualSq = 0.0f;
+    constexpr float defaultSlop = 0.0005f;
+    constexpr float noResponseSlop = 0.0005f;
+
+    constexpr float defaultBaumgarte = 0.5f;
+    constexpr float noResponseBaumgarte = 0.5f;
+
+    constexpr float persistentSlop = 0.005f;
+
+    // optional, but use high value first
+    constexpr float maxBiasVelocity = 5.0f;
 
     for (Contact* contact : contactsToSolve) {
         ContactRuntime& rt = contact->runtimeData;
         RigidBody* bodyA = rt.bodyA;
         RigidBody* bodyB = rt.bodyB;
 
-        // ----- Baumgarte stabilization -----
-        float slop = 0.0005f;
-        float baumgarteFactor = 0.15f;
-        if (contact->noSolverResponseA or contact->noSolverResponseB) {
-            baumgarteFactor = 0.30f;
-            slop = 0.00005f;
+        float contactSlop = defaultSlop;
+        float contactBaumgarte = defaultBaumgarte;
+
+        if (contact->noSolverResponseA || contact->noSolverResponseB) {
+            contactSlop = noResponseSlop;
+            contactBaumgarte = noResponseBaumgarte;
         }
 
-        for (int j = 0; j < contact->points.size(); j++) {
-            ContactPoint& cp = contact->points[j];
+        for (ContactPoint& cp : contact->points) {
+            cp.accumulatedBiasImpulse = 0.0f;
 
-            float penetration = cp.depth;
-            float allowed = penetration - slop;
+            bool active = cp.depth > -persistentSlop;
+
+            if (!active) {
+                cp.accumulatedNormalImpulse = 0.0f;
+                cp.accumulatedFrictionImpulse1 = 0.0f;
+                cp.accumulatedFrictionImpulse2 = 0.0f;
+                cp.accumulatedBiasImpulse = 0.0f;
+                cp.biasVelocity = 0.0f;
+                cp.active = false;
+                continue;
+            }
+
+            cp.active = true;
+
+            float allowed = cp.depth - contactSlop;
 
             if (allowed > 0.0f) {
-                cp.biasVelocity = -((baumgarteFactor * allowed) / dt);
+                float correctionSpeed = (contactBaumgarte * allowed) / dt;
+                correctionSpeed = glm::min(correctionSpeed, maxBiasVelocity);
+
+                cp.biasVelocity = -correctionSpeed;
             }
             else {
                 cp.biasVelocity = 0.0f;
             }
-        }
 
-        // ----- Warm start -----
-        constexpr float warmStartFactor = 0.95f;
-        for (ContactPoint& cp : contact->points) {
-            cp.accumulatedImpulse *= warmStartFactor;
-            cp.accumulatedFrictionImpulse1 *= warmStartFactor;
-            cp.accumulatedFrictionImpulse2 *= warmStartFactor;
+            float maxFriction = staticFriction * cp.accumulatedNormalImpulse;
 
-            // total impuls från föregående steg 
-            glm::vec3 Pn = cp.accumulatedImpulse * contact->normal;
-            glm::vec3 Pt = cp.accumulatedFrictionImpulse1 * contact->t1 + cp.accumulatedFrictionImpulse2 * contact->t2;
+            float f1 = cp.accumulatedFrictionImpulse1;
+            float f2 = cp.accumulatedFrictionImpulse2;
+            float len2 = f1 * f1 + f2 * f2;
+            float max2 = maxFriction * maxFriction;
 
-            // linjär + tangentiell
+            if (len2 > max2) {
+                float len = std::sqrt(len2);
+                if (len > 1e-6f) {
+                    float s = maxFriction / len;
+                    cp.accumulatedFrictionImpulse1 *= s;
+                    cp.accumulatedFrictionImpulse2 *= s;
+                }
+            }
+
+            glm::vec3 Pn = cp.accumulatedNormalImpulse * contact->normal;
+            glm::vec3 Pt =
+                cp.accumulatedFrictionImpulse1 * contact->t1 +
+                cp.accumulatedFrictionImpulse2 * contact->t2;
+
             glm::vec3 J = Pn + Pt;
 
-            if (contact->partnerTypeA == ContactPartnerType::RigidBody and !contact->noSolverResponseA) {
-                bodyA->applyImpulseLinear(-J * bodyA->invMass);
-                bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, J));
+            if (contact->partnerTypeA == ContactPartnerType::RigidBody &&
+                !contact->noSolverResponseA) {
+                bodyA->applyImpulseLinear(-J);
+                bodyA->applyImpulseAngular(-glm::cross(cp.rA, J));
             }
-            if (contact->partnerTypeB == ContactPartnerType::RigidBody and !contact->noSolverResponseB) {
-                bodyB->applyImpulseLinear(J * bodyB->invMass);
-                bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, J));
-            }
-        }
 
-        if (contact->accumulatedTwistImpulse != 0.0f) {
-            glm::vec3 tauWS = (contact->accumulatedTwistImpulse * warmStartFactor) * contact->normal;
-            if (!contact->noSolverResponseA) bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * tauWS);
-            if (!contact->noSolverResponseB) bodyB->applyImpulseAngular(bodyB->invInertiaWorld * tauWS);
+            if (contact->partnerTypeB == ContactPartnerType::RigidBody &&
+                !contact->noSolverResponseB) {
+                bodyB->applyImpulseLinear(J);
+                bodyB->applyImpulseAngular(glm::cross(cp.rB, J));
+            }
         }
     }
 
@@ -456,13 +508,29 @@ void PhysicsEngine::resolveCollisions() {
         float maxDelta = 0.0f;
         //float residualSq = 0.0f;
 
-        for (Contact* contact : contactsToSolve) {
+        // reverse order every other iteration to reduce directional bias in the solver
+        int contactCount = static_cast<int>(contactsToSolve.size());
+
+        for (int cc = 0; cc < contactCount; cc++) {
+            int ci = (i % 2 == 0)
+                ? cc
+                : contactCount - 1 - cc;
+
+            Contact* contact = contactsToSolve[ci];
+
             ContactRuntime& rt = contact->runtimeData;
             RigidBody* bodyA = rt.bodyA;
             RigidBody* bodyB = rt.bodyB;
 
-            for (int j = 0; j < contact->points.size(); j++) {
+            int count = static_cast<int>(contact->points.size());
+
+            // reverse order every other iteration to reduce directional bias in the solver
+            for (int jj = 0; jj < count; jj++) {
+                int j = (i % 2 == 0) ? jj : (count - 1 - jj);
+
                 ContactPoint& cp = contact->points[j];
+
+                if (!cp.active) continue;
 
                 // --- Relative velocity before normal solve ---
                 glm::vec3 relVelA{ 0.0f };
@@ -487,30 +555,75 @@ void PhysicsEngine::resolveCollisions() {
 
                 // ----- Normal impulse -----
                 float v_target = cp.targetBounceVelocity;
-                float v_bias = cp.biasVelocity;
 
-                float J = -(normalVelocity - v_target + v_bias) * cp.m_eff;
+                float J = -(normalVelocity - v_target) * cp.m_eff;
 
-                float oldNormalImpulse = cp.accumulatedImpulse;
-                cp.accumulatedImpulse = glm::max(oldNormalImpulse + J, 0.0f);
-                float deltaImpulse = cp.accumulatedImpulse - oldNormalImpulse;
+                float oldNormalImpulse = cp.accumulatedNormalImpulse;
+                cp.accumulatedNormalImpulse = glm::max(oldNormalImpulse + J, 0.0f);
 
-                //residualSq += deltaImpulse * deltaImpulse;
-
+                float deltaImpulse = cp.accumulatedNormalImpulse - oldNormalImpulse;
                 glm::vec3 deltaNormalImpulse = deltaImpulse * contact->normal;
 
-                if (glm::dot(deltaNormalImpulse, deltaNormalImpulse) > 1e-6f) {
-                    if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                        bodyA->applyImpulseLinear(-deltaNormalImpulse * bodyA->invMass);
-                        bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, deltaNormalImpulse));
-                    }
-                    if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                        bodyB->applyImpulseLinear(deltaNormalImpulse * bodyB->invMass);
-                        bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, deltaNormalImpulse));
-                    }
+                //std::cout
+                //    << "mass=" << bodyB->mass
+                //    << " invMass=" << bodyB->invMass
+                //    << " m_eff=" << cp.m_eff
+                //    << " normalVelocity=" << normalVelocity
+                //    << " J=" << J
+                //    << " deltaV=" << deltaImpulse * bodyB->invMass
+                //    << "\n";
+
+                if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
+                    bodyA->applyImpulseLinear(-deltaNormalImpulse);
+                    bodyA->applyImpulseAngular(-glm::cross(cp.rA, deltaNormalImpulse));
+                }
+                if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
+                    bodyB->applyImpulseLinear(deltaNormalImpulse);
+                    bodyB->applyImpulseAngular(glm::cross(cp.rB, deltaNormalImpulse));
+                }
+                maxDelta = std::max(maxDelta, std::abs(deltaImpulse));
+
+
+                // ----- Bias impulse (Baumgarte) -----
+                glm::vec3 relVelA_bias{ 0.0f };
+                glm::vec3 relVelB_bias{ 0.0f };
+                glm::vec3 angVelA_bias{ 0.0f };
+                glm::vec3 angVelB_bias{ 0.0f };
+
+                if (contact->contributesMotionA) {
+                    relVelA_bias = bodyA->biasLinearVelocity;
+                    angVelA_bias = bodyA->biasAngularVelocity;
+                }
+                if (contact->contributesMotionB) {
+                    relVelB_bias = bodyB->biasLinearVelocity;
+                    angVelB_bias = bodyB->biasAngularVelocity;
                 }
 
-                maxDelta = std::max(maxDelta, std::abs(deltaImpulse));
+                glm::vec3 relativeBiasVelocity =
+                    (relVelB_bias + glm::cross(angVelB_bias, cp.rB)) -
+                    (relVelA_bias + glm::cross(angVelA_bias, cp.rA));
+
+                float normalBiasVelocity = glm::dot(relativeBiasVelocity, contact->normal);
+
+                float Jb = -(normalBiasVelocity + cp.biasVelocity) * cp.m_eff;
+
+                float oldB = cp.accumulatedBiasImpulse;
+                cp.accumulatedBiasImpulse = glm::max(oldB + Jb, 0.0f);
+
+                float deltaB = cp.accumulatedBiasImpulse - oldB;
+                glm::vec3 impulseB = deltaB * contact->normal;
+
+                if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
+                    bodyA->pushBiasImpulseLinear(-impulseB);
+                    bodyA->pushBiasImpulseAngular(-glm::cross(cp.rA, impulseB));
+                }
+
+                if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
+                    bodyB->pushBiasImpulseLinear(impulseB);
+                    bodyB->pushBiasImpulseAngular(glm::cross(cp.rB, impulseB));
+                }
+
+                maxDelta = std::max(maxDelta, std::abs(deltaB));
 
                 // ----- Friction -----
                 constexpr float recomputeThreshold = 1e-4f;
@@ -554,7 +667,7 @@ void PhysicsEngine::resolveCollisions() {
                 float newF1 = cp.accumulatedFrictionImpulse1 + dF1;
                 float newF2 = cp.accumulatedFrictionImpulse2 + dF2;
 
-                float Jn = std::abs(cp.accumulatedImpulse);
+                float Jn = std::abs(cp.accumulatedNormalImpulse);
                 float maxStatic = staticFriction * Jn;
                 float maxStatic2 = maxStatic * maxStatic;
 
@@ -569,15 +682,13 @@ void PhysicsEngine::resolveCollisions() {
                     glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
                     dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
 
-                    //residualSq += dT * dT;
-
                     if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                        bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
-                        bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
+                        bodyA->applyImpulseLinear(-dFt);
+                        bodyA->applyImpulseAngular(-glm::cross(cp.rA, dFt));
                     }
                     if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                        bodyB->applyImpulseLinear(dFt * bodyB->invMass);
-                        bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
+                        bodyB->applyImpulseLinear(dFt);
+                        bodyB->applyImpulseAngular(glm::cross(cp.rB, dFt));
                     }
                 }
                 else {
@@ -599,15 +710,13 @@ void PhysicsEngine::resolveCollisions() {
                         glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
                         dT = std::sqrt(d1 * d1 + d2 * d2);
 
-                        //residualSq += dT * dT;
-
                         if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                            bodyA->applyImpulseLinear(-dFt * bodyA->invMass);
-                            bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * glm::cross(cp.rA, dFt));
+                            bodyA->applyImpulseLinear(-dFt);
+                            bodyA->applyImpulseAngular(-glm::cross(cp.rA, dFt));
                         }
                         if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                            bodyB->applyImpulseLinear(dFt * bodyB->invMass);
-                            bodyB->applyImpulseAngular(bodyB->invInertiaWorld * glm::cross(cp.rB, dFt));
+                            bodyB->applyImpulseLinear(dFt);
+                            bodyB->applyImpulseAngular(glm::cross(cp.rB, dFt));
                         }
                     }
                 }
@@ -627,7 +736,7 @@ void PhysicsEngine::resolveCollisions() {
             // 3) Friktionsbudget baserad på TOTAL normalimpuls i manifoldet
             float Jn_total = 0.0f;
             for (const ContactPoint& cp : contact->points) {
-                Jn_total += std::abs(cp.accumulatedImpulse);
+                Jn_total += std::abs(cp.accumulatedNormalImpulse);
             }
 
             float maxTwistImpulse = twistFriction * Jn_total;
@@ -642,24 +751,41 @@ void PhysicsEngine::resolveCollisions() {
             // 5) Applicera moment kring n
             glm::vec3 tau = delta * contact->normal;
             if (glm::dot(tau, tau) > 1e-6f) {
-
-                //residualSq += delta * delta;
-
                 if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                    bodyA->applyImpulseAngular(-bodyA->invInertiaWorld * tau);
+                    bodyA->applyImpulseAngular(-tau);
                 }
                 if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                    bodyB->applyImpulseAngular(bodyB->invInertiaWorld * tau);
+                    bodyB->applyImpulseAngular(tau);
                 }
             }
         }
-        //iterCount++;
 
-        //lastResidualSq = residualSq;
+        if (maxDelta < 1e-3f) {
+            break;
+        }
+    }
 
-        //if (maxDelta < 1e-3f) {
-        //    break;
-        //}
+    std::unordered_set<uint32_t> committed;
+
+    for (Contact* contact : contactsToSolve) {
+        RigidBody* bodies[2] = {
+            contact->runtimeData.bodyA,
+            contact->runtimeData.bodyB
+        };
+
+        for (RigidBody* body : bodies) {
+            if (!body) continue;
+            if (body->type == BodyType::Static) continue;
+
+            uint32_t slot = body->gameObjectHandle.slot; // eller vad du har
+            if (!committed.insert(slot).second)
+                continue;
+
+            Transform& t = *caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
+            body->commitBiasImpulses(t, dt);
+            t.updateCache();
+            body->updateInertiaWorld(t);
+        }
     }
 
     //std::cout << "PGS iterations: " << iterCount << "\n";
@@ -760,9 +886,7 @@ void PhysicsEngine::updateContactCache() {
             }
         }
         else {
-            // Nollställ för nästa frame
-            it->second.wasUsedThisFrame = false;
-            it->second.framesSinceUsed = 0;  // Nollställ räknaren vid träff
+            it->second.framesSinceUsed = 0; 
         }
         ++it;
     }

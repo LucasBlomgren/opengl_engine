@@ -32,11 +32,14 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
         root = contact.runtimeData.bodyRootA;
 
     contact.points.resize(clippedPoints.size());
+
     for (int i = 0; i < clippedPoints.size(); ++i) {
-        auto& cp = contact.points[i];
+        ContactPoint cp{};
         cp.worldPos = clippedPoints[i];
         cp.depth = -glm::dot(clippedPoints[i] - contact.referenceFace[0], contact.referenceFaceNormal);
         cp.localPos = root->worldToLocalPoint(cp.worldPos);
+
+        contact.points[i] = cp;
     }
 
     // if more than 4 contact points, perform contact point reduction to improve solver stability
@@ -347,7 +350,7 @@ void CollisionManifold::clipPoints(const std::array<glm::vec3, 4>& referenceFace
     // clip all points against each plane one by one, this will keep only the points that are inside all planes (i.e. inside the reference face)
     for (const Plane& plane : this->clippingPlanes) {
         for (int i = 0; i < counter; i++) {
-            clippingStatus[i] = isPointInsidePlane(contactPoints[i], plane.normal, plane.point, 1e-7f);  // remember which points are inside/outside the plane for the clipping algorithm
+            clippingStatus[i] = isPointInsidePlane(contactPoints[i], plane.normal, plane.point, 1e-2f);  // remember which points are inside/outside the plane for the clipping algorithm
         }
 
         counter2 = counter;
@@ -631,10 +634,6 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     cp.invMassT1 = 1.0f / k_t1;
     float k_t2 = (invMassA + invMassB) + glm::dot(rA_t2, invIA_rA_t2) + glm::dot(rB_t2, invIB_rB_t2);
     cp.invMassT2 = 1.0f / k_t2;
-
-    //if (k_t1 <= 1e-8f || k_t2 <= 1e-8f) {
-    //    std::cout << "Warning: contact point with near-zero tangential effective mass!" << std::endl;
-    //}
 }
 
 //==========================================================================================
@@ -737,30 +736,39 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     
     for (int i = 0; i < contact.points.size(); i++) {
         ContactPoint& newPoint = contact.points[i];
-        for (int j = 0; j < cachedContact.points.size(); j++) {
 
+        int bestJ = -1;
+        float bestDist2 = std::numeric_limits<float>::max();
+
+        for (int j = 0; j < cachedContact.points.size(); j++) {
+            float dist2 = glm::distance2(newPoint.worldPos, cachedWorld[j]);
+            if (dist2 < bestDist2) {
+                bestDist2 = dist2;
+                bestJ = j;
+            }
+        }
+
+        for (int j = 0; j < cachedContact.points.size(); j++) {
             if (matchedFinalPoints[i]) break;
             if (matchedCachedPoints[j]) continue;
 
             ContactPoint& cachedPoint = cachedContact.points[j];
-
             glm::vec3 transformedPoint = cachedWorld[j];
 
-            // new point is close to a cached point = warm start
             float dist2 = glm::distance2(newPoint.worldPos, transformedPoint);
 
-            if (dist2 < thresholdSq) {
-
+            if (dist2 < thresholdSq) 
+            {
                 newPoint.wasWarmStarted = true;
 
                 // Remake the contact point data to match the new contact normal and tangential basis
                 glm::vec3 oldImpulseWorld =
-                    cachedPoint.accumulatedImpulse * cachedContact.normal +
+                    cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
                     cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
                     cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
 
                 // Project the old impulse onto the new contact normal and tangential basis
-                newPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, contact.normal);
+                newPoint.accumulatedNormalImpulse = glm::dot(oldImpulseWorld, contact.normal);
                 newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
                 newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
 
@@ -771,85 +779,85 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         }
     }
 
-    //====================================================================================================
-    // Add extra cached points if there's less than 4 points in the new contact (only done for box-box)
-    if (contact.points.size() < 4 &&
-        contact.partnerTypeA == ContactPartnerType::RigidBody &&
-        contact.partnerTypeB == ContactPartnerType::RigidBody &&
-        colliderA->type == ColliderType::CUBOID &&
-        colliderB->type == ColliderType::CUBOID)
-    {
-        // add cached points that were not matched with a new point, but only if they are still valid 
-        // (i.e. still inside the reference face and not too far from the new contact points), 
-        // and transform them to match the new contact normal and tangential basis
-        const float clippingPlaneTolerance = 1e-7f;
-        const float maxPlaneDistanceForWarmStart = 0.1f;
-        const float maxBackfaceDistance = 0.01f;
+    ////====================================================================================================
+    //// Add extra cached points if there's less than 4 points in the new contact (only done for box-box)
+    //if (contact.points.size() < 4 &&
+    //    contact.partnerTypeA == ContactPartnerType::RigidBody &&
+    //    contact.partnerTypeB == ContactPartnerType::RigidBody &&
+    //    colliderA->type == ColliderType::CUBOID &&
+    //    colliderB->type == ColliderType::CUBOID)
+    //{
+    //    // add cached points that were not matched with a new point, but only if they are still valid 
+    //    // (i.e. still inside the reference face and not too far from the new contact points), 
+    //    // and transform them to match the new contact normal and tangential basis
+    //    const float clippingPlaneTolerance = 1e-2f;
+    //    const float maxPlaneDistanceForWarmStart = 0.1f;
+    //    const float maxBackfaceDistance = 0.01f;
 
-        if (contact.partnerTypeB == ContactPartnerType::RigidBody && contact.points.size() < 4) {
-            for (int i = 0; i < cachedContact.points.size(); i++) {
-                if (matchedCachedPoints[i] == true)
-                    continue;
+    //    if (contact.partnerTypeB == ContactPartnerType::RigidBody && contact.points.size() < 4) {
+    //        for (int i = 0; i < cachedContact.points.size(); i++) {
+    //            if (matchedCachedPoints[i] == true)
+    //                continue;
 
-                ContactPoint& cachedPoint = cachedContact.points[i];
-                glm::vec3& transformedPoint = cachedWorld[i];
+    //            ContactPoint& cachedPoint = cachedContact.points[i];
+    //            glm::vec3& transformedPoint = cachedWorld[i];
 
-                // check if point is still inside reference face
-                bool inside = true;
-                for (auto& plane : this->clippingPlanes) {
-                    if (glm::dot(plane.normal, transformedPoint - plane.point) >= clippingPlaneTolerance) {
-                        inside = false;
-                        break;
-                    }
-                }
-                if (!inside) continue;  // skip if the point is outside the reference face
+    //            // check if point is still inside reference face
+    //            bool inside = true;
+    //            for (auto& plane : this->clippingPlanes) {
+    //                if (glm::dot(plane.normal, transformedPoint - plane.point) >= clippingPlaneTolerance) {
+    //                    inside = false;
+    //                    break;
+    //                }
+    //            }
+    //            if (!inside) continue;  // skip if the point is outside the reference face
 
-                // Check if the point is not too far from the reference face plane (i.e. still relevant for warm starting). 
-                float dn = glm::dot(referenceFaceNormal, transformedPoint - referenceFace[0]);
-                if (dn > maxPlaneDistanceForWarmStart) {
-                    continue;
-                }
+    //            // Check if the point is not too far from the reference face plane (i.e. still relevant for warm starting). 
+    //            float dn = glm::dot(referenceFaceNormal, transformedPoint - referenceFace[0]);
+    //            if (dn > maxPlaneDistanceForWarmStart) {
+    //                continue;
+    //            }
 
-                // also allow points that are slightly behind the reference face to be warm started, to avoid jitter for points near the edge of the reference face.
-                if (dn < -maxBackfaceDistance) continue;
+    //            // also allow points that are slightly behind the reference face to be warm started, to avoid jitter for points near the edge of the reference face.
+    //            if (dn < -maxBackfaceDistance) continue;
 
-                glm::vec3 projP = transformedPoint - dn * referenceFaceNormal;
-                cachedPoint.worldPos = projP;
+    //            glm::vec3 projP = transformedPoint - dn * referenceFaceNormal;
+    //            cachedPoint.worldPos = projP;
 
-                Transform* root;
-                if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
-                    root = contact.runtimeData.bodyRootB;
-                }
-                else {
-                    root = contact.runtimeData.bodyRootA;
-                }
+    //            Transform* root;
+    //            if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
+    //                root = contact.runtimeData.bodyRootB;
+    //            }
+    //            else {
+    //                root = contact.runtimeData.bodyRootA;
+    //            }
 
-                cachedPoint.localPos = root->worldToLocalPoint(cachedPoint.worldPos);
-                cachedPoint.depth = -glm::dot(cachedPoint.worldPos - contact.referenceFace[0], contact.referenceFaceNormal);
+    //            cachedPoint.localPos = root->worldToLocalPoint(cachedPoint.worldPos);
+    //            cachedPoint.depth = -glm::dot(cachedPoint.worldPos - contact.referenceFace[0], contact.referenceFaceNormal);
 
-                cachedPoint.wasWarmStarted = true;
+    //            cachedPoint.wasWarmStarted = true;
 
-                // Remake the contact point data to match the new contact normal and tangential basis
-                glm::vec3 oldImpulseWorld =
-                    cachedPoint.accumulatedImpulse * cachedContact.normal +
-                    cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
-                    cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
+    //            // Remake the contact point data to match the new contact normal and tangential basis
+    //            glm::vec3 oldImpulseWorld =
+    //                cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
+    //                cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
+    //                cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
 
-                // Project the old impulse onto the new contact normal and tangential basis
-                cachedPoint.accumulatedImpulse = glm::dot(oldImpulseWorld, contact.normal);
-                cachedPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
-                cachedPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
+    //            // Project the old impulse onto the new contact normal and tangential basis
+    //            cachedPoint.accumulatedNormalImpulse = glm::dot(oldImpulseWorld, contact.normal);
+    //            cachedPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
+    //            cachedPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
 
-                contact.points.push_back(cachedPoint);
+    //            contact.points.push_back(cachedPoint);
 
-                if (contact.points.size() >= 4) {
-                    break;
-                }
-            }
-        }
-    }
+    //            if (contact.points.size() >= 4) {
+    //                break;
+    //            }
+    //        }
+    //    }
+    //}
 
-    // Finally, we copy the new contact (with updated impulse data for warm starting) into the cache, replacing the old contact.
+    // Finally, copy the new contact (with updated impulse data for warm starting) into the cache, replacing the old contact.
     for (int i = 0; i < contact.points.size(); i++) {
         PreComputePointData(contact.points[i], contact);
         contact.points[i].wasUsedThisFrame = true;
