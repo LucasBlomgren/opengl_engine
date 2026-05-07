@@ -1,14 +1,12 @@
-#include "pch.h"
-#include "performance_panel.h"
-#include "editor/panel.h"
-#include "imgui.h"
-#include "imgui_manager.h"
-#include "core/timer.h"
-#include "core/engine_state.h"
-
 #include <algorithm>
 #include <cstdio>
 #include <string>
+
+#include "core/timer.h"
+
+#include "performance_panel.h"
+#include "editor/panel.h"
+#include "imgui.h"
 
 namespace
 {

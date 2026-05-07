@@ -1,7 +1,6 @@
 #pragma once
 
 #include "shaders/shader.h"
-#include "camera.h"
 
 class SkyboxManager {
 private:

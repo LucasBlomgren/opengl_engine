@@ -1,9 +1,5 @@
 #pragma once
 
-#include <string>
-#include <array>
-#include <GLFW/glfw3.h>
-
 class EngineState {
 public:
     void toggleShowWireframes();

@@ -93,7 +93,7 @@ public:
     void updateInertiaWorld(Transform& t);
 
     void applyGravity(float dt);
-    void applyVelocityDamping();
+    void applyVelocityDamping(float dt);
     void applyRollingFriction(ColliderType colliderType, float dt);
     void applyAntistuckFriction(float dt);
 

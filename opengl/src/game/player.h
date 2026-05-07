@@ -1,11 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "scene_builder.h"
 #include "physics.h"
-#include "game_object.h"
-#include "camera.h"
+#include "engine/camera.h"
 
 class Player : public IInputReceiver {
 public:

@@ -44,7 +44,8 @@ public:
 		, meshManager(meshManager)
 		, textureManager(textureManager)
 		, frameTimers(frameTimers)
-		, gpuTimers(gpuTimers) {
+		, gpuTimers(gpuTimers) 
+	{
 		ctx.editorMain = editorMain;
 		ctx.physicsEngine = physicsEngine;
 		ctx.engineState = engineState;

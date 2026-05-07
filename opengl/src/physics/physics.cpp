@@ -277,9 +277,9 @@ void PhysicsEngine::updateBodiesAndColliders() {
                 body->applyRollingFriction(mainCollider->type, dt);
             }
 
-            //body->applyVelocityDamping();
+            body->applyVelocityDamping(dt);
             body->applyGravity(dt);
-            body->applyAntistuckFriction(dt);
+            //body->applyAntistuckFriction(dt);
             body->integrateVelocities(*rootTransform, dt);
             rootTransform->updateCache();
             body->updateInertiaWorld(*rootTransform);
@@ -331,28 +331,8 @@ void PhysicsEngine::detectAndSolveCollisions()
         narrowphaseManager.narrowPhase(terrainPairs, dynamicPairs);
     }
 
-    collectActiveContacts();                    // collect contacts to solve
-
-
-
-    //for (RigidBody& rb : physicsWorld.getRigidBodiesMap().dense()) {
-    //    if (rb.type != BodyType::Static) {
-    //        std::cout << "BEFORE solve body " << rb.gameObjectHandle.slot
-    //            << " w=(" << rb.angularVelocity.x << ", "
-    //            << rb.angularVelocity.y << ", "
-    //            << rb.angularVelocity.z << ")\n";
-    //    }
-    //}
+    collectActiveContacts(); // collect contacts to solve
     resolveCollisions(); // PGS + Baumgarte stabilization
-
-    //for (RigidBody& rb : physicsWorld.getRigidBodiesMap().dense()) {
-    //    if (rb.type != BodyType::Static) {
-    //        std::cout << "AFTER solve body " << rb.gameObjectHandle.slot
-    //            << " w=(" << rb.angularVelocity.x << ", "
-    //            << rb.angularVelocity.y << ", "
-    //            << rb.angularVelocity.z << ")\n";
-    //    }
-    //}
 }
 
 //==============================================
@@ -407,20 +387,24 @@ void PhysicsEngine::resolveCollisions() {
     // för att undvika att lösa stora staplar av kontakter som inte påverkar varandra, vilket kan hända i t.ex. en pyramid av boxar där varje box har kontakt med flera
     // det påverkar också determinism 
 
+    constexpr int iterations = 8;
+    constexpr float velocityEpsilon = 0.01f;
+
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
-    constexpr float twistFriction = 0.1f;
+    constexpr float twistFriction = 0.0f;
 
     constexpr float defaultSlop = 0.0005f;
     constexpr float noResponseSlop = 0.0005f;
 
-    constexpr float defaultBaumgarte = 0.5f;
-    constexpr float noResponseBaumgarte = 0.5f;
+    constexpr float defaultBaumgarte = 0.3f;
+    constexpr float noResponseBaumgarte = 0.3f;
 
     constexpr float persistentSlop = 0.005f;
+    constexpr float angularBiasScale = 0.2f;
 
     // optional, but use high value first
-    constexpr float maxBiasVelocity = 5.0f;
+    constexpr float maxBiasVelocity = 2.0f;
 
     for (Contact* contact : contactsToSolve) {
         ContactRuntime& rt = contact->runtimeData;
@@ -502,11 +486,11 @@ void PhysicsEngine::resolveCollisions() {
     }
 
     // ------ PGS solver ------
-    int maxIterations = 8;
-    //int iterCount = 0;
-    for (int i = 0; i < maxIterations; i++) {
+    int iterationsUsed = 0;
+    for (int i = 0; i < iterations; i++) {
         float maxDelta = 0.0f;
-        //float residualSq = 0.0f;
+
+        iterationsUsed++;
 
         // reverse order every other iteration to reduce directional bias in the solver
         int contactCount = static_cast<int>(contactsToSolve.size());
@@ -564,15 +548,6 @@ void PhysicsEngine::resolveCollisions() {
                 float deltaImpulse = cp.accumulatedNormalImpulse - oldNormalImpulse;
                 glm::vec3 deltaNormalImpulse = deltaImpulse * contact->normal;
 
-                //std::cout
-                //    << "mass=" << bodyB->mass
-                //    << " invMass=" << bodyB->invMass
-                //    << " m_eff=" << cp.m_eff
-                //    << " normalVelocity=" << normalVelocity
-                //    << " J=" << J
-                //    << " deltaV=" << deltaImpulse * bodyB->invMass
-                //    << "\n";
-
                 if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                     bodyA->applyImpulseLinear(-deltaNormalImpulse);
                     bodyA->applyImpulseAngular(-glm::cross(cp.rA, deltaNormalImpulse));
@@ -615,12 +590,16 @@ void PhysicsEngine::resolveCollisions() {
 
                 if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                     bodyA->pushBiasImpulseLinear(-impulseB);
-                    bodyA->pushBiasImpulseAngular(-glm::cross(cp.rA, impulseB));
+
+                    glm::vec3 angularBiasA = -glm::cross(cp.rA, impulseB);
+                    bodyA->pushBiasImpulseAngular(angularBiasScale * angularBiasA);
                 }
 
                 if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
                     bodyB->pushBiasImpulseLinear(impulseB);
-                    bodyB->pushBiasImpulseAngular(glm::cross(cp.rB, impulseB));
+
+                    glm::vec3 angularBiasB = glm::cross(cp.rB, impulseB);
+                    bodyB->pushBiasImpulseAngular(angularBiasScale * angularBiasB);
                 }
 
                 maxDelta = std::max(maxDelta, std::abs(deltaB));
@@ -760,11 +739,12 @@ void PhysicsEngine::resolveCollisions() {
             }
         }
 
-        if (maxDelta < 1e-3f) {
+        if (maxDelta < velocityEpsilon) {
             break;
         }
     }
 
+    // commit bias impulses so they affect velocity in the next frame's collision detection and solving, which improves stability especially for stacked objects
     std::unordered_set<uint32_t> committed;
 
     for (Contact* contact : contactsToSolve) {
@@ -777,7 +757,7 @@ void PhysicsEngine::resolveCollisions() {
             if (!body) continue;
             if (body->type == BodyType::Static) continue;
 
-            uint32_t slot = body->gameObjectHandle.slot; // eller vad du har
+            uint32_t slot = body->gameObjectHandle.slot;
             if (!committed.insert(slot).second)
                 continue;
 
@@ -787,10 +767,6 @@ void PhysicsEngine::resolveCollisions() {
             body->updateInertiaWorld(t);
         }
     }
-
-    //std::cout << "PGS iterations: " << iterCount << "\n";
-    //float residual = std::sqrt(lastResidualSq);
-    //std::cout << "Residual impulse: " << residual << "\n";
 }
 
 //====================================

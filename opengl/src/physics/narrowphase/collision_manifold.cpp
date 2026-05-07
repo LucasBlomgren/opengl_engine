@@ -659,6 +659,10 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     // for tangential basis even when contact normal changes slightly between frames, which can help with warm starting stability of friction impulses.
     if (it != contactCache.end()) {
         t1 = it->second.t1 - n * glm::dot(it->second.t1, n);
+
+        if (glm::length2(t1) > 1e-8f) {
+            t1 = glm::normalize(t1);
+        }
     }
 
     // if no cache or t1 is near zero, we need to generate a tangential basis (t1 and t2) for the contact to be used in the solver for friction calculations.
@@ -723,139 +727,90 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
         M3 = glm::mat3(tA->modelMatrix);
         T3 = glm::vec3(tA->modelMatrix[3]);
     }
-    glm::vec3 cachedWorld[4];
+    glm::vec3 cachedWorld[4]{};
     for (int j = 0; j < cachedContact.points.size(); ++j) {
         cachedWorld[j] = M3 * cachedContact.points[j].localPos + T3;
     }
 
-    //===========================================================================================================
-    // Warm start matching of contact points based on proximity.
-    // Transfer impulse data from matched cached points to new points after projecting to new contact basis
-    const float warmstartMatchingThreshold = 0.05f; // #TODO: behöver ändras till att vara en faktor av objektens storlekar
-    const float thresholdSq = warmstartMatchingThreshold * warmstartMatchingThreshold;
-    
-    for (int i = 0; i < contact.points.size(); i++) {
-        ContactPoint& newPoint = contact.points[i];
+    struct MatchPair {
+        int newIdx;
+        int cachedIdx;
+        float dist2;
+    };
 
-        int bestJ = -1;
-        float bestDist2 = std::numeric_limits<float>::max();
+    std::array<MatchPair, 16> pairs;
+    int pairCount = 0;
+    float thresholdSq = 0.05f * 0.05f; // max distance squared for matching contact points, this can be tuned based on expected movement between frames and precision requirements
 
-        for (int j = 0; j < cachedContact.points.size(); j++) {
-            float dist2 = glm::distance2(newPoint.worldPos, cachedWorld[j]);
-            if (dist2 < bestDist2) {
-                bestDist2 = dist2;
-                bestJ = j;
-            }
-        }
+    for (int i = 0; i < contact.points.size(); ++i) {
+        for (int j = 0; j < cachedContact.points.size(); ++j) {
+            float dist2 = glm::distance2(contact.points[i].worldPos, cachedWorld[j]);
 
-        for (int j = 0; j < cachedContact.points.size(); j++) {
-            if (matchedFinalPoints[i]) break;
-            if (matchedCachedPoints[j]) continue;
-
-            ContactPoint& cachedPoint = cachedContact.points[j];
-            glm::vec3 transformedPoint = cachedWorld[j];
-
-            float dist2 = glm::distance2(newPoint.worldPos, transformedPoint);
-
-            if (dist2 < thresholdSq) 
-            {
-                newPoint.wasWarmStarted = true;
-
-                // Remake the contact point data to match the new contact normal and tangential basis
-                glm::vec3 oldImpulseWorld =
-                    cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
-                    cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
-                    cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
-
-                // Project the old impulse onto the new contact normal and tangential basis
-                newPoint.accumulatedNormalImpulse = glm::dot(oldImpulseWorld, contact.normal);
-                newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
-                newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
-
-                matchedFinalPoints[i] = true;
-                matchedCachedPoints[j] = true;
-                break;
+            if (dist2 < thresholdSq) {
+                pairs[pairCount++] = { i, j, dist2 };
             }
         }
     }
 
-    ////====================================================================================================
-    //// Add extra cached points if there's less than 4 points in the new contact (only done for box-box)
-    //if (contact.points.size() < 4 &&
-    //    contact.partnerTypeA == ContactPartnerType::RigidBody &&
-    //    contact.partnerTypeB == ContactPartnerType::RigidBody &&
-    //    colliderA->type == ColliderType::CUBOID &&
-    //    colliderB->type == ColliderType::CUBOID)
-    //{
-    //    // add cached points that were not matched with a new point, but only if they are still valid 
-    //    // (i.e. still inside the reference face and not too far from the new contact points), 
-    //    // and transform them to match the new contact normal and tangential basis
-    //    const float clippingPlaneTolerance = 1e-2f;
-    //    const float maxPlaneDistanceForWarmStart = 0.1f;
-    //    const float maxBackfaceDistance = 0.01f;
+    std::sort(
+        pairs.begin(),
+        pairs.begin() + pairCount,
+        [](const MatchPair& a, const MatchPair& b) {
+            return a.dist2 < b.dist2;
+        }
+    );
 
-    //    if (contact.partnerTypeB == ContactPartnerType::RigidBody && contact.points.size() < 4) {
-    //        for (int i = 0; i < cachedContact.points.size(); i++) {
-    //            if (matchedCachedPoints[i] == true)
-    //                continue;
+    for (int k = 0; k < pairCount; ++k) {
+        int i = pairs[k].newIdx;
+        int j = pairs[k].cachedIdx;
 
-    //            ContactPoint& cachedPoint = cachedContact.points[i];
-    //            glm::vec3& transformedPoint = cachedWorld[i];
+        if (matchedFinalPoints[i]) continue;
+        if (matchedCachedPoints[j]) continue;
 
-    //            // check if point is still inside reference face
-    //            bool inside = true;
-    //            for (auto& plane : this->clippingPlanes) {
-    //                if (glm::dot(plane.normal, transformedPoint - plane.point) >= clippingPlaneTolerance) {
-    //                    inside = false;
-    //                    break;
-    //                }
-    //            }
-    //            if (!inside) continue;  // skip if the point is outside the reference face
+        ContactPoint& newPoint = contact.points[i];
+        ContactPoint& cachedPoint = cachedContact.points[j];
 
-    //            // Check if the point is not too far from the reference face plane (i.e. still relevant for warm starting). 
-    //            float dn = glm::dot(referenceFaceNormal, transformedPoint - referenceFace[0]);
-    //            if (dn > maxPlaneDistanceForWarmStart) {
-    //                continue;
-    //            }
+        glm::vec3 oldImpulseWorld =
+            cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
+            cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
+            cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
 
-    //            // also allow points that are slightly behind the reference face to be warm started, to avoid jitter for points near the edge of the reference face.
-    //            if (dn < -maxBackfaceDistance) continue;
+        newPoint.accumulatedNormalImpulse = glm::max(glm::dot(oldImpulseWorld, contact.normal), 0.0f);
+        newPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
+        newPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
 
-    //            glm::vec3 projP = transformedPoint - dn * referenceFaceNormal;
-    //            cachedPoint.worldPos = projP;
+        // Clamp transferred friction to new normal impulse budget
+        float maxFriction = 0.6f * newPoint.accumulatedNormalImpulse;
 
-    //            Transform* root;
-    //            if (contact.objBisReference and contact.partnerTypeB == ContactPartnerType::RigidBody) {
-    //                root = contact.runtimeData.bodyRootB;
-    //            }
-    //            else {
-    //                root = contact.runtimeData.bodyRootA;
-    //            }
+        float f1 = newPoint.accumulatedFrictionImpulse1;
+        float f2 = newPoint.accumulatedFrictionImpulse2;
 
-    //            cachedPoint.localPos = root->worldToLocalPoint(cachedPoint.worldPos);
-    //            cachedPoint.depth = -glm::dot(cachedPoint.worldPos - contact.referenceFace[0], contact.referenceFaceNormal);
+        float len2 = f1 * f1 + f2 * f2;
+        float max2 = maxFriction * maxFriction;
 
-    //            cachedPoint.wasWarmStarted = true;
+        if (len2 > max2) {
+            float len = std::sqrt(len2);
+            if (len > 1e-6f) {
+                float s = maxFriction / len;
+                newPoint.accumulatedFrictionImpulse1 *= s;
+                newPoint.accumulatedFrictionImpulse2 *= s;
+            }
+        }
 
-    //            // Remake the contact point data to match the new contact normal and tangential basis
-    //            glm::vec3 oldImpulseWorld =
-    //                cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
-    //                cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
-    //                cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
+        newPoint.wasWarmStarted = true;
+        matchedFinalPoints[i] = true;
+        matchedCachedPoints[j] = true;
+    }
 
-    //            // Project the old impulse onto the new contact normal and tangential basis
-    //            cachedPoint.accumulatedNormalImpulse = glm::dot(oldImpulseWorld, contact.normal);
-    //            cachedPoint.accumulatedFrictionImpulse1 = glm::dot(oldImpulseWorld, contact.t1);
-    //            cachedPoint.accumulatedFrictionImpulse2 = glm::dot(oldImpulseWorld, contact.t2);
-
-    //            contact.points.push_back(cachedPoint);
-
-    //            if (contact.points.size() >= 4) {
-    //                break;
-    //            }
-    //        }
-    //    }
-    //}
+    // if not warm started (meaning no close enough match in cache), 
+    // we initialize impulses to zero for the solver to compute from scratch
+    for (ContactPoint& cp : contact.points) {
+        if (!cp.wasWarmStarted) {
+            cp.accumulatedNormalImpulse = 0.0f;
+            cp.accumulatedFrictionImpulse1 = 0.0f;
+            cp.accumulatedFrictionImpulse2 = 0.0f;
+        }
+    }
 
     // Finally, copy the new contact (with updated impulse data for warm starting) into the cache, replacing the old contact.
     for (int i = 0; i < contact.points.size(); i++) {

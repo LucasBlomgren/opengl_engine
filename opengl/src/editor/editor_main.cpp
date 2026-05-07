@@ -2,7 +2,7 @@
 #include "editor_main.h"
 
 #include "imgui.h"
-#include "input_manager.h"
+#include "engine/input_manager.h"
 #include "scene_builder.h"
 #include "physics.h"
 #include "graphics/renderer/renderer.h"

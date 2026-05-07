@@ -38,7 +38,7 @@ void RigidBody::applyGravity(float dt) {
 	linearVelocity += g * dt;
 }
 
-void RigidBody::applyVelocityDamping() {
+void RigidBody::applyVelocityDamping(float dt) {
 	if (type == BodyType::Static || 
         type == BodyType::Kinematic ||
 		motionControl == MotionControl::External || 
@@ -48,8 +48,8 @@ void RigidBody::applyVelocityDamping() {
     // only apply damping if there have been recent collisions,
     // no air resistance when flying freely
 	if (collisionHistory.average() > 0.0f) {
-		linearVelocity *= 0.99f;
-		angularVelocity *= 0.98f;
+		linearVelocity *= std::pow(0.85f, dt);
+		angularVelocity *= std::pow(0.15f, dt);
     }
 }
 
@@ -126,6 +126,19 @@ void RigidBody::pushBiasImpulseAngular(const glm::vec3& j) {
     biasAngularVelocity += j * invInertiaWorld;
 }
 void RigidBody::commitBiasImpulses(Transform& t, float dt) {
+	constexpr float maxBiasLinearSpeed = 2.0f;
+	constexpr float maxBiasAngularSpeed = 0.5f;
+
+	float linLen = glm::length(biasLinearVelocity);
+	if (linLen > maxBiasLinearSpeed) {
+		biasLinearVelocity *= maxBiasLinearSpeed / linLen;
+	}
+
+	float angLen = glm::length(biasAngularVelocity);
+	if (angLen > maxBiasAngularSpeed) {
+		biasAngularVelocity *= maxBiasAngularSpeed / angLen;
+	}
+
 	t.position += biasLinearVelocity * dt;
 	updateOrientation(t.orientation, biasAngularVelocity, dt);
 

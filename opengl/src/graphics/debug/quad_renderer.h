@@ -1,8 +1,7 @@
 // QuadRenderer.h
 #pragma once
 #include <glad/glad.h>
-#include <glm/glm.hpp>
-#include "camera.h"
+#include "engine/camera.h"
 
 class Shader; // forward-deklaration
 

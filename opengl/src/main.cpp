@@ -1,10 +1,15 @@
 ﻿#include "pch.h"
 
-#include "init_opengl.h"
-#include "timer.h"
-#include "engine_state.h"
-#include "input_manager.h"
-#include "camera.h"
+#include "engine/opengl_init.h"
+#include "engine/engine_state.h"
+#include "engine/input_manager.h"
+#include "engine/camera.h"
+#include "engine/imgui_manager.h"
+
+#include "core/timer.h"
+
+#include "imgui.h"
+
 #include "physics.h"
 #include "scene_builder.h"
 #include "renderer/renderer.h"
@@ -12,7 +17,6 @@
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
 #include "skybox/skybox_manager.h"
-#include "imgui_manager.h"
 #include "lighting/light_manager.h"
 #include "lighting/shadow_manager.h"
 #include "editor/editor_main.h"
@@ -45,7 +49,7 @@ float accumulator = 0.0f;
 
 int main() {
 	// initialize and configure OpenGL
-	GLFWwindow* window = initOpenGL(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+	GLFWwindow* window = OpenGL_init(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
 	// GPU logging
 	static constexpr int NQ = 4;          // ringbuffer (4–8 är lagom)

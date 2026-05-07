@@ -1,12 +1,8 @@
-#include "pch.h"
 #include "settings_panel.h"
 #include "editor/panel.h"
 #include "imgui.h"
-#include "imgui_manager.h"
-#include "time.h"
-#include "core/engine_state.h"
+#include "engine/engine_state.h"
 #include "scene_builder.h"
-#include "world.h"
 #include "skybox/skybox_manager.h"
 
 void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)

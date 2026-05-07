@@ -1,12 +1,14 @@
 #pragma once
 
+#include "engine/engine_state.h"
+#include "engine/camera.h"
+
 #include "shaders/shader.h"
-#include "camera.h"
+#include "shaders/shader_manager.h"
+
 #include "game_object.h"
 #include "physics.h"
-#include "engine_state.h"
 #include "lighting/light_manager.h"
-#include "shaders/shader_manager.h"
 #include "lighting/shadow_manager.h"
 #include "skybox/skybox_manager.h"
 #include "debug/quad_renderer.h"

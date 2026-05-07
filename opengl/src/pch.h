@@ -26,7 +26,7 @@
 #include <glm/gtx/io.hpp>
 
 #include "shaders/shader.h"
-#include "camera.h"
+#include "engine/camera.h"
 
 #include <atomic>
 
