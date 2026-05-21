@@ -45,11 +45,13 @@ void RigidBody::applyVelocityDamping(float dt) {
 		asleep)
 		return;
 
+    constexpr float epsilon = 0.01f;
+
     // only apply damping if there have been recent collisions,
     // no air resistance when flying freely
-	if (collisionHistory.average() > 0.0f) {
-		linearVelocity *= std::pow(0.85f, dt);
-		angularVelocity *= std::pow(0.15f, dt);
+	if (collisionHistory.average() > epsilon) {
+        linearVelocity *= std::pow(0.85f, dt);
+        angularVelocity *= std::pow(0.15f, dt);
     }
 }
 

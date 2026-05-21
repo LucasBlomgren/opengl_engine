@@ -62,6 +62,7 @@ public:
 
 private:
     float dt;
+    uint32_t currentFrame = 0;
     PhysicsWorld physicsWorld;
     World* world = nullptr;
 

@@ -3,6 +3,7 @@
 #include "rigid_body.h"
 #include "tri.h"
 #include "bvh/treetree_query.h"
+#include "bvh/sametree_query.h"
 
 //=======================================
 //    Init & Clear
@@ -100,7 +101,8 @@ void BroadphaseManager::computePairs() {
     // ----- dynamic vs dynamic -----
     if (awakeBvh.rootIdx != -1) {
         pairsBufDynamic.clear();
-        treeVsTreeQuery(awakeBvh, awakeBvh, pairsBufDynamic);
+        //treeVsTreeQuery(awakeBvh, awakeBvh, pairsBufDynamic);
+        treeVsSameTreeQuery(awakeBvh, pairsBufDynamic);
 
         int cap = static_cast<int>(pairsBufDynamic.size());
         dynamicPairs.resize(cap);

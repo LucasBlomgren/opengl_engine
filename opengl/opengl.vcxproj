@@ -318,6 +318,7 @@
     <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
+    <ClInclude Include="src\physics\bvh\sametree_query.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_pairs.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />

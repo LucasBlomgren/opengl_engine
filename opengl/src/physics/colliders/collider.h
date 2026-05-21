@@ -15,7 +15,6 @@ enum class ColliderType {
     SPHERE,
 };
 
-// #TODO: decide what is private/public in Collider
 struct Collider {
     int id = -1;
     ColliderType type = ColliderType::CUBOID;

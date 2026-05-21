@@ -248,6 +248,9 @@ void Renderer::render(
         computeSceneBounds(builder);
     }
 
+    // #TODO: optimize by only updating batches that changed
+    // only awake dynamic objects should need batch updates, static and asleep objects won't move and thus their batch instance data won't need updating
+
     fillBatchInstances();
     debugRenderer.prepareFrame(physics, world->getGameObjectsMap().dense(), *world, editor->selectedObjectHandle, editor->selectedSubPartIndex);
 
@@ -355,6 +358,9 @@ void Renderer::renderGameObjectsShadow() {
             shader = shadowShader->instancedVariant;
             shader->use();
 
+            // #TODO: instanceVBO should live in RenderBatch, otherwise all batches that share mesh.
+            // If BatchA uploads awake data and BatchB is non-dirty and doesn't upload asleep data, BatchB will still use the awake instance data uploaded by BatchA, 
+            // causing asleep objects to render in the wrong position until BatchB uploads its own asleep data and overwrites the awake data.
             glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
             glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
             glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());

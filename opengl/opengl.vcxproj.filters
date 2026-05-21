@@ -172,6 +172,7 @@
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
     <ClInclude Include="src\ecs\ECSWorld.h" />
+    <ClInclude Include="src\physics\bvh\sametree_query.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

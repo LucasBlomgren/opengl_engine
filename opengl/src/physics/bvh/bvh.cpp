@@ -143,7 +143,7 @@ int BVHTree::findBestSibling(AABB& box)
         Node* A = &nodes[n->childAIdx];
         Node* B = &nodes[n->childBIdx];
 
-        // ökning i area om vi lägger box under respektive barn
+        // increase in area if we put the box under each child respectively
         float mergedSurfaceA = box.getMergedSurfaceArea(A->fatBox, box);
         float mergedSurfaceB = box.getMergedSurfaceArea(B->fatBox, box);
 

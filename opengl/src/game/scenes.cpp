@@ -22,35 +22,158 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
 void SceneBuilder::emptyFloorScene() {
     glm::vec3 offset = { 0.0f, 0.0f, 0.0f };
     glm::vec3 cellSize = { 50, 1, 50 };
-    createGridFloor(offset, cellSize, 2, 2);
+    createGridFloor(offset, cellSize, 10, 10);
 
-    // single stack of boxes and a single box with velocity
-    {
-        for (int i = 0; i < 2; i++)   // x
-        for (int j = 0; j < 5; j++)   // y
-        for (int k = 0; k < 2; k++) { // z
-            GameObjectDesc box;
-            box.name = "Box";
-            box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.5f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
-            box.allowSleep = true;
-            box.sleepCounterThreshold = 2.5f;
-            box.mass = 1.0f;
+    //// single stack of boxes and a single box with velocity
+    //{
+    //    for (int i = 0; i < 5; i++)   // x
+    //    for (int j = 0; j < 10; j++)   // y
+    //    for (int k = 0; k < 5; k++) { // z
+    //        GameObjectDesc box;
+    //        box.name = "Box";
+    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.5f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
+    //        box.allowSleep = true;
+    //        box.sleepCounterThreshold = 2.5f;
+    //        box.mass = 1.0f;
 
-            SubPartDesc part;
-            part.name = "MainPart";
-            part.textureName = "crate";
-            part.localTransformHandle = world.createTransform();
+    //        SubPartDesc part;
+    //        part.name = "MainPart";
+    //        part.textureName = "crate";
+    //        part.localTransformHandle = world.createTransform();
 
-            box.parts.push_back(part);
+    //        box.parts.push_back(part);
 
-            world.createGameObject(box);
-        }
-    }
+    //        world.createGameObject(box);
+    //    }
+    //}
+
+    //// create chairs in a grid pattern
+    //for (int i = 0; i < 10; i++)
+    //    for (int j = 0; j < 15; j++)
+    //        for (int k = 0; k < 10; k++)
+    //        {
+    //            GameObjectDesc chair;
+    //            chair.name = "Chair";
+    //            glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
+    //            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //            glm::vec3 scale{ 2.0f };
+    //            chair.rootTransformHandle = world.createTransform(position, orientation, scale);
+    //            chair.bodyType = BodyType::Dynamic;
+    //            chair.mass = 2.0f;
+
+    //            glm::vec3 color = glm::vec3(
+    //                static_cast<float>(rand()) / RAND_MAX,
+    //                static_cast<float>(rand()) / RAND_MAX,
+    //                static_cast<float>(rand()) / RAND_MAX
+    //            );
+
+    //            // seat
+    //            SubPartDesc seat;
+    //            seat.name = "Seat";
+    //            glm::vec3 positionSeat = { 0,0,0 };
+    //            glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //            glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
+    //            seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
+    //            seat.meshName = "cube";
+    //            seat.textureName = "crate";
+    //            seat.shaderName = "default";
+    //            seat.color = color;
+    //            seat.colliderType = ColliderType::CUBOID;
+    //            chair.parts.push_back(seat);
+
+    //            // backrest
+    //            SubPartDesc backrest;
+    //            backrest.name = "Backrest";
+    //            glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
+    //            glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //            glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
+    //            backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+    //            backrest.meshName = "cube";
+    //            backrest.textureName = "crate";
+    //            backrest.shaderName = "default";
+    //            backrest.color = color;
+    //            backrest.colliderType = ColliderType::CUBOID;
+    //            chair.parts.push_back(backrest);
+
+    //            // legs
+    //            std::array<glm::vec3, 4> legPositions{
+    //                glm::vec3(-0.4f, -0.6f, -0.4f),
+    //                glm::vec3(0.4f, -0.6f, -0.4f),
+    //                glm::vec3(-0.4f, -0.6f, 0.4f),
+    //                glm::vec3(0.4f, -0.6f, 0.4f)
+    //            };
+    //            for (int i = 0; i < 4; i++) {
+    //                SubPartDesc leg;
+    //                leg.name = "Leg" + std::to_string(i);
+    //                glm::vec3 positionLeg = legPositions[i];
+    //                glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //                glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
+    //                leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
+    //                leg.meshName = "cube";
+    //                leg.textureName = "crate";
+    //                leg.shaderName = "default";
+    //                leg.color = color;
+    //                leg.colliderType = ColliderType::CUBOID;
+    //                chair.parts.push_back(leg);
+    //            }
+
+    //            GameObjectHandle h = world.createGameObject(chair);
+    //        }
+
+
+    //// create objects in a grid pattern
+    //for (int i = 0; i < 10; i++)
+    //    for (int j = 0; j < 7; j++)
+    //        for (int k = 0; k < 10; k++)
+    //        {
+    //            GameObjectDesc object;
+    //            object.name = "Object";
+    //            glm::vec3 position = { i * 10.0f, 25 + j * 15.0f, k * 10.0f };
+    //            glm::quat orientation = glm::angleAxis(glm::radians(240.0f), glm::vec3(1.0, 0.0, 0.0));
+    //            glm::vec3 scale{ 2.0f };
+    //            object.rootTransformHandle = world.createTransform(position, orientation, scale);
+    //            object.bodyType = BodyType::Dynamic;
+    //            object.mass = 2.0f;
+
+    //            glm::vec3 color = glm::vec3(
+    //                static_cast<float>(rand()) / RAND_MAX,
+    //                static_cast<float>(rand()) / RAND_MAX,
+    //                static_cast<float>(rand()) / RAND_MAX
+    //            );
+
+    //            SubPartDesc part1;
+    //            part1.name = "part1";
+    //            glm::vec3 positionPart1 = { 0,0,0 };
+    //            glm::quat orientationPart1 = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
+    //            glm::vec3 scalePart1{ 1.0f, 5.0f, 1.0f };
+    //            part1.localTransformHandle = world.createTransform(positionPart1, orientationPart1, scalePart1);
+    //            part1.meshName = "cube";
+    //            part1.textureName = "crate";
+    //            part1.shaderName = "default";
+    //            part1.color = color;
+    //            part1.colliderType = ColliderType::CUBOID;
+    //            object.parts.push_back(part1);
+
+    //            SubPartDesc part2;
+    //            part2.name = "part2";
+    //            glm::vec3 positionPart2 = { 0.0f, 3.0f, 3.0f };
+    //            glm::quat orientationPart2 = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+    //            glm::vec3 scalePart2{ 1.0f, 5.0f, 1.0f };
+    //            part2.localTransformHandle = world.createTransform(positionPart2, orientationPart2, scalePart2);
+    //            part2.meshName = "cube";
+    //            part2.textureName = "crate";
+    //            part2.shaderName = "default";
+    //            part2.color = color;
+    //            part2.colliderType = ColliderType::CUBOID;
+    //            object.parts.push_back(part2);
+
+    //            GameObjectHandle h = world.createGameObject(object);
+    //        }
 
     //// 2D pyramid of boxes
     //{
-    //    for (int col = 0; col < 50; col++) {
-    //        for (int row = 50; row - col > 0; row--) {
+    //    for (int col = 0; col < 10; col++) {
+    //        for (int row = 10; row - col > 0; row--) {
 
     //            float x = 54.5f;
     //            float y = 1 + col;
@@ -73,12 +196,64 @@ void SceneBuilder::emptyFloorScene() {
     //        }
     //    }
     //}
+
+    //// 2D pyramid of boxes
+    //{
+    //    for (int i = 0; i < 30; i++)
+    //    for (int col = 0; col < 20; col++) {
+    //        for (int row = 20; row - col > 0; row--) {
+
+    //            float x = 54.5f + i * 10.0f;
+    //            float y = 1 + col;
+    //            float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+    //            GameObjectDesc box;
+    //            box.name = "Box";
+    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+    //            box.mass = 1.0f;
+    //            box.asleep = true;
+
+    //            SubPartDesc part;
+    //            part.name = "MainPart";
+    //            part.localTransformHandle = world.createTransform();
+    //            part.textureName = "plain";
+    //            part.color = randomColor / 255.0f;
+    //            box.parts.push_back(part);
+
+    //            world.createGameObject(box);
+    //        }
+    //    }
+    //}
+
+    //GameObjectDesc sphere;
+    //sphere.name = "Sphere";
+    //sphere.rootTransformHandle = world.createTransform(glm::vec3(32, 5.0, 10.5), glm::quat(), glm::vec3(5.0f));
+    //sphere.mass = 10000.0f;
+    //SubPartDesc part;
+    //part.localTransformHandle = world.createTransform();
+    //part.textureName = "uvmap";
+    //part.meshName = "sphere";
+    //part.colliderType = ColliderType::SPHERE;
+    //sphere.parts.push_back(part);
+
+    //GameObjectHandle h = world.createGameObject (sphere);
+    //RigidBody* rb = world.getRigidBody(h);
+    ////rb->linearVelocity = glm::vec3(150.0f, 0.0f, 0.0f);
+
+
+    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+
+
+    //for (int i = 0; i < 1; i++)
+    //for (int j = 0; j < 1; j++)
+    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 22, 30, 1.0, 1.0, 1.0, 0.0, 1, true);
 }
 
 void SceneBuilder::testFloorScene() {
     glm::vec3 offset = { -50, -110, -50 };
     glm::vec3 cellSize = { 50, 1, 50 };
-    createGridFloor(offset, cellSize, 10, 10);
+    //createGridFloor(offset, cellSize, 10, 10);
 
 
     //{
@@ -148,9 +323,9 @@ void SceneBuilder::testFloorScene() {
 
        
     // create chairs in a grid pattern
-    for (int i = 0; i < 35; i++) 
-    for (int j = 0; j < 1; j++)
-    for (int k = 0; k < 35; k++)
+    for (int i = 0; i < 12; i++) 
+    for (int j = 0; j < 7; j++)
+    for (int k = 0; k < 12; k++)
     {
         GameObjectDesc chair;
         chair.name = "Chair";
@@ -221,18 +396,20 @@ void SceneBuilder::testFloorScene() {
     }
 
 
-    // cube of cubes
-    //for (int i = 0; i < 10; i++)
-    //for (int j = 0; j < 7; j++)
-    //for (int k = 0; k < 10; k++)
+    //// cube of cubes
+    //for (int i = 0; i < 100; i++)
+    //for (int j = 0; j < 100; j++)
+    //for (int k = 0; k < 100; k++)
     //{
     //    GameObjectDesc cube;
-    //    glm::vec3 position = { i * 2.0f, 25 + j * 2.0f, k * 2.0f };
+    //    //glm::vec3 position = { i * 2.0f, 25 + j * 2.0f, k * 2.0f };
+    //    glm::vec3 position = { i * 10.0f, j * 10.0f, k * 10.0f };
     //    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
     //    glm::vec3 scale{ 2.0f };
     //    cube.rootTransformHandle = world.createTransform(position, orientation, scale);
     //    cube.bodyType = BodyType::Dynamic;
     //    cube.mass = 2.0f;
+    //    cube.asleep = true;
 
     //    SubPartDesc cubePart;
     //    glm::vec3 positionPart = { 0,0,0 };
@@ -561,10 +738,10 @@ void SceneBuilder::tallStructureScene() {
     //    glm::vec3(67, 97, 167),
     //    glm::vec3(244, 244, 107)
     //};
-    for (int g = 1; g < 6; g++) {
-        for (int h = 1; h < 6; h++) {
+    for (int g = 1; g < 12; g++) {
+        for (int h = 1; h < 12; h++) {
+            for (int i = 0; i < 10; i++) {
 
-            for (int i = 0; i < 17; i++) {
                 for (int j = 0; j < 2; j++) {
                     for (int k = 0; k < 2; k++)
                     {
@@ -578,7 +755,7 @@ void SceneBuilder::tallStructureScene() {
                         columnDesc.name = "column";
                         columnDesc.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), glm::vec3(1, 10, 1));
                         columnDesc.mass = 10;
-                        columnDesc.asleep = false;
+                        columnDesc.asleep = true;
                         SubPartDesc columnPart;
                         columnPart.name = "columnPart";
                         columnPart.localTransformHandle = world.createTransform();
@@ -600,7 +777,7 @@ void SceneBuilder::tallStructureScene() {
                 floorDesc.name = "floor";
                 floorDesc.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), glm::vec3(6, 1, 6));
                 floorDesc.mass = 10;
-                floorDesc.asleep = false;
+                floorDesc.asleep = true;
                 SubPartDesc floorPart;
                 floorPart.name = "floorPart";
                 floorPart.localTransformHandle = world.createTransform();

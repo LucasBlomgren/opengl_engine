@@ -208,6 +208,9 @@ void PhysicsEngine::prepareStepLoop() {
 //====================================
 void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
     ScopedTimer t(*frameTimers, "Physics");
+
+    currentFrame++;
+
     // Pre-step preparations
     {
         ScopedTimer t(*frameTimers, "Pre step");
@@ -354,23 +357,10 @@ void PhysicsEngine::collectActiveContacts() {
         }
     }
 
-    // Sort contacts by minimum Y coordinate of contact points to improve solving stability
-    auto minY = [](const Contact* c) {
-        const auto& pts = c->points;
-        if (pts.empty()) return std::numeric_limits<float>::infinity();
-        const auto it = std::min_element(pts.begin(), pts.end(),
-            [](const ContactPoint& p1, const ContactPoint& p2) {
-                return p1.worldPos.y < p2.worldPos.y;
-            });
-        return it->worldPos.y;
-        };
-
     std::sort(contactsToSolve.begin(), contactsToSolve.end(),
-        [&](const Contact* a, const Contact* b) {
-            float ay = minY(a), by = minY(b);
-            if (ay < by) return true;
-            if (by < ay) return false;
-            // tie-breaker for determinism:
+        [](const Contact* a, const Contact* b) {
+            if (a->minY < b->minY) return true;
+            if (b->minY < a->minY) return false;
             return a->hashKey < b->hashKey;
         });
 
@@ -392,7 +382,7 @@ void PhysicsEngine::resolveCollisions() {
 
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
-    constexpr float twistFriction = 0.0f;
+    constexpr float twistFriction = 0.1f;
 
     constexpr float defaultSlop = 0.0005f;
     constexpr float noResponseSlop = 0.0005f;
@@ -560,49 +550,48 @@ void PhysicsEngine::resolveCollisions() {
 
 
                 // ----- Bias impulse (Baumgarte) -----
-                glm::vec3 relVelA_bias{ 0.0f };
-                glm::vec3 relVelB_bias{ 0.0f };
-                glm::vec3 angVelA_bias{ 0.0f };
-                glm::vec3 angVelB_bias{ 0.0f };
+                if (cp.biasVelocity != 0.0f || cp.accumulatedBiasImpulse > 0.0f) {
+                    glm::vec3 relVelA_bias{ 0.0f };
+                    glm::vec3 relVelB_bias{ 0.0f };
+                    glm::vec3 angVelA_bias{ 0.0f };
+                    glm::vec3 angVelB_bias{ 0.0f };
 
-                if (contact->contributesMotionA) {
-                    relVelA_bias = bodyA->biasLinearVelocity;
-                    angVelA_bias = bodyA->biasAngularVelocity;
+                    if (contact->contributesMotionA) {
+                        relVelA_bias = bodyA->biasLinearVelocity;
+                        angVelA_bias = bodyA->biasAngularVelocity;
+                    }
+                    if (contact->contributesMotionB) {
+                        relVelB_bias = bodyB->biasLinearVelocity;
+                        angVelB_bias = bodyB->biasAngularVelocity;
+                    }
+
+                    glm::vec3 relativeBiasVelocity =
+                        (relVelB_bias + glm::cross(angVelB_bias, cp.rB)) -
+                        (relVelA_bias + glm::cross(angVelA_bias, cp.rA));
+
+                    float normalBiasVelocity = glm::dot(relativeBiasVelocity, contact->normal);
+
+                    float Jb = -(normalBiasVelocity + cp.biasVelocity) * cp.m_eff;
+
+                    float oldB = cp.accumulatedBiasImpulse;
+                    cp.accumulatedBiasImpulse = glm::max(oldB + Jb, 0.0f);
+
+                    float deltaB = cp.accumulatedBiasImpulse - oldB;
+                    glm::vec3 impulseB = deltaB * contact->normal;
+
+                    if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
+                        bodyA->pushBiasImpulseLinear(-impulseB);
+                        glm::vec3 angularBiasA = -glm::cross(cp.rA, impulseB);
+                        bodyA->pushBiasImpulseAngular(angularBiasScale * angularBiasA);
+                    }
+                    if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
+                        bodyB->pushBiasImpulseLinear(impulseB);
+                        glm::vec3 angularBiasB = glm::cross(cp.rB, impulseB);
+                        bodyB->pushBiasImpulseAngular(angularBiasScale * angularBiasB);
+                    }
+
+                    maxDelta = std::max(maxDelta, std::abs(deltaB));
                 }
-                if (contact->contributesMotionB) {
-                    relVelB_bias = bodyB->biasLinearVelocity;
-                    angVelB_bias = bodyB->biasAngularVelocity;
-                }
-
-                glm::vec3 relativeBiasVelocity =
-                    (relVelB_bias + glm::cross(angVelB_bias, cp.rB)) -
-                    (relVelA_bias + glm::cross(angVelA_bias, cp.rA));
-
-                float normalBiasVelocity = glm::dot(relativeBiasVelocity, contact->normal);
-
-                float Jb = -(normalBiasVelocity + cp.biasVelocity) * cp.m_eff;
-
-                float oldB = cp.accumulatedBiasImpulse;
-                cp.accumulatedBiasImpulse = glm::max(oldB + Jb, 0.0f);
-
-                float deltaB = cp.accumulatedBiasImpulse - oldB;
-                glm::vec3 impulseB = deltaB * contact->normal;
-
-                if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                    bodyA->pushBiasImpulseLinear(-impulseB);
-
-                    glm::vec3 angularBiasA = -glm::cross(cp.rA, impulseB);
-                    bodyA->pushBiasImpulseAngular(angularBiasScale * angularBiasA);
-                }
-
-                if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                    bodyB->pushBiasImpulseLinear(impulseB);
-
-                    glm::vec3 angularBiasB = glm::cross(cp.rB, impulseB);
-                    bodyB->pushBiasImpulseAngular(angularBiasScale * angularBiasB);
-                }
-
-                maxDelta = std::max(maxDelta, std::abs(deltaB));
 
                 // ----- Friction -----
                 constexpr float recomputeThreshold = 1e-4f;
@@ -745,8 +734,6 @@ void PhysicsEngine::resolveCollisions() {
     }
 
     // commit bias impulses so they affect velocity in the next frame's collision detection and solving, which improves stability especially for stacked objects
-    std::unordered_set<uint32_t> committed;
-
     for (Contact* contact : contactsToSolve) {
         RigidBody* bodies[2] = {
             contact->runtimeData.bodyA,
@@ -756,10 +743,9 @@ void PhysicsEngine::resolveCollisions() {
         for (RigidBody* body : bodies) {
             if (!body) continue;
             if (body->type == BodyType::Static) continue;
+            if (body->lastBiasCommitFrame == currentFrame) continue;
 
-            uint32_t slot = body->gameObjectHandle.slot;
-            if (!committed.insert(slot).second)
-                continue;
+            body->lastBiasCommitFrame = currentFrame;
 
             Transform& t = *caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
             body->commitBiasImpulses(t, dt);

@@ -646,6 +646,9 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     // 3. cache-matchning var osäker
     // Ordningen av kontaktpunkter ska vara stabil mellan frames för att undvika jitter.
 
+    for (const ContactPoint& cp : contact.points) {
+        contact.minY = std::min(contact.minY, cp.worldPos.y);
+    }
 
     auto it = contactCache.find(contact.hashKey);
 

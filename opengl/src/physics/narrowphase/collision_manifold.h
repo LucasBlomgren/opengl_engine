@@ -57,11 +57,9 @@ struct ContactRuntime {
 struct Contact {
     size_t hashKey = -1; // generated from collider IDs, used for caching
 
-    // contact points for this contact, can be up to 4 for box-box and box-mesh collisions, otherwise usually 1
-    std::vector<ContactPoint> points;
-
-    // contact normal, precomputed from SAT result for warm starting and impulse solving
-    glm::vec3 normal{ 0.0f };
+    float minY = std::numeric_limits<float>::infinity(); // for solver sorting by minY of contact points to improve stability of resting contacts, updated during contact point generation
+    glm::vec3 normal{ 0.0f };           // contact normal, precomputed from SAT result for warm starting and impulse solving
+    std::vector<ContactPoint> points;   // contact points for this contact, can be up to 4 for box-box and box-mesh collisions, otherwise usually 1
 
     // tangential basis vectors, precomputed from the contact normal for warm starting and impulse solving
     glm::vec3 t1{ 0.0f };

@@ -42,6 +42,7 @@ public:
     AABB aabb; // if compound, this is the AABB of the whole body, otherwise AABB of the single collider.
 
     // physics properties
+    uint32_t lastBiasCommitFrame = 0;
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
     glm::vec3 biasLinearVelocity{ 0.0f };

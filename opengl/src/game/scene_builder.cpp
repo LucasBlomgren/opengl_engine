@@ -356,6 +356,19 @@ void SceneBuilder::createBlockPyramid(
                 }
 
                 //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
+                GameObjectDesc cube;
+                cube.name = "cube";
+                cube.rootTransformHandle = world.createTransform(glm::vec3(xPos, yPos, zPos), glm::quat(1, 0, 0, 0), glm::vec3(sWidth, sHeight, sLength));
+                cube.mass = sWeight;
+                cube.asleep = asleep;
+
+                SubPartDesc part;
+                part.localTransformHandle = world.createTransform();
+                part.textureName = "plain";
+                part.color = color / 255.0f;
+
+                cube.parts.push_back(part);
+                world.createGameObject(cube);
             }
         }
         pWidthCounter -= 1;

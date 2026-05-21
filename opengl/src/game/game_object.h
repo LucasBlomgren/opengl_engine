@@ -21,7 +21,6 @@ struct SubPart {
     int batchInstanceIdx = -1;
 };
 
-// #TODO: decide what is private/public
 class GameObject {
 public:
     int id;
