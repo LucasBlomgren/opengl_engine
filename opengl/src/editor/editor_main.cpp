@@ -212,7 +212,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 SubPartDesc part;
                 part.localTransformHandle = world->createTransform();
                 part.colliderType = ColliderType::SPHERE;
-                part.textureName = "uvmap";
+                part.textureName = "checker";
                 part.meshName = "sphere";
                 newObj.parts.push_back(part);
 

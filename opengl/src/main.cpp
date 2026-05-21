@@ -115,6 +115,8 @@ int main() {
 	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
 	textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
+	textureManager.loadTexture("checker", "src/assets/checker.png");
+
 	std::vector<std::string> skyBoxFaces {
 		std::string("src/assets/skyboxes/learnopengl/right.jpg"),
 		std::string("src/assets/skyboxes/learnopengl/left.jpg"),

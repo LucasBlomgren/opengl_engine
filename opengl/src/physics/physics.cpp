@@ -762,7 +762,7 @@ void PhysicsEngine::resolveCollisions() {
         }
     }
 
-    std::cout << "PGS iterations used: " << iterationsUsed << " out of " << iterations << "\n";
+    //std::cout << "PGS iterations used: " << iterationsUsed << " out of " << iterations << "\n";
 }
 
 //====================================

@@ -22,7 +22,7 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
 void SceneBuilder::emptyFloorScene() {
     glm::vec3 offset = { 0.0f, 0.0f, 0.0f };
     glm::vec3 cellSize = { 50, 1, 50 };
-    createGridFloor(offset, cellSize, 10, 10);
+    createGridFloor(offset, cellSize, 10, 8);
 
     //// single stack of boxes and a single box with velocity
     //{
@@ -205,7 +205,7 @@ void SceneBuilder::emptyFloorScene() {
 
                 float x = 54.5f + i * 10.0f;
                 float y = 1 + col;
-                float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+                float z = 150.0f + 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
                 glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
                 GameObjectDesc box;
@@ -217,7 +217,7 @@ void SceneBuilder::emptyFloorScene() {
                 SubPartDesc part;
                 part.name = "MainPart";
                 part.localTransformHandle = world.createTransform();
-                part.textureName = "plain";
+                part.textureName = "checker";
                 part.color = randomColor / 255.0f;
                 box.parts.push_back(part);
 
@@ -228,11 +228,11 @@ void SceneBuilder::emptyFloorScene() {
 
     GameObjectDesc sphere;
     sphere.name = "Sphere";
-    sphere.rootTransformHandle = world.createTransform(glm::vec3(32, 5.0, 10.5), glm::quat(), glm::vec3(5.0f));
+    sphere.rootTransformHandle = world.createTransform(glm::vec3(0, 5.5, 160.5), glm::quat(), glm::vec3(5.0f));
     sphere.mass = 10000.0f;
     SubPartDesc part;
     part.localTransformHandle = world.createTransform();
-    part.textureName = "uvmap";
+    part.textureName = "checker";
     part.meshName = "sphere";
     part.colliderType = ColliderType::SPHERE;
     sphere.parts.push_back(part);
@@ -240,6 +240,7 @@ void SceneBuilder::emptyFloorScene() {
     GameObjectHandle h = world.createGameObject (sphere);
     RigidBody* rb = world.getRigidBody(h);
     rb->linearVelocity = glm::vec3(150.0f, 0.0f, 0.0f);
+    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -15.0f);
 
 
     //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
