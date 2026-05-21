@@ -378,7 +378,10 @@ void PhysicsEngine::resolveCollisions() {
     // det påverkar också determinism 
 
     constexpr int iterations = 8;
-    constexpr float velocityEpsilon = 0.01f;
+    constexpr float velocityImpulseEps = 1e-2f;
+    constexpr float biasImpulseEps = 5e-2f;
+
+    constexpr float normalImpulseEps = 1e-6f;
 
     constexpr float staticFriction = 0.6f;
     constexpr float dynamicFriction = 0.4f;
@@ -478,7 +481,8 @@ void PhysicsEngine::resolveCollisions() {
     // ------ PGS solver ------
     int iterationsUsed = 0;
     for (int i = 0; i < iterations; i++) {
-        float maxDelta = 0.0f;
+        float maxVelocityDelta = 0.0f;
+        float maxBiasDelta = 0.0f;
 
         iterationsUsed++;
 
@@ -546,8 +550,8 @@ void PhysicsEngine::resolveCollisions() {
                     bodyB->applyImpulseLinear(deltaNormalImpulse);
                     bodyB->applyImpulseAngular(glm::cross(cp.rB, deltaNormalImpulse));
                 }
-                maxDelta = std::max(maxDelta, std::abs(deltaImpulse));
 
+                maxVelocityDelta = std::max(maxVelocityDelta, std::abs(deltaImpulse));
 
                 // ----- Bias impulse (Baumgarte) -----
                 if (cp.biasVelocity != 0.0f || cp.accumulatedBiasImpulse > 0.0f) {
@@ -590,93 +594,66 @@ void PhysicsEngine::resolveCollisions() {
                         bodyB->pushBiasImpulseAngular(angularBiasScale * angularBiasB);
                     }
 
-                    maxDelta = std::max(maxDelta, std::abs(deltaB));
+                    maxBiasDelta = std::max(maxBiasDelta, std::abs(deltaB));
                 }
 
                 // ----- Friction -----
-                constexpr float recomputeThreshold = 1e-4f;
+                if (cp.accumulatedNormalImpulse > normalImpulseEps) {
+                    constexpr float recomputeThreshold = 1e-4f;
 
-                float v_t1, v_t2;
+                    float v_t1, v_t2;
 
-                if (std::abs(deltaImpulse) > recomputeThreshold) {
-                    // Recompute relative velocity after normal impulse
-                    glm::vec3 relVelA2{ 0.0f };
-                    glm::vec3 relVelB2{ 0.0f };
-                    glm::vec3 angVelA2{ 0.0f };
-                    glm::vec3 angVelB2{ 0.0f };
+                    if (std::abs(deltaImpulse) > recomputeThreshold) {
+                        // Recompute relative velocity after normal impulse
+                        glm::vec3 relVelA2{ 0.0f };
+                        glm::vec3 relVelB2{ 0.0f };
+                        glm::vec3 angVelA2{ 0.0f };
+                        glm::vec3 angVelB2{ 0.0f };
 
-                    if (contact->contributesMotionA) {
-                        relVelA2 = bodyA->linearVelocity;
-                        angVelA2 = bodyA->angularVelocity;
+                        if (contact->contributesMotionA) {
+                            relVelA2 = bodyA->linearVelocity;
+                            angVelA2 = bodyA->angularVelocity;
+                        }
+                        if (contact->contributesMotionB) {
+                            relVelB2 = bodyB->linearVelocity;
+                            angVelB2 = bodyB->angularVelocity;
+                        }
+
+                        glm::vec3 relativeVelocity2 =
+                            (relVelB2 + glm::cross(angVelB2, cp.rB)) -
+                            (relVelA2 + glm::cross(angVelA2, cp.rA));
+
+                        v_t1 = glm::dot(relativeVelocity2, contact->t1);
+                        v_t2 = glm::dot(relativeVelocity2, contact->t2);
                     }
-                    if (contact->contributesMotionB) {
-                        relVelB2 = bodyB->linearVelocity;
-                        angVelB2 = bodyB->angularVelocity;
+                    else {
+                        // Reuse tangential velocity from old relative velocity
+                        v_t1 = glm::dot(relativeVelocity, contact->t1);
+                        v_t2 = glm::dot(relativeVelocity, contact->t2);
                     }
 
-                    glm::vec3 relativeVelocity2 =
-                        (relVelB2 + glm::cross(angVelB2, cp.rB)) -
-                        (relVelA2 + glm::cross(angVelA2, cp.rA));
+                    // Desired friction delta
+                    float dF1 = -v_t1 * cp.invMassT1;
+                    float dF2 = -v_t2 * cp.invMassT2;
 
-                    v_t1 = glm::dot(relativeVelocity2, contact->t1);
-                    v_t2 = glm::dot(relativeVelocity2, contact->t2);
-                }
-                else {
-                    // Reuse tangential velocity from old relative velocity
-                    v_t1 = glm::dot(relativeVelocity, contact->t1);
-                    v_t2 = glm::dot(relativeVelocity, contact->t2);
-                }
+                    // Candidate accumulated friction impulse
+                    float newF1 = cp.accumulatedFrictionImpulse1 + dF1;
+                    float newF2 = cp.accumulatedFrictionImpulse2 + dF2;
 
-                // Desired friction delta
-                float dF1 = -v_t1 * cp.invMassT1;
-                float dF2 = -v_t2 * cp.invMassT2;
+                    float Jn = std::abs(cp.accumulatedNormalImpulse);
+                    float maxStatic = staticFriction * Jn;
+                    float maxStatic2 = maxStatic * maxStatic;
 
-                // Candidate accumulated friction impulse
-                float newF1 = cp.accumulatedFrictionImpulse1 + dF1;
-                float newF2 = cp.accumulatedFrictionImpulse2 + dF2;
+                    float newLen2 = newF1 * newF1 + newF2 * newF2;
+                    float dT = 0.0f;
 
-                float Jn = std::abs(cp.accumulatedNormalImpulse);
-                float maxStatic = staticFriction * Jn;
-                float maxStatic2 = maxStatic * maxStatic;
+                    if (newLen2 <= maxStatic2) {
+                        // Static friction
+                        cp.accumulatedFrictionImpulse1 = newF1;
+                        cp.accumulatedFrictionImpulse2 = newF2;
 
-                float newLen2 = newF1 * newF1 + newF2 * newF2;
-                float dT = 0.0f;
-
-                if (newLen2 <= maxStatic2) {
-                    // Static friction
-                    cp.accumulatedFrictionImpulse1 = newF1;
-                    cp.accumulatedFrictionImpulse2 = newF2;
-
-                    glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
-                    dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
-
-                    if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
-                        bodyA->applyImpulseLinear(-dFt);
-                        bodyA->applyImpulseAngular(-glm::cross(cp.rA, dFt));
-                    }
-                    if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
-                        bodyB->applyImpulseLinear(dFt);
-                        bodyB->applyImpulseAngular(glm::cross(cp.rB, dFt));
-                    }
-                }
-                else {
-                    // Dynamic friction
-                    float maxDyn = dynamicFriction * Jn;
-                    float len = std::sqrt(newLen2);
-
-                    if (len > 1e-6f) {
-                        float s = maxDyn / len;
-                        float clampedF1 = newF1 * s;
-                        float clampedF2 = newF2 * s;
-
-                        float d1 = clampedF1 - cp.accumulatedFrictionImpulse1;
-                        float d2 = clampedF2 - cp.accumulatedFrictionImpulse2;
-
-                        cp.accumulatedFrictionImpulse1 = clampedF1;
-                        cp.accumulatedFrictionImpulse2 = clampedF2;
-
-                        glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
-                        dT = std::sqrt(d1 * d1 + d2 * d2);
+                        glm::vec3 dFt = dF1 * contact->t1 + dF2 * contact->t2;
+                        dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
 
                         if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
                             bodyA->applyImpulseLinear(-dFt);
@@ -687,9 +664,38 @@ void PhysicsEngine::resolveCollisions() {
                             bodyB->applyImpulseAngular(glm::cross(cp.rB, dFt));
                         }
                     }
-                }
+                    else {
+                        // Dynamic friction
+                        float maxDyn = dynamicFriction * Jn;
+                        float len = std::sqrt(newLen2);
 
-                maxDelta = std::max(maxDelta, std::abs(dT));
+                        if (len > 1e-6f) {
+                            float s = maxDyn / len;
+                            float clampedF1 = newF1 * s;
+                            float clampedF2 = newF2 * s;
+
+                            float d1 = clampedF1 - cp.accumulatedFrictionImpulse1;
+                            float d2 = clampedF2 - cp.accumulatedFrictionImpulse2;
+
+                            cp.accumulatedFrictionImpulse1 = clampedF1;
+                            cp.accumulatedFrictionImpulse2 = clampedF2;
+
+                            glm::vec3 dFt = d1 * contact->t1 + d2 * contact->t2;
+                            dT = std::sqrt(d1 * d1 + d2 * d2);
+
+                            if (contact->partnerTypeA == ContactPartnerType::RigidBody && !contact->noSolverResponseA) {
+                                bodyA->applyImpulseLinear(-dFt);
+                                bodyA->applyImpulseAngular(-glm::cross(cp.rA, dFt));
+                            }
+                            if (contact->partnerTypeB == ContactPartnerType::RigidBody && !contact->noSolverResponseB) {
+                                bodyB->applyImpulseLinear(dFt);
+                                bodyB->applyImpulseAngular(glm::cross(cp.rB, dFt));
+                            }
+                        }
+                    }
+
+                    maxVelocityDelta = std::max(maxVelocityDelta, std::abs(dT));
+                }
             }
 
             // ---------- Twist friction (per manifold) ----------
@@ -728,7 +734,9 @@ void PhysicsEngine::resolveCollisions() {
             }
         }
 
-        if (maxDelta < velocityEpsilon) {
+        if (maxVelocityDelta < velocityImpulseEps && 
+            maxBiasDelta < biasImpulseEps) 
+        {
             break;
         }
     }
@@ -753,6 +761,8 @@ void PhysicsEngine::resolveCollisions() {
             body->updateInertiaWorld(t);
         }
     }
+
+    std::cout << "PGS iterations used: " << iterationsUsed << " out of " << iterations << "\n";
 }
 
 //====================================

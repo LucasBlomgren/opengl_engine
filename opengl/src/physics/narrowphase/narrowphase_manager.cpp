@@ -30,7 +30,11 @@ void NarrowphaseManager::clear() {
 //=======================================================
 void NarrowphaseManager::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
     externalContacts.clear();
-    contactCache->reserve(contactCache->size() + dynamicHits.size());
+
+    size_t wanted = contactCache->size() + dynamicHits.size();
+    if (wanted > contactCache->bucket_count()) {
+        contactCache->reserve(wanted * 2);
+    }
 
     for (const TerrainPair& pair : terrainHits) processTerrainPair(pair);
     for (const DynamicPair& pair : dynamicHits) processDynamicPair(pair);

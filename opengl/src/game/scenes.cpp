@@ -197,52 +197,52 @@ void SceneBuilder::emptyFloorScene() {
     //    }
     //}
 
-    //// 2D pyramid of boxes
-    //{
-    //    for (int i = 0; i < 30; i++)
-    //    for (int col = 0; col < 20; col++) {
-    //        for (int row = 20; row - col > 0; row--) {
+    // 2D pyramid of boxes
+    {
+        for (int i = 0; i < 30; i++)
+        for (int col = 0; col < 20; col++) {
+            for (int row = 20; row - col > 0; row--) {
 
-    //            float x = 54.5f + i * 10.0f;
-    //            float y = 1 + col;
-    //            float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
-    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                float x = 54.5f + i * 10.0f;
+                float y = 1 + col;
+                float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+                glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
-    //            GameObjectDesc box;
-    //            box.name = "Box";
-    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
-    //            box.mass = 1.0f;
-    //            box.asleep = true;
+                GameObjectDesc box;
+                box.name = "Box";
+                box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+                box.mass = 1.0f;
+                box.asleep = true;
 
-    //            SubPartDesc part;
-    //            part.name = "MainPart";
-    //            part.localTransformHandle = world.createTransform();
-    //            part.textureName = "plain";
-    //            part.color = randomColor / 255.0f;
-    //            box.parts.push_back(part);
+                SubPartDesc part;
+                part.name = "MainPart";
+                part.localTransformHandle = world.createTransform();
+                part.textureName = "plain";
+                part.color = randomColor / 255.0f;
+                box.parts.push_back(part);
 
-    //            world.createGameObject(box);
-    //        }
-    //    }
-    //}
+                world.createGameObject(box);
+            }
+        }
+    }
 
-    //GameObjectDesc sphere;
-    //sphere.name = "Sphere";
-    //sphere.rootTransformHandle = world.createTransform(glm::vec3(32, 5.0, 10.5), glm::quat(), glm::vec3(5.0f));
-    //sphere.mass = 10000.0f;
-    //SubPartDesc part;
-    //part.localTransformHandle = world.createTransform();
-    //part.textureName = "uvmap";
-    //part.meshName = "sphere";
-    //part.colliderType = ColliderType::SPHERE;
-    //sphere.parts.push_back(part);
+    GameObjectDesc sphere;
+    sphere.name = "Sphere";
+    sphere.rootTransformHandle = world.createTransform(glm::vec3(32, 5.0, 10.5), glm::quat(), glm::vec3(5.0f));
+    sphere.mass = 10000.0f;
+    SubPartDesc part;
+    part.localTransformHandle = world.createTransform();
+    part.textureName = "uvmap";
+    part.meshName = "sphere";
+    part.colliderType = ColliderType::SPHERE;
+    sphere.parts.push_back(part);
 
-    //GameObjectHandle h = world.createGameObject (sphere);
-    //RigidBody* rb = world.getRigidBody(h);
-    ////rb->linearVelocity = glm::vec3(150.0f, 0.0f, 0.0f);
+    GameObjectHandle h = world.createGameObject (sphere);
+    RigidBody* rb = world.getRigidBody(h);
+    rb->linearVelocity = glm::vec3(150.0f, 0.0f, 0.0f);
 
 
-    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+    //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
 
 
     //for (int i = 0; i < 1; i++)
@@ -720,7 +720,6 @@ void SceneBuilder::tallStructureScene() {
     bigBoxDesc.rootTransformHandle = world.createTransform(glm::vec3(-10.0, 5.0, -10.0), glm::quat(1, 0, 0, 0), glm::vec3(7.2));
     bigBoxDesc.mass = 1000;
     SubPartDesc bigBoxPart;
-    bigBoxPart.name = "bigBoxPart";
     bigBoxPart.localTransformHandle = world.createTransform();
     bigBoxDesc.parts.push_back(bigBoxPart);
     GameObjectHandle bigBoxHandle = world.createGameObject(bigBoxDesc);
@@ -738,9 +737,9 @@ void SceneBuilder::tallStructureScene() {
     //    glm::vec3(67, 97, 167),
     //    glm::vec3(244, 244, 107)
     //};
-    for (int g = 1; g < 12; g++) {
-        for (int h = 1; h < 12; h++) {
-            for (int i = 0; i < 10; i++) {
+    for (int g = 1; g < 6; g++) {
+        for (int h = 1; h < 6; h++) {
+            for (int i = 0; i < 17; i++) {
 
                 for (int j = 0; j < 2; j++) {
                     for (int k = 0; k < 2; k++)
