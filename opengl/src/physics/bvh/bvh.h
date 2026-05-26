@@ -44,6 +44,7 @@ public:
     void build(std::vector<RigidBodyHandle>& objects);
     void update(std::vector<RigidBodyHandle>& objects);
     void singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const;
+    bool queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const;
 
     int insertLeaf(RigidBodyHandle handle);
     int findBestSibling(AABB& box);

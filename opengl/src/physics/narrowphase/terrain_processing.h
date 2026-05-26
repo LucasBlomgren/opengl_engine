@@ -1,8 +1,6 @@
 #pragma once
 #include "narrowphase_manager.h"
 
-#define FUNC_NAME __FUNCTION__
-
 //----------------------------------------------
 //     Tris vs Box
 //----------------------------------------------

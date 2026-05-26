@@ -2,6 +2,7 @@
 
 class EngineState {
 public:
+    void setSimulationSpeed(float speed) { simulationSpeed = speed; }
     void toggleShowWireframes();
     void setAdvanceStep(bool);
     void setPaused(bool);
@@ -17,6 +18,7 @@ public:
     void toggleShowBVH_static();
     void toggleShowBVH_terrain();
 
+    float getSimulationSpeed() const { return simulationSpeed; }
     bool getShowWireframes() const;
     bool isPaused() const;
     bool getAdvanceStep() const;
@@ -36,6 +38,7 @@ public:
     float deltaTime = 0.0f;
 
 private:
+    float simulationSpeed = 1.0f;
     bool showWireframes = false;
     bool playerMode = false;
     bool advanceStep = false;

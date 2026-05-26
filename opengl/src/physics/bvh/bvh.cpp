@@ -1,8 +1,6 @@
 ﻿#include "pch.h"
 #include "bvh.h"
 
-#define FUNC_NAME __FUNCTION__
-
 //------------------------------
 //    Init & Clear
 //------------------------------
@@ -54,6 +52,39 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
             if (qBox.intersects(n->tightBox)) out.push_back(n->element);
         }
     }
+}
+
+//------------------------------
+//        Query Any
+//------------------------------
+bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
+    if (nodes.empty()) return false;
+
+    constexpr int MaxDepth = 256;
+    const Node* stack[MaxDepth];
+    int sp = 0;
+    stack[sp++] = &nodes[rootIdx];
+
+    while (sp) {
+        const Node* n = stack[--sp];
+
+        if (!n->isLeaf) {
+            if (!qBox.intersects(n->fatBox)) continue;
+
+            if (n->childAIdx != -1) stack[sp++] = &nodes[n->childAIdx];
+            if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
+        }
+        else {
+            if (n->element == ignoreBody)
+                continue;
+
+            if (qBox.intersects(n->tightBox)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------

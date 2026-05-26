@@ -278,7 +278,6 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
     {
         // position
         glm::vec3& spawnPoint = pos;
-        // constexpr glm::vec3 spawnPoint = glm::vec3(25, 275, 25);
         float varianceRange = 20.0f;
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
@@ -289,7 +288,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
         // orientation
         float randomAng = randomRange(0, 360);
         glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
-        glm::quat orientation = glm::angleAxis(glm::radians(randomAng), randomAxis);
+        glm::quat orientation = glm::normalize(glm::angleAxis(glm::radians(randomAng), randomAxis));
 
         // blocks
         if (mode == 0) {
@@ -298,7 +297,18 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             zVariance = randomRange(2.0, 5.0);
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
-            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, spawnPos, size, mass, orientation, 2.0f, false, color, false);
+
+            GameObjectDesc cube;
+            cube.name = "cube";
+            cube.rootTransformHandle = world.createTransform(spawnPos, orientation, size);
+            cube.mass = mass;
+            SubPartDesc part;
+            part.localTransformHandle = world.createTransform();
+            part.meshName = "cube";
+            part.textureName = "checker_magenta";
+            part.color = color / 255.0f;
+            cube.parts.push_back(part);
+            world.createGameObject(cube);
         }
         // spheres
         else if (mode == 1) {
@@ -314,7 +324,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             part.localTransformHandle = world.createTransform();
             part.colliderType = ColliderType::SPHERE;
             part.meshName = "sphere";
-            part.textureName = "plain";
+            part.textureName = "checker_gray";
             part.color = color / 255.0f;
             sphere.parts.push_back(part);
             world.createGameObject(sphere);

@@ -2,7 +2,6 @@
 #include "physics.h"
 #include "aabb.h"
 #include "wake_sleep_utils.h" 
-#include <unordered_set>
 
 void PhysicsEngine::init(World* world, FrameTimers* ft) {
     this->world = world;
@@ -77,6 +76,7 @@ const DebugData PhysicsEngine::getDebugData() {
     debugData.colliders = physicsWorld.getCollidersMap().dense().size();
     debugData.terrainTris = terrainTriangles->size();
     debugData.contacts = contactCache.size();
+    debugData.currentSubstepAmount = currentSubstepAmount;
     return debugData;
 }
 
@@ -203,18 +203,154 @@ void PhysicsEngine::prepareStepLoop() {
     caches.clear();
 }
 
+//===================================
+//    Adaptive substeps
+//===================================
+int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
+    constexpr int maxSubsteps = 8;
+    constexpr int halfMaxSubsteps = maxSubsteps / 2;
+    constexpr float safeFraction = 0.25f;
+    constexpr float minSafeDistance = 0.02f;
+
+    int globalSubsteps = 1;
+
+    const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+
+    for (const RigidBodyHandle& handle : awakeHandles) {
+        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
+        Collider* mainCollider = caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+        if (!body) continue;
+        if (body->type != BodyType::Dynamic) continue;
+        if (body->asleep) continue;
+
+        Transform* rootTransform = 
+            caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
+
+        if (!rootTransform) continue;
+
+        // -----------------------------
+        // 1. Estimate object size
+        // -----------------------------
+        glm::vec3& scale = rootTransform->scale;
+        float minExtent = std::min(scale.x, std::min(scale.y, scale.z));
+        float boundingRadius = 0.5f * glm::length(scale);
+        float safeDistance = std::max(minExtent * safeFraction, minSafeDistance);
+
+        // -----------------------------
+        // 2. Estimate motion this frame
+        // -----------------------------
+        float linearMotion = glm::length(body->linearVelocity) * dt;
+        float angularMotion = glm::length(body->angularVelocity) * boundingRadius * dt;
+        float totalMotion = linearMotion + angularMotion;
+
+        // Not fast enough to matter.
+        if (totalMotion <= safeDistance)
+            continue;
+
+        int wantedSubsteps = static_cast<int>(std::ceil(totalMotion / safeDistance));
+        wantedSubsteps = std::clamp(wantedSubsteps, 1, maxSubsteps);
+
+        // If this body cannot increase the current global value, skip expensive query.
+        if (wantedSubsteps <= globalSubsteps)
+            continue;
+
+        // -----------------------------
+        // 3. Build swept AABB
+        // -----------------------------
+        AABB& currentAABB = body->aabb;
+
+        glm::vec3 delta = body->linearVelocity * dt;
+
+        AABB endAABB = currentAABB;
+        endAABB.worldMin += delta;
+        endAABB.worldMax += delta;
+
+        AABB sweptAABB;
+        sweptAABB.worldMin = glm::min(currentAABB.worldMin, endAABB.worldMin);
+        sweptAABB.worldMax = glm::max(currentAABB.worldMax, endAABB.worldMax);
+
+        // Optional expansion for rotation.
+        if (mainCollider->type != ColliderType::SPHERE || body->isCompound()) {
+            float angularExpansion = glm::length(body->angularVelocity) * boundingRadius * dt;
+            sweptAABB.worldMin -= glm::vec3(angularExpansion);
+            sweptAABB.worldMax += glm::vec3(angularExpansion);
+        }
+
+        // Optional small skin.
+        constexpr float sweptSkin = 0.01f;
+        sweptAABB.worldMin -= glm::vec3(sweptSkin);
+        sweptAABB.worldMax += glm::vec3(sweptSkin);
+
+        // -----------------------------
+        // 4. Check if swept AABB actually hits anything
+        // -----------------------------
+        bool hitAwake = broadphaseManager.getAwakeBVH().queryAny(sweptAABB, handle);
+
+        bool hitAsleep = false;
+        if (!hitAwake) {
+            hitAsleep = broadphaseManager.getAsleepBVH().queryAny(sweptAABB, handle);
+        }
+
+        bool hitStatic = false;
+        if (!hitAwake && !hitAsleep) {
+            hitStatic = broadphaseManager.getStaticBVH().queryAny(sweptAABB, handle);
+        }
+
+        if (!hitAwake && !hitAsleep && !hitStatic)
+            continue;
+
+        // Static-only hits are cheaper: no dynamic target needs to wake up or propagate impulses.
+        if (hitStatic) {
+            wantedSubsteps = std::min(wantedSubsteps, halfMaxSubsteps);
+        }
+
+        // This fast object actually risks collision this frame.
+        globalSubsteps = std::max(globalSubsteps, wantedSubsteps);
+
+        if (globalSubsteps == maxSubsteps)
+            break;
+    }
+
+    return globalSubsteps;
+}
+
 //====================================
-//         Time step
+//         Frame step
 //====================================
-void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
+void PhysicsEngine::step(float dt, EngineState& engine) {
     ScopedTimer t(*frameTimers, "Physics");
 
+    // add/remove objects to the BVH trees
+    flushBroadphaseCommands();
+
+    // determine substep amount based on motion of fast objects
+    float substeps = computeAdaptiveSubsteps(dt);
+    float h = dt / static_cast<float>(substeps);
+    currentSubstepAmount = substeps;
+
+    // perform substeps
+    for (int i = 0; i < substeps; ++i) {
+        stepDiscrete(h);
+
+        if (engine.getAdvanceStep()) {
+            break;
+        }
+    }
+
+    // Clear contact points that were not used this frame
+    updateContactCache();
+}
+
+//===================================
+//        Discrete substep
+//===================================
+void PhysicsEngine::stepDiscrete(float deltaTime) {
     currentFrame++;
+    dt = deltaTime;
 
     // Pre-step preparations
     {
         ScopedTimer t(*frameTimers, "Pre step");
-        this->dt = deltaTime;
 
         // prepare for this step: clear caches, reserve memory for toWake/toSleep lists, etc.
         uint32_t bodiesSlotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
@@ -225,9 +361,6 @@ void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
         toSleep.clear();
 
         //externalContacts.clear();
-
-        // add/remove objects to the BVH trees
-        flushBroadphaseCommands();
 
         // Reset contact points for the current step
         for (auto& [key, contact] : contactCache) {
@@ -259,8 +392,6 @@ void PhysicsEngine::step(float deltaTime, std::mt19937& rng) {
         updateSleepThresholds();
         // Decide which objects to put to sleep or wake up
         decideSleep();
-        // Clear contact points that were not used this frame
-        updateContactCache();
     }
 }
 
@@ -396,9 +527,6 @@ void PhysicsEngine::resolveCollisions() {
     constexpr float persistentSlop = 0.005f;
     constexpr float angularBiasScale = 0.2f;
 
-    // optional, but use high value first
-    constexpr float maxBiasVelocity = 2.0f;
-
     for (Contact* contact : contactsToSolve) {
         ContactRuntime& rt = contact->runtimeData;
         RigidBody* bodyA = rt.bodyA;
@@ -433,8 +561,6 @@ void PhysicsEngine::resolveCollisions() {
 
             if (allowed > 0.0f) {
                 float correctionSpeed = (contactBaumgarte * allowed) / dt;
-                correctionSpeed = glm::min(correctionSpeed, maxBiasVelocity);
-
                 cp.biasVelocity = -correctionSpeed;
             }
             else {
@@ -819,11 +945,8 @@ void PhysicsEngine::decideSleep() {
 
         Transform* transform = caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
 
-        bool goingToSleep = WakeSleep::updateSleepStateAndCheckIfShouldSleep(
-            *body,
-            *transform,
-            dt
-        );
+        bool goingToSleep = 
+            WakeSleep::updateSleepStateAndCheckIfShouldSleep(*body, *transform, dt);
 
         if (goingToSleep) {
             toSleep.push_back(handle);

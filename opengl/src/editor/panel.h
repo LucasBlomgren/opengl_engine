@@ -30,6 +30,7 @@ struct PanelContext {
 	size_t amountTerrainTris = 0;
 	size_t amountContacts = 0;
 	size_t amountColliders = 0;
+    size_t substepAmount = 0;
 	GameObjectHandle selectedObjectHandle;
 	bool objectIsSelected = false;
 

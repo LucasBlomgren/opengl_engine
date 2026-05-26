@@ -170,63 +170,90 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             selectedObjectIsBeingMoved = true;
         }
 
-        static bool wasDown = false;
-        static float shootTimer = 0.0f;
+        // single shot
+        if (in.mousePressed[GLFW_MOUSE_BUTTON_3] && !shootContinuously)
+        {
+            GameObjectDesc newObj;
+            glm::vec3 position = { camera->position + camera->front * 5.0f };
+            glm::vec3 size{ 1.00f };
+            newObj.mass = 100.0f;
+            newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
 
-        const float fireInterval = 0.001f; // 1000/s
+            SubPartDesc part;
+            part.localTransformHandle = world->createTransform();
+            part.colliderType = ColliderType::SPHERE;
+            part.textureName = "checker_gray";
+            part.meshName = "sphere";
+            newObj.parts.push_back(part);
 
-        bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
-
-        if (down && !wasDown) {
-            // Första pressen: starta “nu” utan att försöka hinna ikapp något gammalt
-            shootTimer = fireInterval;
+            // create new object & apply shoot velocity
+            GameObjectHandle newObject = world->createGameObject(newObj);
+            RigidBody* rb = world->getRigidBody(newObject);
+            rb->linearVelocity = camera->front * SHOOT_VELOCITY;
         }
 
-        if (down) {
-            shootTimer -= engineState->deltaTime;
+        // continuous shooting while RMB held down
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_3] && shootContinuously)
+        {
+            static bool wasDown = false;
+            static float shootTimer = 0.0f;
 
-            int spawnedThisFrame = 0;
-            const int maxPerFrame = 50; // säkerhetscap
+            const float fireInterval = 0.001f; // 1000/s
 
-            while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
-                shootTimer += fireInterval; // håll konstant takt
-                spawnedThisFrame++;
+            bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
 
-                // spawn
-                static int shot = 0;
-                int i = shot++ % 10;
-                int x = i % 5, y = i / 5;
-
-                glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
-                float spread = 2.0f;
-                float jitter = 1.4f;
-                glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
-                    + right * (glm::linearRand(-jitter, jitter))
-                    + camera->up * (glm::linearRand(-jitter, jitter));
-
-                // create new object description
-                GameObjectDesc newObj;
-                glm::vec3 position = { camera->position + camera->front * 5.0f + offset };
-                newObj.rootTransformHandle = world->createTransform(position);
-
-                SubPartDesc part;
-                part.localTransformHandle = world->createTransform();
-                part.colliderType = ColliderType::SPHERE;
-                part.textureName = "checker";
-                part.meshName = "sphere";
-                newObj.parts.push_back(part);
-
-                // create new object & apply shoot velocity
-                GameObjectHandle newObject = world->createGameObject(newObj);
-                RigidBody* rb = world->getRigidBody(newObject);
-                rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+            if (down && !wasDown) {
+                // Första pressen: starta “nu” utan att försöka hinna ikapp något gammalt
+                shootTimer = fireInterval;
             }
-        }
-        else {
-            shootTimer = 0.0f;
-        }
 
-        wasDown = down;
+            if (down) {
+                shootTimer -= engineState->deltaTime;
+
+                int spawnedThisFrame = 0;
+                const int maxPerFrame = 50; // säkerhetscap
+
+                while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
+                    shootTimer += fireInterval; // håll konstant takt
+                    spawnedThisFrame++;
+
+                    // spawn
+                    static int shot = 0;
+                    int i = shot++ % 10;
+                    int x = i % 5, y = i / 5;
+
+                    glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
+                    float spread = 2.0f;
+                    float jitter = 1.4f;
+                    glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
+                        + right * (glm::linearRand(-jitter, jitter))
+                        + camera->up * (glm::linearRand(-jitter, jitter));
+
+                    // create new object description
+                    GameObjectDesc newObj;
+                    glm::vec3 position = { camera->position + camera->front * 5.0f + offset };
+                    glm::vec3 size{ 1.00f };
+                    newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
+
+                    SubPartDesc part;
+                    part.localTransformHandle = world->createTransform();
+                    part.colliderType = ColliderType::SPHERE;
+                    part.textureName = "checker_gray";
+                    part.meshName = "sphere";
+                    newObj.parts.push_back(part);
+
+                    // create new object & apply shoot velocity
+                    GameObjectHandle newObject = world->createGameObject(newObj);
+                    RigidBody* rb = world->getRigidBody(newObject);
+                    rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+                }
+            }
+            else {
+                shootTimer = 0.0f;
+            }
+
+            wasDown = down;
+        }
     }
 
     if (!consumed.keyboard) {

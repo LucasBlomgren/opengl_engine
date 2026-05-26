@@ -259,7 +259,7 @@ void Renderer::render(
     glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
     setShadowRender(lightSpaceMatrix);
     renderGameObjectsShadow();
-    debugRenderer.renderShadowPass(); 
+    debugRenderer.renderShadowPass();
     renderTerrain(builder.getTerrainData(), builder.sceneDirty, true);
     cleanupShadowRender();
     glEndQuery(GL_TIME_ELAPSED);
@@ -272,7 +272,8 @@ void Renderer::render(
         viewportFBO->bind();
         targetW = viewportFBO->width;
         targetH = viewportFBO->height;
-    } else {
+    }
+    else {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
     float aspect = (float)targetW / (float)targetH;
@@ -283,6 +284,16 @@ void Renderer::render(
     setViewProjection(camera, aspect);
     uploadDirectionalLight();
     uploadLightsToShader();
+
+    GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
+    if (obj) {
+        Transform* t = world->getTransform(obj->rootTransformHandle);
+        std::vector<Light>& selectedLights = lightManager->getLights();
+
+        if (!selectedLights.empty()) {
+            selectedLights[0].position = t->position;
+        }
+    }
 
     // draw sky quad
     //DirectionalLight& light = lightManager->getDirectionalLight();

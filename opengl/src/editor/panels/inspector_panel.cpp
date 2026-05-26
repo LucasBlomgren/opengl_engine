@@ -336,10 +336,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
                     ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
-                }
 
-                if (ImGui::IsItemDeactivatedAfterEdit())
-                {
                     if (!rb->colliderHandles.empty())
                     {
                         Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);

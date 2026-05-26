@@ -15,7 +15,7 @@ public:
     void addLight(const Light& light);
     void clearLights();
     void clearDirectionalLight();
-    const std::vector<Light>& getLights() const;
+    std::vector<Light>& getLights();
 
     void setDirectionalLight(const glm::vec3& direction, const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular);
     DirectionalLight& getDirectionalLight();

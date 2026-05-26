@@ -26,12 +26,12 @@ void SceneBuilder::emptyFloorScene() {
 
     //// single stack of boxes and a single box with velocity
     //{
-    //    for (int i = 0; i < 5; i++)   // x
-    //    for (int j = 0; j < 10; j++)   // y
-    //    for (int k = 0; k < 5; k++) { // z
+    //    for (int i = 0; i < 2; i++)   // x
+    //    for (int j = 0; j < 5; j++)   // y
+    //    for (int k = 0; k < 2; k++) { // z
     //        GameObjectDesc box;
     //        box.name = "Box";
-    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.5f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
+    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.0f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
     //        box.allowSleep = true;
     //        box.sleepCounterThreshold = 2.5f;
     //        box.mass = 1.0f;
@@ -46,6 +46,20 @@ void SceneBuilder::emptyFloorScene() {
     //        world.createGameObject(box);
     //    }
     //}
+
+    //GameObjectDesc box;
+    //box.name = "Box";
+    //box.rootTransformHandle = world.createTransform(glm::vec3(-5, 4.5, 0.5), glm::quat(), glm::vec3(1.5f));
+    //box.mass = 1.0f;
+    //SubPartDesc boxPart;
+    //boxPart.localTransformHandle = world.createTransform();
+    //boxPart.textureName = "checker_gray";
+    //boxPart.meshName = "cube";
+    //box.parts.push_back(boxPart);
+
+    //GameObjectHandle ha = world.createGameObject(box);
+    //RigidBody* rb = world.getRigidBody(ha);
+    //rb->linearVelocity = glm::vec3(26.7, 0.0, 0.0);
 
     //// create chairs in a grid pattern
     //for (int i = 0; i < 10; i++)
@@ -199,7 +213,7 @@ void SceneBuilder::emptyFloorScene() {
 
     // 2D pyramid of boxes
     {
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < 10; i++)
         for (int col = 0; col < 20; col++) {
             for (int row = 20; row - col > 0; row--) {
 
@@ -217,7 +231,7 @@ void SceneBuilder::emptyFloorScene() {
                 SubPartDesc part;
                 part.name = "MainPart";
                 part.localTransformHandle = world.createTransform();
-                part.textureName = "checker";
+                part.textureName = "checker_magenta";
                 part.color = randomColor / 255.0f;
                 box.parts.push_back(part);
 
@@ -232,23 +246,23 @@ void SceneBuilder::emptyFloorScene() {
     sphere.mass = 10000.0f;
     SubPartDesc part;
     part.localTransformHandle = world.createTransform();
-    part.textureName = "checker";
+    part.textureName = "checker_gray";
     part.meshName = "sphere";
     part.colliderType = ColliderType::SPHERE;
     sphere.parts.push_back(part);
 
     GameObjectHandle h = world.createGameObject (sphere);
-    RigidBody* rb = world.getRigidBody(h);
-    rb->linearVelocity = glm::vec3(150.0f, 0.0f, 0.0f);
-    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -15.0f);
+    RigidBody* rba = world.getRigidBody(h);
+    //rba->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
+    //rba->angularVelocity = glm::vec3(0.0f, 0.0f, -50.0f);
 
 
-    //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
 
 
-    //for (int i = 0; i < 1; i++)
-    //for (int j = 0; j < 1; j++)
-    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 22, 30, 1.0, 1.0, 1.0, 0.0, 1, true);
+    for (int i = 0; i < 1; i++)
+    for (int j = 0; j < 1; j++)
+    createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 10, 8, 1.0, 1.0, 1.0, 0.0, 1, true);
 }
 
 void SceneBuilder::testFloorScene() {
@@ -351,7 +365,7 @@ void SceneBuilder::testFloorScene() {
         glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
         seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
         seat.meshName = "cube";
-        seat.textureName = "crate";
+        seat.textureName = "checker_magenta";
         seat.shaderName = "default";
         seat.color = color;
         seat.colliderType = ColliderType::CUBOID;
@@ -365,7 +379,7 @@ void SceneBuilder::testFloorScene() {
         glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
         backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
         backrest.meshName = "cube";
-        backrest.textureName = "crate";
+        backrest.textureName = "checker_magenta";
         backrest.shaderName = "default";
         backrest.color = color;
         backrest.colliderType = ColliderType::CUBOID;
@@ -386,7 +400,7 @@ void SceneBuilder::testFloorScene() {
             glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
             leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
             leg.meshName = "cube";
-            leg.textureName = "crate";
+            leg.textureName = "checker_magenta";
             leg.shaderName = "default";
             leg.color = color;
             leg.colliderType = ColliderType::CUBOID;

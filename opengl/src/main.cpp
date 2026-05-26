@@ -115,7 +115,8 @@ int main() {
 	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
 	textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
-	textureManager.loadTexture("checker", "src/assets/checker.png");
+	textureManager.loadTexture("checker_magenta", "src/assets/checker_magenta.png");
+	textureManager.loadTexture("checker_gray", "src/assets/checker_gray.png");
 
 	std::vector<std::string> skyBoxFaces {
 		std::string("src/assets/skyboxes/learnopengl/right.jpg"),
@@ -349,8 +350,10 @@ int main() {
 		//--------------------------------------------
 		if (!engineState.isPaused() or engineState.getAdvanceStep()) {
 			const int   kMaxStepsPerFrame = 8;
+			float simSpeed = engineState.getSimulationSpeed();
 			const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
-			accumulator = std::min(accumulator + deltaTime, kMaxAccum);
+
+			accumulator = std::min(accumulator + deltaTime * simSpeed, kMaxAccum);
 
 			// single step advance
 			if (engineState.getAdvanceStep()) {
@@ -365,7 +368,9 @@ int main() {
 				// physics step & player update if in player mode
 				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
 				if (engineState.isPlayerMode()) player.moveSelectedObject(fixedTimeStep);
-				physicsEngine.step(fixedTimeStep, rng);
+
+				physicsEngine.step(fixedTimeStep, engineState);
+
 				if (engineState.isPlayerMode()) player.resolveExternalContact();
 
 				accumulator -= fixedTimeStep;

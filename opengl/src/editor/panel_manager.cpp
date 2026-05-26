@@ -29,6 +29,7 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	ctx.amountTerrainTris = data.terrainTris;
 	ctx.amountContacts = data.contacts;
 	ctx.amountColliders = data.colliders;
+    ctx.substepAmount = data.currentSubstepAmount;
 
 	for (const auto& panel : panels) {
 		panel->OnImGuiRender(ctx);

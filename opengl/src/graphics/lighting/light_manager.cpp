@@ -13,7 +13,7 @@ void LightManager::clearDirectionalLight() {
     directionalLight = DirectionalLight();
 }
 
-const std::vector<Light>& LightManager::getLights() const {
+std::vector<Light>& LightManager::getLights() {
     return lights;
 }
 

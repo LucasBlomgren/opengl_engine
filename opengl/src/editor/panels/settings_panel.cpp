@@ -139,5 +139,15 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
         }
     }
 
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::Text("Simulation speed");
+    float simulationSpeed = ctx.engineState->getSimulationSpeed();
+    if (ImGui::SliderFloat("##", &simulationSpeed, 0.1f, 2.0f, "%.1f")) {
+        ctx.engineState->setSimulationSpeed(simulationSpeed);
+    }
+
     ImGui::End();
 }

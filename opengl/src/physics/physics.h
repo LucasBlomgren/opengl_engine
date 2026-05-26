@@ -1,7 +1,6 @@
 #pragma once
 
-#include <random>
-
+#include "engine/engine_state.h"
 #include "runtime_caches.h"
 #include "physics_world.h"
 #include "world.h"
@@ -21,6 +20,7 @@ struct DebugData {
     size_t colliders = 0;
     size_t terrainTris = 0;
     size_t contacts = 0;
+    size_t currentSubstepAmount = 0;
 };
 
 class PhysicsEngine {
@@ -33,7 +33,9 @@ public:
     void setupScene(std::vector<Tri>* terrainTriangles);
     void clear();
     void prepareStepLoop();
-    void step(float deltaTime, std::mt19937& rng);
+    int computeAdaptiveSubsteps(float dt);
+    void step(float deltaTime, EngineState& engine);
+    void stepDiscrete(float deltaTime);
 
     void sleepAllObjects();
     void awakenAllObjects();
@@ -65,8 +67,9 @@ private:
     uint32_t currentFrame = 0;
     PhysicsWorld physicsWorld;
     World* world = nullptr;
-
     FrameTimers* frameTimers;
+
+    int currentSubstepAmount = 1;
 
     //-----------------------------
     // Debug visualization data
