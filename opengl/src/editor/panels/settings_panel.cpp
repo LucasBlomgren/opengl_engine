@@ -10,9 +10,39 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     ImGui::Begin("Settings");
 
     // ---------------------------------
-    //    OBJECT RENDERING SETTINGS
+    //    PHYSICS SIMULATION SETTINGS
     // ---------------------------------
-    ImGui::SeparatorText("Objects");
+    ImGui::SeparatorText("Physics Simulation");
+    ImGui::Spacing();
+
+    ImGui::Text("Simulation speed");
+    float simulationSpeed = ctx.engineState->getSimulationSpeed();
+    if (ImGui::SliderFloat("##SimulationSpeed", &simulationSpeed, 0.1f, 2.0f, "%.1f")) {
+        ctx.engineState->setSimulationSpeed(simulationSpeed);
+    }
+
+    ImGui::Text("Max substeps");
+    int maxSubsteps = ctx.physicsEngine->maxSubsteps;
+    if (ImGui::SliderInt("##MaxSubsteps", &maxSubsteps, 1, 16)) {
+        ctx.physicsEngine->maxSubsteps = maxSubsteps;
+    }
+
+    ImGui::Text("PGS iterations");
+    int pgsIterations = ctx.physicsEngine->pgsIterations;
+    if (ImGui::SliderInt("##PGSIterations", &pgsIterations, 1, 64)) {
+        ctx.physicsEngine->pgsIterations = pgsIterations;
+    }
+
+
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    // ---------------------------------
+    //    DEBUG RENDERING SETTINGS
+    // ---------------------------------
+    ImGui::SeparatorText("Debug rendering");
     ImGui::Spacing();
 
     if (ImGui::BeginTable("SettingsColumns", 2, ImGuiTableFlags_SizingStretchSame))
@@ -56,25 +86,23 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
         ImGui::EndTable();
     }
 
+    ImGui::Spacing();
+    ImGui::Spacing();
     // ---------------------------------
     //    BVH
     // ---------------------------------
-    ImGui::Spacing();
-    ImGui::SeparatorText("BVH");
-    ImGui::Spacing();
-
     if (ImGui::BeginTable("BVHColumns", 2, ImGuiTableFlags_SizingStretchSame))
     {
         // -- LEFT COLUMN ----------------
         ImGui::TableNextColumn();
 
         bool showBVH_awake = ctx.engineState->getShowBVH_awake();
-        if (ImGui::Checkbox("Awake", &showBVH_awake)) {
+        if (ImGui::Checkbox("Awake BVH", &showBVH_awake)) {
             ctx.engineState->toggleShowBVH_awake();
         }
 
         bool showBVH_asleep = ctx.engineState->getShowBVH_asleep();
-        if (ImGui::Checkbox("Asleep", &showBVH_asleep)) {
+        if (ImGui::Checkbox("Asleep BVH", &showBVH_asleep)) {
             ctx.engineState->toggleShowBVH_asleep();
         }
 
@@ -82,17 +110,21 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
         ImGui::TableNextColumn();
 
         bool showBVH_static = ctx.engineState->getShowBVH_static();
-        if (ImGui::Checkbox("Static", &showBVH_static)) {
+        if (ImGui::Checkbox("Static BVH", &showBVH_static)) {
             ctx.engineState->toggleShowBVH_static();
         }
 
         bool showBVH_terrain = ctx.engineState->getShowBVH_terrain();
-        if (ImGui::Checkbox("Terrain", &showBVH_terrain)) {
+        if (ImGui::Checkbox("Terrain BVH", &showBVH_terrain)) {
             ctx.engineState->toggleShowBVH_terrain();
         }
 
         ImGui::EndTable();
     }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
 
     // ---------------------------------
     //    SCENE SETTINGS
@@ -114,7 +146,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
     static int currentItem = 0;
     const char* items[] = {
-        "Test", "Empty", "Tall structure"
+        "Test", "Terrain", "Tall structure", "Castle",
     };
 
     ImGui::Spacing();
@@ -126,15 +158,15 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     bool playerMode = ctx.engineState->isPlayerMode();
     if (ImGui::Button("Load")) {
         switch (currentItem) {
-        case 0: ctx.sceneBuilder->createScene(0, playerMode); break;
-        case 1: ctx.sceneBuilder->createScene(1, playerMode); break;
-        case 2: ctx.sceneBuilder->createScene(2, playerMode); break;
-        //case 3: ctx.sceneBuilder->createScene(3, playerMode); break;
-        //case 4: ctx.sceneBuilder->createScene(4, playerMode); break;
-        //case 5: ctx.sceneBuilder->createScene(5, playerMode); break;
-        //case 6: ctx.sceneBuilder->createScene(6, playerMode); break;
-        //case 7: ctx.sceneBuilder->createScene(7, playerMode); break;
-        //case 8: ctx.sceneBuilder->createScene(8, playerMode); break;
+        case 0: ctx.sceneBuilder->createScene(0, playerMode, 0); break;
+        case 1: ctx.sceneBuilder->createScene(1, playerMode, 0); break;
+        case 2: ctx.sceneBuilder->createScene(2, playerMode, 0); break;
+        case 3: ctx.sceneBuilder->createScene(3, playerMode, 0); break;
+        //case 4: ctx.sceneBuilder->createScene(4, playerMode, 0); break;
+        //case 5: ctx.sceneBuilder->createScene(5, playerMode, 0); break;
+        //case 6: ctx.sceneBuilder->createScene(6, playerMode, 0); break;
+        //case 7: ctx.sceneBuilder->createScene(7, playerMode, 0); break;
+        //case 8: ctx.sceneBuilder->createScene(8, playerMode, 0); break;
         default: break;
         }
     }
@@ -143,10 +175,33 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::Text("Simulation speed");
-    float simulationSpeed = ctx.engineState->getSimulationSpeed();
-    if (ImGui::SliderFloat("##", &simulationSpeed, 0.1f, 2.0f, "%.1f")) {
-        ctx.engineState->setSimulationSpeed(simulationSpeed);
+    // ---------------------------------
+    //    Shoot projectiles
+    // ---------------------------------
+    ImGui::SeparatorText("Editor shooting");
+    ImGui::Spacing();
+
+    bool shootContinuously = ctx.editorMain->shootContinuously;
+    if (ImGui::Checkbox("Continuous", &shootContinuously)) {
+        ctx.editorMain->shootContinuously = !ctx.editorMain->shootContinuously;
+    }
+
+    ImGui::Text("Cooldown");
+    float shootCooldown = ctx.editorMain->shootCooldown;
+    if (ImGui::SliderFloat("##Cooldown", &shootCooldown, 0.01f, 1.0f, "%.2f")) {
+        ctx.editorMain->shootCooldown = shootCooldown;
+    }
+
+    ImGui::Text("Mass");
+    float shootMass = ctx.editorMain->shootMass;
+    if (ImGui::SliderFloat("##Mass", &shootMass, 1.0f, 1000.0f, "%.0f")) {
+        ctx.editorMain->shootMass = shootMass;
+    }
+
+    ImGui::Text("Velocity");
+    float shootVelocity = ctx.editorMain->shootVelocity;
+    if (ImGui::SliderFloat("##Velocity", &shootVelocity, 1.0f, 1000.0f, "%.0f")) {
+        ctx.editorMain->shootVelocity = shootVelocity;
     }
 
     ImGui::End();

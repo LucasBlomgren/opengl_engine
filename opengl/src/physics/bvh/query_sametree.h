@@ -1,14 +1,22 @@
 #pragma once
 #include <vector>
 #include <cassert>
+#include <algorithm>
+#include <cstdint>
+#include <utility>
+#include <glm/ext/vector_float3.hpp>
+#include <slot_map.h>
+#include <aabb.h>
+
+inline uint32_t elementKey(RigidBodyHandle h) {
+    return h.slot;
+}
 
 template<class BVH>
 void treeVsSameTreeQuery(
     const BVH& tree,
     std::vector<std::pair<typename BVH::Element, typename BVH::Element>>& out
 ) {
-    using Element = typename BVH::Element;
-
     out.clear();
 
     if (tree.nodes.empty() || tree.rootIdx == -1)
@@ -16,10 +24,7 @@ void treeVsSameTreeQuery(
 
     out.reserve(std::min(tree.nodes.size(), static_cast<size_t>(BVH::MaxCollisionBuf)));
 
-    struct Entry {
-        int a;
-        int b;
-    };
+    struct Entry { int a, b; };
 
     constexpr int MaxStack = BVH::MaxStackSize;
     Entry stack[MaxStack];
@@ -51,47 +56,63 @@ void treeVsSameTreeQuery(
         const auto& nA = tree.nodes[ai];
         const auto& nB = tree.nodes[bi];
 
-        // Specialfall: samma node mot sig själv.
-        // Här vill vi INTE göra vanlig traversal, för då får vi både L-R och R-L.
-        if (ai == bi) {
-            if (nA.isLeaf) {
-                // leaf mot sig själv = self-pair, ska alltid bort
-                continue;
-            }
+        if (!nA.fatBox.intersects(nB.fatBox)) {
+            continue;
+        }
 
+        // Leaf-leaf: fungerar även när ai == bi
+        if (nA.isLeaf && nB.isLeaf) {
+            const bool sameLeaf = (ai == bi);
+
+            tree.forEachLeafElement(nA, [&](const auto& elemA, const AABB& boxA) {
+                tree.forEachLeafElement(nB, [&](const auto& elemB, const AABB& boxB) {
+
+                    const uint32_t keyA = elementKey(elemA);
+                    const uint32_t keyB = elementKey(elemB);
+
+                    if (sameLeaf) {
+                        // Samma leaf mot sig själv:
+                        // undvik A-A och dubletter B-A
+                        if (keyA >= keyB) {
+                            return;
+                        }
+                    }
+                    else {
+                        // Olika leaves:
+                        // traversal har redan valt en riktning, så skippa bara exakt self-pair
+                        if (keyA == keyB) {
+                            return;
+                        }
+                    }
+
+                    if (boxA.intersects(boxB)) {
+                        out.emplace_back(elemA, elemB);
+                    }
+                    });
+                });
+
+            continue;
+        }
+
+        // Samma interna node mot sig själv
+        if (ai == bi) {
             const int left = nA.childAIdx;
             const int right = nA.childBIdx;
 
-            // Par inom vänstra subträdet
             push(left, left);
 
-            // Par mellan vänster och höger, bara EN riktning
             if (left != -1 && right != -1 &&
                 tree.nodes[left].fatBox.intersects(tree.nodes[right].fatBox))
             {
                 push(left, right);
             }
 
-            // Par inom högra subträdet
             push(right, right);
 
             continue;
         }
 
-        // Olika noder: vanlig pruning med fat boxes
-        if (!nA.fatBox.intersects(nB.fatBox)) {
-            continue;
-        }
-
-        // Leaf-leaf: riktig kandidat
-        if (nA.isLeaf && nB.isLeaf) {
-            if (nA.tightBox.intersects(nB.tightBox)) {
-                out.emplace_back(nA.element, nB.element);
-            }
-            continue;
-        }
-
-        // Expandera den större noden, ungefär som din vanliga tree-vs-tree
+        // Vanlig expansion för olika noder
         const bool expandA =
             !nA.isLeaf &&
             (nB.isLeaf || sah2(nA.fatBox) >= sah2(nB.fatBox));

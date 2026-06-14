@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "../debug_config.h"
 #include "physics.h"
 #include "aabb.h"
 #include "wake_sleep_utils.h" 
@@ -126,7 +127,7 @@ void PhysicsEngine::sleepAllObjects() {
 
         RigidBodyHandle handle = bodyMap.handle_from_dense_index(i);
 
-        // #rigidbody vector: loop over all the colliders
+        // rigidbody vector: loop over all the colliders
         broadphaseManager.moveToAsleep(handle);
     }
 }
@@ -148,7 +149,7 @@ void PhysicsEngine::awakenAllObjects() {
 
         RigidBodyHandle handle = bodyMap.handle_from_dense_index(i);
 
-        // #rigidbody vector: loop over all the colliders
+        // rigidbody vector: loop over all the colliders
         broadphaseManager.moveToAwake(handle);
     }
 }
@@ -207,14 +208,20 @@ void PhysicsEngine::prepareStepLoop() {
 //    Adaptive substeps
 //===================================
 int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
-    constexpr int maxSubsteps = 8;
-    constexpr int halfMaxSubsteps = maxSubsteps / 2;
-    constexpr float safeFraction = 0.25f;
+    ScopedTimer t(*frameTimers, "Adaptive substep computation");
+
+    constexpr float safeFraction = 0.50f;
     constexpr float minSafeDistance = 0.02f;
 
+    int halfMaxSubsteps = maxSubsteps / 2;
     int globalSubsteps = 1;
 
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+
+#if DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
+    std::vector<int> substepsForBodies;
+    std::unordered_map<RigidBodyHandle, int> bodyToSubsteps;
+#endif
 
     for (const RigidBodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
@@ -223,8 +230,7 @@ int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
         if (body->type != BodyType::Dynamic) continue;
         if (body->asleep) continue;
 
-        Transform* rootTransform = 
-            caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
+        Transform* rootTransform = caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
 
         if (!rootTransform) continue;
 
@@ -244,15 +250,22 @@ int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
         float totalMotion = linearMotion + angularMotion;
 
         // Not fast enough to matter.
-        if (totalMotion <= safeDistance)
+        if (totalMotion <= safeDistance) {
+
+#if DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
+        bodyToSubsteps[handle] = 1;
+#endif
+
             continue;
+        }
 
         int wantedSubsteps = static_cast<int>(std::ceil(totalMotion / safeDistance));
         wantedSubsteps = std::clamp(wantedSubsteps, 1, maxSubsteps);
 
         // If this body cannot increase the current global value, skip expensive query.
-        if (wantedSubsteps <= globalSubsteps)
+        if (wantedSubsteps <= globalSubsteps) {
             continue;
+        }
 
         // -----------------------------
         // 3. Build swept AABB
@@ -284,20 +297,35 @@ int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
         // -----------------------------
         // 4. Check if swept AABB actually hits anything
         // -----------------------------
-        bool hitAwake = broadphaseManager.getAwakeBVH().queryAny(sweptAABB, handle);
+
+#if DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
+        std::vector<RigidBodyHandle> awakeCandidates;
+        std::vector<RigidBodyHandle> asleepCandidates;
+        broadphaseManager.getAwakeBVH().singleQuery(sweptAABB, awakeCandidates);
+        broadphaseManager.getAsleepBVH().singleQuery(sweptAABB, asleepCandidates);
+#endif
+
+        bool hitAwake = 
+            broadphaseManager.getAwakeBVH().queryAny(sweptAABB, handle);
 
         bool hitAsleep = false;
         if (!hitAwake) {
             hitAsleep = broadphaseManager.getAsleepBVH().queryAny(sweptAABB, handle);
         }
 
-        bool hitStatic = false;
+        bool hitTerrain = false;
         if (!hitAwake && !hitAsleep) {
+            hitTerrain = broadphaseManager.getTerrainBVH().queryAny(sweptAABB);
+        }
+
+        bool hitStatic = false;
+        if (!hitAwake && !hitAsleep && !hitTerrain) {
             hitStatic = broadphaseManager.getStaticBVH().queryAny(sweptAABB, handle);
         }
 
-        if (!hitAwake && !hitAsleep && !hitStatic)
+        if (!hitAwake && !hitAsleep && !hitTerrain && !hitStatic) {
             continue;
+        }
 
         // Static-only hits are cheaper: no dynamic target needs to wake up or propagate impulses.
         if (hitStatic) {
@@ -307,9 +335,34 @@ int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
         // This fast object actually risks collision this frame.
         globalSubsteps = std::max(globalSubsteps, wantedSubsteps);
 
+#if !DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
         if (globalSubsteps == maxSubsteps)
             break;
+#endif
+
+#if DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
+        bodyToSubsteps[handle] = wantedSubsteps;
+        for (RigidBodyHandle candidateHandle : awakeCandidates)
+            bodyToSubsteps[candidateHandle] = std::max(bodyToSubsteps[candidateHandle], wantedSubsteps);
+        for (RigidBodyHandle candidateHandle : asleepCandidates)
+            bodyToSubsteps[candidateHandle] = std::max(bodyToSubsteps[candidateHandle], wantedSubsteps);
+#endif
     }
+
+
+#if DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT
+    // DEBUG: print substep distribution
+    std::array substepCounts = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+    for (auto it = bodyToSubsteps.begin(); it != bodyToSubsteps.end(); it++) {
+        substepCounts[it->second - 1]++;
+    }
+    std::cout << "Adaptive substeps: " << globalSubsteps << "\n";
+    for (int i = 0; i < maxSubsteps; ++i) {
+        std::cout << i+1 << " steps: " << substepCounts[i] << " \n";
+    }
+    std::cout << "==============================\n";
+#endif
+
 
     return globalSubsteps;
 }
@@ -325,14 +378,16 @@ void PhysicsEngine::step(float dt, EngineState& engine) {
 
     // determine substep amount based on motion of fast objects
     float substeps = computeAdaptiveSubsteps(dt);
-    float h = dt / static_cast<float>(substeps);
+    float h = dt / substeps;
     currentSubstepAmount = substeps;
+
+    //std::cout << frameTimers->get("Adaptive substep computation") << " ms for substep computation\n";
 
     // perform substeps
     for (int i = 0; i < substeps; ++i) {
         stepDiscrete(h);
 
-        if (engine.getAdvanceStep()) {
+        if (engine.getAdvanceStep()) { // if in single-step mode, break after the first substep
             break;
         }
     }
@@ -359,8 +414,6 @@ void PhysicsEngine::stepDiscrete(float deltaTime) {
         toSleep.reserve(bodiesSlotCap);
         toWake.clear();
         toSleep.clear();
-
-        //externalContacts.clear();
 
         // Reset contact points for the current step
         for (auto& [key, contact] : contactCache) {
@@ -454,7 +507,12 @@ void PhysicsEngine::detectAndSolveCollisions()
 {
     {
         ScopedTimer t(*frameTimers, "Broadphase");
+
+#if RUN_DEBUG_BROADPHASE_TESTS
+        broadphaseManager.debugTest();
+#else
         broadphaseManager.computePairs();
+#endif
     }
 
     const auto& terrainPairs = broadphaseManager.getTerrainPairs();
@@ -508,9 +566,8 @@ void PhysicsEngine::resolveCollisions() {
     // för att undvika att lösa stora staplar av kontakter som inte påverkar varandra, vilket kan hända i t.ex. en pyramid av boxar där varje box har kontakt med flera
     // det påverkar också determinism 
 
-    constexpr int iterations = 8;
-    constexpr float velocityImpulseEps = 1e-2f;
-    constexpr float biasImpulseEps = 5e-2f;
+    constexpr float velocityImpulseEps = 1e-8f;
+    constexpr float biasImpulseEps = 1e-8f;
 
     constexpr float normalImpulseEps = 1e-6f;
 
@@ -518,8 +575,8 @@ void PhysicsEngine::resolveCollisions() {
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.1f;
 
-    constexpr float defaultSlop = 0.0005f;
-    constexpr float noResponseSlop = 0.0005f;
+    constexpr float defaultSlop = 0.0007f;
+    constexpr float noResponseSlop = 0.0007f;
 
     constexpr float defaultBaumgarte = 0.3f;
     constexpr float noResponseBaumgarte = 0.3f;
@@ -606,7 +663,7 @@ void PhysicsEngine::resolveCollisions() {
 
     // ------ PGS solver ------
     int iterationsUsed = 0;
-    for (int i = 0; i < iterations; i++) {
+    for (int i = 0; i < pgsIterations; i++) {
         float maxVelocityDelta = 0.0f;
         float maxBiasDelta = 0.0f;
 

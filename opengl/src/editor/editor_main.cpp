@@ -175,8 +175,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         {
             GameObjectDesc newObj;
             glm::vec3 position = { camera->position + camera->front * 5.0f };
-            glm::vec3 size{ 1.00f };
-            newObj.mass = 100.0f;
+            glm::vec3 size = glm::vec3{ shootSize };
+            newObj.mass = shootMass;
             newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
 
             SubPartDesc part;
@@ -189,7 +189,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             // create new object & apply shoot velocity
             GameObjectHandle newObject = world->createGameObject(newObj);
             RigidBody* rb = world->getRigidBody(newObject);
-            rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+            rb->linearVelocity = camera->front * shootVelocity;
         }
 
         // continuous shooting while RMB held down
@@ -198,13 +198,11 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             static bool wasDown = false;
             static float shootTimer = 0.0f;
 
-            const float fireInterval = 0.001f; // 1000/s
-
             bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
 
             if (down && !wasDown) {
                 // Första pressen: starta “nu” utan att försöka hinna ikapp något gammalt
-                shootTimer = fireInterval;
+                shootTimer = shootCooldown;
             }
 
             if (down) {
@@ -214,7 +212,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 const int maxPerFrame = 50; // säkerhetscap
 
                 while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
-                    shootTimer += fireInterval; // håll konstant takt
+                    shootTimer += shootCooldown; // håll konstant takt
                     spawnedThisFrame++;
 
                     // spawn
@@ -232,7 +230,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     // create new object description
                     GameObjectDesc newObj;
                     glm::vec3 position = { camera->position + camera->front * 5.0f + offset };
-                    glm::vec3 size{ 1.00f };
+                    glm::vec3 size = glm::vec3{ shootSize };
+                    newObj.mass = shootMass;
                     newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
 
                     SubPartDesc part;
@@ -245,7 +244,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     // create new object & apply shoot velocity
                     GameObjectHandle newObject = world->createGameObject(newObj);
                     RigidBody* rb = world->getRigidBody(newObject);
-                    rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+                    rb->linearVelocity = camera->front * shootVelocity;
                 }
             }
             else {
@@ -281,7 +280,6 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             physicsEngine->awakenAllObjects();
             consumed.keyboard = true;
         }
-
 
         if (in.keyDown[GLFW_KEY_C]) {
             static size_t nextIndex = 0;

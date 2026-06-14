@@ -71,7 +71,7 @@ void SceneBuilder::setLights() {
 //----------------------------------
 //         Scene Creation
 //----------------------------------
-void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
+void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
 {
     if (isPlayerMode) {
         player.resetState();
@@ -94,15 +94,16 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode)
     setLights();
 
     switch (sceneID) {
-    case 0: testFloorScene(); break;
-    case 1: emptyFloorScene(); break;
+    case 0: testFloorScene(amount); break;
+    case 1: terrainScene(); break;
     case 2: tallStructureScene(); break;
+    case 3: castleScene(); break;
     default: break;
     }
 
     physicsEngine.setupScene(&terrainData.triangles);
 
-    glcount::print();
+    //glcount::print();
 }
 
 //----------------------------------
@@ -477,6 +478,16 @@ void SceneBuilder::createBrickWall(
                 randomColor = glm::vec3(c, c, c);
             }
             //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            GameObjectDesc cube;
+            cube.name = "cube";
+            cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
+            cube.mass = brickWeight;
+            cube.asleep = true;
+            SubPartDesc part;
+            part.localTransformHandle = world.createTransform();
+            part.color = randomColor / 255.0f;
+            cube.parts.push_back(part);
+            world.createGameObject(cube);
         }
         brickWeight -= brickDecrease;
         // row 1, 3, 5, 7...
@@ -500,6 +511,17 @@ void SceneBuilder::createBrickWall(
             randomColor = glm::vec3(c, c, c);
         }
         //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        GameObjectDesc cube;
+        cube.name = "cube";
+        cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
+        cube.mass = brickWeight;
+        cube.asleep = true;
+        SubPartDesc part;
+        part.localTransformHandle = world.createTransform();
+        part.color = randomColor / 255.0f;
+        cube.parts.push_back(part);
+        world.createGameObject(cube);
+
         // middle bricks
         for (int row = 1; row < wallWidth - 2; row++) {
             glm::vec3 pos = startPos;
@@ -521,6 +543,16 @@ void SceneBuilder::createBrickWall(
                 randomColor = glm::vec3(c, c, c);
             }
             //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            GameObjectDesc cube;
+            cube.name = "cube";
+            cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
+            cube.mass = brickWeight;
+            cube.asleep = true;
+            SubPartDesc part;
+            part.localTransformHandle = world.createTransform();
+            part.color = randomColor / 255.0f;
+            cube.parts.push_back(part);
+            world.createGameObject(cube);
         }
         // edge brick
         pos = startPos;
@@ -541,6 +573,17 @@ void SceneBuilder::createBrickWall(
             randomColor = glm::vec3(c, c, c);
         }
         //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        GameObjectDesc cube2;
+        cube2.name = "cube";
+        cube2.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
+        cube2.mass = brickWeight;
+        cube2.asleep = true;
+        SubPartDesc part2;
+        part2.localTransformHandle = world.createTransform();
+        part2.color = randomColor / 255.0f;
+        cube2.parts.push_back(part2);
+        world.createGameObject(cube2);
+
         brickWeight -= brickDecrease;
     }
 }

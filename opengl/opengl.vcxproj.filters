@@ -64,6 +64,8 @@
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />
     <ClCompile Include="src\physics\wake_sleep_utils.cpp" />
     <ClCompile Include="src\engine\engine.cpp" />
+    <ClCompile Include="src\physics\bvh\bvh_temp_island.cpp" />
+    <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -144,7 +146,7 @@
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\core\slot_map.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
-    <ClInclude Include="src\physics\bvh\treetree_query.h" />
+    <ClInclude Include="src\physics\bvh\query_treetree.h" />
     <ClInclude Include="src\editor\panels\inspector_panel.h" />
     <ClInclude Include="src\editor\panels\performance_panel.h" />
     <ClInclude Include="src\editor\panels\settings_panel.h" />
@@ -172,7 +174,11 @@
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
     <ClInclude Include="src\ecs\ECSWorld.h" />
-    <ClInclude Include="src\physics\bvh\sametree_query.h" />
+    <ClInclude Include="src\physics\bvh\query_sametree.h" />
+    <ClInclude Include="src\physics\bvh\bvh_temp_island.h" />
+    <ClInclude Include="debug_config.h" />
+    <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
+    <ClInclude Include="src\physics\broadphase\SAP_test.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

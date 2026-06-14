@@ -31,6 +31,36 @@ void TerrainBVH::singleQuery(const AABB& qBox, std::vector<Tri*>& out) const {
     }
 }
 
+//------------------------------
+//        Query Any
+//------------------------------
+bool TerrainBVH::queryAny(const AABB& qBox) const {
+    if (nodes.empty()) return false;
+
+    constexpr int MaxDepth = 256;
+    const Node* stack[MaxDepth];
+    int sp = 0;
+    stack[sp++] = &nodes[rootIdx];
+
+    while (sp) {
+        const Node* n = stack[--sp];
+
+        if (!n->isLeaf) {
+            if (!qBox.intersects(n->fatBox)) continue;
+
+            if (n->childAIdx != -1) stack[sp++] = &nodes[n->childAIdx];
+            if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
+        }
+        else {
+            if (qBox.intersects(n->tightBox)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 //-------------------------
 //         Build 
 //-------------------------

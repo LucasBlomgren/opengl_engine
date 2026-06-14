@@ -62,6 +62,11 @@ public:
 
     std::vector<Contact*> contactsToSolve;
 
+    int maxSubsteps = 16;
+    int pgsIterations = 8;
+
+    BroadphaseManager broadphaseManager;
+
 private:
     float dt;
     uint32_t currentFrame = 0;
@@ -75,7 +80,6 @@ private:
     // Debug visualization data
     //-----------------------------
     DebugData debugData;
-
 
     //-----------------------------
     //  Broadphase Add/Remove/Move
@@ -102,7 +106,7 @@ private:
     //------------------------
     //  Collision detection 
     //------------------------
-    BroadphaseManager broadphaseManager;
+    //BroadphaseManager broadphaseManager;
     NarrowphaseManager narrowphaseManager;
 
     // caches for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map

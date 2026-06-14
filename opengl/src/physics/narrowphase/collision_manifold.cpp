@@ -26,10 +26,11 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
 
     // create contact points from clipped points
     Transform* root = nullptr;
-    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody)
+    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
         root = contact.runtimeData.bodyRootB;
-    else
+    } else {
         root = contact.runtimeData.bodyRootA;
+    }
 
     contact.points.resize(clippedPoints.size());
 
@@ -44,6 +45,10 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
 
     // if more than 4 contact points, perform contact point reduction to improve solver stability
     if (contact.points.size() > 4) {
+
+        // #TODO: different points are chosen different frames, causing solver instability, maybe add some temporal coherence to point selection?
+        // like remembering which points were chosen last frame and prefer those if they are still valid (within some tolerance), 
+        // or add some bias towards points with deeper penetration depth
         contactPointReduction(contact);
     }
 
@@ -63,10 +68,11 @@ void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, C
     contact.points[0].depth = satResult.depth;    // penetration depth
 
     Transform* root = nullptr;
-    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody)
+    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
         root = contact.runtimeData.bodyRootB;
-    else
+    } else {
         root = contact.runtimeData.bodyRootA;
+    }
 
     contact.points[0].localPos = root->worldToLocalPoint(contact.points[0].worldPos);
 
@@ -311,15 +317,18 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider
     std::array<glm::vec3, 4> localFace;
 
     if (absN.x >= absN.y && absN.x >= absN.z) {
-        localFace = (rotated.x > 0) ? box.getLocalFace(FaceId::MaxX)
+        localFace = (rotated.x > 0) 
+            ? box.getLocalFace(FaceId::MaxX)
             : box.getLocalFace(FaceId::MinX);
     }
     else if (absN.y >= absN.x && absN.y >= absN.z) {
-        localFace = (rotated.y > 0) ? box.getLocalFace(FaceId::MaxY)
+        localFace = (rotated.y > 0) 
+            ? box.getLocalFace(FaceId::MaxY)
             : box.getLocalFace(FaceId::MinY);
     }
     else {
-        localFace = (rotated.z > 0) ? box.getLocalFace(FaceId::MaxZ)
+        localFace = (rotated.z > 0) 
+            ? box.getLocalFace(FaceId::MaxZ)
             : box.getLocalFace(FaceId::MinZ);
     }
 

@@ -22,13 +22,12 @@ public:
 
     // update
     void updateObjectSelection(Shader& shader);
-    void updateMovement();
+    void updateMovement(float dt);
     void updateBody(float fixedTimeStep);
     void resolveExternalContact();
+    void headBob(float dt);
 
     // select object
-    bool objectIsSelected = false;
-    bool objectIsHovered = false;
     GameObjectHandle selectedObjectHandle;
     GameObjectHandle hoveredObjectHandle;
     glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
@@ -42,7 +41,6 @@ public:
     bool placementObstructed = true;
     void placeObject();
     void createPlaceObjectAABB(Shader& shader);
-    void drawAABB(const AABB& aabb, Shader& shader, glm::vec3 color = { 0.9f,0.7f,0.2f });
 
 private:
     World* world = nullptr;
@@ -56,10 +54,19 @@ private:
     glm::vec3 moveImpulse{ 0.0f, 0.0f, 0.0f };
     float jumpImpulse = 0.0f;
 
-    constexpr static float MOVE_ACCELERATION = 3.0f; // meters per second
+    // player eyelevel & headbob animation
+    float eyeHeight = 0.76f;
+    float bobTimer = 0.0f;
+    float bobAmount = eyeHeight * 0.04f;
+    float sideBobAmount = eyeHeight * 0.008f;
+    float bobFrequency = 12.0f;
+
+    constexpr static float MOVE_ACCELERATION = 15.0f; // meters per second
     constexpr static float MAX_MOVE_SPEED = 15.0f;
     constexpr static float JUMP_HEIGHT = 10.5f;
-    constexpr static float SHOOT_VELOCITY = 1000.0f;
+    constexpr static float SHOOT_VELOCITY = 300.0f;
+    constexpr static glm::vec3 SHOOT_SIZE{ 0.5f, 0.5f, 0.5f };
+    constexpr static float SHOOT_MASS = 10.0f;
     constexpr static float ON_GROUND_ANGLE_THRESHOLD = 0.7f; // cos(45 degrees)
     constexpr static float GRAVITY = -9.81f;    
     constexpr static float GRAVITY_MULTIPLIER = 3.0f;

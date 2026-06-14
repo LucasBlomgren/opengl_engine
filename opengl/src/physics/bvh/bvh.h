@@ -53,12 +53,19 @@ public:
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
 
+    template<class Func>
+    void forEachLeafElement(const Node& leaf, Func&& fn) const {
+        fn(leaf.element, leaf.tightBox);
+    }
+
 private:
     PhysicsWorld* world = nullptr;
     RuntimeCaches* caches = nullptr;
 
-    int   numRefits = 0;
-    int   rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
+    int rebuildCooldown = 3;
+    int rebuildCooldownCounter = 0;
+    int numRefits = 0;
+    int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
 
     // settings
     const int   leafThreshold = 1;
@@ -74,7 +81,7 @@ private:
     };
     std::vector<BVHPrimitive> prims;
 
-    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
+    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
     void createPrimitives(std::vector<RigidBodyHandle>& objectHandles);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);

@@ -194,6 +194,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\bvh\bvh.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -204,6 +205,7 @@
     </ClCompile>
     <ClCompile Include="src\physics\broadphase\broadphase_manager.cpp" />
     <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
+    <ClCompile Include="src\physics\bvh\bvh_temp_island.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -264,6 +266,7 @@
     <None Include="src\graphics\shaders\SkyShader.vert" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="debug_config.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity.h" />
@@ -316,9 +319,12 @@
     <ClInclude Include="src\engine\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\SAP_test.h" />
+    <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
-    <ClInclude Include="src\physics\bvh\sametree_query.h" />
+    <ClInclude Include="src\physics\bvh\query_sametree.h" />
+    <ClInclude Include="src\physics\bvh\bvh_temp_island.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_pairs.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
@@ -340,7 +346,7 @@
     <ClInclude Include="src\physics\rigid_body.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\sat.h" />
-    <ClInclude Include="src\physics\bvh\treetree_query.h" />
+    <ClInclude Include="src\physics\bvh\query_treetree.h" />
     <ClInclude Include="src\physics\wake_sleep_utils.h" />
   </ItemGroup>
   <ItemGroup>

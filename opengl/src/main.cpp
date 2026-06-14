@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "../debug_config.h"
 
 #include "engine/opengl_init.h"
 #include "engine/engine_state.h"
@@ -34,6 +35,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
+void debugTest(SceneBuilder& sceneBuilder, PhysicsEngine& physicsEngine);
+
 // settings
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -52,10 +55,10 @@ int main() {
 	GLFWwindow* window = OpenGL_init(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
 	// GPU logging
-	static constexpr int NQ = 4;          // ringbuffer (4–8 är lagom)
+	static constexpr int NQ = 4;
 	GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
-	int writeIdx = 0;                     // var vi börjar nya queries
-	int readIdx = (writeIdx + 1) % NQ;    // var vi försöker läsa från
+	int writeIdx = 0;
+	int readIdx = (writeIdx + 1) % NQ;
 	glGenQueries(NQ, qShadow);
 	glGenQueries(NQ, qMain);
 	glGenQueries(NQ, qDebug);
@@ -107,9 +110,7 @@ int main() {
 	// setup rendering
 	renderer.init(SCR_WIDTH, SCR_HEIGHT, world, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
 
-	//--------------------------------------------
 	// load textures
-	//--------------------------------------------
 	textureManager.loadTexture("crate", "src/assets/crate.jpg");
 	textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
 	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
@@ -128,25 +129,23 @@ int main() {
 	};
 	textureManager.loadCubemap("skybox_default", skyBoxFaces);
 
-	//skyBoxFaces = {
-	//	std::string("src/assets/skyboxes/milkyway/right.png"),
-	//	std::string("src/assets/skyboxes/milkyway/left.png"),
-	//	std::string("src/assets/skyboxes/milkyway/top.png"),
-	//	std::string("src/assets/skyboxes/milkyway/bottom.png"),
-	//	std::string("src/assets/skyboxes/milkyway/front.png"),
-	//	std::string("src/assets/skyboxes/milkyway/back.png")
-	//};
-	//textureManager.loadCubemap("skybox_night", skyBoxFaces);
+	skyBoxFaces = {
+		std::string("src/assets/skyboxes/milkyway/right.png"),
+		std::string("src/assets/skyboxes/milkyway/left.png"),
+		std::string("src/assets/skyboxes/milkyway/top.png"),
+		std::string("src/assets/skyboxes/milkyway/bottom.png"),
+		std::string("src/assets/skyboxes/milkyway/front.png"),
+		std::string("src/assets/skyboxes/milkyway/back.png")
+	};
+	textureManager.loadCubemap("skybox_night", skyBoxFaces);
 
 	// setup skybox
 	skyboxManager.init(); 
 
 	// create default scene 
-	sceneBuilder.createScene(1, engineState.isPlayerMode());
+	sceneBuilder.createScene(0, engineState.isPlayerMode(), 0);
 
-	//--------------------------------------------
 	// setup editor
-	//--------------------------------------------
 	editor.init(
 		SCR_WIDTH, 
 		SCR_HEIGHT, 
@@ -166,19 +165,13 @@ int main() {
 		&gpu
 	);
 
-	//--------------------------------------------
 	// setup player
-	//--------------------------------------------
 	player.setPointers(&world, &physicsEngine, &camera);
 
-	//--------------------------------------------
 	// ImGui setup
-	//--------------------------------------------
 	imguiManager.init(window);
 
-	//--------------------------------------------
 	// add input routers
-	//--------------------------------------------
 	inputManager.router.add(&editor);
 	inputManager.router.add(&player);
 	inputManager.router.add(&camera);
@@ -190,23 +183,17 @@ int main() {
 	// main loop
 	//--------------------------------------------
 	while (true) {
-		//--------------------------------------------
 		// timing
-		//--------------------------------------------
 		frameTimers.beginFrame();
 		float timeNow = (float)glfwGetTime();
 		deltaTime = timeNow - timeLastFrame;
 		timeLastFrame = timeNow;
 		engineState.deltaTime = deltaTime;
 
-		//--------------------------------------------
 		// update camera
-		//--------------------------------------------
 		camera.updateDeltaTime(deltaTime);
 
-		//--------------------------------------------
 		// events
-		//--------------------------------------------
 		inputManager.beginFrame();
 		glfwPollEvents();
 
@@ -218,14 +205,10 @@ int main() {
 			break;
 		}
 
-		//--------------------------------------------
 		// start ImGui frame
-		//--------------------------------------------
 		imguiManager.newFrame();
 
-		//--------------------------------------------
 		// read GPU timers from previous frames
-		//--------------------------------------------
 		GLuint avail = 0;
 		// SHADOW
 		glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
@@ -277,31 +260,23 @@ int main() {
 			writeIdx = (writeIdx + 1) % NQ;
 		}
 
-		//--------------------------------------------
 		// Imgui rendering
-		//--------------------------------------------
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer a(frameTimers, "ImGui");
 			editor.drawUI(inputManager.currentContext, deltaTime);
 		}
 		imguiManager.render();
 
-		//--------------------------------------------
 		// setup input context
-		//--------------------------------------------
 		inputManager.setCurrentContext(
 			ImGui::GetIO().WantCaptureMouse,
 			ImGui::GetIO().WantCaptureKeyboard,
 			engineState.isPlayerMode());
 
-		//--------------------------------------------
 		// route input
-		//--------------------------------------------
 		inputManager.route(window);
 
-		//--------------------------------------------
 		// input [V]: toggle editor/player mode
-		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
 			engineState.setPlayerMode(!engineState.isPlayerMode());
 
@@ -319,28 +294,23 @@ int main() {
 			}
 		}
 
-		//--------------------------------------------
 		// editor/player update
-		//--------------------------------------------
 		if (!engineState.isPlayerMode()) {
 			ScopedTimer t(frameTimers, "Editor");
 			editor.update(*renderer.debugShader);
 		}
 		else {
 			ScopedTimer t(frameTimers, "Player");
-			player.updateMovement();
+			player.updateMovement(deltaTime);
 			player.updateObjectSelection(*renderer.debugShader);
+			player.moveSelectedObject(deltaTime);
 		}
 
-		//--------------------------------------------
 		// pause toggle [G]
-		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
 			engineState.setPaused(!engineState.isPaused());
 		}
-		//--------------------------------------------
 		// advance step [F]
-		//--------------------------------------------
 		if (inputManager.currentFrame.keyPressed[GLFW_KEY_F]) {
 			engineState.setAdvanceStep(true);
 		}
@@ -364,13 +334,16 @@ int main() {
 
 			// stepping loop
 			int steps = 0;
-			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) {
+			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
+			{
+
+#if RUN_DEBUG_BROADPHASE_TESTS
+				debugTest(sceneBuilder, physicsEngine);
+#endif
+
 				// physics step & player update if in player mode
 				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
-				if (engineState.isPlayerMode()) player.moveSelectedObject(fixedTimeStep);
-
 				physicsEngine.step(fixedTimeStep, engineState);
-
 				if (engineState.isPlayerMode()) player.resolveExternalContact();
 
 				accumulator -= fixedTimeStep;
@@ -378,16 +351,12 @@ int main() {
 			}
 		}
 
-		//--------------------------------------------
 		// single step advance flag reset
-		//--------------------------------------------
 		if (engineState.getAdvanceStep()) {
 			engineState.setAdvanceStep(false);
 		}
 
-		//--------------------------------------------
 		// object rain
-		//--------------------------------------------
 		if (!engineState.isPaused()) {
 			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
 			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
@@ -403,4 +372,103 @@ int main() {
    glfwTerminate();
 
    return 0;
+}
+
+
+void debugTest(SceneBuilder& sceneBuilder, PhysicsEngine& physicsEngine) {
+	static int substeps = 1;
+	static int maxSubsteps = 16;
+	static int amount = 10;
+	static int resetAmount = 10;
+	static bool benchmarkStarted = false;
+
+	constexpr int maxBodies = 500;
+	constexpr int amountStepSize = 10;
+	constexpr size_t measuredSamples = 20;
+
+	static std::ofstream file;
+
+	auto openFileForSubstep = [&]() {
+		if (file.is_open()) {
+			file.close();
+		}
+
+		std::ostringstream filename;
+		filename << "bvh_benchmark_substeps_" << std::setw(2) << std::setfill('0') << substeps << ".txt";
+
+		file.open(filename.str());
+
+		file << substeps << " substeps\n";
+		file << "====================================\n";
+		file.flush();
+		};
+
+	if (!benchmarkStarted) {
+		physicsEngine.broadphaseManager.debugSubsteps = substeps;
+
+		openFileForSubstep();
+
+		sceneBuilder.createScene(0, 0, amount);
+		benchmarkStarted = true;
+
+		physicsEngine.broadphaseManager.debugResultBvh.clear();
+		physicsEngine.broadphaseManager.debugResultBruteForce.clear();
+		physicsEngine.broadphaseManager.debugResultSweep.clear();
+	}
+
+	auto& bvh = physicsEngine.broadphaseManager.debugResultBvh;
+	auto& brute = physicsEngine.broadphaseManager.debugResultBruteForce;
+	auto& sweep = physicsEngine.broadphaseManager.debugResultSweep;
+
+	if (bvh.size() >= measuredSamples && 
+		brute.size() >= measuredSamples && 
+		sweep.size() >= measuredSamples) 
+	{
+		std::sort(bvh.begin(), bvh.end());
+		std::sort(brute.begin(), brute.end());
+		std::sort(sweep.begin(), sweep.end());
+
+		double medianBvh = bvh[bvh.size() / 2];
+		double medianBrute = brute[brute.size() / 2];
+        double medianSweep = sweep[sweep.size() / 2];
+
+		std::ostringstream line;
+		line
+			<< "Bodies: " << amount
+			<< " | Brute Force: " << medianBrute << " ms"
+			<< " | BVH: " << medianBvh << " ms"
+			<< " | SAP: " << medianSweep << " ms\n";
+
+		std::cout << line.str();
+		file << line.str();
+		file.flush();
+
+		bvh.clear();
+		brute.clear();
+		sweep.clear();
+		amount += amountStepSize;
+
+		if (amount > maxBodies) {
+			std::cout << "Benchmark finished for " << substeps << " substeps.\n";
+			file << "Benchmark finished for " << substeps << " substeps.\n";
+			file.flush();
+
+			substeps++;
+
+			if (substeps > maxSubsteps) {
+				std::cout << "All benchmarks finished.\n";
+				file.close();
+				exit(0);
+			}
+
+			std::cout << "Starting benchmark for " << substeps << " substeps.\n";
+
+			amount = resetAmount;
+			physicsEngine.broadphaseManager.debugSubsteps = substeps;
+
+			openFileForSubstep();
+		}
+
+		sceneBuilder.createScene(0, 0, amount);
+	}
 }

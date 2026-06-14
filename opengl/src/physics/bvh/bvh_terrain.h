@@ -31,6 +31,12 @@ public:
 
     void build(std::vector<Tri>& tris);
     void singleQuery(const AABB& qBox, std::vector<Tri*>& out) const;
+    bool queryAny(const AABB& qBox) const;
+
+    template<class Func>
+    void forEachLeafElement(const Node& leaf, Func&& fn) const {
+        fn(leaf.element, leaf.tightBox);
+    }
 
 private:
     struct BVHPrimitive {

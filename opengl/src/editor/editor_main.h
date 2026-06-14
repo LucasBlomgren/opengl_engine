@@ -77,6 +77,13 @@ public:
     bool objectRainBlocks = false;
     bool objectRainSpheres = false;
 
+
+    bool shootContinuously = false;
+    float shootCooldown = 0.1f;
+    float shootVelocity = 500.0f;
+    float shootMass = 10.0f;
+    float shootSize = 1.0f;
+
 private:
     float SCR_WIDTH = 800.0f;
     float SCR_HEIGHT = 600.0f;
@@ -110,8 +117,5 @@ private:
     constexpr static float SELECT_RANGE = 5000.0f;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static float SHOOT_VELOCITY = 500.0f;
-
-    bool shootContinuously = false;
 };
 }

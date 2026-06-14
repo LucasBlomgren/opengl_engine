@@ -25,6 +25,8 @@ void BVHTree::clear() {
     rebuildThreshold = 0;
 }
 
+
+
 //------------------------------
 //        Single Query
 //------------------------------
@@ -268,14 +270,23 @@ void BVHTree::removeLeaf(int leafIdx)
     parent.childBIdx = -1;
 }
 
+
+
 //------------------------------------------------------------------
 //      Update
 //------------------------------------------------------------------
 void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
-    if (numRefits > rebuildThreshold) {
+    if (numRefits > rebuildThreshold) 
+    {
+        rebuildCooldownCounter++;
+        if (rebuildCooldownCounter < rebuildCooldown) {
+            return;
+        }
+
         // för många refits, bygg om trädet
         build(handles);
         numRefits = 0;
+        rebuildCooldownCounter = 0;
         return;
     }
 
@@ -323,7 +334,7 @@ void BVHTree::refitNode(int nodeIdx) {
         return;
 
     if (node.isLeaf) {
-        // blad: fatBox är redan expanderad vid containment‐kontrollen
+        // leaf: fatBox is already expanded to include tightBox
         return;
     }
 
@@ -402,7 +413,7 @@ void BVHTree::createPrimitives(std::vector<RigidBodyHandle>& handles) {
         RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
         body->broadphaseHandle.leafIdx = -1;
         
-        AABB box = body->aabb;
+        AABB& box = body->aabb;
 
         BVHPrimitive prim;
         prim.min = box.worldMin;
@@ -424,6 +435,9 @@ void BVHTree::split(int parentIdx, int depth) {
         return;
     }
 
+    int mid = start + (count / 2);
+    int end = start + count;
+
     // choose by largest extent axis to split
     int axis;
     glm::vec3 extent = parent.fatBox.worldMax - parent.fatBox.worldMin;
@@ -432,7 +446,6 @@ void BVHTree::split(int parentIdx, int depth) {
         : (extent.y > extent.z ? 1 : 2));
 
     // median‐partition of primitives
-    int mid = start + (count / 2);
     std::nth_element(
         prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
         [&](auto const& a, auto const& b) {
@@ -442,26 +455,25 @@ void BVHTree::split(int parentIdx, int depth) {
     // create child nodes and init them
     Node* A = &nodes.emplace_back();
     A->selfIdx = nodes.size() - 1;
-
     Node* B = &nodes.emplace_back();
     B->selfIdx = nodes.size() - 1;
 
-    initChild(parentIdx, A->selfIdx, true, start, mid, mid - start);
-    initChild(parentIdx, B->selfIdx, false, mid, start + count, start + count - mid);
+    initChild(parentIdx, A->selfIdx, true, start, mid);
+    initChild(parentIdx, B->selfIdx, false, mid, end);
 
     // recursive split
     split(A->selfIdx, depth + 1);
     split(B->selfIdx, depth + 1);
 }
 
-void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end, int count) {
+void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end) {
 
     Node& parent = nodes[parentIdx];
     Node& child = nodes[childIdx];
 
     child.parentIdx = parentIdx;
     child.start = start;
-    child.count = count;
+    child.count = end - start;
 
     if (isLeft) parent.childAIdx = childIdx;
     else        parent.childBIdx = childIdx;

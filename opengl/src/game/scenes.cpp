@@ -14,15 +14,91 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
         part.localTransformHandle = world.createTransform();
         part.textureName = "uvmap";
         floorTile.parts.push_back(part);
-
+        
         world.createGameObject(floorTile);
     }
 }
 
-void SceneBuilder::emptyFloorScene() {
-    glm::vec3 offset = { 0.0f, 0.0f, 0.0f };
+
+
+void SceneBuilder::testFloorScene(int amount) {
+    glm::vec3 offset = { -30.0f, -0.5f, -30.0f };
     glm::vec3 cellSize = { 50, 1, 50 };
     createGridFloor(offset, cellSize, 10, 8);
+
+    int maxPerAxis = 30;
+    float spacing = 2.5f;
+
+    for (int n = 0; n < amount; n++) {
+        int x = n % maxPerAxis;
+        int z = (n / maxPerAxis) % maxPerAxis;
+        int y = n / (maxPerAxis * maxPerAxis);
+
+        if (y >= maxPerAxis) {
+            break; // max 10x10x10 = 1000 objekt
+        }
+
+        glm::vec3 pos = glm::vec3(
+            x * spacing,
+            y * spacing + 0.5f,
+            z * spacing
+        );
+
+        GameObjectDesc box;
+        box.name = "Box";
+        box.rootTransformHandle = world.createTransform(pos, glm::quat(1.0, 0.0, 0.0, 0.0), glm::vec3(1.0, 1.0, 1.0));
+        box.asleep = false;
+        box.mass = 1.0f;
+        SubPartDesc part;
+        part.localTransformHandle = world.createTransform();
+        part.textureName = "plain";
+        box.parts.push_back(part);
+        world.createGameObject(box);
+    }
+
+    //// circular tower of boxes
+    //for (int k = 0; k < amount; k++) {
+    //    for (int l = 0; l < 1; l++) {
+    //        float angleRad;
+    //        glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
+    //        glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
+    //        glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
+    //        glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
+
+    //        int height = 9;
+    //        for (int i = 0; i < height; i++) {
+    //            angleRad = glm::radians(static_cast<float>(i) * 15.0);
+
+    //            for (int j = 0; j < 12; j++) {
+
+    //                glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
+
+    //                glm::vec3 offset = startPos - center;   // radien från center till startPos
+    //                glm::vec3 rotated = q * offset;         // radien vriden runt axeln
+    //                glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
+
+    //                glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
+    //                newCenter.y += i;
+
+    //                glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+    //                GameObjectDesc box;
+    //                box.name = "Box";
+    //                box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
+    //                box.asleep = true;
+    //                box.mass = 1.0f;
+    //                SubPartDesc part;
+    //                part.localTransformHandle = world.createTransform();
+    //                part.textureName = "plain";
+    //                part.color = randomColor / 255.0f;
+    //                box.parts.push_back(part);
+    //                world.createGameObject(box);
+
+    //                angleRad += glm::radians(30.0f);
+    //            }
+    //        }
+    //    }
+    //}
 
     //// single stack of boxes and a single box with velocity
     //{
@@ -31,7 +107,7 @@ void SceneBuilder::emptyFloorScene() {
     //    for (int k = 0; k < 2; k++) { // z
     //        GameObjectDesc box;
     //        box.name = "Box";
-    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.0f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
+    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
     //        box.allowSleep = true;
     //        box.sleepCounterThreshold = 2.5f;
     //        box.mass = 1.0f;
@@ -211,61 +287,61 @@ void SceneBuilder::emptyFloorScene() {
     //    }
     //}
 
-    // 2D pyramid of boxes
-    {
-        for (int i = 0; i < 10; i++)
-        for (int col = 0; col < 20; col++) {
-            for (int row = 20; row - col > 0; row--) {
+    //// 2D pyramid of boxes
+    //{
+    //    for (int i = 0; i < 5; i++)
+    //    for (int col = 0; col < 20; col++) {
+    //        for (int row = 20; row - col > 0; row--) {
 
-                float x = 54.5f + i * 10.0f;
-                float y = 1 + col;
-                float z = 150.0f + 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
-                glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+    //            float x = 54.5f + i * 10.0f;
+    //            float y = 0.5f + col;
+    //            float z = 150.0f + 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
-                GameObjectDesc box;
-                box.name = "Box";
-                box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
-                box.mass = 1.0f;
-                box.asleep = true;
+    //            GameObjectDesc box;
+    //            box.name = "Box";
+    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+    //            box.mass = 1.0f;
+    //            box.asleep = true;
 
-                SubPartDesc part;
-                part.name = "MainPart";
-                part.localTransformHandle = world.createTransform();
-                part.textureName = "checker_magenta";
-                part.color = randomColor / 255.0f;
-                box.parts.push_back(part);
+    //            SubPartDesc part;
+    //            part.name = "MainPart";
+    //            part.localTransformHandle = world.createTransform();
+    //            part.textureName = "checker_magenta";
+    //            part.color = randomColor / 255.0f;
+    //            box.parts.push_back(part);
 
-                world.createGameObject(box);
-            }
-        }
-    }
+    //            world.createGameObject(box);
+    //        }
+    //    }
+    //}
 
-    GameObjectDesc sphere;
-    sphere.name = "Sphere";
-    sphere.rootTransformHandle = world.createTransform(glm::vec3(0, 5.5, 160.5), glm::quat(), glm::vec3(5.0f));
-    sphere.mass = 10000.0f;
-    SubPartDesc part;
-    part.localTransformHandle = world.createTransform();
-    part.textureName = "checker_gray";
-    part.meshName = "sphere";
-    part.colliderType = ColliderType::SPHERE;
-    sphere.parts.push_back(part);
+    //GameObjectDesc sphere;
+    //sphere.name = "Sphere";
+    //sphere.rootTransformHandle = world.createTransform(glm::vec3(0, 5.5, 160.5), glm::quat(), glm::vec3(5.0f));
+    //sphere.mass = 10000.0f;
+    //SubPartDesc part;
+    //part.localTransformHandle = world.createTransform();
+    //part.textureName = "checker_gray";
+    //part.meshName = "sphere";
+    //part.colliderType = ColliderType::SPHERE;
+    //sphere.parts.push_back(part);
 
-    GameObjectHandle h = world.createGameObject (sphere);
-    RigidBody* rba = world.getRigidBody(h);
-    //rba->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
-    //rba->angularVelocity = glm::vec3(0.0f, 0.0f, -50.0f);
-
-
-    createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+    //GameObjectHandle h = world.createGameObject (sphere);
+    //RigidBody* rba = world.getRigidBody(h);
+    ////rba->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
+    ////rba->angularVelocity = glm::vec3(0.0f, 0.0f, -50.0f);
 
 
-    for (int i = 0; i < 1; i++)
-    for (int j = 0; j < 1; j++)
-    createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 10, 8, 1.0, 1.0, 1.0, 0.0, 1, true);
+    //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.5f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+
+
+    //for (int i = 0; i < 1; i++)
+    //for (int j = 0; j < 1; j++)
+    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 10, 8, 1.0, 1.0, 1.0, 0.0, 1, true);
 }
 
-void SceneBuilder::testFloorScene() {
+void SceneBuilder::terrainScene() {
     glm::vec3 offset = { -50, -110, -50 };
     glm::vec3 cellSize = { 50, 1, 50 };
     //createGridFloor(offset, cellSize, 10, 10);
@@ -338,9 +414,9 @@ void SceneBuilder::testFloorScene() {
 
        
     // create chairs in a grid pattern
-    for (int i = 0; i < 12; i++) 
-    for (int j = 0; j < 7; j++)
-    for (int k = 0; k < 12; k++)
+    for (int i = 0; i < 5; i++) 
+    for (int j = 0; j < 18; j++)
+    for (int k = 0; k < 5; k++)
     {
         GameObjectDesc chair;
         chair.name = "Chair";
@@ -511,28 +587,6 @@ void SceneBuilder::testFloorScene() {
     //}
 }
 
-//-------------------------
-//       Terrain Scene
-//-------------------------
-void SceneBuilder::terrainScene() {
-
-    ////world.createGameObject("plain", ColliderType::TEAPOT, glm::vec3(40, 120, 40), glm::vec3(1), 100, 0, glm::quat(1,0,0,0), 3.5f, 0);
-
-    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(210.0, 120.0, 225.0), 12, 10, 1.0, 1.0, 1.0, 0.0, 1, true);
-    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(250.0, 120.0, 155.0), 12, 10, 1.0, 1.0, 1.0, 0.0, 1, true);
-
-    //createSpherePyramid("plain", glm::vec3(-1.0), glm::vec3(100.0, 120.0, 205.0), 12, 10, 0.5, 0.0, 0.5, true);
-    //createSpherePyramid("plain", glm::vec3(-1.0), glm::vec3(100.0, 120.0, 105.0), 12, 10, 0.5, 0.0, 0.5, true);
-
-    //generateFlatTerrain(
-    //    /*offset*/glm::vec3(0.0, 0.0, 0.0),
-    //    /*gridX=*/144,
-    //    /*gridZ=*/144,
-    //    /*cellSize=*/3.0,
-    //    /*maxHeight=*/120.0
-    //);
-}
-
 void SceneBuilder::containerScene() {
 
     //int floorWidth = 1;
@@ -610,38 +664,30 @@ void SceneBuilder::containerScene() {
 
 
 void SceneBuilder::castleScene() {
-    //int floorWidth = 4;
-    //int floorHeight = 4;
-
-    //const float baseX = -30.0f;
-    //const float baseZ = -30.0f;
-    //for (int i = 0; i < floorWidth; i++) {
-    //    for (int j = 0; j < floorHeight; j++) {
-    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //        world.createGameObject("uvmap", "cube", ColliderType::CUBOID, BodyType::Static, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), false, orientation, 0, false, {}, false);
-    //    }
-    //}
+    glm::vec3 offset = { -30.0f, -0.5f, -30.0f };
+    glm::vec3 cellSize = { 50, 1, 50 };
+    createGridFloor(offset, cellSize, 4, 4);
 
     //createBrickWall(glm::vec3(25, 0, 44), 0, 20, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
     //createBrickWall(glm::vec3(25, 0, 65), 0, 20, 21, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
     //createBrickWall(glm::vec3(25, 0, 45), 1, 20, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
     //createBrickWall(glm::vec3(45, 0, 45), 1, 20, 20, glm::vec3(1, 1, 1), 0.0f, 1, 0, glm::vec2(95, 110), false);
 
-    //// castle walls
-    //for (int i = 0; i < 4; i++) {
-    //    // -x, +z
-    //    // side of gate walls
-    //    createBrickWall(glm::vec3(20, 0, 39 - i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //    createBrickWall(glm::vec3(38, 0, 39 - i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //    // over gate wall
-    //    createBrickWall(glm::vec3(33, 6, 39 - i), 0, 4, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //    // +x, +z
-    //    createBrickWall(glm::vec3(20, 0, 70 + i), 0, 10, 31, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //    // -x, -z
-    //    createBrickWall(glm::vec3(19 - i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //    // +x, -z
-    //    createBrickWall(glm::vec3(51 + i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-    //}
+    // castle walls
+    for (int i = 0; i < 4; i++) {
+        //// -x, +z
+        //// side of gate walls
+        //createBrickWall(glm::vec3(20, 0, 39 - i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        //createBrickWall(glm::vec3(38, 0, 39 - i), 0, 10, 13, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        //// over gate wall
+        //createBrickWall(glm::vec3(33, 6, 39 - i), 0, 4, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        // +x, +z
+        createBrickWall(glm::vec3(20, 0, 70 + i), 0, 10, 31, glm::vec3(1, 1, 1), 0.0f, 2500, 0, glm::vec2(95, 110), false);
+        //// -x, -z
+        //createBrickWall(glm::vec3(19 - i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+        //// +x, -z
+        //createBrickWall(glm::vec3(51 + i, 0, 40), 1, 10, 30, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
+    }
 
     //// tower -x, -z
     //createBrickWall(glm::vec3(13, 0, 33), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
@@ -663,15 +709,6 @@ void SceneBuilder::castleScene() {
     //createBrickWall(glm::vec3(51, 0, 76), 0, 15, 6, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
     //createBrickWall(glm::vec3(51, 0, 71), 1, 15, 5, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
     //createBrickWall(glm::vec3(57, 0, 70), 1, 15, 7, glm::vec3(1, 1, 1), 0.0f, 100, 0, glm::vec2(95, 110), false);
-
-
-
-    //for (int i = 0; i < 1; i++) {
-    //    GameObjectHandle handle = world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, glm::vec3(55 - i * 2, 40 + i * 2, -90 - i * 10), glm::vec3(0.75f), 150, glm::quat(1, 0, 0, 0), 1, true, {}, false);
-    //    GameObject* heavyBox = world.getGameObject(handle);
-    //    RigidBody* rb = world.getRigidBody(heavyBox->rigidBodyHandle);
-    //    rb->linearVelocity = glm::vec3(0, 0, 50);
-    //}
 }
 
 //-----------------------------

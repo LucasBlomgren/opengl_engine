@@ -5,6 +5,7 @@
 #include "runtime_caches.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
+#include "bvh/bvh_temp_island.h"
 #include "broadphase_types.h"
 #include "broadphase_pairs.h"
 
@@ -15,6 +16,15 @@ class BroadphaseManager {
 public:
     void init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris);
     void clear();
+
+    int debugSubsteps = 1;
+    void debugTest();
+    void measureBVH(int substeps);
+    void measureBrute(int substeps);
+    void measureSweepAndPrune(int substeps);
+    std::vector<double> debugResultBvh;
+    std::vector<double> debugResultBruteForce;
+    std::vector<double> debugResultSweep;
 
     // update BVHs if dirty
     void updateBVHs();
@@ -57,6 +67,7 @@ private:
     std::vector<RigidBodyHandle> staticHandles;
 
     // trees 
+    TempIslandBVH tempIslandBvh;
     BVHTree awakeBvh;
     BVHTree asleepBvh;
     BVHTree staticBvh;

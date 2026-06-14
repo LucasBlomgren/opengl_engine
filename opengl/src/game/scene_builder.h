@@ -25,13 +25,13 @@ public:
     bool sceneDirty = true; 
     void objectRain(float& current_time, glm::vec3& pos, int mode);
 
-    void createScene(int sceneID, bool isPlayerMode);
+    void createScene(int sceneID, bool isPlayerMode, int amount);
     void mainScene();
     void terrainScene();
     void tallStructureScene();
     void castleScene();
     void containerScene();
-    void testFloorScene();
+    void testFloorScene(int amount);
     void emptyFloorScene();
     void shapePileScene();
 

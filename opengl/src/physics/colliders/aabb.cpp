@@ -35,9 +35,11 @@ void AABB::update(const ColliderPose& pose) {
 }
 
 bool AABB::intersects(const AABB& b) const {
-    return (worldMin.x <= b.worldMax.x and worldMax.x >= b.worldMin.x)
-        and (worldMin.y <= b.worldMax.y and worldMax.y >= b.worldMin.y)
-        and (worldMin.z <= b.worldMax.z and worldMax.z >= b.worldMin.z);
+    constexpr float margin = 1e-4f;
+
+    return (worldMin.x <= b.worldMax.x + margin && worldMax.x + margin >= b.worldMin.x)
+        && (worldMin.y <= b.worldMax.y + margin && worldMax.y + margin >= b.worldMin.y)
+        && (worldMin.z <= b.worldMax.z + margin && worldMax.z + margin >= b.worldMin.z);
 }
 
 //--------------------------------------------

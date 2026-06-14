@@ -13,8 +13,8 @@ namespace WakeSleep
     WakeUpInfo computeWakeUpInfo(
         const RigidBody& A,
         const RigidBody& B,
-        float velocityThreshold = 1.2f,
-        float angularThreshold = 0.8f
+        float velocityThreshold = 0.6f,
+        float angularThreshold = 0.4f
     );
 
     void enqueueWakeRequests(
