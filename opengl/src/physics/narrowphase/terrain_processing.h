@@ -4,7 +4,7 @@
 //----------------------------------------------
 //     Tris vs Box
 //----------------------------------------------
-void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
+void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {
         SAT::Result SAT_result;
@@ -43,13 +43,14 @@ void NarrowphaseManager::processTerrainTriBox(RigidBodyHandle bodyH, Collider* c
     Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
     ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform);
     Contact contact(bodyH, runtimeData, avgNormal);
-    collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
+    Contact* contactPtr = collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
+    batch.contacts.push_back(contactPtr);
 }
 
 //----------------------------------------------
 //     Tris vs Sphere
 //----------------------------------------------
-void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
+void NarrowphaseManager::processTerrainTriSphere(ContactBatch& batch, RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {
         SAT::Result SAT_result;
@@ -84,7 +85,8 @@ void NarrowphaseManager::processTerrainTriSphere(RigidBodyHandle bodyH, Collider
     Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
     ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform);
     Contact contact(bodyH, runtimeData, avgNormal);
-    collisionManifold->sphereMesh(contact, *contactCache, SAT_resultsList);
+    Contact* contactPtr = collisionManifold->sphereMesh(contact, *contactCache, SAT_resultsList);
+    batch.contacts.push_back(contactPtr);
 }
 
 //-----------------------------------------------

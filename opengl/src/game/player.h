@@ -1,7 +1,7 @@
 #pragma once
 
 #include "scene_builder.h"
-#include "physics.h"
+#include "physics/physics_engine.h"
 #include "engine/camera.h"
 
 class Player : public IInputReceiver {

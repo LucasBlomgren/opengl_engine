@@ -34,6 +34,7 @@ public:
     void beginFrame();
     void endFrame();
 
+    void reset(const std::string& name);
     void submit(const std::string& name, float ms);
 
     float get(const std::string& name) const;

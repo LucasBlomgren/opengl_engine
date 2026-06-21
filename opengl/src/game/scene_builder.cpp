@@ -4,7 +4,7 @@
 #include "geometry/vertex.h"
 #include "renderer/renderer.h"
 #include "lighting/light_manager.h"
-#include "physics.h"
+#include "physics/physics_engine.h"
 
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
@@ -310,6 +310,71 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             part.color = color / 255.0f;
             cube.parts.push_back(part);
             world.createGameObject(cube);
+            //GameObjectDesc chair;
+            //chair.name = "Chair";
+            //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::vec3 scale{ 2.0f };
+            //chair.rootTransformHandle = world.createTransform(spawnPos, orientation, scale);
+            //chair.bodyType = BodyType::Dynamic;
+            //chair.mass = 2.0f;
+
+            //glm::vec3 color = glm::vec3(
+            //    static_cast<float>(rand()) / RAND_MAX,
+            //    static_cast<float>(rand()) / RAND_MAX,
+            //    static_cast<float>(rand()) / RAND_MAX
+            //);
+
+            //// seat
+            //SubPartDesc seat;
+            //seat.name = "Seat";
+            //glm::vec3 positionSeat = { 0,0,0 };
+            //glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
+            //seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
+            //seat.meshName = "cube";
+            //seat.textureName = "checker_magenta";
+            //seat.shaderName = "default";
+            //seat.color = color;
+            //seat.colliderType = ColliderType::CUBOID;
+            //chair.parts.push_back(seat);
+
+            //// backrest
+            //SubPartDesc backrest;
+            //backrest.name = "Backrest";
+            //glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
+            //glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
+            //backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+            //backrest.meshName = "cube";
+            //backrest.textureName = "checker_magenta";
+            //backrest.shaderName = "default";
+            //backrest.color = color;
+            //backrest.colliderType = ColliderType::CUBOID;
+            //chair.parts.push_back(backrest);
+
+            //// legs
+            //std::array<glm::vec3, 4> legPositions{
+            //    glm::vec3(-0.4f, -0.6f, -0.4f),
+            //    glm::vec3(0.4f, -0.6f, -0.4f),
+            //    glm::vec3(-0.4f, -0.6f, 0.4f),
+            //    glm::vec3(0.4f, -0.6f, 0.4f)
+            //};
+            //for (int i = 0; i < 4; i++) {
+            //    SubPartDesc leg;
+            //    leg.name = "Leg" + std::to_string(i);
+            //    glm::vec3 positionLeg = legPositions[i];
+            //    glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //    glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
+            //    leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
+            //    leg.meshName = "cube";
+            //    leg.textureName = "checker_magenta";
+            //    leg.shaderName = "default";
+            //    leg.color = color;
+            //    leg.colliderType = ColliderType::CUBOID;
+            //    chair.parts.push_back(leg);
+            //}
+
+            //GameObjectHandle h = world.createGameObject(chair);
         }
         // spheres
         else if (mode == 1) {

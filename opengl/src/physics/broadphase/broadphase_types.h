@@ -1,12 +1,24 @@
 #pragma once
-#include <cstdint>
+#include <vector>
+#include <slot_map.h>
 
-// Broadphase bucket types
-enum class BroadphaseBucket : uint8_t { None, Awake, Asleep, Static };
+class Tri;
 
-// Handle for broadphase BVH management
-struct BroadphaseHandle {
-    BroadphaseBucket bucket = BroadphaseBucket::None;
-    int listIdx = -1;
-    int leafIdx = -1;
+struct TerrainPair {
+    RigidBodyHandle body;
+    std::vector<Tri*> tris;
+};
+struct DynamicPair {
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
+};
+
+struct PairBatch {
+    std::vector<DynamicPair> dynamicPairs;
+    std::vector<TerrainPair> terrainPairs;
+
+    void clear() {
+        dynamicPairs.clear();
+        terrainPairs.clear();
+    }
 };

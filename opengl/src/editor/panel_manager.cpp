@@ -5,8 +5,8 @@
 
 #include "imgui.h"
 #include "panel_manager.h"
-#include "scene_builder.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
+#include "game/world.h"
 
 // Initialize panels
 void Editor::PanelManager::init() {

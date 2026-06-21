@@ -11,22 +11,35 @@ void TerrainBVH::singleQuery(const AABB& qBox, std::vector<Tri*>& out) const {
     out.clear();
     out.reserve(MaxCollisionBuf);
 
-    constexpr int MaxDepth = 256;
-    const Node* stack[MaxDepth];
+    constexpr int MaxStackSize = TerrainBVH::MaxStackSize;
+    const Node* stack[MaxStackSize];
     int sp = 0;
+
     stack[sp++] = &nodes[rootIdx];
 
     while (sp) {
         const Node* n = stack[--sp];
 
-        if (!n->isLeaf) {
-            if (!qBox.intersects(n->fatBox)) continue;
-
-            if (n->childAIdx != -1) stack[sp++] = &nodes[n->childAIdx];
-            if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
+        if (!qBox.intersects(n->fatBox)) {
+            continue;
         }
-        else {
-            if (qBox.intersects(n->tightBox)) out.push_back(n->element);
+
+        if (!n->isLeaf) {
+            if (n->childAIdx != -1 && sp < MaxStackSize) stack[sp++] = &nodes[n->childAIdx];
+            if (n->childBIdx != -1 && sp < MaxStackSize) stack[sp++] = &nodes[n->childBIdx];
+            continue;
+        }
+
+        // Leaf contains prims[start ... start + count)
+        const int begin = n->start;
+        const int end = n->start + n->count;
+
+        for (int i = begin; i < end; ++i) {
+            const BVHPrimitive& prim = prims[i];
+
+            if (qBox.intersects(prim.box)) {
+                out.push_back(prim.element);
+            }
         }
     }
 }
@@ -37,7 +50,7 @@ void TerrainBVH::singleQuery(const AABB& qBox, std::vector<Tri*>& out) const {
 bool TerrainBVH::queryAny(const AABB& qBox) const {
     if (nodes.empty()) return false;
 
-    constexpr int MaxDepth = 256;
+    constexpr int MaxDepth = TerrainBVH::MaxStackSize;
     const Node* stack[MaxDepth];
     int sp = 0;
     stack[sp++] = &nodes[rootIdx];
@@ -45,14 +58,28 @@ bool TerrainBVH::queryAny(const AABB& qBox) const {
     while (sp) {
         const Node* n = stack[--sp];
 
-        if (!n->isLeaf) {
-            if (!qBox.intersects(n->fatBox)) continue;
-
-            if (n->childAIdx != -1) stack[sp++] = &nodes[n->childAIdx];
-            if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
+        if (!qBox.intersects(n->fatBox)) {
+            continue;
         }
-        else {
-            if (qBox.intersects(n->tightBox)) {
+
+        if (!n->isLeaf) {
+            if (n->childAIdx != -1 && sp < MaxStackSize)
+                stack[sp++] = &nodes[n->childAIdx];
+
+            if (n->childBIdx != -1 && sp < MaxStackSize)
+                stack[sp++] = &nodes[n->childBIdx];
+
+            continue;
+        }
+
+        // Leaf contains prims[start ... start + count)
+        const int begin = n->start;
+        const int end = n->start + n->count;
+
+        for (int i = begin; i < end; ++i) {
+            const BVHPrimitive& prim = prims[i];
+
+            if (qBox.intersects(prim.box)) {
                 return true;
             }
         }
@@ -82,15 +109,15 @@ void TerrainBVH::build(std::vector<Tri>& tris) {
     root.start = 0;
     root.count = prims.size();
 
-    // Beräkna root->aabb som union av alla primitiva
-    root.fatBox.worldMin = prims[0].min;
-    root.fatBox.worldMax = prims[0].max;
+    // Calculate root AABB as union of all primitives
+    root.fatBox.worldMin = prims[0].box.worldMin;
+    root.fatBox.worldMax = prims[0].box.worldMax;
     for (int i = 1; i < prims.size(); i++) {
-        root.fatBox.growToInclude(prims[i].min);
-        root.fatBox.growToInclude(prims[i].max);
+        root.fatBox.growToInclude(prims[i].box.worldMin);
+        root.fatBox.growToInclude(prims[i].box.worldMax);
     }
 
-    // Splittra in i children
+    // split into children
     int depth = 0;
     split(rootIdx, depth);
 
@@ -115,15 +142,7 @@ void TerrainBVH::createPrimitives(std::vector<Tri>& tris) {
     prims.reserve(tris.size());
 
     for (Tri& tri : tris) {
-        Tri* t = &tri;
-        AABB box = t->getAABB();
-
-        BVHPrimitive prim;
-        prim.min = box.worldMin;
-        prim.max = box.worldMax;
-        prim.centroid = box.worldCenter;
-        prim.element = t;
-        prims.push_back(prim);
+        prims.emplace_back(tri.getAABB(), &tri);
     }
 }
 
@@ -141,6 +160,9 @@ void TerrainBVH::split(int parentIdx, int depth) {
         return;
     }
 
+    int mid = start + (count / 2);
+    int end = start + count;
+
     // choose by largest extent axis to split
     int axis;
     glm::vec3 extent = parent.fatBox.worldMax - parent.fatBox.worldMin;
@@ -149,48 +171,48 @@ void TerrainBVH::split(int parentIdx, int depth) {
         : (extent.y > extent.z ? 1 : 2));
 
     // median‐partition of primitives
-    int mid = start + count / 2;
     std::nth_element(
         prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
         [&](auto const& a, auto const& b) {
-            return a.centroid[axis] < b.centroid[axis];
+            return a.box.worldCenter[axis] < b.box.worldCenter[axis];
         });
 
-    // skapa child-nodes och initiera dem
+    // create child nodes and init them
     Node* A = &nodes.emplace_back();
-    int idxA = nodes.size() - 1;
-
+    A->selfIdx = nodes.size() - 1;
     Node* B = &nodes.emplace_back();
-    int idxB = nodes.size() - 1;
+    B->selfIdx = nodes.size() - 1;
 
-    initChild(parentIdx, idxA, true, start, mid, mid - start);
-    initChild(parentIdx, idxB, false, mid, start + count, start + count - mid);
+    initChild(parentIdx, A->selfIdx, true, start, mid);
+    initChild(parentIdx, B->selfIdx, false, mid, end);
 
-    // rekursivt splitta vidare
-    split(idxA, depth + 1);
-    split(idxB, depth + 1);
+    // recursive split
+    split(A->selfIdx, depth + 1);
+    split(B->selfIdx, depth + 1);
 }
 
 //------------------------------
 //          Init Child
 //------------------------------
-void TerrainBVH::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end, int count) {
+void TerrainBVH::initChild(int parentIdx, int childIdx, bool isLeft, int start, int end) {
 
     Node& parent = nodes[parentIdx];
     Node& child = nodes[childIdx];
 
+    child.parentIdx = parentIdx;
     child.start = start;
-    child.count = count;
+    child.count = end - start;
 
     if (isLeft) parent.childAIdx = childIdx;
     else        parent.childBIdx = childIdx;
 
-    // beräkna båda childs fatBox
-    child.fatBox.worldMin = prims[start].min;
-    child.fatBox.worldMax = prims[start].max;
+    // calculate both child's fatBox
+    child.fatBox.worldMin = prims[start].box.worldMin;
+    child.fatBox.worldMax = prims[start].box.worldMax;
+
     for (int i = start + 1; i < end; ++i) {
-        child.fatBox.growToInclude(prims[i].min);
-        child.fatBox.growToInclude(prims[i].max);
+        child.fatBox.growToInclude(prims[i].box.worldMin);
+        child.fatBox.growToInclude(prims[i].box.worldMax);
     }
 }
 
@@ -200,11 +222,8 @@ void TerrainBVH::initChild(int parentIdx, int childIdx, bool isLeft, int start, 
 void TerrainBVH::makeLeaf(int nodeIdx) {
     Node& leaf = nodes[nodeIdx];
 
+    leaf.selfIdx = nodeIdx;
     leaf.isLeaf = true;
-    leaf.element = prims[leaf.start].element;
-    leaf.element->broadphaseHandle.leafIdx = nodeIdx;
-    leaf.tightBox = leaf.element->getAABB();
-    leaf.fatBox = leaf.tightBox;
 }
 
 //------------------------------

@@ -3,10 +3,9 @@
 #include <vector>
 
 #include "runtime_caches.h"
-#include "rigid_body.h"
 #include "colliders/aabb.h"
 #include "bvh/bvh_terrain.h"
-#include "broadphase_pairs.h"
+#include "broadphase_types.h"
 
 namespace sap {
 

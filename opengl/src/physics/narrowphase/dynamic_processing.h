@@ -6,6 +6,7 @@
 //     Box vs Box
 //----------------------------------------------
 void NarrowphaseManager::processBoxBox(
+    ContactBatch& batch,
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,
     ColliderHandle colliderHandleA,
@@ -92,13 +93,15 @@ void NarrowphaseManager::processBoxBox(
     contact.contributesMotionA = contributesMotionA;
     contact.contributesMotionB = contributesMotionB;
 
-    collisionManifold->boxBox(contact, *contactCache, satResult);
+    Contact* contactPtr = collisionManifold->boxBox(contact, *contactCache, satResult);
+    batch.contacts.push_back(contactPtr);
 }
 
 //----------------------------------------------
 //     Sphere vs Box
 //----------------------------------------------
 void NarrowphaseManager::processBoxSphere(
+    ContactBatch& batch,
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,
     ColliderHandle colliderHandleA,
@@ -184,13 +187,15 @@ void NarrowphaseManager::processBoxSphere(
     contact.contributesMotionA = contributesMotionA;
     contact.contributesMotionB = contributesMotionB;
 
-    collisionManifold->boxSphere(contact, *contactCache, satResult);
+    Contact* contactPtr = collisionManifold->boxSphere(contact, *contactCache, satResult);
+    batch.contacts.push_back(contactPtr);
 }
 
 //----------------------------------------------
 //     Sphere vs Sphere
 //----------------------------------------------
 void NarrowphaseManager::processSphereSphere(
+    ContactBatch& batch,
     RigidBodyHandle bodyHandleA,
     RigidBodyHandle bodyHandleB,
     ColliderHandle colliderHandleA,
@@ -266,5 +271,6 @@ void NarrowphaseManager::processSphereSphere(
     contact.contributesMotionA = contributesMotionA;
     contact.contributesMotionB = contributesMotionB;
 
-    collisionManifold->sphereSphere(contact, *contactCache, satResult);
+    Contact* contactPtr = collisionManifold->sphereSphere(contact, *contactCache, satResult);
+    batch.contacts.push_back(contactPtr);
 }

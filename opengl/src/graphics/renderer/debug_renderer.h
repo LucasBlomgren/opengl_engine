@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/engine_state.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
 
@@ -60,8 +60,9 @@ private:
     void renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const;
     void renderFrustum(const glm::mat4& viewProj) const;
     void renderBVHs(const PhysicsEngine& physics);
-    template<class Tree> void renderBVH(const Tree& tree, const glm::vec3& nodeColor, const glm::vec3& leafColor);
-    
+    void renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor);
+    void renderTerrainBVHLeafGroups(const TerrainBVH& tree, const glm::vec3& leafColor);
+
     struct BVHColors {
         glm::vec3 awakeNode{ 0.80f, 0.40f, 0.00f }; // orange
         glm::vec3 awakeLeaf{ 1.00f, 0.65f, 0.20f };

@@ -1,10 +1,11 @@
 ﻿#include "pch.h"
 #include "editor_main.h"
 
+#include "game/world.h"
 #include "imgui.h"
 #include "engine/input_manager.h"
 #include "scene_builder.h"
-#include "physics.h"
+#include "physics/physics_engine.h"
 #include "graphics/renderer/renderer.h"
 #include "game_object.h"
 #include "aabb.h"
@@ -209,7 +210,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 shootTimer -= engineState->deltaTime;
 
                 int spawnedThisFrame = 0;
-                const int maxPerFrame = 50; // säkerhetscap
+                const int maxPerFrame = 500; // säkerhetscap
 
                 while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
                     shootTimer += shootCooldown; // håll konstant takt
@@ -513,10 +514,6 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
 
 // drop selected object
 void Editor::EditorMain::dropObject() {
-    if (selectedObjectHandle.isValid()) {
-        RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-    }
-
     selectedSubPartIndex = -1;
 
     selectedObjectHandle = {};

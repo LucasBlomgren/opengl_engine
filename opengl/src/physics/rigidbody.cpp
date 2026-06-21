@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "rigid_body.h"
+#include "rigidbody.h"
 
 //--------------------------------------
 //   Velocity integration

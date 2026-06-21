@@ -2,7 +2,7 @@
 
 #include "runtime_caches.h"
 #include "physics_world.h"
-#include "rigid_body.h"
+#include "rigidbody.h"
 #include "colliders/aabb.h"
 
 class BVHTree {
@@ -38,7 +38,7 @@ public:
     std::vector<Node> nodes;
 
     // tree vs tree query
-    static constexpr int MaxStackSize = 256;
+    static constexpr int MaxStackSize = 512;
     static constexpr int MaxCollisionBuf = 25000;
 
     void build(std::vector<RigidBodyHandle>& objects);

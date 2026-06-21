@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "texture_manager.h"
+#include <stb/stb_image.h>
 
 std::unordered_map<std::string, unsigned int> TextureManager::textures;
 std::unordered_map<std::string, unsigned int> TextureManager::cubemaps;

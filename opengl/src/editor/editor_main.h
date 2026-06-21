@@ -114,7 +114,7 @@ private:
 
     // selection and placement
     bool drawPlacementAABB = false;
-    constexpr static float SELECT_RANGE = 5000.0f;
+    constexpr static float SELECT_RANGE = 1000.0f;
     constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
     constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
 };

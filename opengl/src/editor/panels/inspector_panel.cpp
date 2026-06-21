@@ -7,6 +7,7 @@
 #include "graphics/mesh/mesh.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/textures/texture_manager.h"
+#include "game/world.h"
 
 bool DrawSection(const char* title, ImVec2 innerSize = ImVec2(0, 0))
 {

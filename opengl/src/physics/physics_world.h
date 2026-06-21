@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/slot_map.h"
-#include "physics/rigid_body.h"
+#include "physics/rigidbody.h"
 #include "physics/colliders/collider.h"
 
 class PhysicsEngine;

@@ -2,10 +2,7 @@
 #include "debug_renderer.h"
 #include "debug/render_contact_points.h"
 #include "physics/colliders/collider_pose.h"
-
-template void DebugRenderer::renderBVH<BVHTree>(const BVHTree&, const glm::vec3&, const glm::vec3&);
-template void DebugRenderer::renderBVH<TerrainBVH>(const TerrainBVH&, const glm::vec3&, const glm::vec3&);
-
+#include "game/world.h"
 
 //-----------------------------
 //   Init
@@ -283,11 +280,11 @@ void DebugRenderer::renderBVHs(const PhysicsEngine& physics) {
         renderBVH(physics.getStaticBvh(), BVH_COLORS.staticNode, BVH_COLORS.staticLeaf);
     }
     if (engineState->getShowBVH_terrain()) {
-        renderBVH(physics.getTerrainBvh(), BVH_COLORS.terrainNode, BVH_COLORS.terrainLeaf);
+        renderTerrainBVHLeafGroups(physics.getTerrainBvh(), BVH_COLORS.terrainLeaf);
     }
 }
-template<class Tree> 
-void DebugRenderer::renderBVH(const Tree& tree, const glm::vec3& nodeColor, const glm::vec3& leafColor) {
+
+void DebugRenderer::renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor) {
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
 
@@ -296,7 +293,7 @@ void DebugRenderer::renderBVH(const Tree& tree, const glm::vec3& nodeColor, cons
     glm::vec3 color;
     AABB toDraw;
 
-    for (const auto& node : tree.nodes) {
+    for (const auto& node : bvh.nodes) {
         if (!node.alive) continue;
 
         if (node.isLeaf) {
@@ -314,6 +311,27 @@ void DebugRenderer::renderBVH(const Tree& tree, const glm::vec3& nodeColor, cons
 
         aabbRenderer.updateModel(toDraw, /*asleep=*/false);
         aabbRenderer.render(color, *debugShapeShader);
+    }
+}
+
+void DebugRenderer::renderTerrainBVHLeafGroups(const TerrainBVH& tree,const glm::vec3& leafColor) {
+    debugShapeShader->use();
+    debugShapeShader->setBool("debug.useUniformColor", true);
+
+    glBindVertexArray(aabbRenderer.sVAO);
+
+    for (const TerrainBVH::Node& node : tree.nodes) {
+        if (!node.alive) continue;
+
+        // Render only leaf nodes as groups, to avoid visual clutter from internal nodes
+        if (!node.isLeaf) {
+            continue;
+        }
+
+        glLineWidth(BVH_LEAF_LINE_WIDTH);
+
+        aabbRenderer.updateModel(node.fatBox, /*asleep=*/false);
+        aabbRenderer.render(leafColor, *debugShapeShader);
     }
 }
 

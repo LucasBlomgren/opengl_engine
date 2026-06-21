@@ -2,6 +2,7 @@
 #include "sweep_and_prune.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "tri.h"
 
@@ -28,13 +29,90 @@ namespace sap {
             return a.itemIdx < b.itemIdx;
         }
 
-        void removeActiveIndex(std::vector<int>& active, int idx) {
-            for (int i = 0; i < static_cast<int>(active.size()); ++i) {
-                if (active[i] == idx) {
-                    active[i] = active.back();
-                    active.pop_back();
+        struct SapEdge2 {
+            float value = 0.0f;
+            int itemIdx = -1;
+            bool isA = false;
+            bool isMin = false;
+        };
+
+        bool edge2Less(const SapEdge2& a, const SapEdge2& b) {
+            if (a.value != b.value) {
+                return a.value < b.value;
+            }
+
+            if (a.isMin != b.isMin) {
+                return a.isMin && !b.isMin;
+            }
+
+            if (a.isA != b.isA) {
+                return a.isA && !b.isA;
+            }
+
+            return a.itemIdx < b.itemIdx;
+        }
+
+        // Active list med O(1) remove via swap-remove.
+        struct ActiveSet {
+            std::vector<int> items;
+            std::vector<int> pos; // pos[itemIdx] = index i items, eller -1
+
+            void reset(int itemCount) {
+                items.clear();
+                items.reserve(itemCount);
+                pos.assign(itemCount, -1);
+            }
+
+            void add(int idx) {
+                assert(idx >= 0 && idx < static_cast<int>(pos.size()));
+                assert(pos[idx] == -1 && "SAP active item added twice");
+
+                pos[idx] = static_cast<int>(items.size());
+                items.push_back(idx);
+            }
+
+            void remove(int idx) {
+                assert(idx >= 0 && idx < static_cast<int>(pos.size()));
+
+                int p = pos[idx];
+
+                if (p == -1) {
                     return;
                 }
+
+                int lastIdx = items.back();
+
+                items[p] = lastIdx;
+                pos[lastIdx] = p;
+
+                items.pop_back();
+                pos[idx] = -1;
+            }
+        };
+
+        inline bool overlapsOtherTwoAxes(const AABB& a, const AABB& b, int sweepAxis)
+        {
+            switch (sweepAxis) {
+            case 0: // swept X, test Y/Z
+                return
+                    a.worldMin.y <= b.worldMax.y &&
+                    a.worldMax.y >= b.worldMin.y &&
+                    a.worldMin.z <= b.worldMax.z &&
+                    a.worldMax.z >= b.worldMin.z;
+
+            case 1: // swept Y, test X/Z
+                return
+                    a.worldMin.x <= b.worldMax.x &&
+                    a.worldMax.x >= b.worldMin.x &&
+                    a.worldMin.z <= b.worldMax.z &&
+                    a.worldMax.z >= b.worldMin.z;
+
+            default: // swept Z, test X/Y
+                return
+                    a.worldMin.x <= b.worldMax.x &&
+                    a.worldMax.x >= b.worldMin.x &&
+                    a.worldMin.y <= b.worldMax.y &&
+                    a.worldMax.y >= b.worldMin.y;
             }
         }
 
@@ -135,7 +213,7 @@ namespace sap {
         const int axis = chooseLargestExtentAxis(items);
 
         static std::vector<SapEdge> edges;
-        static std::vector<int> active;
+        static ActiveSet active;
 
         edges.clear();
         edges.reserve(count * 2);
@@ -156,8 +234,7 @@ namespace sap {
 
         std::sort(edges.begin(), edges.end(), edgeLess);
 
-        active.clear();
-        active.reserve(count);
+        active.reset(count);
 
         for (const SapEdge& edge : edges) {
             const int aIdx = edge.itemIdx;
@@ -165,19 +242,23 @@ namespace sap {
             if (edge.isMin) {
                 const AABB& boxA = items[aIdx].box;
 
-                for (int bIdx : active) {
+                for (int bIdx : active.items) {
                     const AABB& boxB = items[bIdx].box;
 
-                    // Sweep axis gav kandidat. Detta gör full 3D AABB-test.
-                    if (boxA.intersects(boxB)) {
-                        out.emplace_back(items[aIdx].handle, items[bIdx].handle);
+                    // Sweep-axis overlap är redan garanterad av active-listan.
+                    // Därför räcker det att testa de andra två axlarna.
+                    if (overlapsOtherTwoAxes(boxA, boxB, axis)) {
+                        out.emplace_back(
+                            items[aIdx].handle,
+                            items[bIdx].handle
+                        );
                     }
                 }
 
-                active.push_back(aIdx);
+                active.add(aIdx);
             }
             else {
-                removeActiveIndex(active, aIdx);
+                active.remove(aIdx);
             }
         }
     }
@@ -191,55 +272,51 @@ namespace sap {
             return;
         }
 
-        struct SapEdge2 {
-            float value = 0.0f;
-            int itemIdx = -1;
-            bool isA = false;
-            bool isMin = false;
-        };
-
-        auto edge2Less = [](const SapEdge2& a, const SapEdge2& b) {
-            if (a.value != b.value) {
-                return a.value < b.value;
-            }
-
-            if (a.isMin != b.isMin) {
-                return a.isMin && !b.isMin;
-            }
-
-            if (a.isA != b.isA) {
-                return a.isA && !b.isA;
-            }
-
-            return a.itemIdx < b.itemIdx;
-            };
-
         const int axis = chooseLargestExtentAxis(aItems, bItems);
 
         static std::vector<SapEdge2> edges;
-        static std::vector<int> activeA;
-        static std::vector<int> activeB;
+        static ActiveSet activeA;
+        static ActiveSet activeB;
 
         edges.clear();
         edges.reserve((aItems.size() + bItems.size()) * 2);
 
         for (int i = 0; i < static_cast<int>(aItems.size()); ++i) {
-            edges.push_back(SapEdge2{ aItems[i].box.worldMin[axis], i, true, true });
-            edges.push_back(SapEdge2{ aItems[i].box.worldMax[axis], i, true, false });
+            edges.push_back(SapEdge2{
+                aItems[i].box.worldMin[axis],
+                i,
+                true,
+                true
+                });
+
+            edges.push_back(SapEdge2{
+                aItems[i].box.worldMax[axis],
+                i,
+                true,
+                false
+                });
         }
 
         for (int i = 0; i < static_cast<int>(bItems.size()); ++i) {
-            edges.push_back(SapEdge2{ bItems[i].box.worldMin[axis], i, false, true });
-            edges.push_back(SapEdge2{ bItems[i].box.worldMax[axis], i, false, false });
+            edges.push_back(SapEdge2{
+                bItems[i].box.worldMin[axis],
+                i,
+                false,
+                true
+                });
+
+            edges.push_back(SapEdge2{
+                bItems[i].box.worldMax[axis],
+                i,
+                false,
+                false
+                });
         }
 
         std::sort(edges.begin(), edges.end(), edge2Less);
 
-        activeA.clear();
-        activeB.clear();
-
-        activeA.reserve(aItems.size());
-        activeB.reserve(bItems.size());
+        activeA.reset(static_cast<int>(aItems.size()));
+        activeB.reset(static_cast<int>(bItems.size()));
 
         for (const SapEdge2& edge : edges) {
             if (edge.isA) {
@@ -248,19 +325,22 @@ namespace sap {
                 if (edge.isMin) {
                     const AABB& boxA = aItems[aIdx].box;
 
-                    for (int bIdx : activeB) {
+                    for (int bIdx : activeB.items) {
                         const AABB& boxB = bItems[bIdx].box;
 
-                        if (boxA.intersects(boxB)) {
+                        if (overlapsOtherTwoAxes(boxA, boxB, axis)) {
                             // A är alltid awake/dynamic.
-                            out.emplace_back(aItems[aIdx].handle, bItems[bIdx].handle);
+                            out.emplace_back(
+                                aItems[aIdx].handle,
+                                bItems[bIdx].handle
+                            );
                         }
                     }
 
-                    activeA.push_back(aIdx);
+                    activeA.add(aIdx);
                 }
                 else {
-                    removeActiveIndex(activeA, aIdx);
+                    activeA.remove(aIdx);
                 }
             }
             else {
@@ -269,19 +349,22 @@ namespace sap {
                 if (edge.isMin) {
                     const AABB& boxB = bItems[bIdx].box;
 
-                    for (int aIdx : activeA) {
+                    for (int aIdx : activeA.items) {
                         const AABB& boxA = aItems[aIdx].box;
 
-                        if (boxA.intersects(boxB)) {
+                        if (overlapsOtherTwoAxes(boxA, boxB, axis)) {
                             // A är alltid awake/dynamic.
-                            out.emplace_back(aItems[aIdx].handle, bItems[bIdx].handle);
+                            out.emplace_back(
+                                aItems[aIdx].handle,
+                                bItems[bIdx].handle
+                            );
                         }
                     }
 
-                    activeB.push_back(bIdx);
+                    activeB.add(bIdx);
                 }
                 else {
-                    removeActiveIndex(activeB, bIdx);
+                    activeB.remove(bIdx);
                 }
             }
         }

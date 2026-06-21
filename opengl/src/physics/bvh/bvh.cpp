@@ -25,8 +25,6 @@ void BVHTree::clear() {
     rebuildThreshold = 0;
 }
 
-
-
 //------------------------------
 //        Single Query
 //------------------------------
@@ -36,7 +34,7 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
     out.clear();
     out.reserve(BVHTree::MaxCollisionBuf);
 
-    constexpr int MaxDepth = 256;
+    constexpr int MaxDepth = MaxStackSize;
     const Node* stack[MaxDepth];
     int sp = 0;
     stack[sp++] = &nodes[rootIdx];
@@ -62,7 +60,7 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
 bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
     if (nodes.empty()) return false;
 
-    constexpr int MaxDepth = 256;
+    constexpr int MaxDepth = MaxStackSize;
     const Node* stack[MaxDepth];
     int sp = 0;
     stack[sp++] = &nodes[rootIdx];
@@ -270,19 +268,15 @@ void BVHTree::removeLeaf(int leafIdx)
     parent.childBIdx = -1;
 }
 
-
-
 //------------------------------------------------------------------
 //      Update
 //------------------------------------------------------------------
 void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
-    if (numRefits > rebuildThreshold) 
-    {
-        rebuildCooldownCounter++;
-        if (rebuildCooldownCounter < rebuildCooldown) {
-            return;
-        }
+    this->dirty = false;
 
+    rebuildCooldownCounter++;
+    if (numRefits > rebuildThreshold && rebuildCooldownCounter >= rebuildCooldown) 
+    {
         // för många refits, bygg om trädet
         build(handles);
         numRefits = 0;
@@ -294,8 +288,6 @@ void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
 
     updateLeaves();
     if (rootIdx != -1) refitNode(rootIdx);
-
-    this->dirty = false;
 }
 
 void BVHTree::updateLeaves() {

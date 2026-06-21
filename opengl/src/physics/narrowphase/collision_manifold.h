@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "runtime_caches.h"
-#include "rigid_body.h"
+#include "rigidbody.h"
 #include "sat.h"
 #include "collider_pose.h"
 
@@ -127,11 +127,11 @@ public:
     void init(RuntimeCaches* caches) { this->caches = caches; }
     size_t generateKey(int idA, int idB);
 
-    void boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void boxMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
-    void sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    void sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
+    Contact* boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    Contact* boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    Contact* boxMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
+    Contact* sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
+    Contact* sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
 
 private:
     RuntimeCaches* caches = nullptr;
@@ -165,7 +165,7 @@ private:
     void PreComputePointData(ContactPoint& cp, Contact& contact);
 
     // contact cache integration
-    void integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
+    Contact* integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
 
     //std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);
 };

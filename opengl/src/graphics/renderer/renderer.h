@@ -7,7 +7,7 @@
 #include "shaders/shader_manager.h"
 
 #include "game_object.h"
-#include "physics.h"
+#include "physics/physics_engine.h"
 #include "lighting/light_manager.h"
 #include "lighting/shadow_manager.h"
 #include "skybox/skybox_manager.h"

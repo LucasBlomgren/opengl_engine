@@ -4,7 +4,7 @@
 #include "core/slot_map.h"
 #include "game/transform.h"
 #include "physics/colliders/collider.h"
-#include "physics/rigid_body.h"
+#include "physics/rigidbody.h"
 
 struct RuntimeCaches {
     PointerCache<Transform, TransformHandle> transforms;

@@ -4,7 +4,7 @@
 #include "bvh/bvh.h"
 #include "game_object.h"
 #include "colliders/collider.h"
-#include "rigid_body.h"
+#include "rigidbody.h"
 
 struct Ray {
     float length;

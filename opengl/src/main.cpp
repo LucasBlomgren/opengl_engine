@@ -1,5 +1,4 @@
 ﻿#include "pch.h"
-#include "../debug_config.h"
 
 #include "engine/opengl_init.h"
 #include "engine/engine_state.h"
@@ -11,7 +10,7 @@
 
 #include "imgui.h"
 
-#include "physics.h"
+#include "physics/physics_engine.h"
 #include "scene_builder.h"
 #include "renderer/renderer.h"
 #include "textures/texture_manager.h"
@@ -34,8 +33,6 @@ std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
-
-void debugTest(SceneBuilder& sceneBuilder, PhysicsEngine& physicsEngine);
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -336,11 +333,6 @@ int main() {
 			int steps = 0;
 			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
 			{
-
-#if RUN_DEBUG_BROADPHASE_TESTS
-				debugTest(sceneBuilder, physicsEngine);
-#endif
-
 				// physics step & player update if in player mode
 				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
 				physicsEngine.step(fixedTimeStep, engineState);
@@ -362,6 +354,15 @@ int main() {
 			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
 		}
 
+        // Delete out of bounds objects
+        for (const RigidBodyHandle& handle : physicsEngine.getAwakeList()) {
+            RigidBody* rb = world.getRigidBody(handle);
+            Transform* t = world.getTransform(rb->rootTransformHandle);
+			if (t->position.y < -1000.0f || t->position.y > 5000.0f) {
+                world.deleteGameObject(rb->gameObjectHandle);
+			}
+        }
+
 		frameTimers.endFrame();
 
 		// swap buffers
@@ -372,103 +373,4 @@ int main() {
    glfwTerminate();
 
    return 0;
-}
-
-
-void debugTest(SceneBuilder& sceneBuilder, PhysicsEngine& physicsEngine) {
-	static int substeps = 1;
-	static int maxSubsteps = 16;
-	static int amount = 10;
-	static int resetAmount = 10;
-	static bool benchmarkStarted = false;
-
-	constexpr int maxBodies = 500;
-	constexpr int amountStepSize = 10;
-	constexpr size_t measuredSamples = 20;
-
-	static std::ofstream file;
-
-	auto openFileForSubstep = [&]() {
-		if (file.is_open()) {
-			file.close();
-		}
-
-		std::ostringstream filename;
-		filename << "bvh_benchmark_substeps_" << std::setw(2) << std::setfill('0') << substeps << ".txt";
-
-		file.open(filename.str());
-
-		file << substeps << " substeps\n";
-		file << "====================================\n";
-		file.flush();
-		};
-
-	if (!benchmarkStarted) {
-		physicsEngine.broadphaseManager.debugSubsteps = substeps;
-
-		openFileForSubstep();
-
-		sceneBuilder.createScene(0, 0, amount);
-		benchmarkStarted = true;
-
-		physicsEngine.broadphaseManager.debugResultBvh.clear();
-		physicsEngine.broadphaseManager.debugResultBruteForce.clear();
-		physicsEngine.broadphaseManager.debugResultSweep.clear();
-	}
-
-	auto& bvh = physicsEngine.broadphaseManager.debugResultBvh;
-	auto& brute = physicsEngine.broadphaseManager.debugResultBruteForce;
-	auto& sweep = physicsEngine.broadphaseManager.debugResultSweep;
-
-	if (bvh.size() >= measuredSamples && 
-		brute.size() >= measuredSamples && 
-		sweep.size() >= measuredSamples) 
-	{
-		std::sort(bvh.begin(), bvh.end());
-		std::sort(brute.begin(), brute.end());
-		std::sort(sweep.begin(), sweep.end());
-
-		double medianBvh = bvh[bvh.size() / 2];
-		double medianBrute = brute[brute.size() / 2];
-        double medianSweep = sweep[sweep.size() / 2];
-
-		std::ostringstream line;
-		line
-			<< "Bodies: " << amount
-			<< " | Brute Force: " << medianBrute << " ms"
-			<< " | BVH: " << medianBvh << " ms"
-			<< " | SAP: " << medianSweep << " ms\n";
-
-		std::cout << line.str();
-		file << line.str();
-		file.flush();
-
-		bvh.clear();
-		brute.clear();
-		sweep.clear();
-		amount += amountStepSize;
-
-		if (amount > maxBodies) {
-			std::cout << "Benchmark finished for " << substeps << " substeps.\n";
-			file << "Benchmark finished for " << substeps << " substeps.\n";
-			file.flush();
-
-			substeps++;
-
-			if (substeps > maxSubsteps) {
-				std::cout << "All benchmarks finished.\n";
-				file.close();
-				exit(0);
-			}
-
-			std::cout << "Starting benchmark for " << substeps << " substeps.\n";
-
-			amount = resetAmount;
-			physicsEngine.broadphaseManager.debugSubsteps = substeps;
-
-			openFileForSubstep();
-		}
-
-		sceneBuilder.createScene(0, 0, amount);
-	}
 }

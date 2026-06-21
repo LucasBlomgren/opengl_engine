@@ -1,5 +1,5 @@
 #pragma once
-#include "broadphase/broadphase_types.h"
+#include "broadphase/rigidbody_broadphase_types.h"
 #include "aabb.h"
 
 class Tri {

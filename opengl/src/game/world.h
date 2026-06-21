@@ -3,7 +3,7 @@
 #include "core/slot_map.h"
 #include "game/game_object.h"
 #include "physics/colliders/collider.h"
-#include "rigid_body.h"
+#include "rigidbody.h"
 
 class TextureManager;
 class LightManager;

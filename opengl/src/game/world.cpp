@@ -5,7 +5,7 @@
 #include "textures/texture_manager.h"
 #include "mesh/mesh_manager.h"
 #include "shaders/shader_manager.h"
-#include "physics.h"
+#include "physics/physics_engine.h"
 
 void World::clear() {
     gameObjects.clear();
@@ -195,4 +195,7 @@ void World::deleteGameObject(GameObjectHandle handle) {
     else {
         std::cerr << "[World] Warning: Tried to delete non-existing GameObject with handle (slot: " << handle.slot << ", gen: " << handle.gen << ")\n";
     }
+
+    // #TODO: mark physics objects as pending deletion so they wont be used in physics
+    // so they wont mess up parallelization of the physics step loop
 }

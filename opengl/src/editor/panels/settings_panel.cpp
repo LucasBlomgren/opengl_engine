@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "settings_panel.h"
 #include "editor/panel.h"
 #include "imgui.h"
@@ -17,7 +18,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
     ImGui::Text("Simulation speed");
     float simulationSpeed = ctx.engineState->getSimulationSpeed();
-    if (ImGui::SliderFloat("##SimulationSpeed", &simulationSpeed, 0.1f, 2.0f, "%.1f")) {
+    if (ImGui::SliderFloat("##SimulationSpeed", &simulationSpeed, 0.01f, 2.0f, "%.2f")) {
         ctx.engineState->setSimulationSpeed(simulationSpeed);
     }
 
@@ -188,7 +189,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
     ImGui::Text("Cooldown");
     float shootCooldown = ctx.editorMain->shootCooldown;
-    if (ImGui::SliderFloat("##Cooldown", &shootCooldown, 0.01f, 1.0f, "%.2f")) {
+    if (ImGui::SliderFloat("##Cooldown", &shootCooldown, 0.001f, 1.0f, "%.3f")) {
         ctx.editorMain->shootCooldown = shootCooldown;
     }
 
@@ -196,6 +197,12 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     float shootMass = ctx.editorMain->shootMass;
     if (ImGui::SliderFloat("##Mass", &shootMass, 1.0f, 1000.0f, "%.0f")) {
         ctx.editorMain->shootMass = shootMass;
+    }
+
+    ImGui::Text("Size");
+    float shootSize = ctx.editorMain->shootSize;
+    if (ImGui::SliderFloat("##Size", &shootSize, 1.0f, 100.0f, "%.0f")) {
+        ctx.editorMain->shootSize = shootSize;
     }
 
     ImGui::Text("Velocity");

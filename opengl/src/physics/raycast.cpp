@@ -23,12 +23,19 @@ RaycastHit raycast(
     bool noHit = true;
     for (RigidBodyHandle& handle : collisions) {
         RigidBody* body = bodyMap->try_get(handle);
-        GameObject* obj = goMap->try_get(body->gameObjectHandle);
-
-        if (!obj) {
-            std::cout << "[Raycast] Error: RigidBody with handle " << handle.slot << " has no associated GameObject." << std::endl;
+        if (!body) {
+            std::cout << "[Raycast] Error: Invalid body handle. slot="
+                << handle.slot << " gen=" << handle.gen << "\n";
             continue;
         }
+
+        GameObject* obj = goMap->try_get(body->gameObjectHandle);
+        if (!obj) {
+            std::cout << "[Raycast] Error: RigidBody with handle "
+                << handle.slot << " has no associated GameObject.\n";
+            continue;
+        }
+
         if (obj->player) continue;
 
         glm::vec3 min = body->aabb.worldMin;

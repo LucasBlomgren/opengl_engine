@@ -1,8 +1,8 @@
 #pragma once
 
-#include "game/player.h"
+#include "game/world.h"
 #include "editor/editor_main.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "game_object.h"
 #include "tri.h"
 

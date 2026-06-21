@@ -28,22 +28,25 @@ void NarrowphaseManager::clear() {
 //=======================================================
 //               Narrow phase
 //=======================================================
-void NarrowphaseManager::narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits) {
+void NarrowphaseManager::narrowPhase(
+    const PairBatch& pairs,
+    ContactBatch& batch) 
+{
     externalContacts.clear();
 
-    size_t wanted = contactCache->size() + dynamicHits.size();
+    size_t wanted = contactCache->size() + pairs.dynamicPairs.size();
     if (wanted > contactCache->bucket_count()) {
         contactCache->reserve(wanted * 2);
     }
 
-    for (const TerrainPair& pair : terrainHits) processTerrainPair(pair);
-    for (const DynamicPair& pair : dynamicHits) processDynamicPair(pair);
+    for (const TerrainPair& pair : pairs.terrainPairs) processTerrainPair(pair, batch);
+    for (const DynamicPair& pair : pairs.dynamicPairs) processDynamicPair(pair, batch);
 }
 
 //=======================================================
 //     Dynamic pair processing
 //=======================================================
-void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
+void NarrowphaseManager::processDynamicPair(const DynamicPair& pair, ContactBatch& batch) {
     RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
     RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
 
@@ -68,24 +71,24 @@ void NarrowphaseManager::processDynamicPair(const DynamicPair& pair) {
 
             // box-box, box-sphere or sphere-sphere SAT + collision manifold generation depending on collider types
             if (colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::CUBOID) {
-                processBoxBox(pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
+                processBoxBox(batch, pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
             }
             else if ((colliderA->type == ColliderType::CUBOID and colliderB->type == ColliderType::SPHERE) or
                 (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::CUBOID)) {
-                processBoxSphere(pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
+                processBoxSphere(batch, pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
             }
             else if (colliderA->type == ColliderType::SPHERE and colliderB->type == ColliderType::SPHERE) {
-                processSphereSphere(pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
+                processSphereSphere(batch, pair.bodyA, pair.bodyB, colAH, colBH, bodyA, bodyB, colliderA, colliderB);
             }
         }
     }
-}
+}   
 
 
 //=======================================================
 //     Terrain pair processing
 //=======================================================
-void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
+void NarrowphaseManager::processTerrainPair(const TerrainPair& pair, ContactBatch& batch) {
     RigidBody* body = caches->bodies.get(pair.body, FUNC_NAME);
     if (body->asleep || body->type == BodyType::Kinematic) return;
 
@@ -113,11 +116,11 @@ void NarrowphaseManager::processTerrainPair(const TerrainPair& pair) {
 
         switch (collider->type) {
         case ColliderType::CUBOID:
-            processTerrainTriBox(collider->rigidBodyHandle, collider, body, *candidates);
+            processTerrainTriBox(batch, collider->rigidBodyHandle, collider, body, *candidates);
             break;
 
         case ColliderType::SPHERE:
-            processTerrainTriSphere(collider->rigidBodyHandle, collider , body , *candidates);
+            processTerrainTriSphere(batch, collider->rigidBodyHandle, collider , body , *candidates);
             break;
         }
     }

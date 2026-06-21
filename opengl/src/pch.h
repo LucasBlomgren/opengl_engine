@@ -2,7 +2,9 @@
 
 #define GLM_FORCE_SIMD_AVX2 
 
-#include <stb/stb_image.h>
+#define GLFW_INCLUDE_NONE
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <fstream>
@@ -14,11 +16,6 @@
 #include <string>
 #include <unordered_map>
 #include <stdexcept>
-
-
-#define GLFW_INCLUDE_NONE
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/component_wise.hpp>
@@ -30,6 +27,7 @@
 
 #include <atomic>
 
+#include "../debug_config.h"
 
 #define FUNC_NAME __FUNCTION__
 

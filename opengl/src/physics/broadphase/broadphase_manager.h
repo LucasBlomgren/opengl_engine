@@ -5,9 +5,9 @@
 #include "runtime_caches.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
-#include "bvh/bvh_temp_island.h"
+#include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
-#include "broadphase_pairs.h"
+#include "physics_step_types.h"
 
 class RigidBody;
 class Tri;
@@ -17,22 +17,11 @@ public:
     void init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris);
     void clear();
 
-    int debugSubsteps = 1;
-    void debugTest();
-    void measureBVH(int substeps);
-    void measureBrute(int substeps);
-    void measureSweepAndPrune(int substeps);
-    std::vector<double> debugResultBvh;
-    std::vector<double> debugResultBruteForce;
-    std::vector<double> debugResultSweep;
-
     // update BVHs if dirty
     void updateBVHs();
 
     // compute pairs for this frame and get results
-    void computePairs();
-    const std::vector<TerrainPair>& getTerrainPairs() const { return terrainPairs; }
-    const std::vector<DynamicPair>& getDynamicPairs() const { return dynamicPairs; }
+    void buildPairs(const StepScope& scope, PairBatch& batch);
 
     // add/remove from current list
     void add(RigidBodyHandle& handle, BroadphaseBucket dst);
@@ -67,15 +56,10 @@ private:
     std::vector<RigidBodyHandle> staticHandles;
 
     // trees 
-    TempIslandBVH tempIslandBvh;
     BVHTree awakeBvh;
     BVHTree asleepBvh;
     BVHTree staticBvh;
     TerrainBVH terrainBvh;
-
-    // computePairs results
-    std::vector<TerrainPair> terrainPairs;
-    std::vector<DynamicPair> dynamicPairs;
 
     // pairs buffers
     std::vector<std::pair<RigidBodyHandle, Tri*>> pairsBufTerrain;

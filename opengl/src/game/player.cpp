@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "player.h"
+#include "world.h"
 
 void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera) {
     this->world = world;
@@ -75,8 +76,8 @@ void Player::resetState() {
     moveImpulse = glm::vec3(0.0f);
     jumpImpulse = 0.0f;
 
-    GameObjectHandle selectedObjectHandle;
-    GameObjectHandle hoveredObjectHandle;
+    selectedObjectHandle = {};
+    hoveredObjectHandle = {};
 }   
 void Player::activate() {
     resetState();
@@ -357,7 +358,6 @@ void Player::selectObject() {
     bpBucket = BroadphaseBucket::Awake;
     physicsEngine->queueMove(raycast.bodyHandle, bpBucket);
 
-    rb->allowSleep = false;
     transform->lastPosition = transform->position;
 
     rb->linearVelocity = glm::vec3(0.0f);

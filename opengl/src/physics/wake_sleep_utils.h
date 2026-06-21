@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "rigid_body.h"
+#include "rigidbody.h"
 
 namespace WakeSleep
 {
@@ -13,8 +13,8 @@ namespace WakeSleep
     WakeUpInfo computeWakeUpInfo(
         const RigidBody& A,
         const RigidBody& B,
-        float velocityThreshold = 0.6f,
-        float angularThreshold = 0.4f
+        float velocityThreshold = 0.3f, // 6
+        float angularThreshold = 0.2f  // 4
     );
 
     void enqueueWakeRequests(

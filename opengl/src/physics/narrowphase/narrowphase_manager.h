@@ -1,25 +1,11 @@
 #pragma once
 
-#include "rigid_body.h"
-#include "broadphase/broadphase_pairs.h"
+#include "narrowphase_types.h"
+#include "rigidbody.h"
 #include "collision_manifold.h"
 #include "sat.h"
 #include "runtime_caches.h"
-
-struct ExternalMotionContact {
-    RigidBodyHandle bodyA;
-    RigidBodyHandle bodyB;
-    glm::vec3 normal{ 0.0f };
-    float penetration = 0.0f;
-
-    ExternalMotionContact(const RigidBodyHandle& bodyA,
-        const RigidBodyHandle& bodyB,
-        const glm::vec3& normal,
-        float penetration)
-        : bodyA(bodyA), bodyB(bodyB), normal(normal), penetration(penetration) {
-    }
-    ExternalMotionContact() = default;
-};
+#include "broadphase/broadphase_types.h"
 
 class NarrowphaseManager {
 public:
@@ -36,7 +22,10 @@ public:
     }
 
     // main function
-    void narrowPhase(const std::vector<TerrainPair>& terrainHits, const std::vector<DynamicPair>& dynamicHits);
+    void narrowPhase(
+        const PairBatch& pairs,
+        ContactBatch& batch
+    );
 
 private:
     // references to caches
@@ -44,10 +33,11 @@ private:
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;
 
-    void processTerrainPair(const TerrainPair& terrainPair);
-    void processDynamicPair(const DynamicPair& dynamicPair);
+    void processTerrainPair(const TerrainPair& terrainPair, ContactBatch& batch);
+    void processDynamicPair(const DynamicPair& dynamicPair, ContactBatch& batch);
 
     void processTerrainTriBox(
+        ContactBatch& batch,
         RigidBodyHandle bodyH, 
         Collider* collider, 
         RigidBody* body,
@@ -55,6 +45,7 @@ private:
     );
 
     void processTerrainTriSphere(
+        ContactBatch& batch,
         RigidBodyHandle bodyH, 
         Collider* collider, 
         RigidBody* body,
@@ -62,6 +53,7 @@ private:
     );
 
     void processBoxBox(
+        ContactBatch& batch,
         RigidBodyHandle bodyHandleA,
         RigidBodyHandle bodyHandleB,
         ColliderHandle colliderHandleA,
@@ -73,6 +65,7 @@ private:
     );
 
     void processBoxSphere(
+        ContactBatch& batch,
         RigidBodyHandle bodyHandleA,
         RigidBodyHandle bodyHandleB,
         ColliderHandle colliderHandleA,
@@ -84,6 +77,7 @@ private:
     );
 
     void processSphereSphere(
+        ContactBatch& batch,
         RigidBodyHandle bodyHandleA,
         RigidBodyHandle bodyHandleB,
         ColliderHandle colliderHandleA,

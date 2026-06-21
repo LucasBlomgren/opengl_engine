@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -28,7 +28,6 @@
     <ClCompile Include="Linking\include\imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="Linking\lib\stb\stb.cpp" />
     <ClCompile Include="src\engine\camera.cpp" />
-    <ClCompile Include="src\engine\engine.cpp" />
     <ClCompile Include="src\engine\engine_state.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -205,7 +204,6 @@
     </ClCompile>
     <ClCompile Include="src\physics\broadphase\broadphase_manager.cpp" />
     <ClCompile Include="src\physics\bvh\bvh_terrain.cpp" />
-    <ClCompile Include="src\physics\bvh\bvh_temp_island.cpp" />
     <ClCompile Include="src\physics\colliders\aabb.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -233,14 +231,17 @@
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />
-    <ClCompile Include="src\physics\physics.cpp">
+    <ClCompile Include="src\physics\physics_engine.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClCompile>
+        </ClCompile>
+    <ClCompile Include="src\physics\physics_commands.cpp" />
+    <ClCompile Include="src\physics\physics_queries.cpp" />
+    <ClCompile Include="src\physics\physics_scene.cpp" />
     <ClCompile Include="src\physics\physics_world.cpp" />
     <ClCompile Include="src\physics\raycast.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -250,7 +251,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\rigid_body.cpp" />
+    <ClCompile Include="src\physics\rigidbody.cpp" />
+    <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
     <ClCompile Include="src\physics\wake_sleep_utils.cpp" />
     <None Include="src\graphics\shaders\debug.frag">
       <FileType>Document</FileType>
@@ -272,7 +274,6 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\engine\camera.h" />
-    <ClInclude Include="src\engine\engine.h" />
     <ClInclude Include="src\engine\engine_state.h" />
     <ClInclude Include="src\engine\opengl_init.h" />
     <ClInclude Include="src\engine\input.h" />
@@ -319,14 +320,13 @@
     <ClInclude Include="src\engine\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
     <ClInclude Include="src\physics\broadphase\SAP_test.h" />
     <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
     <ClInclude Include="src\physics\bvh\query_sametree.h" />
-    <ClInclude Include="src\physics\bvh\bvh_temp_island.h" />
     <ClInclude Include="src\physics\colliders\aabb.h" />
-    <ClInclude Include="src\physics\broadphase\broadphase_pairs.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
     <ClInclude Include="src\physics\colliders\collider_pose.h" />
@@ -337,16 +337,19 @@
     <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
     <ClInclude Include="src\physics\narrowphase\dynamic_processing.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
+    <ClInclude Include="src\physics\narrowphase\narrowphase_types.h" />
     <ClInclude Include="src\physics\narrowphase\sat.h" />
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
-    <ClInclude Include="src\physics\physics.h" />
+    <ClInclude Include="src\physics\physics_engine.h" />
+<ClInclude Include="src\physics\physics_step_types.h" />
     <ClInclude Include="src\physics\physics_world.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast.h" />
-    <ClInclude Include="src\physics\rigid_body.h" />
+    <ClInclude Include="src\physics\rigidbody.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\sat.h" />
     <ClInclude Include="src\physics\bvh\query_treetree.h" />
+    <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\wake_sleep_utils.h" />
   </ItemGroup>
   <ItemGroup>
@@ -460,7 +463,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include;$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -476,6 +479,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)Linking\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
@@ -490,7 +494,7 @@
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Linking\include;$(ProjectDir)Linking\include\imgui-docking\backends;$(ProjectDir)Linking\include\imgui-docking;src/imgui;src;src/externals;src/core;src/shaders;src/graphics;src/graphics/graphics debug;src/physics;src/physics/colliders;src/game;src/geometry;src/game/editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -505,6 +509,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ProjectDir)Linking\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
@@ -513,3 +518,7 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+
+
+
+

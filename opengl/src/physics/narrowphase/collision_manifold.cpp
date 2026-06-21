@@ -4,7 +4,7 @@
 //=============================================
 // Box-Box collision
 //=============================================
-void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+Contact* CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     ContactRuntime& rt = contact.runtimeData;
     Collider* colliderA = rt.colliderA;
     Collider* colliderB = rt.colliderB;
@@ -55,13 +55,13 @@ void CollisionManifold::boxBox(Contact& contact, std::unordered_map<size_t, Cont
     contact.hashKey = generateKey(colliderA->id, colliderB->id);
     contact.normal = satResult.normal;
 
-    integrateContact(cache, contact);
+    return integrateContact(cache, contact);
 }
 
 //==================================================
 // Box-Sphere collision
 //==================================================
-void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+Contact* CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     contact.normal = satResult.normal;
     contact.points.resize(1);
     contact.points[0].worldPos = satResult.point; // point is the closest point on the cuboid to the sphere
@@ -77,13 +77,13 @@ void CollisionManifold::boxSphere(Contact& contact, std::unordered_map<size_t, C
     contact.points[0].localPos = root->worldToLocalPoint(contact.points[0].worldPos);
 
     contact.hashKey = generateKey(contact.runtimeData.colliderA->id, contact.runtimeData.colliderB->id);
-    integrateContact(cache, contact);
+    return integrateContact(cache, contact);
 }
 
 //===================================================
 // Box-Mesh collision
 //===================================================
-void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+Contact* CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
     ContactRuntime& rt = contact.runtimeData;
     Collider* colliderA = rt.colliderA;
 
@@ -128,13 +128,13 @@ void CollisionManifold::boxMesh(Contact& contact, std::unordered_map<size_t, Con
     }
 
     contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
-    integrateContact(cache, contact);
+    return integrateContact(cache, contact);
 }
 
 //===================================================
 // Sphere-Sphere collision
 //===================================================
-void CollisionManifold::sphereSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
+Contact* CollisionManifold::sphereSphere(Contact& contact, std::unordered_map<size_t, Contact>& cache, SAT::Result& satResult) {
     ContactRuntime& rt = contact.runtimeData;
     Collider* colliderA = rt.colliderA;
     Collider* colliderB = rt.colliderB;
@@ -153,13 +153,13 @@ void CollisionManifold::sphereSphere(Contact& contact, std::unordered_map<size_t
     contact.points[0].localPos = root->worldToLocalPoint(contact.points[0].worldPos);
 
     contact.hashKey = generateKey(colliderA->id, colliderB->id);
-    integrateContact(cache, contact);
+    return integrateContact(cache, contact);
 }
 
 //===================================================
 // Sphere-Mesh collision
 //===================================================
-void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
+Contact* CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, Contact>& cache, std::vector<SAT::Result>& allResults) {
     ContactRuntime& rt = contact.runtimeData;
     Collider* colliderA = rt.colliderA;
 
@@ -186,7 +186,7 @@ void CollisionManifold::sphereMesh(Contact& contact, std::unordered_map<size_t, 
     }
 
     contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
-    integrateContact(cache, contact);
+    return integrateContact(cache, contact);
 }
 
 //===================================================
@@ -648,7 +648,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
 //==========================================================================================
 // Integration of new contact with cached contact for warm starting and temporal coherence
 //==========================================================================================
-void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
+Contact* CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact) {
     // #TODO: FaceCenter kan användas för att sortera contact points om:
     // 1. nya kontaktpunkter skapades
     // 2. antal ändrades
@@ -709,8 +709,12 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
             contact.points[i].wasUsedThisFrame = true;
         }
 
-        contactCache.emplace(contact.hashKey, std::move(contact));
-        return;
+        size_t key = contact.hashKey;
+
+        auto [insertedIt, inserted] =
+            contactCache.emplace(key, std::move(contact));
+
+        return &insertedIt->second;
     }
 
     // we have a matching contact in cache, so we try to match the new contact points with the cached contact points for warm starting
@@ -831,6 +835,8 @@ void CollisionManifold::integrateContact(std::unordered_map<size_t, Contact>& co
     }
 
     it->second = std::move(contact);
+
+    return &it->second;
 }
 
 //========================================

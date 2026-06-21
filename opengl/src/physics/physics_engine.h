@@ -1,9 +1,8 @@
 #pragma once
 
-#include "engine/engine_state.h"
+#include "physics_step_types.h"
 #include "runtime_caches.h"
 #include "physics_world.h"
-#include "world.h"
 #include "timer.h"
 #include "narrowphase/collision_manifold.h"
 #include "raycast.h"
@@ -11,7 +10,11 @@
 #include "bvh/bvh_terrain.h"
 #include "broadphase/broadphase_manager.h"
 #include "narrowphase/narrowphase_manager.h"
+#include "solver/pgs_solver.h"
 #include "tri.h"
+
+class EngineState;
+class World;
 
 struct DebugData {
     size_t awake = 0;
@@ -34,8 +37,14 @@ public:
     void clear();
     void prepareStepLoop();
     int computeAdaptiveSubsteps(float dt);
+
+    void beginPhysicsStep(float outerDt);
+    void stepScope(const StepScope& scope, float dt);
     void step(float deltaTime, EngineState& engine);
     void stepDiscrete(float deltaTime);
+    void endPhysicsStep(float outerDt);
+    void processWakeList();
+    void processSleepList(float outerDt);
 
     void sleepAllObjects();
     void awakenAllObjects();
@@ -52,8 +61,9 @@ public:
     //        Getters
     //------------------------
     PhysicsWorld* getPhysicsWorld();
-    std::vector<ExternalMotionContact>& getExternalMotionContacts();
     const DebugData getDebugData();
+    std::vector<ExternalMotionContact>& getExternalMotionContacts();
+    const std::vector<RigidBodyHandle>& getAwakeList() const;
     const BVHTree& getDynamicAwakeBvh() const;
     const BVHTree& getDynamicAsleepBvh() const;
     const BVHTree& getStaticBvh() const;
@@ -62,10 +72,8 @@ public:
 
     std::vector<Contact*> contactsToSolve;
 
-    int maxSubsteps = 16;
+    int maxSubsteps = 8;
     int pgsIterations = 8;
-
-    BroadphaseManager broadphaseManager;
 
 private:
     float dt;
@@ -75,6 +83,7 @@ private:
     FrameTimers* frameTimers;
 
     int currentSubstepAmount = 1;
+    int currentStepId = 0;
 
     //-----------------------------
     // Debug visualization data
@@ -100,20 +109,18 @@ private:
     //------------------------
     //    Update functions
     //------------------------
-    void updateBodiesAndColliders();
+    void updateBodiesAndColliders(const std::vector<RigidBodyHandle>& bodies, float dt);
     void updateContactCache();
 
     //------------------------
-    //  Collision detection 
+    //  Collision handling
     //------------------------
-    //BroadphaseManager broadphaseManager;
+    BroadphaseManager broadphaseManager;
     NarrowphaseManager narrowphaseManager;
+    PGSSolver pgsSolver;
 
     // caches for handles to pointers during narrow phase and contact generation to avoid multiple gen-checks and lookups in the slot map
     RuntimeCaches caches;
-
-    void detectAndSolveCollisions();
-    void collectActiveContacts();
 
     //------------------------
     //   Collision Manifold
@@ -133,4 +140,5 @@ private:
     std::vector<RigidBodyHandle> toSleep;
     void decideSleep();
     void updateSleepThresholds();
+    void addSleepDamping();
 };

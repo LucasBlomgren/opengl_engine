@@ -12,6 +12,10 @@ void FrameTimers::endFrame() {
     submit("Frame", ms);
 }
 
+void FrameTimers::reset(const std::string& name) {
+    timers[name].lastMs = 0.0f;
+}
+
 // Submit a timing measurement for a named timer
 void FrameTimers::submit(const std::string& name, float ms) {
     timers[name].update(ms);

@@ -12,16 +12,16 @@ public:
     struct Node {
         bool alive = true;
         bool isLeaf = false;
+
+        int selfIdx = -1;
+        int parentIdx = -1;
         int childAIdx = -1;
         int childBIdx = -1;
 
         int   start = -1;
         int   count = -1;
         bool  dirty = false;
-
-        Element element;
-        AABB  tightBox;     // only for leaf nodes
-        AABB  fatBox;       // for all nodes
+        AABB  fatBox;
     };
     std::vector<Node> nodes;
 
@@ -34,27 +34,33 @@ public:
     bool queryAny(const AABB& qBox) const;
 
     template<class Func>
-    void forEachLeafElement(const Node& leaf, Func&& fn) const {
-        fn(leaf.element, leaf.tightBox);
+    void forEachLeafElement(const Node& leaf, Func&& fn) const
+    {
+        const int begin = leaf.start;
+        const int end = leaf.start + leaf.count;
+
+        for (int i = begin; i < end; ++i) {
+            const BVHPrimitive& prim = prims[i];
+            fn(prim.element, prim.box);
+        }
     }
 
 private:
+    // settings
+    const int   leafThreshold = 32;
+    const glm::vec3 fatBoxMargin{ 0.2f };
+
     struct BVHPrimitive {
-        glm::vec3 min{ 0.0f };
-        glm::vec3 max{ 0.0f };
-        glm::vec3 centroid{ 0.0f };
+        AABB box;
         Element element;
     };
-
-    int leafThreshold = 1;
-    glm::vec3 fatBoxMargin{ 0.2f };
-
     std::vector<BVHPrimitive> prims;
-    void createPrimitives(std::vector<Tri>& tris);
 
-    void split(int parentIdx, int depth);
-    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end, int count);
+    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
+    void createPrimitives(std::vector<Tri>& tris);
     void makeLeaf(int leafIdx);
+    void split(int parentIdx, int depth);
+    void updateLeaves();
     void refitNode(int nodeIdx);
     void updateRenderData(Node& n);
 };
