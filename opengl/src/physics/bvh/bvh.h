@@ -1,9 +1,15 @@
 ﻿#pragma once
 
-#include "runtime_caches.h"
+#include "../physics_step_types.h"
 #include "physics_world.h"
 #include "rigidbody.h"
 #include "colliders/aabb.h"
+
+enum class BVHType {
+    Awake,
+    Asleep,
+    Static
+};
 
 class BVHTree {
 public:
@@ -11,11 +17,12 @@ public:
 
     // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
     using Element = RigidBodyHandle;
-    void init(PhysicsWorld* world, RuntimeCaches* caches, int allocSize);
+    void init(PhysicsWorld* world, RuntimeCaches* caches, size_t allocSize);
     void clear();
 
     bool dirty = false;
     int rootIdx = -1;
+    bool shouldUpdateRenderData = false;
 
     // public för att rendera AABBs
     struct Node {
@@ -62,7 +69,7 @@ private:
     PhysicsWorld* world = nullptr;
     RuntimeCaches* caches = nullptr;
 
-    int rebuildCooldown = 3;
+    int rebuildCooldown = 10;
     int rebuildCooldownCounter = 0;
     int numRefits = 0;
     int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio

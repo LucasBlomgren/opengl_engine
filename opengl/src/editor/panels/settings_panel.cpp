@@ -5,6 +5,7 @@
 #include "engine/engine_state.h"
 #include "scene_builder.h"
 #include "skybox/skybox_manager.h"
+#include "physics/bvh/bvh.h"
 
 void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 {
@@ -99,11 +100,13 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
         bool showBVH_awake = ctx.engineState->getShowBVH_awake();
         if (ImGui::Checkbox("Awake BVH", &showBVH_awake)) {
+            ctx.physicsEngine->updateBVHRenderData(BVHType::Awake, showBVH_awake);
             ctx.engineState->toggleShowBVH_awake();
         }
 
         bool showBVH_asleep = ctx.engineState->getShowBVH_asleep();
         if (ImGui::Checkbox("Asleep BVH", &showBVH_asleep)) {
+            ctx.physicsEngine->updateBVHRenderData(BVHType::Asleep, showBVH_asleep);
             ctx.engineState->toggleShowBVH_asleep();
         }
 
@@ -112,6 +115,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
         bool showBVH_static = ctx.engineState->getShowBVH_static();
         if (ImGui::Checkbox("Static BVH", &showBVH_static)) {
+            ctx.physicsEngine->updateBVHRenderData(BVHType::Static, showBVH_static);
             ctx.engineState->toggleShowBVH_static();
         }
 

@@ -3,8 +3,21 @@
 #include <vector>
 #include <cstdint>
 #include "slot_map.h"
+#include "core/pointer_cache.h"
+#include "colliders/collider.h"
+#include "rigidbody.h"
 
-using IslandID = uint32_t;
+struct RuntimeCaches {
+    PointerCache<Transform, TransformHandle> transforms;
+    PointerCache<Collider, ColliderHandle> colliders;
+    PointerCache<RigidBody, RigidBodyHandle> bodies;
+
+    void clear() {
+        transforms.clear();
+        colliders.clear();
+        bodies.clear();
+    }
+};
 
 enum class StepScopeType {
     Global,
@@ -22,6 +35,6 @@ struct StepScope {
 
     const std::vector<RigidBodyHandle>* bodies = nullptr;
 
-    IslandID islandId = 0;
+    uint32_t islandId = 0;
     IslandBroadphaseMode islandBroadphaseMode = IslandBroadphaseMode::BruteForce;
 };

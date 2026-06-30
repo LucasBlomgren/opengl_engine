@@ -1,13 +1,13 @@
 ﻿#include "pch.h"
 #include "bvh.h"
 
-//------------------------------
+//=======================================================
 //    Init & Clear
-//------------------------------
+//=======================================================
 void BVHTree::init(
     PhysicsWorld* world,
     RuntimeCaches* caches,
-    int allocSize) 
+    size_t allocSize) 
 {
     this->world = world;
     this->caches = caches;
@@ -25,13 +25,16 @@ void BVHTree::clear() {
     rebuildThreshold = 0;
 }
 
-//------------------------------
+//=======================================================
 //        Single Query
-//------------------------------
+//=======================================================
 void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const {
-    if (nodes.empty()) return;
-
     out.clear();
+
+    if (rootIdx == -1 || nodes.empty()) {
+        return;
+    }
+
     out.reserve(BVHTree::MaxCollisionBuf);
 
     constexpr int MaxDepth = MaxStackSize;
@@ -54,11 +57,13 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
     }
 }
 
-//------------------------------
+//=======================================================
 //        Query Any
-//------------------------------
+//=======================================================
 bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
-    if (nodes.empty()) return false;
+    if (rootIdx == -1 || nodes.empty()) {
+        return false;
+    }
 
     constexpr int MaxDepth = MaxStackSize;
     const Node* stack[MaxDepth];
@@ -87,9 +92,9 @@ bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
     return false;
 }
 
-//------------------------------------------------------------------
+//========================================================
 //      Insert Leaf
-//------------------------------------------------------------------
+//========================================================
 int BVHTree::insertLeaf(RigidBodyHandle handle) {
     RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
 
@@ -161,7 +166,8 @@ int BVHTree::createLeaf(RigidBodyHandle handle, RigidBody* body) {
 
     body->broadphaseHandle.leafIdx = leaf.selfIdx;
 
-    updateRenderData(leaf);
+    if (shouldUpdateRenderData)
+        updateRenderData(leaf);
 
     return leaf.selfIdx;
 }
@@ -203,13 +209,14 @@ void BVHTree::refitParents(int parentIdx) {
         n.fatBox.worldMin = glm::min(boxA->worldMin, boxB->worldMin);
         n.fatBox.worldMax = glm::max(boxA->worldMax, boxB->worldMax);
 
-        updateRenderData(n);
+        if (shouldUpdateRenderData)
+            updateRenderData(n);
     }
 }
 
-//------------------------------------------------------------------
+//========================================================
 //      Remove leaf
-//------------------------------------------------------------------
+//========================================================
 void BVHTree::removeLeaf(int leafIdx)
 {
     if (leafIdx == -1) {
@@ -268,9 +275,9 @@ void BVHTree::removeLeaf(int leafIdx)
     parent.childBIdx = -1;
 }
 
-//------------------------------------------------------------------
+//========================================================
 //      Update
-//------------------------------------------------------------------
+//========================================================
 void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
     this->dirty = false;
 
@@ -310,7 +317,8 @@ void BVHTree::updateLeaves() {
         n.fatBox.grow(fatBoxMargin);
         numRefits++;
 
-        updateRenderData(n);
+        if (shouldUpdateRenderData)
+            updateRenderData(n);
 
         // Markera just det lövet **och alla dess föräldrar**
         for (int p = i; p != -1; p = nodes[p].parentIdx) {
@@ -343,18 +351,21 @@ void BVHTree::refitNode(int nodeIdx) {
         node.fatBox.worldMax = glm::max(childA->fatBox.worldMax, childB->fatBox.worldMax);
     }
 
-    updateRenderData(node);
+    if (shouldUpdateRenderData)
+        updateRenderData(node);
 
     node.dirty = false;
 }
 
-//------------------------------------------------------------------
+//========================================================
 //      Build
-//------------------------------------------------------------------
+//========================================================
 void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
     nodes.clear();
     // Fill prims vector with primitives from handles
     createPrimitives(handles);
+
+    rootIdx = -1;
 
     if (prims.empty()) return;
 
@@ -388,7 +399,8 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
         if (n.isLeaf) {
             n.fatBox.grow(fatBoxMargin);
 
-            updateRenderData(n);
+            if (shouldUpdateRenderData)
+                updateRenderData(n);
         }
         else {
             n.dirty = true;
@@ -493,9 +505,9 @@ void BVHTree::makeLeaf(int nodeIdx) {
     leaf.fatBox = body->aabb;
 }
 
-//------------------------------------------------------------------
+//========================================================
 //      Update Render Data
-//------------------------------------------------------------------
+//========================================================
 void BVHTree::updateRenderData(Node& n) {
     n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
     n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;

@@ -56,72 +56,72 @@ void SceneBuilder::testFloorScene(int amount) {
     //    world.createGameObject(box);
     //}
 
-    //// circular tower of boxes
-    //for (int k = 0; k < amount; k++) {
-    //    for (int l = 0; l < 1; l++) {
-    //        float angleRad;
-    //        glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
-    //        glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
-    //        glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
-    //        glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
+    // circular tower of boxes
+    for (int k = 0; k < amount; k++) {
+        for (int l = 0; l < 1; l++) {
+            float angleRad;
+            glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
+            glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
+            glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
+            glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
 
-    //        int height = 9;
-    //        for (int i = 0; i < height; i++) {
-    //            angleRad = glm::radians(static_cast<float>(i) * 15.0);
+            int height = 9;
+            for (int i = 0; i < height; i++) {
+                angleRad = glm::radians(static_cast<float>(i) * 15.0);
 
-    //            for (int j = 0; j < 12; j++) {
+                for (int j = 0; j < 12; j++) {
 
-    //                glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
+                    glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
 
-    //                glm::vec3 offset = startPos - center;   // radien från center till startPos
-    //                glm::vec3 rotated = q * offset;         // radien vriden runt axeln
-    //                glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
+                    glm::vec3 offset = startPos - center;   // radien från center till startPos
+                    glm::vec3 rotated = q * offset;         // radien vriden runt axeln
+                    glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
 
-    //                glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
-    //                newCenter.y += i;
+                    glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
+                    newCenter.y += i;
 
-    //                glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                    glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
 
-    //                GameObjectDesc box;
-    //                box.name = "Box";
-    //                box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
-    //                box.asleep = true;
-    //                box.mass = 1.0f;
-    //                SubPartDesc part;
-    //                part.localTransformHandle = world.createTransform();
-    //                part.textureName = "plain";
-    //                part.color = randomColor / 255.0f;
-    //                box.parts.push_back(part);
-    //                world.createGameObject(box);
+                    GameObjectDesc box;
+                    box.name = "Box";
+                    box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
+                    box.asleep = true;
+                    box.mass = 1.0f;
+                    SubPartDesc part;
+                    part.localTransformHandle = world.createTransform();
+                    part.textureName = "plain";
+                    part.color = randomColor / 255.0f;
+                    box.parts.push_back(part);
+                    world.createGameObject(box);
 
-    //                angleRad += glm::radians(30.0f);
-    //            }
-    //        }
-    //    }
-    //}
+                    angleRad += glm::radians(30.0f);
+                }
+            }
+        }
+    }
 
-    //// single stack of boxes and a single box with velocity
-    //{
-    //    for (int i = 0; i < 2; i++)   // x
-    //    for (int j = 0; j < 5; j++)   // y
-    //    for (int k = 0; k < 2; k++) { // z
-    //        GameObjectDesc box;
-    //        box.name = "Box";
-    //        box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
-    //        box.allowSleep = true;
-    //        box.sleepCounterThreshold = 2.5f;
-    //        box.mass = 1.0f;
+    // single stack of boxes and a single box with velocity
+    {
+        for (int i = 0; i < 2; i++)   // x
+        for (int j = 0; j < 5; j++)   // y
+        for (int k = 0; k < 2; k++) { // z
+            GameObjectDesc box;
+            box.name = "Box";
+            box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
+            box.allowSleep = true;
+            box.sleepCounterThreshold = 2.5f;
+            box.mass = 1.0f;
 
-    //        SubPartDesc part;
-    //        part.name = "MainPart";
-    //        part.textureName = "crate";
-    //        part.localTransformHandle = world.createTransform();
+            SubPartDesc part;
+            part.name = "MainPart";
+            part.textureName = "crate";
+            part.localTransformHandle = world.createTransform();
 
-    //        box.parts.push_back(part);
+            box.parts.push_back(part);
 
-    //        world.createGameObject(box);
-    //    }
-    //}
+            world.createGameObject(box);
+        }
+    }
 
     //GameObjectDesc box;
     //box.name = "Box";
@@ -450,7 +450,7 @@ void SceneBuilder::testFloorScene(int amount) {
         glm::quat shelfRotation = glm::angleAxis(shelfAngle, axis);
 
         glm::vec3 shelfOffset =
-            shelfRotation * glm::vec3(shelfCenterRadius, 0.0f, 0.0f);
+            shelfRotation * glm::vec3(shelfCenterRadius+2.0f, 0.0f, 0.0f);
 
         SubPartDesc shelf;
 

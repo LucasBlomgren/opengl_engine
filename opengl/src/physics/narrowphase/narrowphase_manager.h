@@ -1,10 +1,10 @@
 #pragma once
 
+#include "../physics_step_types.h"
 #include "narrowphase_types.h"
 #include "rigidbody.h"
 #include "collision_manifold.h"
 #include "sat.h"
-#include "runtime_caches.h"
 #include "broadphase/broadphase_types.h"
 
 class NarrowphaseManager {

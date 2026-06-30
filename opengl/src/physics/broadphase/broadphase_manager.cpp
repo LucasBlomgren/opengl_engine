@@ -39,6 +39,23 @@ void BroadphaseManager::clear() {
     pairsBufTerrain.clear();
 }
 
+//=======================================
+//    Set BVH render data flag
+//=======================================
+void BroadphaseManager::updateBVHRenderData(const BVHType& type, bool update) {
+    switch (type) {
+    case BVHType::Awake:
+        awakeBvh.shouldUpdateRenderData = update;
+        break;
+    case BVHType::Asleep:
+        asleepBvh.shouldUpdateRenderData = update;
+        break;
+    case BVHType::Static:
+        staticBvh.shouldUpdateRenderData = update;
+        break;
+    }
+}
+
 //==================================================
 //      Update BVHs
 //==================================================

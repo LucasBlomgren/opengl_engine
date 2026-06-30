@@ -2,12 +2,11 @@
 #include <vector>
 
 #include "core/slot_map.h"
-#include "runtime_caches.h"
+#include "../physics_step_types.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
-#include "physics_step_types.h"
 
 class RigidBody;
 class Tri;
@@ -44,6 +43,8 @@ public:
     const BVHTree& getAsleepBVH() const { return asleepBvh; }
     const BVHTree& getStaticBVH() const { return staticBvh; }
     const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
+
+    void updateBVHRenderData(const BVHType& type, bool update);
 
 private:
     // references to pointer caches and terrain triangles

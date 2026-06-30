@@ -72,6 +72,12 @@ void NarrowphaseManager::processBoxBox(
         bodyB->type == BodyType::Kinematic ||
         (bodyB->type == BodyType::Dynamic && bodyB->asleep && !wakeInfo.B);
 
+    // #TODO: asleep bodies against kinematic bodies creates division by zero in solver with "cp.m_eff = 1.0f / (invMassA + invMassB + ...);"
+    // this is because the kinematic body has invMass = 0, and the asleep body has invMass = 0, so the sum is 0, and we divide by 0
+    if (noSolverResponseA && noSolverResponseB) {
+        return;
+    }
+
     // pointer data for solver
     ContactRuntime runtimeData = makeRuntimeData(
         bodyA, bodyB, colliderA, colliderB, caches->transforms.get(bodyA->rootTransformHandle, FUNC_NAME), caches->transforms.get(bodyB->rootTransformHandle, FUNC_NAME)

@@ -238,7 +238,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">pch.h</PrecompiledHeaderFile>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-        </ClCompile>
+    </ClCompile>
     <ClCompile Include="src\physics\physics_commands.cpp" />
     <ClCompile Include="src\physics\physics_queries.cpp" />
     <ClCompile Include="src\physics\physics_scene.cpp" />
@@ -253,6 +253,7 @@
     </ClCompile>
     <ClCompile Include="src\physics\rigidbody.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
+    <ClCompile Include="src\physics\solver\solver_builder.cpp" />
     <ClCompile Include="src\physics\wake_sleep_utils.cpp" />
     <None Include="src\graphics\shaders\debug.frag">
       <FileType>Document</FileType>
@@ -341,15 +342,15 @@
     <ClInclude Include="src\physics\narrowphase\sat.h" />
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
     <ClInclude Include="src\physics\physics_engine.h" />
-<ClInclude Include="src\physics\physics_step_types.h" />
+    <ClInclude Include="src\physics\physics_step_types.h" />
     <ClInclude Include="src\physics\physics_world.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\physics\rigidbody.h" />
-    <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\sat.h" />
     <ClInclude Include="src\physics\bvh\query_treetree.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
+    <ClInclude Include="src\physics\solver\solver_types.h" />
     <ClInclude Include="src\physics\wake_sleep_utils.h" />
   </ItemGroup>
   <ItemGroup>
@@ -518,7 +519,3 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
-
-
-
-

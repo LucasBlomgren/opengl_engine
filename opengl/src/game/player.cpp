@@ -2,9 +2,10 @@
 #include "player.h"
 #include "world.h"
 
-void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera) {
+void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* renderer, Camera* camera) {
     this->world = world;
     this->physicsEngine = physicsEngine;
+    this->renderer = renderer;
     this->camera = camera;
 }
  
@@ -109,6 +110,10 @@ void Player::createPlayerObject() {
     RigidBody* rb = world->getRigidBody(playerHandle);
     rb->responseMode = ContactResponseMode::Character;
     rb->setExternalControl(true);
+
+    if (part.seeThrough) {
+        renderer->addObjectToBatch(playerHandle);
+    }
 }
 
 void Player::destroyPlayerObject() {
@@ -128,10 +133,10 @@ void Player::updateMovement(float dt) {
 
     // first person camera
     camera->position = t->position + glm::vec3(0, 0.76f, 0);
-    headBob(dt);
+    //headBob(dt);
 
     // third person camera
-    //camera->position = t.position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
+    //camera->position = t->position - camera->front * glm::vec3(12.0f) + glm::vec3(0, 0.76f, 0);
 
     // avoid diagonal speed boost
     if (glm::length2(moveInput) > 0.0f) {

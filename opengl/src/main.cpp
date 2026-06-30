@@ -163,7 +163,7 @@ int main() {
 	);
 
 	// setup player
-	player.setPointers(&world, &physicsEngine, &camera);
+	player.setPointers(&world, &physicsEngine, &renderer, &camera);
 
 	// ImGui setup
 	imguiManager.init(window);

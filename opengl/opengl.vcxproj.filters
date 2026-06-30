@@ -65,6 +65,10 @@
     <ClCompile Include="src\physics\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
+    <ClCompile Include="src\physics\physics_commands.cpp" />
+    <ClCompile Include="src\physics\physics_queries.cpp" />
+    <ClCompile Include="src\physics\physics_scene.cpp" />
+    <ClCompile Include="src\physics\solver\solver_builder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -165,7 +169,6 @@
     <ClInclude Include="src\physics\narrowphase\dynamic_processing.h" />
     <ClInclude Include="src\physics\narrowphase\sat.h" />
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
-    <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\wake_sleep_utils.h" />
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
@@ -178,10 +181,8 @@
     <ClInclude Include="src\physics\physics_step_types.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_types.h" />
     <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
-    <ClInclude Include="src\physics\physics_scene.cpp" />
-    <ClInclude Include="src\physics\physics_queries.cpp" />
-    <ClInclude Include="src\physics\physics_commands.cpp" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
+    <ClInclude Include="src\physics\solver\solver_types.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

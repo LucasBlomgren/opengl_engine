@@ -2,9 +2,9 @@
 
 #include "physics_world.h"
 
-//-------------------------------------------
+//===========================================
 // Clear all data
-//-------------------------------------------
+//===========================================
 void PhysicsWorld::clear() {
     colliders.clear();
     rigidBodies.clear();
@@ -12,9 +12,9 @@ void PhysicsWorld::clear() {
     rigidBodyId = 0;
 }
 
-//-------------------------------------------
+//===========================================
 // Getters
-//-------------------------------------------
+//===========================================
 RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle& handle) {
     return rigidBodies.try_get(handle); 
 }
@@ -47,9 +47,9 @@ AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
     return merged;
 }
 
-//-------------------------------------------
+//===========================================
 // Creation
-//-------------------------------------------
+//===========================================
 RigidBodyHandle PhysicsWorld::createRigidBody() {
     RigidBodyHandle handle = rigidBodies.create();
     RigidBody* body = rigidBodies.try_get(handle);
@@ -64,9 +64,9 @@ ColliderHandle PhysicsWorld::createCollider() {
     return handle;
 }
 
-//-------------------------------------------
+//===========================================
 // Deletion
-//-------------------------------------------
+//===========================================
 void PhysicsWorld::deleteRigidBody(RigidBodyHandle handle) {
     rigidBodies.destroy(handle);
 }

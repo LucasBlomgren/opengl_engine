@@ -1,7 +1,6 @@
 #pragma once
 
 #include "physics_step_types.h"
-#include "runtime_caches.h"
 #include "physics_world.h"
 #include "timer.h"
 #include "narrowphase/collision_manifold.h"
@@ -54,9 +53,10 @@ public:
     void queueMove(RigidBodyHandle& handle, BroadphaseBucket& target);
 
     void setBVHDirty(RigidBodyHandle& handle);
+    void updateBVHRenderData(const BVHType& type, bool update);
     RaycastHit performRaycast(Ray& ray);
 
-    // #TODO: fix better public API 
+    // #TODO: fix better public API
     //------------------------
     //        Getters
     //------------------------
@@ -84,11 +84,6 @@ private:
 
     int currentSubstepAmount = 1;
     int currentStepId = 0;
-
-    //-----------------------------
-    // Debug visualization data
-    //-----------------------------
-    DebugData debugData;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

@@ -27,6 +27,7 @@ std::vector<ExternalMotionContact>& PhysicsEngine::getExternalMotionContacts() {
     return narrowphaseManager.getExternalContacts();
 }
 const DebugData PhysicsEngine::getDebugData() {
+    static DebugData debugData;
     debugData.awake = broadphaseManager.getAwakeList().size();
     debugData.asleep = broadphaseManager.getAsleepList().size();
     debugData.Static = broadphaseManager.getStaticList().size();

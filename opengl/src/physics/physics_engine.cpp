@@ -35,9 +35,11 @@ void PhysicsEngine::step(float dt, EngineState& engine) {
 
     beginPhysicsStep(dt);
 
-    int substeps = computeAdaptiveSubsteps(dt);
-    substeps = std::max(substeps, 1);
-
+    int substeps = 1;
+    if (maxSubsteps > 1) {
+        substeps = computeAdaptiveSubsteps(dt);
+        substeps = std::max(substeps, 1);
+    }
     float h = dt / static_cast<float>(substeps);
     currentSubstepAmount = substeps;
 
@@ -276,60 +278,35 @@ int PhysicsEngine::computeAdaptiveSubsteps(float dt) {
 void PhysicsEngine::stepScope(const StepScope& scope, float h) {
     this->dt = h;
 
+    auto updateTimer = [&](const std::string& name, double start) {
+        frameTimers->submit(name, frameTimers->get(name) + glfwGetTime() * 1000.0 - start);
+        };
+
     double start = glfwGetTime() * 1000.0;
     updateBodiesAndColliders(*scope.bodies, h);
-
-    frameTimers->submit(
-        "Pre step",
-        frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start
-    );
-
+    updateTimer("Pre step", start);
 
     start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
-
-    frameTimers->submit(
-        "BVH update",
-        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-    );
-
+    updateTimer("BVH update", start);
 
     start = glfwGetTime() * 1000.0;
     PairBatch pairs;
     broadphaseManager.buildPairs(scope, pairs);
+    updateTimer("Broadphase", start);
 
-    frameTimers->submit(
-        "Broadphase",
-        frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
-    );
-
-    ContactBatch contacts;
     start = glfwGetTime() * 1000.0;
+    ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts);
-
-    frameTimers->submit(
-        "Narrowphase",
-        frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
-    );
+    updateTimer("Narrowphase", start);
 
     start = glfwGetTime() * 1000.0;
     contacts.sortByMinY();
-
-    frameTimers->submit(
-        "Contact collection",
-        frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
-    );
-
+    updateTimer("Contact collection", start);
 
     start = glfwGetTime() * 1000.0;
-    pgsSolver.resolveContacts(scope, contacts, pgsIterations, h);
-    pgsSolver.postSolve(scope, contacts, caches, currentFrame, h);
-
-    frameTimers->submit(
-        "Collision resolution",
-        frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
-    );
-
+    pgsSolver.solve(scope, contacts, caches, currentFrame, pgsIterations, h);
+    updateTimer("Collision resolution", start);
 
     processWakeList();
 }

@@ -3,13 +3,14 @@
 #include "scene_builder.h"
 #include "physics/physics_engine.h"
 #include "engine/camera.h"
+#include "renderer/renderer.h"
 
 class Player : public IInputReceiver {
 public:
     GameObjectHandle playerHandle;
 
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
-    void setPointers(World* world, PhysicsEngine* physicsEngine, Camera* camera);
+    void setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* renderer, Camera* camera);
 
     // activate/deactivate player mode
     void activate();
@@ -46,6 +47,7 @@ private:
     World* world = nullptr;
     PhysicsEngine* physicsEngine = nullptr;
     Camera* camera = nullptr;
+    Renderer* renderer = nullptr;
 
     // movement
     bool onGround = false;
