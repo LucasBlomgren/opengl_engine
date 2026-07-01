@@ -70,10 +70,10 @@ public:
     const TerrainBVH& getTerrainBvh() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
-    std::vector<Contact*> contactsToSolve;
-
     int maxSubsteps = 8;
     int pgsIterations = 8;
+
+    std::unordered_map<size_t, Contact> contactCache; // public for debug rendering, but should be private and accessed through a getter
 
 private:
     float dt;
@@ -121,7 +121,6 @@ private:
     //   Collision Manifold
     //------------------------
     CollisionManifold* collisionManifold;
-    std::unordered_map<size_t, Contact> contactCache;
 
     //------------------------
     //  Collision Resolution

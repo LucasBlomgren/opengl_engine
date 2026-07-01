@@ -82,7 +82,10 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
     if (!engineState->getShowCollisionNormals()) return;
 
-    for (Contact* c : physics.contactsToSolve) {
+    for (const auto& pair : physics.contactCache) {
+        const Contact* c = &pair.second;
+        if (!c->wasUsedThisFrame) continue;
+
         glm::vec3 pos(0.0f);
 
         if (!c->points.empty()) {

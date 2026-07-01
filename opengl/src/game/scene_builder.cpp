@@ -95,9 +95,10 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
 
     switch (sceneID) {
     case 0: testFloorScene(amount); break;
-    case 1: terrainScene(); break;
-    case 2: tallStructureScene(); break;
-    case 3: castleScene(); break;
+    case 1: sandBox(); break;
+    case 2: terrainScene(); break;
+    case 3: tallStructureScene(); break;
+    case 4: castleScene(); break;
     default: break;
     }
 

@@ -5,6 +5,24 @@
 #include "rigidbody.h"
 #include "colliders/aabb.h"
 
+// #TODO: optimize nodes for cache size:
+// Het array — bara det traverseringen rör. Indexeras parallellt med cold[].
+//struct BVHNodeHot {
+//    float fatMin[3];   // 12
+//    float fatMax[3];   // 12
+//    int   childA;      // 4   (-1 => leaf)
+//    int   childB;      // 4
+//    RigidBodyHandle element; // 8  (giltig bara för löv)
+//};                      // 40 B → ryms i en cache-line, ~1,5 nod/line
+//
+//// Kall array — allt övrigt, rörs bara i build/update/refit, aldrig i query.
+//struct BVHNodeCold {
+//    AABB tightBox;
+//    int parentIdx, start, count, selfIdx;
+//    bool alive, dirty;
+//    // local-koordinater etc.
+//};
+
 enum class BVHType {
     Awake,
     Asleep,

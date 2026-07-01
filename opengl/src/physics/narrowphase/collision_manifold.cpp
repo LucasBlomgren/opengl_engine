@@ -1,6 +1,22 @@
 ﻿#include "pch.h"
 #include "collision_manifold.h"
 
+// #TODO: implementera recycled contacts för att genom heuristik kunna återanvända gamla contacts 
+// istället för att skapa nya varje frame, för att förbättra solver stabilitet och prestanda.
+// Recycling kan ske redan innan SAT, genom att jämföra transforms och collider IDs
+// Se Box3D.
+
+// 1. key = generateKey(a, b), slå upp i cachen.
+// 
+// 2. Finns den + relativeTransformValid + recycling på : beräkna rörelse - bounden(vinkeländring + translation + rotationsbåge·maxExtent) 
+//    mot en tolerans.Ingen normal - jämförelse.
+// 
+// 3. Under toleransen : rotera cachade ankare med delta - rotation, räkna ny separation per punkt via baseSeparation + dot(dp, normal), 
+//    behåll impulserna(warm start), kör solverns active - check som vanligt.Hoppa över SAT + face - select + clipping + reduction + integrateContact - matchningen.
+// 
+// 4. Över toleransen(eller ingen cache) : full väg — SAT, contact generation — och cacha(qA, qB, relativ pose, baseSeparation per punkt) för nästa frame.
+
+
 //=============================================
 // Box-Box collision
 //=============================================

@@ -26,7 +26,6 @@ void PhysicsEngine::clear() {
     physicsWorld.clear();
     broadphaseManager.clear();
     narrowphaseManager.clear();
-    contactsToSolve.clear();
     pending.clear();
     pending.reserve(50000);
 }

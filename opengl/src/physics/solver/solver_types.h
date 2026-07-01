@@ -30,7 +30,7 @@ struct ContactConstraint {
     uint32_t firstPoint; // index into contactPoints
     uint8_t pointCount;  // number of contact points in this constraint
     uint8_t flags;       // contributesMotionA/B, noSolverResponseA/B as bit flags
-}; // 56 bytes = 1 cache line
+}; // 60 bytes = 1 cache line
 
 struct ContactConstraintPoint {
     glm::vec3 rA;
@@ -44,4 +44,4 @@ struct ContactConstraintPoint {
     float fImpulse1;
     float fImpulse2;
     float biasImpulse;
-}; // 56 bytes = 1 cache line
+}; // 60 bytes = 1 cache line

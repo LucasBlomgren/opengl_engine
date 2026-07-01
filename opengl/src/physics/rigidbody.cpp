@@ -17,7 +17,6 @@ void RigidBody::integrateVelocities(Transform& t, float dt) {
 		angularVelocity.y = 0.0f;
 	}
 
-
 	// update position and orientation
 	t.lastPosition = t.position;
 	t.position += linearVelocity * dt;
@@ -140,6 +139,15 @@ void RigidBody::commitBiasImpulses(Transform& t, float dt) {
 	//if (angLen > maxBiasAngularSpeed) {
 	//	biasAngularVelocity *= maxBiasAngularSpeed / angLen;
 	//}
+
+
+	// fake constraints
+	if (!canMoveLinearly) {
+		biasLinearVelocity = glm::vec3(0.0f);
+		biasAngularVelocity.x = 0.0f;
+		biasAngularVelocity.y = 0.0f;
+	}
+
 
 	t.position += biasLinearVelocity * dt;
 	updateOrientation(t.orientation, biasAngularVelocity, dt);

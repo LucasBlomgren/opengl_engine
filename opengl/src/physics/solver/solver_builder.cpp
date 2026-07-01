@@ -34,6 +34,7 @@ void PGSSolver::buildSolverData(
     constraintSources.reserve(batch.contacts.size());
     pointSources.reserve(batch.contacts.size() * 4);
 
+    // #TODO: inte super effektivt att loopa igenom en linked list av contacts. Kan optimera senare om det behövs.
     for (Contact* contact : batch.contacts) {
         if (!contact) {
             continue;
@@ -59,7 +60,7 @@ void PGSSolver::buildSolverData(
         cc.invMassTwist = contact->invMassTwist;
         cc.accumulatedTwistImpulse = contact->accumulatedTwistImpulse;
 
-        cc.firstPoint = static_cast<uint16_t>(contactPoints.size());
+        cc.firstPoint = static_cast<uint32_t>(contactPoints.size());
         cc.pointCount = 0;
 
         cc.flags = 0;
