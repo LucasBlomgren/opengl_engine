@@ -1,7 +1,7 @@
 #pragma once
 
 #include "solver_types.h"
-#include "physics_step_types.h"
+#include "substeps/physics_step_types.h"
 #include <narrowphase/narrowphase_types.h>
 
 class PGSSolver {
@@ -13,7 +13,6 @@ public:
         const StepScope& scope,
         ContactBatch& batch,
         RuntimeCaches& caches,
-        const int currentFrame,
         const int PGSiterations,
         const float dt
     );
@@ -27,7 +26,7 @@ private:
     std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
 
     std::vector<RigidBody*> solverBodySources;
-    std::vector<uint8_t> solverBodyWriteBack;
+    std::vector<uint8_t> solverBodyWriteBack; // yes or no
 
     std::vector<Contact*> constraintSources;
     std::vector<ContactPoint*> pointSources;
@@ -57,22 +56,23 @@ private:
     );
 
     void applyImpulseToSolverBody(
-        SolverBody& body,
+        SolverBody* body,
         const glm::vec3& linearImpulse,
         const glm::vec3& angularImpulse
     );
 
     void applyBiasImpulseToSolverBody(
-        SolverBody& body,
+        SolverBody* body,
         const glm::vec3& linearImpulse,
         const glm::vec3& angularImpulse
     );
 
     glm::vec3 multiplyInvInertia(
-        const SolverBody& body,
+        const SolverBody* body,
         const glm::vec3& v
     );
 
+    SolverBody* getSolverBodyOrNull(uint32_t idx);
     static bool hasFlag(uint8_t flags, uint8_t flag);
 
     // solve constraints using Projected Gauss-Seidel (PGS) method
@@ -84,7 +84,6 @@ private:
     // post-solve: update RigidBody velocities and bias velocities based on solver results
     void postSolve(
         RuntimeCaches& caches, 
-        int currentFrame, 
         const float dt
     );
 

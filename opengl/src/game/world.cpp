@@ -148,6 +148,18 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         std::cerr << "[World] Warning: Created GameObject with no colliders. GameObject ID: " << gameObject.id << "\n";
     }
 
+    // Update colliders
+    for (const ColliderHandle& colH : body.colliderHandles) {
+        Collider* collider = getCollider(colH);
+        Transform* localTransform = getTransform(collider->localTransformHandle);
+
+        collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
+        collider->pose.ensureModelMatrix();
+        collider->updateAABB(collider->pose);
+        collider->updateCollider(collider->pose);
+    }
+
+    // update body AABB
     Collider* mainCollider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
     body.aabb = mainCollider->getAABB();
 
@@ -163,34 +175,6 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         body.aabb.worldCenter = (body.aabb.worldMin + body.aabb.worldMax) * 0.5f;
         body.aabb.worldHalfExtents = (body.aabb.worldMax - body.aabb.worldMin) * 0.5f;
         body.aabb.setSurfaceArea();
-    }
-
-    if (objDesc.bodyType == BodyType::Static) {
-        // per collider
-        for (const ColliderHandle& colH : body.colliderHandles) {
-            Collider* collider = getCollider(colH);
-            Transform* localTransform = getTransform(collider->localTransformHandle);
-
-            collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
-            collider->pose.ensureModelMatrix();
-            collider->updateAABB(collider->pose);
-            collider->updateCollider(collider->pose);
-        }
-
-        body.aabb = mainCollider->getAABB();
-
-        // update compound body AABB
-        if (body.isCompound()) {
-            for (size_t i = 1; i < body.colliderHandles.size(); ++i) {
-                Collider* c = getCollider(body.colliderHandles[i]);
-                body.aabb.growToInclude(c->getAABB().worldMin);
-                body.aabb.growToInclude(c->getAABB().worldMax);
-            }
-
-            body.aabb.worldCenter = (body.aabb.worldMin + body.aabb.worldMax) * 0.5f;
-            body.aabb.worldHalfExtents = (body.aabb.worldMax - body.aabb.worldMin) * 0.5f;
-            body.aabb.setSurfaceArea();
-        }
     }
 
     // inertia init 

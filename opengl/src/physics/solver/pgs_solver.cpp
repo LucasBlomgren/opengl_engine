@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "pgs_solver.h"
-#include "physics_step_types.h"
+#include "substeps/physics_step_types.h"
 #include "rigidbody.h"
 #include "narrowphase/collision_manifold.h"
 #include "narrowphase/narrowphase_types.h"
@@ -30,45 +30,53 @@ void PGSSolver::solve(
     const StepScope& scope,
     ContactBatch& batch, 
     RuntimeCaches& caches, 
-    const int currentFrame,
     const int PGSiterations, 
     const float dt
 ) {
     buildSolverData(scope, batch, caches, dt);
     resolveContacts(PGSiterations, dt);
-    postSolve(caches, currentFrame, dt);
+    postSolve(caches, dt);
 }
 
 //================================================================
 //  Apply impulses to solver bodies
 //================================================================
 inline void PGSSolver::applyImpulseToSolverBody(
-    SolverBody& body,
+    SolverBody* body,
     const glm::vec3& linearImpulse,
     const glm::vec3& angularImpulse
 ) {
-    body.linVelocity += linearImpulse * body.invMass;
-    body.angVelocity += multiplyInvInertia(body, angularImpulse);
+    body->linVelocity += linearImpulse * body->invMass;
+    body->angVelocity += multiplyInvInertia(body, angularImpulse);
 }
 
 inline void PGSSolver::applyBiasImpulseToSolverBody(
-    SolverBody& body,
+    SolverBody* body,
     const glm::vec3& linearImpulse,
     const glm::vec3& angularImpulse
 ) {
-    body.biasLinVelocity += linearImpulse * body.invMass;
-    body.biasAngVelocity += multiplyInvInertia(body, angularImpulse);
+    body->biasLinVelocity += linearImpulse * body->invMass;
+    body->biasAngVelocity += multiplyInvInertia(body, angularImpulse);
 }
 
 inline glm::vec3 PGSSolver::multiplyInvInertia(
-    const SolverBody& body,
+    const SolverBody* body,
     const glm::vec3& v
 ) {
     return glm::vec3(
-        body.InvI[0] * v.x + body.InvI[3] * v.y + body.InvI[4] * v.z,
-        body.InvI[3] * v.x + body.InvI[1] * v.y + body.InvI[5] * v.z,
-        body.InvI[4] * v.x + body.InvI[5] * v.y + body.InvI[2] * v.z
+        body->InvI[0] * v.x + body->InvI[3] * v.y + body->InvI[4] * v.z,
+        body->InvI[3] * v.x + body->InvI[1] * v.y + body->InvI[5] * v.z,
+        body->InvI[4] * v.x + body->InvI[5] * v.y + body->InvI[2] * v.z
     );
+}
+
+//=================================================================
+//  Distinguish between body and terrain contacts
+//=================================================================
+SolverBody* PGSSolver::getSolverBodyOrNull(uint32_t idx) {
+    if (idx == InvalidSolverBody) return nullptr;
+    if (idx >= solverBodies.size()) return nullptr;
+    return &solverBodies[idx];
 }
 
 //================================================================
@@ -117,8 +125,8 @@ void PGSSolver::resolveContacts(
                 : contactCount - 1 - cc;
 
             ContactConstraint& contact = contactConstraints[ci];
-            SolverBody& bodyA = solverBodies[contact.bodyA];
-            SolverBody& bodyB = solverBodies[contact.bodyB];
+            SolverBody* bodyA = getSolverBodyOrNull(contact.bodyA);
+            SolverBody* bodyB = getSolverBodyOrNull(contact.bodyB);
             int count = static_cast<int>(contact.pointCount);
 
             // reverse order every other iteration to reduce directional bias in the solver
@@ -133,13 +141,13 @@ void PGSSolver::resolveContacts(
                 glm::vec3 angVelA{ 0.0f };
                 glm::vec3 angVelB{ 0.0f };
 
-                if (contact.flags & ContributesMotionA) {
-                    relVelA = bodyA.linVelocity;
-                    angVelA = bodyA.angVelocity;
+                if ((contact.flags & ContributesMotionA) && bodyA) {
+                    relVelA = bodyA->linVelocity;
+                    angVelA = bodyA->angVelocity;
                 }
-                if (contact.flags & ContributesMotionB) {
-                    relVelB = bodyB.linVelocity;
-                    angVelB = bodyB.angVelocity;
+                if ((contact.flags & ContributesMotionB) && bodyB) {
+                    relVelB = bodyB->linVelocity;
+                    angVelB = bodyB->angVelocity;
                 }
 
                 glm::vec3 relativeVelocity =
@@ -159,10 +167,10 @@ void PGSSolver::resolveContacts(
                 float deltaImpulse = cp.nImpulse - oldNormalImpulse;
                 glm::vec3 deltaNormalImpulse = deltaImpulse * contact.normal;
 
-                if ((contact.flags & CanApplyImpulseA) != 0) {
+                if ((contact.flags & CanApplyImpulseA) != 0 && bodyA) {
                     applyImpulseToSolverBody(bodyA, -deltaNormalImpulse, -glm::cross(cp.rA, deltaNormalImpulse));
                 }
-                if (contact.flags & CanApplyImpulseB) {
+                if ((contact.flags & CanApplyImpulseB) && bodyB) {
                     applyImpulseToSolverBody(bodyB, deltaNormalImpulse, glm::cross(cp.rB, deltaNormalImpulse));
                 }
 
@@ -175,13 +183,13 @@ void PGSSolver::resolveContacts(
                     glm::vec3 angVelA_bias{ 0.0f };
                     glm::vec3 angVelB_bias{ 0.0f };
 
-                    if (contact.flags & ContributesMotionA) {
-                        relVelA_bias = bodyA.biasLinVelocity;
-                        angVelA_bias = bodyA.biasAngVelocity;
+                    if ((contact.flags & ContributesMotionA) && bodyA) {
+                        relVelA_bias = bodyA->biasLinVelocity;
+                        angVelA_bias = bodyA->biasAngVelocity;
                     }
-                    if (contact.flags & ContributesMotionB) {
-                        relVelB_bias = bodyB.biasLinVelocity;
-                        angVelB_bias = bodyB.biasAngVelocity;
+                    if ((contact.flags & ContributesMotionB) && bodyB) {
+                        relVelB_bias = bodyB->biasLinVelocity;
+                        angVelB_bias = bodyB->biasAngVelocity;
                     }
 
                     glm::vec3 relativeBiasVelocity =
@@ -198,7 +206,7 @@ void PGSSolver::resolveContacts(
                     float deltaB = cp.biasImpulse - oldB;
                     glm::vec3 impulseB = deltaB * contact.normal;
 
-                    if (contact.flags & CanApplyImpulseA) {
+                    if ((contact.flags & CanApplyImpulseA) && bodyA) {
                         glm::vec3 angularBiasA = -glm::cross(cp.rA, impulseB);
 
                         applyBiasImpulseToSolverBody(
@@ -208,7 +216,7 @@ void PGSSolver::resolveContacts(
                         );
                     }
 
-                    if (contact.flags & CanApplyImpulseB) {
+                    if ((contact.flags & CanApplyImpulseB) && bodyB) {
                         glm::vec3 angularBiasB = glm::cross(cp.rB, impulseB);
 
                         applyBiasImpulseToSolverBody(
@@ -234,14 +242,14 @@ void PGSSolver::resolveContacts(
                         glm::vec3 angVelA2{ 0.0f };
                         glm::vec3 angVelB2{ 0.0f };
 
-                        if (contact.flags & ContributesMotionA) {
-                            relVelA2 = bodyA.linVelocity;
-                            angVelA2 = bodyA.angVelocity;
+                        if ((contact.flags & ContributesMotionA) && bodyA) {
+                            relVelA2 = bodyA->linVelocity;
+                            angVelA2 = bodyA->angVelocity;
                         }
 
-                        if (contact.flags & ContributesMotionB) {
-                            relVelB2 = bodyB.linVelocity;
-                            angVelB2 = bodyB.angVelocity;
+                        if ((contact.flags & ContributesMotionB) && bodyB) {
+                            relVelB2 = bodyB->linVelocity;
+                            angVelB2 = bodyB->angVelocity;
                         }
 
                         glm::vec3 relativeVelocity2 =
@@ -280,14 +288,14 @@ void PGSSolver::resolveContacts(
                         glm::vec3 dFt = dF1 * contact.t1 + dF2 * contact.t2;
                         dT = std::sqrt(dF1 * dF1 + dF2 * dF2);
 
-                        if (contact.flags & CanApplyImpulseA) {
+                        if ((contact.flags & CanApplyImpulseA) && bodyA) {
                             applyImpulseToSolverBody(
                                 bodyA,
                                 -dFt,
                                 -glm::cross(cp.rA, dFt)
                             );
                         }
-                        if (contact.flags & CanApplyImpulseB) {
+                        if ((contact.flags & CanApplyImpulseB) && bodyB) {
                             applyImpulseToSolverBody(
                                 bodyB,
                                 dFt,
@@ -314,14 +322,14 @@ void PGSSolver::resolveContacts(
                             glm::vec3 dFt = d1 * contact.t1 + d2 * contact.t2;
                             dT = std::sqrt(d1 * d1 + d2 * d2);
 
-                            if (contact.flags & CanApplyImpulseA) {
+                            if ((contact.flags & CanApplyImpulseA) && bodyA) {
                                 applyImpulseToSolverBody(
                                     bodyA,
                                     -dFt,
                                     -glm::cross(cp.rA, dFt)
                                 );
                             }
-                            if (contact.flags & CanApplyImpulseB) {
+                            if ((contact.flags & CanApplyImpulseB) && bodyB) {
                                 applyImpulseToSolverBody(
                                     bodyB,
                                     dFt,
@@ -339,8 +347,12 @@ void PGSSolver::resolveContacts(
             // 1) Relativ rotationshastighet kring normalen
             glm::vec3 angVelA{ 0.0f };
             glm::vec3 angVelB{ 0.0f };
-            if (contact.flags & ContributesMotionA) angVelA = bodyA.angVelocity;
-            if (contact.flags & ContributesMotionB) angVelB = bodyB.angVelocity;
+            if ((contact.flags & ContributesMotionA) && bodyA) {
+                angVelA = bodyA->angVelocity;
+            }
+            if ((contact.flags & ContributesMotionB) && bodyB) {
+                angVelB = bodyB->angVelocity;
+            }
 
             float v_twist = glm::dot((angVelB - angVelA), contact.normal);
 
@@ -364,12 +376,12 @@ void PGSSolver::resolveContacts(
             glm::vec3 tau = delta * contact.normal;
             if (glm::dot(tau, tau) > 1e-6f) 
             {
-                if ((contact.flags & CanApplyImpulseA) != 0) {
-                    SolverBody& bodyA = solverBodies[contact.bodyA];
+                if ((contact.flags & CanApplyImpulseA) != 0 && bodyA) {
+                    SolverBody* bodyA = getSolverBodyOrNull(contact.bodyA);
                     applyImpulseToSolverBody(bodyA, glm::vec3(0.0f), -tau);
                 }
-                if ((contact.flags & CanApplyImpulseB) != 0) {
-                    SolverBody& bodyB = solverBodies[contact.bodyB];
+                if ((contact.flags & CanApplyImpulseB) != 0 && bodyB) {
+                    SolverBody* bodyB = getSolverBodyOrNull(contact.bodyB);
                     applyImpulseToSolverBody(bodyB, glm::vec3(0.0f), tau);
                 }
             }
@@ -388,7 +400,6 @@ void PGSSolver::resolveContacts(
 //===========================================================================
 void PGSSolver::postSolve(
     RuntimeCaches& caches,
-    int currentFrame,
     const float dt
 ) {
     // 1. Skriv tillbaka ackumulerade impulser till original ContactPoint.

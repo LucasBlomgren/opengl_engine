@@ -93,7 +93,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
     static float postStep_ui = 0.0f;
 
     uiTimer += ctx.deltaTime;
-    if (uiTimer >= 0.2f)
+    if (uiTimer >= 0.25f)
     {
         uiTimer = 0.0f;
 

@@ -57,8 +57,8 @@ void SceneBuilder::testFloorScene(int amount) {
     //}
 
     // circular tower of boxes
-    for (int k = 0; k < amount; k++) {
-        for (int l = 0; l < 1; l++) {
+    for (int k = 0; k < 10; k++) {
+        for (int l = 0; l < 10; l++) {
             float angleRad;
             glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
             glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
@@ -1738,20 +1738,20 @@ void SceneBuilder::sandBox() {
 
     glm::quat modelOrientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    createSinglePartObject(
-        "Girl",
-        "plain",
-        "girl",
-        ColliderType::CUBOID,
-        BodyType::Static,
-        glm::vec3(-20.0f, 0.0f, 0.0f),
-        glm::vec3(0.0135f),
-        1.0f,
-        modelOrientation,
-        3.5f,
-        false,
-        glm::vec3(255.0f)
-    );
+    //createSinglePartObject(
+    //    "Girl",
+    //    "plain",
+    //    "girl",
+    //    ColliderType::CUBOID,
+    //    BodyType::Static,
+    //    glm::vec3(-20.0f, 0.0f, 0.0f),
+    //    glm::vec3(0.0135f),
+    //    1.0f,
+    //    modelOrientation,
+    //    3.5f,
+    //    false,
+    //    glm::vec3(255.0f)
+    //);
 
     createSinglePartObject(
         "Tank",

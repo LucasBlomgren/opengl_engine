@@ -69,6 +69,11 @@
     <ClCompile Include="src\physics\physics_queries.cpp" />
     <ClCompile Include="src\physics\physics_scene.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
+    <ClCompile Include="src\physics\islands\build_islands.cpp" />
+    <ClCompile Include="src\physics\computeAdaptiveSubsteps.cpp" />
+    <ClCompile Include="src\physics\sleep_functions.cpp" />
+    <ClCompile Include="src\physics\updateBodiesAndColliders.cpp" />
+    <ClCompile Include="src\physics\updateContactCache.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -183,6 +188,7 @@
     <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
+    <ClInclude Include="src\physics\islands\island_types.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "core/slot_map.h"
-#include "../physics_step_types.h"
+#include "substeps/physics_step_types.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
@@ -19,8 +19,29 @@ public:
     // update BVHs if dirty
     void updateBVHs();
 
-    // compute pairs for this frame and get results
-    void buildPairs(const StepScope& scope, PairBatch& batch);
+    //   Build pairs for narrowphase
+    void buildGlobalPairs(PairBatch& batch);
+    void buildPairsBruteForce(
+        const std::vector<RigidBodyHandle>& bodies,
+        std::vector<DynamicPair>& outPairs
+    );
+    void buildPairsSAP(
+        const std::vector<RigidBodyHandle>& bodies,
+        std::vector<DynamicPair>& outPairs
+    );
+    void buildPairsSAPTwoSets(
+        const std::vector<RigidBodyHandle>& aBodies,
+        const std::vector<RigidBodyHandle>& bBodies,
+        std::vector<DynamicPair>& outPairs
+    );
+    void buildStaticPairsForScope(
+        const std::vector<RigidBodyHandle>& bodies,
+        std::vector<DynamicPair>& outPairs
+    );
+    void buildTerrainPairsForScope(
+        const std::vector<RigidBodyHandle>& bodies,
+        std::vector<TerrainPair>& outPairs
+    );
 
     // add/remove from current list
     void add(RigidBodyHandle& handle, BroadphaseBucket dst);

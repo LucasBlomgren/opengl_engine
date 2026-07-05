@@ -202,7 +202,7 @@ namespace sap {
 
     void querySameSet(
         const std::vector<SapItem>& items,
-        std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>>& out)
+        std::vector<DynamicPair>& out)
     {
         const int count = static_cast<int>(items.size());
 
@@ -266,7 +266,7 @@ namespace sap {
     void queryTwoSets(
         const std::vector<SapItem>& aItems,
         const std::vector<SapItem>& bItems,
-        std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>>& out)
+        std::vector<DynamicPair>& out)
     {
         if (aItems.empty() || bItems.empty()) {
             return;
@@ -369,78 +369,4 @@ namespace sap {
             }
         }
     }
-
-    void queryTerrain(
-        const TerrainBVH& terrainBvh,
-        const std::vector<SapItem>& dynamicItems,
-        std::vector<TerrainPair>& out)
-    {
-        out.clear();
-
-        if (terrainBvh.rootIdx == -1 || dynamicItems.empty()) {
-            return;
-        }
-
-        static std::vector<Tri*> triHits;
-
-        out.reserve(dynamicItems.size());
-
-        for (const SapItem& item : dynamicItems) {
-            triHits.clear();
-
-            terrainBvh.singleQuery(item.box, triHits);
-
-            if (!triHits.empty()) {
-                out.emplace_back(TerrainPair{
-                    item.handle,
-                    triHits
-                    });
-            }
-        }
-    }
-
-    void computePairs(
-        RuntimeCaches* caches,
-        const TerrainBVH& terrainBvh,
-        const std::vector<RigidBodyHandle>& awakeHandles,
-        const std::vector<RigidBodyHandle>& asleepHandles,
-        const std::vector<RigidBodyHandle>& staticHandles,
-        std::vector<TerrainPair>& terrainPairs,
-        std::vector<DynamicPair>& dynamicPairs)
-    {
-        static std::vector<SapItem> awakeItems;
-        static std::vector<SapItem> asleepItems;
-        static std::vector<SapItem> staticItems;
-        static std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>> pairBuffer;
-
-        buildItems(caches, awakeHandles, awakeItems);
-        buildItems(caches, asleepHandles, asleepItems);
-        buildItems(caches, staticHandles, staticItems);
-
-        terrainPairs.clear();
-        dynamicPairs.clear();
-        pairBuffer.clear();
-
-        // Dynamic vs terrain.
-        queryTerrain(terrainBvh, awakeItems, terrainPairs);
-
-        // Dynamic vs dynamic.
-        querySameSet(awakeItems, pairBuffer);
-
-        // Dynamic vs asleep.
-        queryTwoSets(awakeItems, asleepItems, pairBuffer);
-
-        // Dynamic vs static.
-        queryTwoSets(awakeItems, staticItems, pairBuffer);
-
-        dynamicPairs.reserve(pairBuffer.size());
-
-        for (const auto& p : pairBuffer) {
-            dynamicPairs.emplace_back(DynamicPair{
-                p.first,
-                p.second
-                });
-        }
-    }
-
 } // namespace sap

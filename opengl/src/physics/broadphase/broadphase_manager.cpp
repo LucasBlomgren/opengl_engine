@@ -4,6 +4,7 @@
 #include "tri.h"
 #include "bvh/query_treetree.h"
 #include "bvh/query_sametree.h"
+#include "sweep_and_prune.h"
 
 //=======================================
 //    Init & Clear
@@ -68,22 +69,130 @@ void BroadphaseManager::updateBVHs() {
 #endif
 }
 
+
 //==================================================
-//     Broadphase queries
+//      Build pairs for scope
 //==================================================
-void BroadphaseManager::buildPairs(const StepScope& scope, PairBatch& batch) 
+void BroadphaseManager::buildPairsBruteForce(
+    const std::vector<RigidBodyHandle>& bodies,
+    std::vector<DynamicPair>& outPairs)
 {
-#if USE_SAP_BROADPHASE
-    sap::buildPairs(
-        caches,
-        terrainBvh,
-        awakeHandles,
-        asleepHandles,
-        staticHandles,
-        batch.terrainPairs,
-        batch.dynamicPairs
-    );
-#else
+    for (int i = 0; i < bodies.size(); ++i) {
+        RigidBodyHandle aH = bodies[i];
+        RigidBody* a = caches->bodies.get(aH, FUNC_NAME);
+
+        for (int j = i + 1; j < bodies.size(); ++j) {
+            RigidBodyHandle bH = bodies[j];
+            RigidBody* b = caches->bodies.get(bH, FUNC_NAME);
+
+            if (a->asleep && b->asleep) continue;
+            if (!a->aabb.intersects(b->aabb)) continue;
+
+            outPairs.push_back(DynamicPair{aH, bH});
+        }
+    }
+}
+
+void BroadphaseManager::buildPairsSAP(
+    const std::vector<RigidBodyHandle>& bodies,
+    std::vector<DynamicPair>& outPairs)
+{
+    if (bodies.empty()) {
+        return;
+    }
+
+    static std::vector<sap::SapItem> sapItems;
+    sapItems.clear();
+    sapItems.reserve(bodies.size());
+
+    for (RigidBodyHandle h : bodies) {
+        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
+
+        sapItems.emplace_back(sap::SapItem{ h, body->aabb });
+    }
+
+    sap::querySameSet(sapItems, outPairs);
+}
+
+void BroadphaseManager::buildPairsSAPTwoSets(
+    const std::vector<RigidBodyHandle>& aBodies,
+    const std::vector<RigidBodyHandle>& bBodies,
+    std::vector<DynamicPair>& outPairs)
+{
+    if (aBodies.empty() || bBodies.empty()) {
+        return;
+    }
+
+    static std::vector<sap::SapItem> sapItemsA;
+    static std::vector<sap::SapItem> sapItemsB;
+    sapItemsA.clear();
+    sapItemsB.clear();
+    sapItemsA.reserve(aBodies.size());
+    sapItemsB.reserve(bBodies.size());
+
+    for (RigidBodyHandle h : aBodies) {
+        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
+        sapItemsA.emplace_back(sap::SapItem{ h, body->aabb });
+    }
+    for (RigidBodyHandle h : bBodies) {
+        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
+        sapItemsB.emplace_back(sap::SapItem{ h, body->aabb });
+    }
+
+    sap::queryTwoSets(sapItemsA, sapItemsB, outPairs);
+}
+
+void BroadphaseManager::buildStaticPairsForScope(
+    const std::vector<RigidBodyHandle>& bodies,
+    std::vector<DynamicPair>& outPairs)
+{
+    if (bodies.empty()) {
+        return;
+    }
+
+    static std::vector<RigidBodyHandle> staticCandidates;
+    staticCandidates.reserve(128);
+
+    for (RigidBodyHandle h : bodies) {
+        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
+
+        staticCandidates.clear();
+        staticBvh.singleQuery(body->aabb, staticCandidates);
+
+        for (RigidBodyHandle sH : staticCandidates) {
+            outPairs.emplace_back(DynamicPair{ h, sH });
+        }
+    }
+}
+
+void BroadphaseManager::buildTerrainPairsForScope(
+    const std::vector<RigidBodyHandle>& bodies,
+    std::vector<TerrainPair>& outPairs)
+{
+    if (bodies.empty()) {
+        return;
+    }
+
+    static std::vector<Tri*> terrainCandidates;
+    terrainCandidates.reserve(128);
+
+    for (RigidBodyHandle h : bodies) {
+        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
+
+        terrainCandidates.clear();
+        terrainBvh.singleQuery(body->aabb, terrainCandidates);
+
+        for (Tri* tri : terrainCandidates) {
+            outPairs.emplace_back(TerrainPair{ h, { tri } });
+        }
+    }
+}
+
+//==================================================
+//     Global pair building for narrowphase
+//==================================================
+void BroadphaseManager::buildGlobalPairs(PairBatch& batch)
+{
     batch.dynamicPairs.reserve(BVHTree::MaxCollisionBuf);
     batch.terrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
@@ -161,7 +270,6 @@ void BroadphaseManager::buildPairs(const StepScope& scope, PairBatch& batch)
             batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
         }
     }
-#endif
 }
 
 

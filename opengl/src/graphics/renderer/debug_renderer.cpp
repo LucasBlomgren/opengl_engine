@@ -62,6 +62,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
     renderColliders(objects, camera, world);
     renderContactPoints(physics.GetContactCache());
     renderBVHs(physics);
+    renderSubstepIslands(physics.predictedIslands, world);
 
     // render debug meshes with lighting
     litMeshShader->use();
@@ -267,6 +268,32 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
         }
     }
     glEnable(GL_DEPTH_TEST);
+}
+
+//----------------------------------------
+//    Render Substep Islands
+//----------------------------------------
+void DebugRenderer::renderSubstepIslands(const std::vector<Island>& islands, World& world) {
+    debugShapeShader->use();
+    debugShapeShader->setBool("debug.useUniformColor", true);
+    glBindVertexArray(aabbRenderer.sVAO);
+
+    for (const Island& island : islands)
+    {
+        int colorIdx = island.id % COLOR_COUNT;
+        glm::vec3 color{
+            ISLAND_COLORS[colorIdx * 3 + 0],
+            ISLAND_COLORS[colorIdx * 3 + 1],
+            ISLAND_COLORS[colorIdx * 3 + 2]
+        };
+        for (const RigidBodyHandle& handle : island.bodies) {
+            if (!handle.isValid()) continue;
+            RigidBody* rb = world.getRigidBody(handle);
+            AABB& aabb = rb->aabb;
+            aabbRenderer.updateModel(aabb, /*asleep=*/false);
+            aabbRenderer.render(color, *debugShapeShader);
+        }
+    }
 }
 
 //----------------------------------------

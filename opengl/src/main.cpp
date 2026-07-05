@@ -176,9 +176,9 @@ int main() {
 	float loadTimeFinished = (float)glfwGetTime();
 	std::cout << "Load time: " << (loadTimeFinished - loadTimeStart) << " seconds\n";
 
-	//--------------------------------------------
+	//=============================================================
 	// main loop
-	//--------------------------------------------
+	//=============================================================
 	while (true) {
 		// timing
 		frameTimers.beginFrame();
@@ -234,36 +234,6 @@ int main() {
 			readIdx = (readIdx + 1) % NQ;
 		}
 
-		//--------------------------------------------
-		// rendering
-		//--------------------------------------------
-		{
-			ScopedTimer t(frameTimers, "Render");
-
-			// render to screen or editor viewport
-			if (engineState.isPlayerMode()) {
-				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-			}
-			else {
-				if (editor.flag_drawUI) {
-					ImGui::DockSpaceOverViewport();
-					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
-				}
-				else {
-					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-				}
-			}
-			sceneBuilder.sceneDirty = false;
-			writeIdx = (writeIdx + 1) % NQ;
-		}
-
-		// Imgui rendering
-		if (!engineState.isPlayerMode()) {
-			ScopedTimer a(frameTimers, "ImGui");
-			editor.drawUI(inputManager.currentContext, deltaTime);
-		}
-		imguiManager.render();
-
 		// setup input context
 		inputManager.setCurrentContext(
 			ImGui::GetIO().WantCaptureMouse,
@@ -312,9 +282,9 @@ int main() {
 			engineState.setAdvanceStep(true);
 		}
 
-		//--------------------------------------------
+		//=============================================================
 		// physics step
-		//--------------------------------------------
+		//=============================================================
 		if (!engineState.isPaused() or engineState.getAdvanceStep()) {
 			const int   kMaxStepsPerFrame = 8;
 			float simSpeed = engineState.getSimulationSpeed();
@@ -327,7 +297,13 @@ int main() {
 				accumulator = fixedTimeStep;
 			}
 
-			physicsEngine.prepareStepLoop();
+			int possibleSteps = std::min(
+				static_cast<int>(accumulator / fixedTimeStep),
+				kMaxStepsPerFrame
+			);
+
+			if (possibleSteps > 0)
+				physicsEngine.prepareStepLoop();
 
 			// stepping loop
 			int steps = 0;
@@ -362,6 +338,36 @@ int main() {
                 world.deleteGameObject(rb->gameObjectHandle);
 			}
         }
+
+		//=============================================================
+		// rendering
+		//=============================================================
+		{
+			ScopedTimer t(frameTimers, "Render");
+
+			// render to screen or editor viewport
+			if (engineState.isPlayerMode()) {
+				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
+			}
+			else {
+				if (editor.flag_drawUI) {
+					ImGui::DockSpaceOverViewport();
+					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
+				}
+				else {
+					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
+				}
+			}
+			sceneBuilder.sceneDirty = false;
+			writeIdx = (writeIdx + 1) % NQ;
+
+			// Imgui rendering
+			if (!engineState.isPlayerMode()) {
+				ScopedTimer a(frameTimers, "ImGui");
+				editor.drawUI(inputManager.currentContext, deltaTime);
+			}
+			imguiManager.render();
+		}
 
 		frameTimers.endFrame();
 

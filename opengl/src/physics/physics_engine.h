@@ -1,6 +1,7 @@
 #pragma once
 
-#include "physics_step_types.h"
+#include "substeps/island_types.h"
+#include "substeps/physics_step_types.h"
 #include "physics_world.h"
 #include "timer.h"
 #include "narrowphase/collision_manifold.h"
@@ -29,16 +30,26 @@ class PhysicsEngine {
 public:
     void init(World* world, FrameTimers* ft);
 
+    std::vector<Island> predictedIslands;
+    std::vector<RigidBodyHandle> restBodies;
+    std::vector<uint8_t> isIslandBody;
+    MotionRisk computeMotionRisk(RigidBodyHandle h, float frameDt);
+    void createPredictedIslandsMVP(float frameDt);
+    void stepIslandModeMVP(float frameDt);
+    void buildPairsForScope(const StepScope& scope, PairBatch& pairs);
+    void buildIslandPairs(const std::vector<RigidBodyHandle>& bodies, PairBatch& pairs);
+    void buildRestPairs(const std::vector<RigidBodyHandle>& bodies, PairBatch& pairs);
+
     //------------------------
     //     Main functions
     //------------------------
     void setupScene(std::vector<Tri>* terrainTriangles);
     void clear();
     void prepareStepLoop();
-    int computeAdaptiveSubsteps(float dt);
+    int computeGlobalSubsteps(float dt);
 
     void beginPhysicsStep(float outerDt);
-    void stepScope(const StepScope& scope, float dt);
+    void stepScope(StepScope& scope, float dt);
     void step(float deltaTime, EngineState& engine);
     void stepDiscrete(float deltaTime);
     void endPhysicsStep(float outerDt);
@@ -73,17 +84,15 @@ public:
     int maxSubsteps = 8;
     int pgsIterations = 8;
 
-    std::unordered_map<size_t, Contact> contactCache; // public for debug rendering, but should be private and accessed through a getter
+    std::unordered_map<size_t, Contact> contactCache; // public for debug rendering
 
 private:
     float dt;
-    uint32_t currentFrame = 0;
     PhysicsWorld physicsWorld;
     World* world = nullptr;
     FrameTimers* frameTimers;
 
     int currentSubstepAmount = 1;
-    int currentStepId = 0;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

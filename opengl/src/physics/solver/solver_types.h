@@ -29,7 +29,7 @@ struct ContactConstraint {
     float accumulatedTwistImpulse;
     uint32_t firstPoint; // index into contactPoints
     uint8_t pointCount;  // number of contact points in this constraint
-    uint8_t flags;       // contributesMotionA/B, noSolverResponseA/B as bit flags
+    uint8_t flags;       // ContactFlags as bitmask
 }; // 60 bytes = 1 cache line
 
 struct ContactConstraintPoint {

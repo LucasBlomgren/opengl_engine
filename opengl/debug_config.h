@@ -1,5 +1,1 @@
 #pragma once
-
-#define USE_SAP_BROADPHASE 0
-
-#define DEBUG_PRINT_WANTED_SUBSTEP_AMOUNT 0

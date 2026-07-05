@@ -26,6 +26,10 @@ void PhysicsEngine::clear() {
     physicsWorld.clear();
     broadphaseManager.clear();
     narrowphaseManager.clear();
+    pgsSolver.clear();
     pending.clear();
-    pending.reserve(50000);
+
+    predictedIslands.clear();
+    restBodies.clear();
+    isIslandBody.clear();
 }

@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "physics_step_types.h"
+#include "substeps/physics_step_types.h"
 #include "rigidbody.h"
 #include "sat.h"
 #include "collider_pose.h"

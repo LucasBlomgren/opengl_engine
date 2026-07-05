@@ -1,6 +1,6 @@
 #pragma once
 #include "narrowphase_manager.h"
-#include "physics/wake_sleep_utils.h"
+#include "sleep/wake_sleep_utils.h"
 
 //----------------------------------------------
 //     Box vs Box

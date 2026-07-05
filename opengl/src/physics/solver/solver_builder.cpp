@@ -45,8 +45,15 @@ void PGSSolver::buildSolverData(
         RigidBody* bodyA_ptr = rt.bodyA;
         RigidBody* bodyB_ptr = rt.bodyB;
 
-        uint32_t bodyAIndex = getOrCreateSolverBody(contact->bodyA, bodyA_ptr);
-        uint32_t bodyBIndex = getOrCreateSolverBody(contact->bodyB, bodyB_ptr);
+        uint32_t bodyAIndex = InvalidSolverBody;
+        uint32_t bodyBIndex = InvalidSolverBody;
+
+        if (contact->partnerTypeA == ContactPartnerType::RigidBody && rt.bodyA != nullptr) {
+            bodyAIndex = getOrCreateSolverBody(contact->bodyA, rt.bodyA);
+        }
+        if (contact->partnerTypeB == ContactPartnerType::RigidBody && rt.bodyB != nullptr) {
+            bodyBIndex = getOrCreateSolverBody(contact->bodyB, rt.bodyB);
+        }
 
         ContactConstraint cc{};
 
@@ -64,17 +71,27 @@ void PGSSolver::buildSolverData(
         cc.pointCount = 0;
 
         cc.flags = 0;
-        if (contact->contributesMotionA) cc.flags |= ContributesMotionA;
-        if (contact->contributesMotionB) cc.flags |= ContributesMotionB;
-        if (contact->noSolverResponseA)  cc.flags |= NoSolverResponseA;
-        if (contact->noSolverResponseB)  cc.flags |= NoSolverResponseB;
-        if (contact->partnerTypeA == ContactPartnerType::RigidBody &&
-            !contact->noSolverResponseA) {
+        if (bodyAIndex != InvalidSolverBody && contact->contributesMotionA) {
+            cc.flags |= ContributesMotionA;
+        }
+        if (bodyBIndex != InvalidSolverBody && contact->contributesMotionB) {
+            cc.flags |= ContributesMotionB;
+        }
+        if (contact->noSolverResponseA) cc.flags |= NoSolverResponseA;
+        if (contact->noSolverResponseB) cc.flags |= NoSolverResponseB;
+
+        if (bodyAIndex != InvalidSolverBody &&
+            contact->partnerTypeA == ContactPartnerType::RigidBody &&
+            !contact->noSolverResponseA)
+        {
             cc.flags |= CanApplyImpulseA;
             solverBodyWriteBack[bodyAIndex] = 1;
         }
-        if (contact->partnerTypeB == ContactPartnerType::RigidBody &&
-            !contact->noSolverResponseB) {
+
+        if (bodyBIndex != InvalidSolverBody &&
+            contact->partnerTypeB == ContactPartnerType::RigidBody &&
+            !contact->noSolverResponseB)
+        {
             cc.flags |= CanApplyImpulseB;
             solverBodyWriteBack[bodyBIndex] = 1;
         }
@@ -260,7 +277,7 @@ void PGSSolver::warmStartContactPoint(
     glm::vec3 J = Pn + Pt;
 
     if (contact.flags & CanApplyImpulseA) {
-        SolverBody& bodyA = solverBodies[contact.bodyA];
+        SolverBody* bodyA = getSolverBodyOrNull(contact.bodyA);
 
         applyImpulseToSolverBody(
             bodyA,
@@ -270,7 +287,7 @@ void PGSSolver::warmStartContactPoint(
     }
 
     if (contact.flags & CanApplyImpulseB) {
-        SolverBody& bodyB = solverBodies[contact.bodyB];
+        SolverBody* bodyB = getSolverBodyOrNull(contact.bodyB);
 
         applyImpulseToSolverBody(
             bodyB,

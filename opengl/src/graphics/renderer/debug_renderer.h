@@ -63,6 +63,8 @@ private:
     void renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor);
     void renderTerrainBVHLeafGroups(const TerrainBVH& tree, const glm::vec3& leafColor);
 
+    void renderSubstepIslands(const std::vector<Island>& islands, World& world);
+
     struct BVHColors {
         glm::vec3 awakeNode{ 0.80f, 0.40f, 0.00f }; // orange
         glm::vec3 awakeLeaf{ 1.00f, 0.65f, 0.20f };
@@ -88,4 +90,37 @@ private:
     const float AABB_LINE_WIDTH = 2.0f;
     const float OOBB_LINE_WIDTH = 2.0f;
     const float SPHERE_LINE_WIDTH = 4.0f;
+
+    const int COLOR_COUNT = 22;
+    const std::array<float, 72> ISLAND_COLORS = {
+        // strong basics
+        0.00f, 1.00f, 0.00f, // green
+        1.00f, 1.00f, 0.00f, // yellow
+        1.00f, 0.00f, 1.00f, // magenta
+        0.00f, 1.00f, 1.00f, // cyan
+
+        // orange / purple / lime variants
+        1.00f, 0.50f, 0.00f, // orange
+        0.50f, 0.00f, 1.00f, // violet
+        0.50f, 1.00f, 0.00f, // lime
+        0.00f, 0.50f, 1.00f, // sky blue
+        1.00f, 0.00f, 0.50f, // pink/red
+        0.00f, 1.00f, 0.50f, // mint
+
+        // softer distincts
+        1.00f, 0.25f, 0.25f,
+        0.25f, 1.00f, 0.25f,
+        0.25f, 0.25f, 1.00f,
+        1.00f, 1.00f, 0.25f,
+        1.00f, 0.25f, 1.00f,
+        0.25f, 1.00f, 1.00f,
+
+        // darker distincts
+        0.75f, 0.25f, 0.00f,
+        0.25f, 0.00f, 0.75f,
+        0.00f, 0.75f, 0.25f,
+        0.75f, 0.00f, 0.25f,
+        0.25f, 0.75f, 0.00f,
+        0.00f, 0.25f, 0.75f,
+    };
 };
