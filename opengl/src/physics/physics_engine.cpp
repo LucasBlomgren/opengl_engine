@@ -159,7 +159,8 @@ void PhysicsEngine::beginPhysicsStep(float outerDt) {
     for (auto& [key, contact] : contactCache) {
         contact.wasUsedThisFrame = false;
 
-        for (ContactPoint& cp : contact.points) {
+        for (size_t i = 0; i < contact.numPoints; ++i) {
+            ContactPoint& cp = contact.points[i];
             cp.wasUsedThisFrame = false;
             cp.wasWarmStarted = false;
         }

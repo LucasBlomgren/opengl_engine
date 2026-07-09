@@ -42,9 +42,6 @@ void PGSSolver::buildSolverData(
 
         ContactRuntime& rt = contact->runtimeData;
 
-        RigidBody* bodyA_ptr = rt.bodyA;
-        RigidBody* bodyB_ptr = rt.bodyB;
-
         uint32_t bodyAIndex = InvalidSolverBody;
         uint32_t bodyBIndex = InvalidSolverBody;
 
@@ -96,7 +93,8 @@ void PGSSolver::buildSolverData(
             solverBodyWriteBack[bodyBIndex] = 1;
         }
 
-        for (ContactPoint& cp : contact->points) {
+        for (size_t i = 0; i < contact->numPoints; ++i) {
+            ContactPoint& cp = contact->points[i];
             ContactConstraintPoint& ccp = contactPoints.emplace_back();
 
             bool active = prepareContactPointBaumgarte(cc, cp, ccp, dt);
@@ -178,11 +176,11 @@ bool PGSSolver::prepareContactPointBaumgarte(
 ) {
     constexpr float staticFriction = 0.6f;
 
-    constexpr float defaultSlop = 0.0007f;
-    constexpr float noResponseSlop = 0.0007f;
+    constexpr float defaultSlop = 0.0002f;
+    constexpr float noResponseSlop = 0.0002f;
 
-    constexpr float defaultBaumgarte = 0.3f;
-    constexpr float noResponseBaumgarte = 0.6f;
+    constexpr float defaultBaumgarte = 1.0f;
+    constexpr float noResponseBaumgarte = 1.0f;
 
     constexpr float persistentSlop = 0.005f;
 

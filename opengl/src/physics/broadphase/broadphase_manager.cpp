@@ -159,6 +159,7 @@ void BroadphaseManager::buildStaticPairsForScope(
         staticCandidates.clear();
         staticBvh.singleQuery(body->aabb, staticCandidates);
 
+        if (staticCandidates.empty()) continue;
         for (RigidBodyHandle sH : staticCandidates) {
             outPairs.emplace_back(DynamicPair{ h, sH });
         }
@@ -182,9 +183,8 @@ void BroadphaseManager::buildTerrainPairsForScope(
         terrainCandidates.clear();
         terrainBvh.singleQuery(body->aabb, terrainCandidates);
 
-        for (Tri* tri : terrainCandidates) {
-            outPairs.emplace_back(TerrainPair{ h, { tri } });
-        }
+        if (terrainCandidates.empty()) continue;
+        outPairs.emplace_back(TerrainPair{ h, terrainCandidates });
     }
 }
 

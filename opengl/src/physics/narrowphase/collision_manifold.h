@@ -54,12 +54,32 @@ struct ContactRuntime {
     Transform* bodyRootB = nullptr;
 };
 
+static constexpr uint32_t MaxContactPoints = 4;
 struct Contact {
     size_t hashKey = -1; // generated from collider IDs, used for caching
 
     float minY = std::numeric_limits<float>::infinity(); // for solver sorting by minY of contact points to improve stability of resting contacts, updated during contact point generation
     glm::vec3 normal{ 0.0f };           // contact normal, precomputed from SAT result for warm starting and impulse solving
-    std::vector<ContactPoint> points;   // contact points for this contact, can be up to 4 for box-box and box-mesh collisions, otherwise usually 1
+
+    std::array<ContactPoint, MaxContactPoints> points{};
+    uint32_t numPoints = 0;
+
+    void clearPoints() {
+        numPoints = 0;
+    }
+
+    void addPoint(const ContactPoint& cp) {
+        assert(numPoints < points.size());
+        points[numPoints++] = cp;
+    }
+
+    bool tryAddPoint(const ContactPoint& cp) {
+        if (numPoints >= points.size())
+            return false;
+
+        points[numPoints++] = cp;
+        return true;
+    }
 
     // tangential basis vectors, precomputed from the contact normal for warm starting and impulse solving
     glm::vec3 t1{ 0.0f };
@@ -105,7 +125,6 @@ struct Contact {
         runtimeData(data),
         normal(normal)
     {
-        points.reserve(8);
     }
 
     // body vs terrain
@@ -116,7 +135,6 @@ struct Contact {
         runtimeData(data),   
         normal(normal)
     {
-        points.reserve(8);
     }
 
     Contact() = default;
@@ -124,6 +142,10 @@ struct Contact {
 
 class CollisionManifold {
 public:
+    static constexpr uint32_t MaxContactPoints = 4;
+    static constexpr uint32_t MaxClippedPoints = 16;
+    static constexpr uint32_t MaxMeshContactCandidates = 256;
+
     void init(RuntimeCaches* caches) { this->caches = caches; }
     size_t generateKey(int idA, int idB);
 
@@ -141,31 +163,50 @@ private:
     void selectOOBBCollisionIncidentFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
 
     // furthest point selection for terrain collisions
-    std::vector<glm::vec3> furthestPoints;
-    std::vector<int> indices;
     void pickFourFurthestPoints();
-    void addFurthestPoint(std::vector<int>& indices);
+    void addFurthestPoint();
 
     // Sutherland-Hodgman clipping
-    std::vector<float> allPointsDepthsScratch;
     std::array<Plane, 4> clippingPlanes;
-    std::array<glm::vec3, 16> contactPoints;
-    std::array<glm::vec3, 16> nextContactPoints;
-    std::array<bool, 16> clippingStatus;
-    std::vector<glm::vec3> clippedPoints;
-    std::vector<glm::vec3> allClippedPoints;
     void createClippingPlanes(const std::array<glm::vec3, 4>& face, const glm::vec3& faceNormal);
     void getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane, glm::vec3& outPoint, bool& outBool);
     bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3& planePoint, const float tolerance);
     void clipPoints(const std::array<glm::vec3, 4>& referenceFace, const std::array<glm::vec3, 4>& incidentFace, int incidentCount, const glm::vec3& referenceFaceNormal);
 
     // contact point reduction and penetration depth computation
-    void contactPointReduction(Contact& contact);
-    void computePenetrationDepth(std::vector<glm::vec3>& points, std::array<glm::vec3, 4>& refFace, glm::vec3& refFaceNormal, std::vector<float>& out);
+    void contactPointReduction(Contact& contact,
+        const std::array<ContactPoint, MaxClippedPoints>& candidates,
+        uint32_t candidateCount);
+    float computePenetrationDepth(const glm::vec3& point,
+        const std::array<glm::vec3, 4>& refFace,
+        const glm::vec3& refFaceNormal);
     void PreComputePointData(ContactPoint& cp, Contact& contact);
 
     // contact cache integration
     Contact* integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
 
-    //std::array<glm::vec3, 2> edgeEdgePoints(glm::vec3& P0, glm::vec3& P1, glm::vec3& Q0, glm::vec3& Q1);
+
+    struct MeshContactCandidate {
+        glm::vec3 worldPos{};
+        float depth = 0.0f;
+        int sourceIndex = -1;
+    };
+
+    // clipping scratch
+    std::array<glm::vec3, MaxClippedPoints> clippedPoints{};
+    uint32_t clippedPointCount = 0;
+
+    std::array<glm::vec3, MaxClippedPoints> contactPoints{};
+    std::array<glm::vec3, MaxClippedPoints> nextContactPoints{};
+    std::array<bool, MaxClippedPoints> clippingStatus{};
+
+    // mesh candidate scratch
+    std::array<MeshContactCandidate, MaxMeshContactCandidates> meshCandidates{};
+    uint32_t meshCandidateCount = 0;
+
+    std::array<MeshContactCandidate, MaxContactPoints> furthestCandidates{};
+    uint32_t furthestCandidateCount = 0;
+
+    std::array<int, MaxContactPoints> selectedCandidateIndices{};
+    uint32_t selectedCandidateCount = 0;
 };

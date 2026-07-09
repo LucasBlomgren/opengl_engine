@@ -99,14 +99,7 @@ void PGSSolver::resolveContacts(
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.1f;
 
-    constexpr float defaultSlop = 0.0007f;
-    constexpr float noResponseSlop = 0.0007f;
-
-    constexpr float defaultBaumgarte = 0.3f;
-    constexpr float noResponseBaumgarte = 0.6f;
-
-    constexpr float persistentSlop = 0.005f;
-    constexpr float angularBiasScale = 0.2f;
+    constexpr float angularBiasScale = 1.0f;
 
     // ------ PGS solver ------
     int iterationsUsed = 0;

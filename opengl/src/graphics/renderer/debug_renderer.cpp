@@ -90,8 +90,8 @@ void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world
         glm::vec3 pos(0.0f);
 
         if (!c->points.empty()) {
-            for (const ContactPoint& cp : c->points) {
-                pos += cp.worldPos;
+            for (size_t i = 0; i < c->numPoints; ++i) {
+                pos += c->points[i].worldPos;
             }
             pos /= static_cast<float>(c->points.size());
         }
@@ -253,7 +253,7 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
     for (const auto& pair : cache) {
         const Contact& contact = pair.second;
 
-        for (int i = 0; i < contact.points.size(); i++) {
+        for (int i = 0; i < contact.numPoints; i++) {
             if (!contact.points[i].wasUsedThisFrame) {
                 continue;
             }
