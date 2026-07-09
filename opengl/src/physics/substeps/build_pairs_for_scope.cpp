@@ -10,10 +10,6 @@ void PhysicsEngine::buildPairsForScope(
     pairs.clear();
 
     switch (scope.type) {
-    case StepScopeType::Global:
-        broadphaseManager.buildGlobalPairs(pairs);
-        break;
-
     case StepScopeType::Island:
         buildIslandPairs(*scope.bodies, pairs);
         break;

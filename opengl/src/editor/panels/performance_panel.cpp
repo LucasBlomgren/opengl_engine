@@ -85,6 +85,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
     static float gpuDebugMs_ui = 0.0f;
 
     static float preStep_ui = 0.0f;
+    static float sync_ui = 0.0f;
     static float bvhUpdate_ui = 0.0f;
     static float broadphase_ui = 0.0f;
     static float narrowphase_ui = 0.0f;
@@ -117,6 +118,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
         cpu_total_ms = phys_ui + renderSub_ui + editor_ui + imgui_ui;
 
         preStep_ui = frameTimers->get("Pre step");
+        sync_ui = frameTimers->get("Sync");
         bvhUpdate_ui = frameTimers->get("BVH update");
         broadphase_ui = frameTimers->get("Broadphase");
         narrowphase_ui = frameTimers->get("Narrowphase");
@@ -317,6 +319,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
                 struct Sub { const char* name; float ms; };
                 Sub subs[] = {
                     {"Pre",    preStep_ui},
+                    {"Sync",   sync_ui},
                     {"BVH",    bvhUpdate_ui},
                     {"Broad",  broadphase_ui},
                     {"Narrow", narrowphase_ui},

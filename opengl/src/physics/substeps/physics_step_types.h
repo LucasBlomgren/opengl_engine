@@ -20,7 +20,6 @@ struct RuntimeCaches {
 };
 
 enum class StepScopeType {
-    Global,
     Island,
     Rest
 };
@@ -31,10 +30,9 @@ enum class IslandBroadphaseMode {
 };
 
 struct StepScope {
-    StepScopeType type = StepScopeType::Global;
+    StepScopeType type = StepScopeType::Rest;
 
     const std::vector<RigidBodyHandle>* bodies = nullptr;
-
     uint32_t islandId = 0;
     IslandBroadphaseMode islandBroadphaseMode = IslandBroadphaseMode::BruteForce;
 };

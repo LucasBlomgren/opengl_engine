@@ -62,7 +62,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
     renderColliders(objects, camera, world);
     renderContactPoints(physics.GetContactCache());
     renderBVHs(physics);
-    renderSubstepIslands(physics.predictedIslands, world);
+    renderSubstepIslands(physics.debugSweeps, physics.predictedIslands, world);
 
     // render debug meshes with lighting
     litMeshShader->use();
@@ -273,7 +273,7 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
 //----------------------------------------
 //    Render Substep Islands
 //----------------------------------------
-void DebugRenderer::renderSubstepIslands(const std::vector<Island>& islands, World& world) {
+void DebugRenderer::renderSubstepIslands(const std::vector<AABB>& sweeps, const std::vector<Island>& islands, World& world) {
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
     glBindVertexArray(aabbRenderer.sVAO);
@@ -293,6 +293,22 @@ void DebugRenderer::renderSubstepIslands(const std::vector<Island>& islands, Wor
             aabbRenderer.updateModel(aabb, /*asleep=*/false);
             aabbRenderer.render(color, *debugShapeShader);
         }
+    }
+
+    for (const AABB& sweptSrc : sweeps) {
+        AABB swept = sweptSrc; // local mutable copy for rendering only
+
+        swept.worldCenter =
+            (swept.worldMin + swept.worldMax) * 0.5f;
+
+        swept.worldHalfExtents =
+            (swept.worldMax - swept.worldMin) * 0.5f;
+
+        aabbRenderer.updateModel(swept, false);
+        aabbRenderer.render(
+            glm::vec3(1.0f, 0.0f, 1.0f),
+            *debugShapeShader
+        );
     }
 }
 

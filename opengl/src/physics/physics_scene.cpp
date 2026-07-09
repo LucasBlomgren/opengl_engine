@@ -32,4 +32,8 @@ void PhysicsEngine::clear() {
     predictedIslands.clear();
     restBodies.clear();
     isIslandBody.clear();
+
+    physicsFrameActive = false;
+    schedulerSubstep = 0;
+    highestSubstepIslandCount = 0;
 }

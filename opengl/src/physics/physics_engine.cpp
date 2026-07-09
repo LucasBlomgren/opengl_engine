@@ -27,6 +27,7 @@ void PhysicsEngine::prepareStepLoop() {
 
     frameTimers->reset("Physics");
     frameTimers->reset("Pre step");
+    frameTimers->reset("Sync");
     frameTimers->reset("BVH update");
     frameTimers->reset("Broadphase");
     frameTimers->reset("Narrowphase");
@@ -41,51 +42,98 @@ void PhysicsEngine::prepareStepLoop() {
 void PhysicsEngine::step(float dt, EngineState& engine) {
     double physicsStart = glfwGetTime() * 1000.0;
 
-    // #BUG: Fixa NAN-bugg med sphere vs sphere för island substepping
-    bool globalStep = false;
+    if (!physicsFrameActive) {
+        ScopedTimer t(*frameTimers, "Pre step");
+        physicsFrameActive = true;
+        schedulerSubstep = 0;
+        highestSubstepIslandCount = 0;
 
-    beginPhysicsStep(dt);
-
-    if (globalStep) {
-        int substeps = 1;
-        if (maxSubsteps > 1) {
-            substeps = computeGlobalSubsteps(dt);
-            substeps = std::max(substeps, 1);
-        }
-        float h = dt / static_cast<float>(substeps);
-        currentSubstepAmount = substeps;
-
-        StepScope globalScope;
-        globalScope.type = StepScopeType::Global;
-        globalScope.bodies = &broadphaseManager.getAwakeList();
-
-        for (int i = 0; i < substeps; ++i) {
-            stepScope(globalScope, h);
-        }
-    }
-    else {
+        beginPhysicsStep(dt);
         createPredictedIslandsMVP(dt);
 
         for (const Island& island : predictedIslands) {
-            StepScope islandScope;
-            islandScope.type = StepScopeType::Island;
-            islandScope.bodies = &island.bodies;
-            islandScope.islandId = island.id;
-            islandScope.islandBroadphaseMode = IslandBroadphaseMode::SAP;
-            float islandH = dt / static_cast<float>(island.substeps);
-
-            for (int i = 0; i < island.substeps; ++i) {
-                stepScope(islandScope, islandH);
-            }
+            highestSubstepIslandCount = std::max(highestSubstepIslandCount, island.substeps);
         }
 
-        StepScope restScope;
-        restScope.type = StepScopeType::Rest;
-        restScope.bodies = &restBodies;
-        stepScope(restScope, dt);
+        if (engine.isPaused()) {
+            std::cout << "Physics frame started | highest substep count=" << highestSubstepIslandCount << " | islands=" << predictedIslands.size() << std::endl;
+            schedulerSubstep = -1; // special value to indicate that we are paused and waiting for user input to advance
+        }
     }
 
-    endPhysicsStep(dt);
+    if (engine.isPaused() && !engine.getAdvanceStep()) {
+        frameTimers->submit(
+            "Physics",
+            frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
+        );
+        return;
+    }
+
+    // If we are paused and the user has requested to advance one step, run one substep and then pause again
+    if (schedulerSubstep == -1) {
+        schedulerSubstep = 0;
+        return;
+    }
+
+    bool keepRunning = true;
+    while (keepRunning && physicsFrameActive) {
+        // Run one substep for each island that has not yet completed its substeps
+        if (schedulerSubstep < highestSubstepIslandCount) {
+            for (const Island& island : predictedIslands) {
+                if (schedulerSubstep >= island.substeps)
+                    continue;
+
+                StepScope islandScope;
+                islandScope.type = StepScopeType::Island;
+                islandScope.bodies = &island.bodies;
+                islandScope.islandId = island.id;
+                islandScope.islandBroadphaseMode = IslandBroadphaseMode::SAP;
+
+                float islandH = dt / static_cast<float>(island.substeps);
+
+                stepScope(islandScope, islandH);
+            }
+
+            float start = glfwGetTime() * 1000.0;
+            broadphaseManager.updateBVHs();
+            frameTimers->submit(
+                "BVH update",
+                frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+            );
+
+            schedulerSubstep++;
+
+            if (engine.isPaused())
+                std::cout << "Scheduler substep " << schedulerSubstep << "/" << highestSubstepIslandCount << " completed." << std::endl;
+        }
+
+        // All islands have completed their substeps, 
+        // now do the rest step for all remaining bodies
+        if (schedulerSubstep >= highestSubstepIslandCount) {
+            StepScope restScope;
+            restScope.type = StepScopeType::Rest;
+            restScope.bodies = &restBodies;
+
+            stepScope(restScope, dt);
+
+            float start = glfwGetTime() * 1000.0;
+            broadphaseManager.updateBVHs();
+            frameTimers->submit(
+                "BVH update",
+                frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+            );
+
+            endPhysicsStep(dt);
+
+            physicsFrameActive = false;
+            schedulerSubstep = 0;
+            highestSubstepIslandCount = 0;
+        }
+
+        if (engine.isPaused()) {
+            keepRunning = false;
+        }
+    }
 
     frameTimers->submit(
         "Physics",
@@ -117,7 +165,14 @@ void PhysicsEngine::beginPhysicsStep(float outerDt) {
         }
     }
 
+    double start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
+    frameTimers->submit(
+        "BVH update",
+        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+    );
+
+    debugSweeps.clear();
 }
 
 //===================================
@@ -132,14 +187,16 @@ void PhysicsEngine::stepScope(StepScope& scope, float h) {
 
     double start = 0.0f;
 
-    // pre-step: update bodies and colliders
+    // sync bodies and colliders
     start = glfwGetTime() * 1000.0;
     updateBodiesAndColliders(*scope.bodies, h);
-    updateTimer("Pre step", start);
+    updateTimer("Sync", start);
 
-    start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
-    updateTimer("BVH update", start);
+    frameTimers->submit(
+        "BVH update",
+        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+    );
 
     // broadphase
     start = glfwGetTime() * 1000.0;

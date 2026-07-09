@@ -84,6 +84,7 @@ public:
     int maxSubsteps = 8;
     int pgsIterations = 8;
 
+    std::vector<AABB> debugSweeps; // public for debug rendering
     std::unordered_map<size_t, Contact> contactCache; // public for debug rendering
 
 private:
@@ -93,6 +94,9 @@ private:
     FrameTimers* frameTimers;
 
     int currentSubstepAmount = 1;
+    bool physicsFrameActive = false;
+    int schedulerSubstep = 0;
+    int highestSubstepIslandCount = 0;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

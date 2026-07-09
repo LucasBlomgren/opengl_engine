@@ -69,13 +69,31 @@ MotionRisk PhysicsEngine::computeMotionRisk(
     swept.worldMax = glm::max(current.worldMax, end.worldMax);
 
     if (mainCollider->type != ColliderType::SPHERE || body->isCompound()) {
-        float angularExpansion =
-            glm::length(body->angularVelocity) *
-            boundingRadius *
-            frameDt;
+        float theta =
+            glm::length(body->angularVelocity) * frameDt;
 
-        swept.worldMin -= glm::vec3(angularExpansion);
-        swept.worldMax += glm::vec3(angularExpansion);
+        float arcExpansion =
+            theta * boundingRadius;
+
+        glm::vec3 currentHalf =
+            (current.worldMax - current.worldMin) * 0.5f;
+
+        // Max extra expansion needed before current AABB reaches
+        // the object's full rotational bounding sphere.
+        glm::vec3 maxRotExpansion =
+            glm::max(
+                glm::vec3(0.0f),
+                glm::vec3(boundingRadius) - currentHalf
+            );
+
+        glm::vec3 angularExpansion =
+            glm::min(
+                glm::vec3(arcExpansion),
+                maxRotExpansion
+            );
+
+        swept.worldMin -= angularExpansion;
+        swept.worldMax += angularExpansion;
     }
 
     constexpr float sweptSkin = 0.01f;
@@ -85,6 +103,8 @@ MotionRisk PhysicsEngine::computeMotionRisk(
     risk.risky = true;
     risk.wantedSubsteps = wanted;
     risk.sweptAABB = swept;
+
+    debugSweeps.push_back(swept);
 
     return risk;
 }
