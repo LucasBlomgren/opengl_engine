@@ -244,7 +244,7 @@ void PhysicsEngine::stepScope(
     double start = glfwGetTime() * 1000.0;
 
     // Sync bodies and colliders
-    if (scope.type == PhysicsScopeType::Rest) {
+    if (scope.type == PhysicsScopeType::Rest && stepMode == StepMode::Global) {
         updateBodiesAndColliders(broadphaseManager.getAwakeList(), h);
     } else {
         updateBodiesAndColliders(scope.bodies, h);
