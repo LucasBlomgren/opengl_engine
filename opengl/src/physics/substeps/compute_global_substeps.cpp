@@ -8,6 +8,10 @@
 int PhysicsEngine::computeGlobalSubsteps(float dt) {
     //ScopedTimer t(*frameTimers, "Adaptive substep computation");
 
+    if (maxSubsteps <= 1) {
+        return 1;
+    }
+
     constexpr float safeFraction = 0.50f;
     constexpr float minSafeDistance = 0.02f;
 

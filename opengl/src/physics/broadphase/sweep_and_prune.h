@@ -2,9 +2,11 @@
 
 #include <vector>
 
-#include "substeps/physics_step_types.h"
+#include "../runtime_caches.h"
 #include "colliders/aabb.h"
 #include "broadphase_types.h"
+
+struct RuntimeCaches;
 
 namespace sap {
 
@@ -13,20 +15,112 @@ namespace sap {
         AABB box;
     };
 
-    void buildItems(
-        RuntimeCaches* caches,
-        const std::vector<RigidBodyHandle>& handles,
-        std::vector<SapItem>& out
-    );
+    class SweepAndPrune {
+    public:
 
-    void querySameSet(
-        const std::vector<SapItem>& items,
-        std::vector<DynamicPair>& out
-    );
+        enum class Mode {
+            Empty,
+            SameSet,
+            TwoSets
+        };
 
-    void queryTwoSets(
-        const std::vector<SapItem>& aItems,
-        const std::vector<SapItem>& bItems,
-        std::vector<DynamicPair>& out
-    );
-}
+        void clear();
+
+        // Build one persistent SAP set.
+        void build(
+            RuntimeCaches* caches,
+            const std::vector<RigidBodyHandle>& handles
+        );
+
+        // Build two persistent SAP sets.
+        void build(
+            RuntimeCaches* caches,
+            const std::vector<RigidBodyHandle>& aHandles,
+            const std::vector<RigidBodyHandle>& bHandles
+        );
+
+        // Refresh AABBs, update edge positions, sort and emit pairs.
+        // Does not clear out.
+        void query(
+            RuntimeCaches* caches,
+            std::vector<DynamicPair>& out
+        );
+
+        Mode getMode() const {
+            return mode;
+        }
+
+    private:
+
+        struct Edge {
+            float value = 0.0f;
+            int itemIdx = -1;
+
+            // Always true for SameSet mode.
+            bool isA = true;
+            bool isMin = false;
+        };
+
+        struct ActiveSet {
+            std::vector<int> items;
+            std::vector<int> pos;
+
+            void clear();
+            void reset(int itemCount);
+            void add(int idx);
+            void remove(int idx);
+        };
+
+        Mode mode = Mode::Empty;
+        int sweepAxis = 0;
+
+        // False immediately after build().
+        // First query uses std::sort; later queries use insertion sort.
+        bool edgesSorted = false;
+
+        std::vector<SapItem> aItems;
+        std::vector<SapItem> bItems;
+        std::vector<Edge> edges;
+
+        ActiveSet activeA;
+        ActiveSet activeB;
+
+        static bool edgeLess(const Edge& a, const Edge& b);
+
+        static bool overlapsOtherTwoAxes(
+            const AABB& a,
+            const AABB& b,
+            int sweepAxis
+        );
+
+        static int chooseLargestExtentAxis(
+            const std::vector<SapItem>& items
+        );
+
+        static int chooseLargestExtentAxis(
+            const std::vector<SapItem>& aItems,
+            const std::vector<SapItem>& bItems
+        );
+
+        static void buildItems(
+            RuntimeCaches* caches,
+            const std::vector<RigidBodyHandle>& handles,
+            std::vector<SapItem>& out
+        );
+
+        static void updateItems(
+            RuntimeCaches* caches,
+            std::vector<SapItem>& items
+        );
+
+        void buildSameSetEdges();
+        void buildTwoSetEdges();
+
+        void updateEdgeValues();
+        void sortEdges();
+
+        void querySameSet(std::vector<DynamicPair>& out);
+        void queryTwoSets(std::vector<DynamicPair>& out);
+    };
+
+} // namespace sap

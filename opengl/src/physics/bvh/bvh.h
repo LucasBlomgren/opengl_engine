@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "substeps/physics_step_types.h"
+#include "substeps/physics_scope.h"
 #include "physics_world.h"
 #include "rigidbody.h"
 #include "colliders/aabb.h"

@@ -57,8 +57,8 @@ void SceneBuilder::testFloorScene(int amount) {
     //}
 
     // circular tower of boxes
-    for (int k = 0; k < 10; k++) {
-        for (int l = 0; l < 10; l++) {
+    for (int k = 0; k < 5; k++) {
+        for (int l = 0; l < 5; l++) {
             float angleRad;
             glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
             glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
@@ -99,6 +99,66 @@ void SceneBuilder::testFloorScene(int amount) {
             }
         }
     }
+
+    glm::vec3 offsetpos = glm::vec3(150, 0.25, 150);
+
+    for (int j = 0; j < 500; j++) {   // y
+        for (int k = 0; k < 2; k++) {   // z
+            GameObjectDesc plank;
+            plank.name = "Plank";
+
+            float xPos = 0.0f;
+            float zPos = 0.0f;
+
+            glm::quat rotationShortSide =
+                glm::angleAxis(
+                    glm::radians(90.0f),
+                    glm::vec3(1.0f, 0.0f, 0.0f)
+                );
+
+            glm::quat orientation = rotationShortSide;
+
+            if (j % 2 == 0) {
+                glm::quat rotationY =
+                    glm::angleAxis(
+                        glm::radians(90.0f),
+                        glm::vec3(0.0f, 1.0f, 0.0f)
+                    );
+
+                // Först runt kortsidan X, sedan runt world-Y.
+                orientation = rotationY * rotationShortSide;
+
+                xPos = k * 4.0f - 2.0f;
+                zPos = 2.0f;
+            }
+            else {
+                zPos = k * 4.0f;
+            }
+
+            plank.rootTransformHandle = world.createTransform(
+                glm::vec3(
+                    offsetpos.x + xPos,
+                    offsetpos.y + j/2.0f,
+                    offsetpos.z + zPos),
+                orientation,
+                glm::vec3(5.0f, 1.0f, 0.5f)
+            );
+
+            plank.allowSleep = true;
+            plank.sleepCounterThreshold = 2.5f;
+            plank.mass = 50.0f;
+
+            SubPartDesc part;
+            part.name = "MainPart";
+            part.textureName = "crate";
+            part.localTransformHandle = world.createTransform();
+
+            plank.parts.push_back(part);
+
+            world.createGameObject(plank);
+        }
+    }
+
 
     // single stack of boxes and a single box with velocity
     {

@@ -1,16 +1,6 @@
 #pragma once
 
-#include <vector>
-#include <algorithm>
-#include <cstdint>
-
-#include "physics_step_types.h"
-
-struct Island {
-    uint32_t id = 0;
-    std::vector<RigidBodyHandle> bodies;
-    int substeps = 1;
-};
+#include "physics_engine.h"
 
 struct MotionRisk {
     bool risky = false;

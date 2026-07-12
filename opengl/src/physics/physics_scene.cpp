@@ -29,8 +29,8 @@ void PhysicsEngine::clear() {
     pgsSolver.clear();
     pending.clear();
 
-    predictedIslands.clear();
-    restBodies.clear();
+    islandScopes.clear();
+    restScope = PhysicsScope{};
     isIslandBody.clear();
 
     physicsFrameActive = false;

@@ -1,67 +1,52 @@
+#include "pch.h"
 #include "physics_engine.h"
 
 //========================================
-//   Build pairs for a given step scope
+//   Build pairs for a physics scope
 //========================================
 void PhysicsEngine::buildPairsForScope(
-    const StepScope& scope,
+    PhysicsScope& scope,
     PairBatch& pairs)
 {
     pairs.clear();
 
-    switch (scope.type) {
-    case StepScopeType::Island:
-        buildIslandPairs(*scope.bodies, pairs);
-        break;
-
-    case StepScopeType::Rest:
-        buildRestPairs(*scope.bodies, pairs);
-        break;
+    if (stepMode == StepMode::Global) {
+        // In global mode, we can use the broadphase manager to build pairs for the entire world
+        broadphaseManager.buildGlobalPairs(pairs);
+        return;
     }
-}
 
-//========================================
-//   Build pairs for a given island
-//========================================
-void PhysicsEngine::buildIslandPairs(
-    const std::vector<RigidBodyHandle>& bodies,
-    PairBatch& pairs)
-{
-    // dynamic-vs-dynamic intra island
-    if (bodies.size() <= 16) {
-        broadphaseManager.buildPairsBruteForce(bodies, pairs.dynamicPairs);
+    // Bodies inside this scope against each other
+    if (scope.bodies.size() <= 16) {
+        broadphaseManager.buildPairsBruteForce(
+            scope.bodies,
+            pairs.dynamicPairs
+        );
     }
     else {
-        broadphaseManager.buildPairsSAP(bodies, pairs.dynamicPairs);
+        broadphaseManager.querySAP(
+            scope.internalSap,
+            pairs.dynamicPairs
+        );
     }
 
-    // island bodies vs terrain
-    broadphaseManager.buildTerrainPairsForScope(bodies, pairs.terrainPairs);
+    // Rest bodies must also be tested against sleeping bodies
+    if (scope.type == PhysicsScopeType::Rest) {
+        broadphaseManager.buildAsleepPairsForScope(
+            scope.bodies,
+            pairs.dynamicPairs
+        );
+    }
 
-    // island bodies vs static bodies
-    broadphaseManager.buildStaticPairsForScope(bodies, pairs.dynamicPairs);
-}
-
-//========================================
-//   Build pairs for rest bodies
-//========================================
-void PhysicsEngine::buildRestPairs(
-    const std::vector<RigidBodyHandle>& bodies,
-    PairBatch& pairs)
-{
-    // dynamic vs awake bodies
-    broadphaseManager.buildPairsSAP(bodies, pairs.dynamicPairs);
-
-    // dynamic vs asleep bodies
-    broadphaseManager.buildPairsSAPTwoSets(
-        bodies,
-        broadphaseManager.getAsleepList(),
-        pairs.dynamicPairs
+    // Scope bodies vs terrain
+    broadphaseManager.buildTerrainPairsForScope(
+        scope.bodies,
+        pairs.terrainPairs
     );
 
-    // rest bodies vs terrain
-    broadphaseManager.buildTerrainPairsForScope(bodies, pairs.terrainPairs);
-
-    // rest bodies vs static bodies
-    broadphaseManager.buildStaticPairsForScope(bodies, pairs.dynamicPairs);
+    // Scope bodies vs static rigid bodies
+    broadphaseManager.buildStaticPairsForScope(
+        scope.bodies,
+        pairs.dynamicPairs
+    );
 }

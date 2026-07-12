@@ -5,7 +5,6 @@
 //  Build solver data structures from contact batch and runtime caches
 //=====================================================================
 void PGSSolver::buildSolverData(
-    const StepScope& scope,
     ContactBatch& batch,
     RuntimeCaches& caches,
     float dt
@@ -176,11 +175,11 @@ bool PGSSolver::prepareContactPointBaumgarte(
 ) {
     constexpr float staticFriction = 0.6f;
 
-    constexpr float defaultSlop = 0.0002f;
-    constexpr float noResponseSlop = 0.0002f;
+    constexpr float defaultSlop = 0.0007f;
+    constexpr float noResponseSlop = 0.0007f;
 
-    constexpr float defaultBaumgarte = 1.0f;
-    constexpr float noResponseBaumgarte = 1.0f;
+    constexpr float defaultBaumgarte = 0.6f;
+    constexpr float noResponseBaumgarte = 0.6f;
 
     constexpr float persistentSlop = 0.005f;
 

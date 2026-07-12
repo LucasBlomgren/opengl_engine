@@ -33,7 +33,7 @@ const DebugData PhysicsEngine::getDebugData() {
     debugData.Static = broadphaseManager.getStaticList().size();
     debugData.colliders = physicsWorld.getCollidersMap().dense().size();
     debugData.terrainTris = terrainTriangles->size();
-    debugData.contacts = contactCache.size();
+    debugData.contacts = contactsGeneratedThisFrame;
     debugData.currentSubstepAmount = currentSubstepAmount;
     return debugData;
 }

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "substeps/island_types.h"
-#include "substeps/physics_step_types.h"
+#include "substeps/physics_scope.h"
+#include "substeps/build_islands_types.h"
+#include "runtime_caches.h"
 #include "physics_world.h"
 #include "timer.h"
 #include "narrowphase/collision_manifold.h"
@@ -26,19 +27,24 @@ struct DebugData {
     size_t currentSubstepAmount = 0;
 };
 
+enum class StepMode {
+    Global = 0,
+    Island = 1
+};
+
 class PhysicsEngine {
 public:
     void init(World* world, FrameTimers* ft);
 
-    std::vector<Island> predictedIslands;
-    std::vector<RigidBodyHandle> restBodies;
+    StepMode stepMode = StepMode::Island;
+
+    std::vector<PhysicsScope> islandScopes;
+    PhysicsScope restScope;
     std::vector<uint8_t> isIslandBody;
     MotionRisk computeMotionRisk(RigidBodyHandle h, float frameDt);
     void createPredictedIslandsMVP(float frameDt);
     void stepIslandModeMVP(float frameDt);
-    void buildPairsForScope(const StepScope& scope, PairBatch& pairs);
-    void buildIslandPairs(const std::vector<RigidBodyHandle>& bodies, PairBatch& pairs);
-    void buildRestPairs(const std::vector<RigidBodyHandle>& bodies, PairBatch& pairs);
+    void buildPairsForScope(PhysicsScope& scope, PairBatch& pairs);
 
     //------------------------
     //     Main functions
@@ -49,7 +55,7 @@ public:
     int computeGlobalSubsteps(float dt);
 
     void beginPhysicsStep(float outerDt);
-    void stepScope(StepScope& scope, float dt);
+    void stepScope(PhysicsScope& scope, float dt);
     void step(float deltaTime, EngineState& engine);
     void stepDiscrete(float deltaTime);
     void endPhysicsStep(float outerDt);
@@ -81,7 +87,7 @@ public:
     const TerrainBVH& getTerrainBvh() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
-    int maxSubsteps = 8;
+    int maxSubsteps = 16;
     int pgsIterations = 8;
 
     std::vector<AABB> debugSweeps; // public for debug rendering
@@ -97,6 +103,8 @@ private:
     bool physicsFrameActive = false;
     int schedulerSubstep = 0;
     int highestSubstepIslandCount = 0;
+
+    uint32_t contactsGeneratedThisFrame = 0;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

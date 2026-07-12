@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "pgs_solver.h"
-#include "substeps/physics_step_types.h"
+#include "substeps/physics_scope.h"
 #include "rigidbody.h"
 #include "narrowphase/collision_manifold.h"
 #include "narrowphase/narrowphase_types.h"
@@ -27,13 +27,12 @@ void PGSSolver::clear() {
 //  build solver data, resolve contacts, and post-solve updates
 //================================================================
 void PGSSolver::solve(
-    const StepScope& scope,
     ContactBatch& batch, 
     RuntimeCaches& caches, 
     const int PGSiterations, 
     const float dt
 ) {
-    buildSolverData(scope, batch, caches, dt);
+    buildSolverData(batch, caches, dt);
     resolveContacts(PGSiterations, dt);
     postSolve(caches, dt);
 }
@@ -99,7 +98,7 @@ void PGSSolver::resolveContacts(
     constexpr float dynamicFriction = 0.4f;
     constexpr float twistFriction = 0.1f;
 
-    constexpr float angularBiasScale = 1.0f;
+    constexpr float angularBiasScale = 0.2f;
 
     // ------ PGS solver ------
     int iterationsUsed = 0;

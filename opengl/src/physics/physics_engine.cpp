@@ -39,95 +39,138 @@ void PhysicsEngine::prepareStepLoop() {
 //====================================
 //         Step
 //====================================
-void PhysicsEngine::step(float dt, EngineState& engine) {
+void PhysicsEngine::step(float dt, EngineState& engine)
+{
     double physicsStart = glfwGetTime() * 1000.0;
 
+    // Initialize one new outer physics frame.
     if (!physicsFrameActive) {
         ScopedTimer t(*frameTimers, "Pre step");
+
         physicsFrameActive = true;
         schedulerSubstep = 0;
         highestSubstepIslandCount = 0;
 
         beginPhysicsStep(dt);
-        createPredictedIslandsMVP(dt);
 
-        for (const Island& island : predictedIslands) {
-            highestSubstepIslandCount = std::max(highestSubstepIslandCount, island.substeps);
+        if (stepMode == StepMode::Global) {
+            currentSubstepAmount = computeGlobalSubsteps(dt);
+
+            debugSweeps.clear();
+            islandScopes.clear();
+
+            restScope = PhysicsScope{};
+            restScope.type = PhysicsScopeType::Rest;
+            restScope.substeps = currentSubstepAmount;
+            //restScope.bodies = broadphaseManager.getAwakeList();
+
+            highestSubstepIslandCount = currentSubstepAmount;
+        }
+        else {
+            createPredictedIslandsMVP(dt);
+
+            for (const PhysicsScope& scope : islandScopes) {
+                highestSubstepIslandCount = std::max(
+                    highestSubstepIslandCount,
+                    scope.substeps
+                );
+            }
         }
 
         if (engine.isPaused()) {
-            std::cout << "Physics frame started | highest substep count=" << highestSubstepIslandCount << " | islands=" << predictedIslands.size() << std::endl;
-            schedulerSubstep = -1; // special value to indicate that we are paused and waiting for user input to advance
+            std::cout
+                << "Physics frame started | highest substep count="
+                << highestSubstepIslandCount
+                << " | islands="
+                << islandScopes.size()
+                << '\n';
+
+            schedulerSubstep = -1;
         }
     }
 
     if (engine.isPaused() && !engine.getAdvanceStep()) {
         frameTimers->submit(
             "Physics",
-            frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
+            frameTimers->get("Physics") +
+            glfwGetTime() * 1000.0 -
+            physicsStart
         );
+
         return;
     }
 
-    // If we are paused and the user has requested to advance one step, run one substep and then pause again
     if (schedulerSubstep == -1) {
         schedulerSubstep = 0;
         return;
     }
 
     bool keepRunning = true;
+
     while (keepRunning && physicsFrameActive) {
-        // Run one substep for each island that has not yet completed its substeps
-        if (schedulerSubstep < highestSubstepIslandCount) {
-            for (const Island& island : predictedIslands) {
-                if (schedulerSubstep >= island.substeps)
-                    continue;
+        if (stepMode == StepMode::Global) {
+            // Run the entire awake world once per global substep.
+            if (schedulerSubstep < currentSubstepAmount) {
+                float h =
+                    dt / static_cast<float>(currentSubstepAmount);
 
-                StepScope islandScope;
-                islandScope.type = StepScopeType::Island;
-                islandScope.bodies = &island.bodies;
-                islandScope.islandId = island.id;
-                islandScope.islandBroadphaseMode = IslandBroadphaseMode::SAP;
+                stepScope(restScope, h);
 
-                float islandH = dt / static_cast<float>(island.substeps);
+                ++schedulerSubstep;
 
-                stepScope(islandScope, islandH);
+                if (engine.isPaused()) {
+                    std::cout
+                        << "Global substep "
+                        << schedulerSubstep
+                        << "/"
+                        << currentSubstepAmount
+                        << " completed.\n";
+                }
             }
 
-            float start = glfwGetTime() * 1000.0;
-            broadphaseManager.updateBVHs();
-            frameTimers->submit(
-                "BVH update",
-                frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-            );
+            if (schedulerSubstep >= currentSubstepAmount) {
+                endPhysicsStep(dt);
 
-            schedulerSubstep++;
-
-            if (engine.isPaused())
-                std::cout << "Scheduler substep " << schedulerSubstep << "/" << highestSubstepIslandCount << " completed." << std::endl;
+                physicsFrameActive = false;
+                schedulerSubstep = 0;
+                highestSubstepIslandCount = 0;
+            }
         }
+        else {
+            // Adaptive island substeps.
+            if (schedulerSubstep < highestSubstepIslandCount) {
+                for (PhysicsScope& scope : islandScopes) {
+                    if (schedulerSubstep >= scope.substeps) {
+                        continue;
+                    }
 
-        // All islands have completed their substeps, 
-        // now do the rest step for all remaining bodies
-        if (schedulerSubstep >= highestSubstepIslandCount) {
-            StepScope restScope;
-            restScope.type = StepScopeType::Rest;
-            restScope.bodies = &restBodies;
+                    float h =
+                        dt / static_cast<float>(scope.substeps);
 
-            stepScope(restScope, dt);
+                    stepScope(scope, h);
+                }
 
-            float start = glfwGetTime() * 1000.0;
-            broadphaseManager.updateBVHs();
-            frameTimers->submit(
-                "BVH update",
-                frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-            );
+                ++schedulerSubstep;
 
-            endPhysicsStep(dt);
+                if (engine.isPaused()) {
+                    std::cout
+                        << "Scheduler substep "
+                        << schedulerSubstep
+                        << "/"
+                        << highestSubstepIslandCount
+                        << " completed.\n";
+                }
+            }
 
-            physicsFrameActive = false;
-            schedulerSubstep = 0;
-            highestSubstepIslandCount = 0;
+            // Run non-island bodies once with the outer timestep.
+            if (schedulerSubstep >= highestSubstepIslandCount) {
+                stepScope(restScope, dt);
+                endPhysicsStep(dt);
+
+                physicsFrameActive = false;
+                schedulerSubstep = 0;
+                highestSubstepIslandCount = 0;
+            }
         }
 
         if (engine.isPaused()) {
@@ -137,7 +180,9 @@ void PhysicsEngine::step(float dt, EngineState& engine) {
 
     frameTimers->submit(
         "Physics",
-        frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
+        frameTimers->get("Physics") +
+        glfwGetTime() * 1000.0 -
+        physicsStart
     );
 }
 
@@ -174,55 +219,97 @@ void PhysicsEngine::beginPhysicsStep(float outerDt) {
     );
 
     debugSweeps.clear();
+    islandScopes.clear();
+
+    contactsGeneratedThisFrame = 0;
 }
 
 //===================================
 //    Step scope
 //===================================
-void PhysicsEngine::stepScope(StepScope& scope, float h) {
+void PhysicsEngine::stepScope(
+    PhysicsScope& scope,
+    float h)
+{
     this->dt = h;
 
     auto updateTimer = [&](const std::string& name, double start) {
-        frameTimers->submit(name, frameTimers->get(name) + glfwGetTime() * 1000.0 - start);
+        frameTimers->submit(
+            name,
+            frameTimers->get(name) +
+            glfwGetTime() * 1000.0 -
+            start);
         };
 
-    double start = 0.0f;
+    double start = glfwGetTime() * 1000.0;
 
-    // sync bodies and colliders
-    start = glfwGetTime() * 1000.0;
-    updateBodiesAndColliders(*scope.bodies, h);
+    // Sync bodies and colliders
+    if (scope.type == PhysicsScopeType::Rest) {
+        updateBodiesAndColliders(broadphaseManager.getAwakeList(), h);
+    } else {
+        updateBodiesAndColliders(scope.bodies, h);
+    }
     updateTimer("Sync", start);
 
+    start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
     frameTimers->submit(
         "BVH update",
         frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
     );
 
-    // broadphase
+    // Broadphase
     start = glfwGetTime() * 1000.0;
+
+    if (!scope.internalSapBuilt && stepMode != StepMode::Global) {
+        // Build the internal SAP for this scope if it hasn't been built yet.
+        if (scope.bodies.size() > 16) {
+            broadphaseManager.buildSAP(
+                scope.internalSap,
+                scope.bodies
+            );
+        }
+        scope.internalSapBuilt = true;
+    }
+
+    if (scope.type == PhysicsScopeType::Rest && !scope.vsAsleepSapBuilt && stepMode != StepMode::Global) {
+        // Build the SAP for the rest scope against the sleeping bodies if it hasn't been built yet.
+        broadphaseManager.buildSAPTwoSets(
+            scope.vsAsleepSap,
+            scope.bodies,
+            broadphaseManager.getAsleepList()
+        );
+        scope.vsAsleepSapBuilt = true;
+    }
     PairBatch pairs;
-    pairs.dynamicPairs.reserve(scope.bodies->size() * 2);
+    pairs.dynamicPairs.reserve(scope.bodies.size() * 2);
     buildPairsForScope(scope, pairs);
     updateTimer("Broadphase", start);
 
-    // narrowphase
+    // Narrowphase
     start = glfwGetTime() * 1000.0;
     ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts);
     updateTimer("Narrowphase", start);
 
-    // sort contacts by minY for better stability of resting contacts
+    // Contact collection
     start = glfwGetTime() * 1000.0;
     contacts.sortByMinY();
     updateTimer("Contact collection", start);
 
-    // solve contacts
+    // Solver
     start = glfwGetTime() * 1000.0;
-    pgsSolver.solve(scope, contacts, caches, pgsIterations, h);
+    pgsSolver.solve(
+        contacts,
+        caches,
+        pgsIterations,
+        h
+    );
     updateTimer("Collision resolution", start);
 
     processWakeList();
+
+    contactsGeneratedThisFrame += contacts.size();
 }
 
 //================================================================

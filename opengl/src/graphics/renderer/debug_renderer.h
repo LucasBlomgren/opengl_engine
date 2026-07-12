@@ -63,7 +63,7 @@ private:
     void renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor);
     void renderTerrainBVHLeafGroups(const TerrainBVH& tree, const glm::vec3& leafColor);
 
-    void renderSubstepIslands(const std::vector<AABB>& sweeps, const std::vector<Island>& islands, World& world);
+    void renderSubstepIslands(const std::vector<AABB>& sweeps, const std::vector<PhysicsScope>& scopes, World& world);
 
     struct BVHColors {
         glm::vec3 awakeNode{ 0.80f, 0.40f, 0.00f }; // orange

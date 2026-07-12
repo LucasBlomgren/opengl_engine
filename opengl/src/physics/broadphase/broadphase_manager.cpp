@@ -61,12 +61,10 @@ void BroadphaseManager::updateBVHRenderData(const BVHType& type, bool update) {
 //      Update BVHs
 //==================================================
 void BroadphaseManager::updateBVHs() {
-#if !USE_SAP_BROADPHASE
     awakeBvh.update(awakeHandles);
 
     if (asleepBvh.dirty) asleepBvh.update(asleepHandles);
     if (staticBvh.dirty) staticBvh.build(staticHandles);
-#endif
 }
 
 
@@ -93,53 +91,46 @@ void BroadphaseManager::buildPairsBruteForce(
     }
 }
 
-void BroadphaseManager::buildPairsSAP(
+void BroadphaseManager::buildSAP(
+    sap::SweepAndPrune& state,
+    const std::vector<RigidBodyHandle>& bodies)
+{
+    state.build(caches, bodies);
+}
+
+void BroadphaseManager::buildSAPTwoSets(
+    sap::SweepAndPrune& state,
+    const std::vector<RigidBodyHandle>& aBodies,
+    const std::vector<RigidBodyHandle>& bBodies)
+{
+    state.build(caches, aBodies, bBodies);
+}
+
+void BroadphaseManager::querySAP(
+    sap::SweepAndPrune& state,
+    std::vector<DynamicPair>& outPairs)
+{
+    state.query(caches, outPairs);
+}
+
+void BroadphaseManager::buildAsleepPairsForScope(
     const std::vector<RigidBodyHandle>& bodies,
     std::vector<DynamicPair>& outPairs)
 {
     if (bodies.empty()) {
         return;
     }
-
-    static std::vector<sap::SapItem> sapItems;
-    sapItems.clear();
-    sapItems.reserve(bodies.size());
-
+    static std::vector<RigidBodyHandle> asleepCandidates;
+    asleepCandidates.reserve(128);
     for (RigidBodyHandle h : bodies) {
         RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-
-        sapItems.emplace_back(sap::SapItem{ h, body->aabb });
+        asleepCandidates.clear();
+        asleepBvh.singleQuery(body->aabb, asleepCandidates);
+        if (asleepCandidates.empty()) continue;
+        for (RigidBodyHandle sH : asleepCandidates) {
+            outPairs.emplace_back(DynamicPair{ h, sH });
+        }
     }
-
-    sap::querySameSet(sapItems, outPairs);
-}
-
-void BroadphaseManager::buildPairsSAPTwoSets(
-    const std::vector<RigidBodyHandle>& aBodies,
-    const std::vector<RigidBodyHandle>& bBodies,
-    std::vector<DynamicPair>& outPairs)
-{
-    if (aBodies.empty() || bBodies.empty()) {
-        return;
-    }
-
-    static std::vector<sap::SapItem> sapItemsA;
-    static std::vector<sap::SapItem> sapItemsB;
-    sapItemsA.clear();
-    sapItemsB.clear();
-    sapItemsA.reserve(aBodies.size());
-    sapItemsB.reserve(bBodies.size());
-
-    for (RigidBodyHandle h : aBodies) {
-        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-        sapItemsA.emplace_back(sap::SapItem{ h, body->aabb });
-    }
-    for (RigidBodyHandle h : bBodies) {
-        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-        sapItemsB.emplace_back(sap::SapItem{ h, body->aabb });
-    }
-
-    sap::queryTwoSets(sapItemsA, sapItemsB, outPairs);
 }
 
 void BroadphaseManager::buildStaticPairsForScope(

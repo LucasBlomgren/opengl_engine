@@ -2,11 +2,13 @@
 #include <vector>
 
 #include "core/slot_map.h"
-#include "substeps/physics_step_types.h"
+#include "../runtime_caches.h"
+#include "../substeps/physics_scope.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
+#include "broadphase/sweep_and_prune.h"
 
 class RigidBody;
 class Tri;
@@ -25,6 +27,23 @@ public:
         const std::vector<RigidBodyHandle>& bodies,
         std::vector<DynamicPair>& outPairs
     );
+
+
+    void buildSAP(
+        sap::SweepAndPrune& state,
+        const std::vector<RigidBodyHandle>& bodies
+    );
+    void buildSAPTwoSets(
+        sap::SweepAndPrune& state,
+        const std::vector<RigidBodyHandle>& aBodies,
+        const std::vector<RigidBodyHandle>& bBodies
+    );
+    void querySAP(
+        sap::SweepAndPrune& state,
+        std::vector<DynamicPair>& outPairs
+    );
+
+
     void buildPairsSAP(
         const std::vector<RigidBodyHandle>& bodies,
         std::vector<DynamicPair>& outPairs
@@ -32,6 +51,10 @@ public:
     void buildPairsSAPTwoSets(
         const std::vector<RigidBodyHandle>& aBodies,
         const std::vector<RigidBodyHandle>& bBodies,
+        std::vector<DynamicPair>& outPairs
+    );
+    void buildAsleepPairsForScope(
+        const std::vector<RigidBodyHandle>& bodies,
         std::vector<DynamicPair>& outPairs
     );
     void buildStaticPairsForScope(
@@ -42,6 +65,7 @@ public:
         const std::vector<RigidBodyHandle>& bodies,
         std::vector<TerrainPair>& outPairs
     );
+
 
     // add/remove from current list
     void add(RigidBodyHandle& handle, BroadphaseBucket dst);

@@ -17,6 +17,12 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     ImGui::SeparatorText("Physics Simulation");
     ImGui::Spacing();
 
+    ImGui::Text("Step mode");
+    int selectedStepMode = static_cast<int>(ctx.physicsEngine->stepMode);
+    if (ImGui::Combo("##StepMode",&selectedStepMode, "Global\0Island\0")) {
+        ctx.physicsEngine->stepMode = static_cast<StepMode>(selectedStepMode);
+    }
+
     ImGui::Text("Simulation speed");
     float simulationSpeed = ctx.engineState->getSimulationSpeed();
     if (ImGui::SliderFloat("##SimulationSpeed", &simulationSpeed, 0.01f, 2.0f, "%.2f")) {

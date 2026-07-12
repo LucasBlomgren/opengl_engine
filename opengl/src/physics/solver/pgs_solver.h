@@ -1,7 +1,7 @@
 #pragma once
 
 #include "solver_types.h"
-#include "substeps/physics_step_types.h"
+#include "substeps/physics_scope.h"
 #include <narrowphase/narrowphase_types.h>
 
 class PGSSolver {
@@ -10,7 +10,6 @@ public:
     void clear();
 
     void solve(
-        const StepScope& scope,
         ContactBatch& batch,
         RuntimeCaches& caches,
         const int PGSiterations,
@@ -34,7 +33,6 @@ private:
     // solver_builder.cpp
     // Builds the solver data structures from the contact batch and runtime caches.
     void buildSolverData(
-        const StepScope& scope, 
         ContactBatch& batch, 
         RuntimeCaches& caches,
         float dt

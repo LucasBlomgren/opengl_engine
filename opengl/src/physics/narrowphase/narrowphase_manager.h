@@ -1,6 +1,6 @@
 #pragma once
 
-#include "substeps/physics_step_types.h"
+#include "substeps/physics_scope.h"
 #include "narrowphase_types.h"
 #include "rigidbody.h"
 #include "collision_manifold.h"

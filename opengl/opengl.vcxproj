@@ -231,7 +231,6 @@
     </ClCompile>
     <ClCompile Include="src\physics\substeps\compute_global_substeps.cpp" />
     <ClCompile Include="src\physics\substeps\build_islands.cpp" />
-    <ClInclude Include="src\physics\substeps\island_types.h" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />
@@ -329,7 +328,6 @@
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
     <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
-    <ClInclude Include="src\physics\broadphase\SAP_test.h" />
     <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
@@ -349,7 +347,9 @@
     <ClInclude Include="src\physics\narrowphase\sat.h" />
     <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
     <ClInclude Include="src\physics\physics_engine.h" />
-    <ClInclude Include="src\physics\substeps\physics_step_types.h" />
+    <ClInclude Include="src\physics\runtime_caches.h" />
+    <ClInclude Include="src\physics\substeps\build_islands_types.h" />
+    <ClInclude Include="src\physics\substeps\physics_scope.h" />
     <ClInclude Include="src\physics\physics_world.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast.h" />
