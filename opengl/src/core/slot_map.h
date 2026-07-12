@@ -48,6 +48,10 @@ public:
         return h.slot < m_slotGen.size() && m_slotGen[h.slot] == h.gen && m_slotToDense[h.slot] != INVALID;
     }
 
+    T* get(Id h) {
+        return &m_dense[m_slotToDense[h.slot]];
+    }
+
     T* try_get(Id h) {
         if (!alive(h)) return nullptr;
         return &m_dense[m_slotToDense[h.slot]];

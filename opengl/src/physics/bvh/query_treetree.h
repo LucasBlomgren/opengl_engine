@@ -56,11 +56,14 @@ void treeVsTreeQuery(
             continue;
         }
 
+        // Decide which node to expand next based on surface area heuristic (SAH).
         const bool expandA =
             !nA.isLeaf &&
             (nB.isLeaf || sah2(nA.fatBox) >= sah2(nB.fatBox));
 
+        // Expand the node with the larger surface area, or the non-leaf node if one is a leaf.
         if (expandA) {
+            // Expand node A
             const int a0 = nA.childAIdx;
             const int a1 = nA.childBIdx;
 
@@ -73,6 +76,7 @@ void treeVsTreeQuery(
             }
         }
         else {
+            // Expand node B
             const int b0 = nB.childAIdx;
             const int b1 = nB.childBIdx;
 

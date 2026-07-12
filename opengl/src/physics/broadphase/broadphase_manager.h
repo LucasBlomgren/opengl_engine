@@ -3,7 +3,6 @@
 
 #include "core/slot_map.h"
 #include "../runtime_caches.h"
-#include "../substeps/physics_scope.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
@@ -22,50 +21,22 @@ public:
     void updateBVHs();
 
     //   Build pairs for narrowphase
-    void buildGlobalPairs(PairBatch& batch);
+    void buildPairs(PairBatch& batch);
     void buildPairsBruteForce(
         const std::vector<RigidBodyHandle>& bodies,
         std::vector<DynamicPair>& outPairs
     );
 
-
-    void buildSAP(
-        sap::SweepAndPrune& state,
-        const std::vector<RigidBodyHandle>& bodies
+    void buildSpeculativePairs(
+        float dt, 
+        PairBatch& batch,
+        std::vector<AABB>& debugSweeps
     );
-    void buildSAPTwoSets(
-        sap::SweepAndPrune& state,
-        const std::vector<RigidBodyHandle>& aBodies,
-        const std::vector<RigidBodyHandle>& bBodies
+    void determineSpeculativeBodies(
+        float dt, 
+        std::vector<RigidBodyHandle>& outBodies, 
+        std::vector<AABB>& outAABBs
     );
-    void querySAP(
-        sap::SweepAndPrune& state,
-        std::vector<DynamicPair>& outPairs
-    );
-
-
-    void buildPairsSAP(
-        const std::vector<RigidBodyHandle>& bodies,
-        std::vector<DynamicPair>& outPairs
-    );
-    void buildPairsSAPTwoSets(
-        const std::vector<RigidBodyHandle>& aBodies,
-        const std::vector<RigidBodyHandle>& bBodies,
-        std::vector<DynamicPair>& outPairs
-    );
-    void buildAsleepPairsForScope(
-        const std::vector<RigidBodyHandle>& bodies,
-        std::vector<DynamicPair>& outPairs
-    );
-    void buildStaticPairsForScope(
-        const std::vector<RigidBodyHandle>& bodies,
-        std::vector<DynamicPair>& outPairs
-    );
-    void buildTerrainPairsForScope(
-        const std::vector<RigidBodyHandle>& bodies,
-        std::vector<TerrainPair>& outPairs
-    );
-
 
     // add/remove from current list
     void add(RigidBodyHandle& handle, BroadphaseBucket dst);

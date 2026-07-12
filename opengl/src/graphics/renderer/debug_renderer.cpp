@@ -18,6 +18,7 @@ void DebugRenderer::init(const EngineState& engineState, const MeshManager& mesh
     sphereOutlineRenderer.init();
     normalsRenderer.init();
     arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
+    arrowRenderer.mesh = meshManager.getMesh("debug_arrow");
 
     litMeshShader->use();
     VAO_contactPoint = setupContactPoint();
@@ -62,7 +63,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
     renderColliders(objects, camera, world);
     renderContactPoints(physics.GetContactCache());
     renderBVHs(physics);
-    //renderSubstepIslands(physics.debugSweeps, physics.islandScopes, world);
+    renderSweptAABBs(physics.debugSweeps, glm::vec3(1.0f, 1.0f, 0.0f));
 
     // render debug meshes with lighting
     litMeshShader->use();
@@ -273,30 +274,13 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
 //----------------------------------------
 //    Render Substep Islands
 //----------------------------------------
-void DebugRenderer::renderSubstepIslands(
+void DebugRenderer::renderSweptAABBs(
     const std::vector<AABB>& sweeps,
-    const std::vector<PhysicsScope>& scopes, 
-    World& world) 
+    const glm::vec3& color)
 {
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
     glBindVertexArray(aabbRenderer.sVAO);
-
-    for (const PhysicsScope& scope : scopes) {
-        int colorIdx = scope.id % COLOR_COUNT;
-        glm::vec3 color{
-            ISLAND_COLORS[colorIdx * 3 + 0],
-            ISLAND_COLORS[colorIdx * 3 + 1],
-            ISLAND_COLORS[colorIdx * 3 + 2]
-        };
-        for (const RigidBodyHandle& handle : scope.bodies) {
-            if (!handle.isValid()) continue;
-            RigidBody* rb = world.getRigidBody(handle);
-            AABB& aabb = rb->aabb;
-            aabbRenderer.updateModel(aabb, /*asleep=*/false);
-            aabbRenderer.render(color, *debugShapeShader);
-        }
-    }
 
     for (const AABB& sweptSrc : sweeps) {
         AABB swept = sweptSrc; // local mutable copy for rendering only
@@ -309,7 +293,7 @@ void DebugRenderer::renderSubstepIslands(
 
         aabbRenderer.updateModel(swept, false);
         aabbRenderer.render(
-            glm::vec3(1.0f, 0.0f, 1.0f),
+            color,
             *debugShapeShader
         );
     }

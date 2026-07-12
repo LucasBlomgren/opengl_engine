@@ -1,9 +1,9 @@
 #pragma once
 #include "narrowphase_manager.h"
 
-//----------------------------------------------
+//===============================================
 //     Tris vs Box
-//----------------------------------------------
+//===============================================
 void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {
@@ -47,9 +47,9 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
     batch.contacts.push_back(contactPtr);
 }
 
-//----------------------------------------------
+//===============================================
 //     Tris vs Sphere
-//----------------------------------------------
+//===============================================
 void NarrowphaseManager::processTerrainTriSphere(ContactBatch& batch, RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) {
     // SAT for each tri
     for (Tri* tri : candidates) {
@@ -89,9 +89,9 @@ void NarrowphaseManager::processTerrainTriSphere(ContactBatch& batch, RigidBodyH
     batch.contacts.push_back(contactPtr);
 }
 
-//-----------------------------------------------
+//===============================================
 //     Helper functions
-//-----------------------------------------------
+//===============================================
 glm::vec3 NarrowphaseManager::getAvgNormal(const std::vector<SAT::Result>& results) const {
     glm::vec3 avgNormal(0.0f);
 

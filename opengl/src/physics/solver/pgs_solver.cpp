@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "pgs_solver.h"
-#include "substeps/physics_scope.h"
 #include "rigidbody.h"
 #include "narrowphase/collision_manifold.h"
 #include "narrowphase/narrowphase_types.h"

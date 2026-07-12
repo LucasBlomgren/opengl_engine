@@ -10,7 +10,7 @@
 #include "game_object.h"
 #include "aabb.h"
 #include "shaders/shader.h"
-#include "physics/raycast.h"
+#include "physics/raycast/raycast.h"
 
 #include <glm/gtc/random.hpp>
 

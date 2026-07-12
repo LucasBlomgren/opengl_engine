@@ -28,12 +28,4 @@ void PhysicsEngine::clear() {
     narrowphaseManager.clear();
     pgsSolver.clear();
     pending.clear();
-
-    islandScopes.clear();
-    restScope = PhysicsScope{};
-    isIslandBody.clear();
-
-    physicsFrameActive = false;
-    schedulerSubstep = 0;
-    highestSubstepIslandCount = 0;
 }

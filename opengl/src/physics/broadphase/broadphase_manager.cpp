@@ -69,7 +69,7 @@ void BroadphaseManager::updateBVHs() {
 
 
 //==================================================
-//      Build pairs for scope
+//     Brute force pair building for narrowphase
 //==================================================
 void BroadphaseManager::buildPairsBruteForce(
     const std::vector<RigidBodyHandle>& bodies,
@@ -91,98 +91,10 @@ void BroadphaseManager::buildPairsBruteForce(
     }
 }
 
-void BroadphaseManager::buildSAP(
-    sap::SweepAndPrune& state,
-    const std::vector<RigidBodyHandle>& bodies)
-{
-    state.build(caches, bodies);
-}
-
-void BroadphaseManager::buildSAPTwoSets(
-    sap::SweepAndPrune& state,
-    const std::vector<RigidBodyHandle>& aBodies,
-    const std::vector<RigidBodyHandle>& bBodies)
-{
-    state.build(caches, aBodies, bBodies);
-}
-
-void BroadphaseManager::querySAP(
-    sap::SweepAndPrune& state,
-    std::vector<DynamicPair>& outPairs)
-{
-    state.query(caches, outPairs);
-}
-
-void BroadphaseManager::buildAsleepPairsForScope(
-    const std::vector<RigidBodyHandle>& bodies,
-    std::vector<DynamicPair>& outPairs)
-{
-    if (bodies.empty()) {
-        return;
-    }
-    static std::vector<RigidBodyHandle> asleepCandidates;
-    asleepCandidates.reserve(128);
-    for (RigidBodyHandle h : bodies) {
-        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-        asleepCandidates.clear();
-        asleepBvh.singleQuery(body->aabb, asleepCandidates);
-        if (asleepCandidates.empty()) continue;
-        for (RigidBodyHandle sH : asleepCandidates) {
-            outPairs.emplace_back(DynamicPair{ h, sH });
-        }
-    }
-}
-
-void BroadphaseManager::buildStaticPairsForScope(
-    const std::vector<RigidBodyHandle>& bodies,
-    std::vector<DynamicPair>& outPairs)
-{
-    if (bodies.empty()) {
-        return;
-    }
-
-    static std::vector<RigidBodyHandle> staticCandidates;
-    staticCandidates.reserve(128);
-
-    for (RigidBodyHandle h : bodies) {
-        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-
-        staticCandidates.clear();
-        staticBvh.singleQuery(body->aabb, staticCandidates);
-
-        if (staticCandidates.empty()) continue;
-        for (RigidBodyHandle sH : staticCandidates) {
-            outPairs.emplace_back(DynamicPair{ h, sH });
-        }
-    }
-}
-
-void BroadphaseManager::buildTerrainPairsForScope(
-    const std::vector<RigidBodyHandle>& bodies,
-    std::vector<TerrainPair>& outPairs)
-{
-    if (bodies.empty()) {
-        return;
-    }
-
-    static std::vector<Tri*> terrainCandidates;
-    terrainCandidates.reserve(128);
-
-    for (RigidBodyHandle h : bodies) {
-        RigidBody* body = caches->bodies.get(h, FUNC_NAME);
-
-        terrainCandidates.clear();
-        terrainBvh.singleQuery(body->aabb, terrainCandidates);
-
-        if (terrainCandidates.empty()) continue;
-        outPairs.emplace_back(TerrainPair{ h, terrainCandidates });
-    }
-}
-
 //==================================================
 //     Global pair building for narrowphase
 //==================================================
-void BroadphaseManager::buildGlobalPairs(PairBatch& batch)
+void BroadphaseManager::buildPairs(PairBatch& batch)
 {
     batch.dynamicPairs.reserve(BVHTree::MaxCollisionBuf);
     batch.terrainPairs.reserve(BVHTree::MaxCollisionBuf);
@@ -263,6 +175,156 @@ void BroadphaseManager::buildGlobalPairs(PairBatch& batch)
     }
 }
 
+void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) {
+    batch.speculativeDynamicPairs.clear();
+    batch.speculativeTerrainPairs.clear();
+    batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
+    batch.speculativeTerrainPairs.reserve(BVHTree::MaxCollisionBuf);
+
+    static std::vector<RigidBodyHandle> speculativeBodies;
+    static std::vector<AABB> speculativeAABBs;
+    speculativeBodies.reserve(awakeHandles.size());
+    speculativeAABBs.reserve(awakeHandles.size());
+    speculativeBodies.clear();
+    speculativeAABBs.clear();
+    determineSpeculativeBodies(dt, speculativeBodies, speculativeAABBs);
+
+    // #TODO: Let debug renderer use speculativeAABBs directly instead of copying to debugSweeps.
+    debugSweeps = speculativeAABBs;
+
+    static std::vector<RigidBodyHandle> candidates;
+    candidates.reserve(BVHTree::MaxCollisionBuf);
+
+    for (int i = 0; i < speculativeBodies.size(); ++i) {
+        RigidBodyHandle bodyHandle = speculativeBodies[i];
+        AABB& sweptAABB = speculativeAABBs[i];
+
+        if (awakeBvh.rootIdx != -1) { 
+            candidates.clear(); 
+            awakeBvh.singleQuery(sweptAABB, candidates);
+            for (auto& otherHandle : candidates) {
+                if (bodyHandle == otherHandle) continue;
+                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+            }
+        }
+        if (asleepBvh.rootIdx != -1) {
+            candidates.clear();
+            asleepBvh.singleQuery(sweptAABB, candidates);
+            for (auto& otherHandle : candidates) {
+                if (bodyHandle == otherHandle) continue;
+                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+            }
+        }
+        if (staticBvh.rootIdx != -1) {
+            candidates.clear();
+            staticBvh.singleQuery(sweptAABB, candidates);
+            for (auto& otherHandle : candidates) {
+                if (bodyHandle == otherHandle) continue;
+                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+            }
+        }
+    }
+
+    //std::cout << "Speculative bodies: " << speculativeBodies.size() << std::endl;
+    //std::cout << "Speculative pairs: " << batch.speculativeDynamicPairs.size() << std::endl;
+    //std::cout << "Speculative terrain pairs: " << batch.speculativeTerrainPairs.size() << std::endl;
+}
+
+void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<RigidBodyHandle>& outBodies, std::vector<AABB>& outAABBs) {
+    for (const RigidBodyHandle& handle : awakeHandles) {
+        RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
+        Collider* mainCollider = caches->colliders.get(body->colliderHandles[0], FUNC_NAME);
+        Transform* rootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
+
+        constexpr float safeFraction = 0.50f;
+        constexpr float minSafeDistance = 0.02f;
+
+        // -----------------------------
+        // 1. Estimate object size
+        // -----------------------------
+        glm::vec3& scale = rootTransform->scale;
+        float minExtent = std::min(scale.x, std::min(scale.y, scale.z));
+        float boundingRadius = 0.5f * glm::length(scale);
+        float safeDistance = std::max(minExtent * safeFraction, minSafeDistance);
+
+        // -----------------------------
+        // 2. Estimate motion this frame
+        // -----------------------------
+        float linearMotion = glm::length(body->linearVelocity) * dt;
+        float angularMotion = glm::length(body->angularVelocity) * boundingRadius * dt;
+        float totalMotion = linearMotion + angularMotion;
+
+        // Not fast enough to matter.
+        if (totalMotion <= safeDistance) {
+            continue;
+        }
+
+        outBodies.push_back(handle);
+
+        // -----------------------------
+        // 3. Build swept AABB
+        // -----------------------------
+        AABB& currentAABB = body->aabb;
+
+        glm::vec3 delta = body->linearVelocity * dt;
+
+        AABB endAABB = currentAABB;
+        endAABB.worldMin += delta;
+        endAABB.worldMax += delta;
+
+        outAABBs.emplace_back();
+        AABB& sweptAABB = outAABBs.back();
+        sweptAABB.worldMin = glm::min(currentAABB.worldMin, endAABB.worldMin);
+        sweptAABB.worldMax = glm::max(currentAABB.worldMax, endAABB.worldMax);
+
+        // -----------------------------
+        // 4. Expand for rotation
+        // -----------------------------
+        if (mainCollider->type != ColliderType::SPHERE || body->isCompound()) {
+            float omega = glm::length(body->angularVelocity);
+            if (omega > 1e-6f) {
+                glm::vec3 axis = body->angularVelocity / omega;
+
+                // Use the box's OWN oriented axes + local half-extents.
+                // The world AABB is sign-agnostic: currentHalf is always the
+                // all-positive corner, a phantom point that sits far from the
+                // axis when the body's long dimension points "against" it.
+                // Measuring that corner's distance to the axis is the bug.
+                glm::mat3 R = glm::mat3_cast(rootTransform->orientation);
+                glm::vec3 h = 0.5f * rootTransform->scale; // local half-extents
+
+                // Max perpendicular distance of any box point to the spin axis
+                // (conservative). A box axis PARALLEL to the spin axis contributes
+                // 0 (that extent doesn't sweep); perpendicular contributes fully.
+                float sweepRadius =
+                    h.x * glm::length(glm::cross(R[0], axis)) +
+                    h.y * glm::length(glm::cross(R[1], axis)) +
+                    h.z * glm::length(glm::cross(R[2], axis));
+
+                float theta = omega * dt;
+                float arcExpansion = theta * sweepRadius;
+
+                glm::vec3 currentHalf =
+                    (currentAABB.worldMax - currentAABB.worldMin) * 0.5f;
+
+                glm::vec3 maxRotExpansion =
+                    glm::max(glm::vec3(0.0f),
+                        glm::vec3(boundingRadius) - currentHalf);
+
+                glm::vec3 angularExpansion =
+                    glm::min(glm::vec3(arcExpansion), maxRotExpansion);
+
+                sweptAABB.worldMin -= angularExpansion;
+                sweptAABB.worldMax += angularExpansion;
+            }
+        }
+
+        // Optional small skin.
+        constexpr float sweptSkin = 0.01f;
+        sweptAABB.worldMin -= glm::vec3(sweptSkin);
+        sweptAABB.worldMax += glm::vec3(sweptSkin);
+    }
+}
 
 //==================================================
 //    List management

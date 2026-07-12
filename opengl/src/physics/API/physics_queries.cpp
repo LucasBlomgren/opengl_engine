@@ -34,7 +34,6 @@ const DebugData PhysicsEngine::getDebugData() {
     debugData.colliders = physicsWorld.getCollidersMap().dense().size();
     debugData.terrainTris = terrainTriangles->size();
     debugData.contacts = contactsGeneratedThisFrame;
-    debugData.currentSubstepAmount = currentSubstepAmount;
     return debugData;
 }
 

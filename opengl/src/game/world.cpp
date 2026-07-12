@@ -18,9 +18,11 @@ void World::clear() {
 //----------------------------------
 GameObject* World::getGameObject(const GameObjectHandle& h) {
     return gameObjects.try_get(h);
+    //return gameObjects.get(h);
 }
 Transform* World::getTransform(const TransformHandle& h) {
-    return transforms.try_get(h);
+    //return transforms.try_get(h);
+    return transforms.get(h);
 }
 
 // physics getters, #TODO: refactor to world only dependent on physics world, not physics engine

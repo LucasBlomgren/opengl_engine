@@ -70,7 +70,6 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
     // ----------------------------------------------------
     static float dt_ui = 0.0f;
     static float framerate_ui = 0.0f;
-    static float substeps_ui = 0.0f;
 
     static float renderSub_ui = 0.0f;
     static float editor_ui = 0.0f;
@@ -104,7 +103,6 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
         ImGuiIO& io = ImGui::GetIO();
         framerate_ui = io.Framerate;
         dt_ui = ctx.deltaTime * 1000.0f;
-        substeps_ui = ctx.substepAmount;
 
         gpu_total_ms = gpuTimers->totalMs();
         gpuShadowMs_ui = gpuTimers->shadowMs;
@@ -368,7 +366,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 
     ImGui::Begin("##PerformanceHUD", nullptr, hudFlags);
 
-    ImGui::Text("%.0f FPS   %.2f ms   Steps: %zu", framerate_ui, dt_ui, ctx.substepAmount);
+    ImGui::Text("%.0f FPS   %.2f ms   ", framerate_ui, dt_ui);
     TotalTooltip();
 
     ImGui::TextDisabled("CPU %.2f   GPU %.2f", cpu_total_ms, gpu_total_ms);
@@ -406,7 +404,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
 
         if (ImGui::Begin("Profiler", &showFullProfiler))
         {
-            ImGui::Text("%.0f FPS   Frame %.2f ms   Steps: %zu", framerate_ui, dt_ui, ctx.substepAmount);
+            ImGui::Text("%.0f FPS   Frame %.2f ms   ", framerate_ui, dt_ui);
             if (ImGui::IsItemHovered())
             {
                 ImGui::BeginTooltip();

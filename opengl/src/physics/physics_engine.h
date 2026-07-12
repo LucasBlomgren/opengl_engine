@@ -1,12 +1,9 @@
 #pragma once
-
-#include "substeps/physics_scope.h"
-#include "substeps/build_islands_types.h"
 #include "runtime_caches.h"
 #include "physics_world.h"
 #include "timer.h"
 #include "narrowphase/collision_manifold.h"
-#include "raycast.h"
+#include "raycast/raycast.h"
 #include "bvh/bvh.h"
 #include "bvh/bvh_terrain.h"
 #include "broadphase/broadphase_manager.h"
@@ -27,24 +24,9 @@ struct DebugData {
     size_t currentSubstepAmount = 0;
 };
 
-enum class StepMode {
-    Global = 0,
-    Island = 1
-};
-
 class PhysicsEngine {
 public:
     void init(World* world, FrameTimers* ft);
-
-    StepMode stepMode = StepMode::Island;
-
-    std::vector<PhysicsScope> islandScopes;
-    PhysicsScope restScope;
-    std::vector<uint8_t> isIslandBody;
-    MotionRisk computeMotionRisk(RigidBodyHandle h, float frameDt);
-    void createPredictedIslandsMVP(float frameDt);
-    void stepIslandModeMVP(float frameDt);
-    void buildPairsForScope(PhysicsScope& scope, PairBatch& pairs);
 
     //------------------------
     //     Main functions
@@ -55,7 +37,6 @@ public:
     int computeGlobalSubsteps(float dt);
 
     void beginPhysicsStep(float outerDt);
-    void stepScope(PhysicsScope& scope, float dt);
     void step(float deltaTime, EngineState& engine);
     void stepDiscrete(float deltaTime);
     void endPhysicsStep(float outerDt);
@@ -87,7 +68,6 @@ public:
     const TerrainBVH& getTerrainBvh() const;
     const std::unordered_map<size_t, Contact>& GetContactCache() const;
 
-    int maxSubsteps = 16;
     int pgsIterations = 8;
 
     std::vector<AABB> debugSweeps; // public for debug rendering
@@ -98,11 +78,6 @@ private:
     PhysicsWorld physicsWorld;
     World* world = nullptr;
     FrameTimers* frameTimers;
-
-    int currentSubstepAmount = 1;
-    bool physicsFrameActive = false;
-    int schedulerSubstep = 0;
-    int highestSubstepIslandCount = 0;
 
     uint32_t contactsGeneratedThisFrame = 0;
 

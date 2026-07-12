@@ -16,7 +16,6 @@
     <ClCompile Include="src\graphics\debug\xyz_object.cpp" />
     <ClCompile Include="src\game\scene_builder.cpp" />
     <ClCompile Include="src\externals\glad.c" />
-    <ClCompile Include="src\physics\raycast.cpp" />
     <ClCompile Include="src\graphics\debug\oobb_renderer.cpp" />
     <ClCompile Include="src\graphics\debug\aabb_renderer.cpp" />
     <ClCompile Include="src\physics\bvh\bvh.cpp" />
@@ -64,17 +63,18 @@
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />
     <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
-    <ClCompile Include="src\physics\physics_commands.cpp" />
-    <ClCompile Include="src\physics\physics_queries.cpp" />
-    <ClCompile Include="src\physics\physics_scene.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
     <ClCompile Include="src\physics\updateBodiesAndColliders.cpp" />
-    <ClCompile Include="src\physics\updateContactCache.cpp" />
-    <ClCompile Include="src\physics\substeps\build_pairs_for_scope.cpp" />
-    <ClCompile Include="src\physics\substeps\compute_global_substeps.cpp" />
-    <ClCompile Include="src\physics\substeps\build_islands.cpp" />
     <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
+    <ClCompile Include="src\physics\narrowphase\dynamic_speculative.cpp" />
+    <ClCompile Include="src\physics\narrowphase\narrowphase_emit_contact.cpp" />
+    <ClCompile Include="src\physics\API\physics_commands.cpp" />
+    <ClCompile Include="src\physics\API\physics_queries.cpp" />
+    <ClCompile Include="src\physics\API\physics_scene.cpp" />
+    <ClCompile Include="src\physics\raycast\raycast.cpp" />
+    <ClCompile Include="src\physics\contactcache\updateContactCache.cpp" />
+    <ClCompile Include="src\physics\narrowphase\dynamic_normal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -122,7 +122,6 @@
     <ClInclude Include="src\graphics\debug\xyz_object.h" />
     <ClInclude Include="src\game\game_object.h" />
     <ClInclude Include="src\game\scene_builder.h" />
-    <ClInclude Include="src\physics\raycast.h" />
     <ClInclude Include="src\graphics\debug\oobb_renderer.h" />
     <ClInclude Include="src\graphics\debug\aabb_renderer.h" />
     <ClInclude Include="src\geometry\vertex.h" />
@@ -172,9 +171,7 @@
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
     <ClInclude Include="src\physics\colliders\collider_pose.h" />
     <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
-    <ClInclude Include="src\physics\narrowphase\dynamic_processing.h" />
     <ClInclude Include="src\physics\narrowphase\sat.h" />
-    <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
@@ -186,10 +183,10 @@
     <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
-    <ClInclude Include="src\physics\substeps\physics_scope.h" />
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
-    <ClInclude Include="src\physics\substeps\build_islands_types.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
+    <ClInclude Include="src\physics\raycast\raycast.h" />
+    <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

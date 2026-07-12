@@ -23,6 +23,8 @@ namespace SAT {
 
         Tri* tri_ptr = nullptr;
         glm::vec3 point{}; // sphereCube or sphereTri
+
+
     };
 
     bool boxBox(Collider& A, Collider& B, Result& out);

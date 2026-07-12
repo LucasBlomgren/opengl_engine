@@ -1,6 +1,9 @@
 ﻿#include "pch.h"
 #include "SAT.h"
 
+//=======================================================
+//  Helpers
+//=======================================================
 void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) {
     glm::vec3 direction = posB - posA; 
     if (glm::dot(direction, normal) < 0) { 
@@ -73,45 +76,37 @@ void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>
     indices.push_back(bestIdx);
 }
 
-bool SAT::boxBox(Collider& A, Collider& B, Result& out) {
-    //OOBB& boxA = std::get<OOBB>(A.shape);
-    //OOBB& boxB = std::get<OOBB>(B.shape);
+static inline void SAT::projectTriOntoAxisLocal(
+    const glm::vec3& p0,
+    const glm::vec3& p1,
+    const glm::vec3& p2,
+    const glm::vec3& axis,
+    float& outMin,
+    float& outMax)
+{
+    float d0 = glm::dot(p0, axis);
+    float d1 = glm::dot(p1, axis);
+    float d2 = glm::dot(p2, axis);
 
-    //return intersectPolygons(boxA.worldVertices, boxB.worldVertices, boxA.worldAxes, boxB.worldAxes, out);
-
-    //return boxBoxOBB_NoPrecompute(A, B, out);
-    return boxBoxOBB(A, B, out);
-
-    // #TODO: Korrekt hantering av face vs edge-edge för BoxBox
-    // 
-    // ---- Välja face-face:
-    // 
-    // float s = dot(A.axis[k], normal);
-    // int faceSign = (s >= 0.0f) ? +1 : -1;   // +1 = plus-face, -1 = minus-face
-    // vec3 faceCenter = A.center + faceSign * A.axis[k] * A.halfExtents[k];
-    // vec3 faceNormal = faceSign * A.axis[k];
-    // 
-    // Sen använda faceCenter och faceNormal för att välja rätt face för clipping
-    //
-    // ---- Välja edge-edge:
-    // 
-    //// inputs: center C, axes U[3], half extents he[3], edge axis i, contact normal n (A->B)
-    //int a0 = (i + 1) % 3;
-    //int a1 = (i + 2) % 3;
-
-    //float s0 = (dot(n, U[a0]) >= 0.0f) ? 1.0f : -1.0f;
-    //float s1 = (dot(n, U[a1]) >= 0.0f) ? 1.0f : -1.0f;
-
-    //// base point on the "side" of the box (fixed a0/a1 signs)
-    //glm::vec3 base = C
-    //    + s0 * U[a0] * he[a0]
-    //    + s1 * U[a1] * he[a1];
-
-    //// edge endpoints (vary along i)
-    //glm::vec3 e0 = base + U[i] * he[i];
-    //glm::vec3 e1 = base - U[i] * he[i];
+    outMin = std::min(d0, std::min(d1, d2));
+    outMax = std::max(d0, std::max(d1, d2));
 }
 
+static inline bool SAT::overlapIntervals(
+    float minA, float maxA,
+    float minB, float maxB,
+    float& outOverlap)
+{
+    if (maxA < minB || maxB < minA)
+        return false;
+
+    outOverlap = std::min(maxA, maxB) - std::max(minA, minB);
+    return true;
+}
+
+//=======================================================
+//  Box-Sphere
+//=======================================================
 bool SAT::boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& out) {
     // Plocka alltid ut cuboid i A och sphere i B
     OOBB*   box  = std::get_if<OOBB>(&A.shape);
@@ -154,6 +149,9 @@ bool SAT::boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& 
     return true;
 }
 
+//=======================================================
+//  Sphere-Sphere
+//=======================================================
 bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
     Sphere& sphereA = std::get<Sphere>(A.shape);
     Sphere& sphereB = std::get<Sphere>(B.shape);
@@ -174,16 +172,10 @@ bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
     return true;
 }
 
+//=======================================================
+//  Box-Triangle
+//=======================================================
 bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
-    //OOBB& box = std::get<OOBB>(A.shape);
-    //out.tri_ptr = &tri;
-
-    //return intersectPolygons(box.worldVertices, tri.vertices, box.worldAxes, tri.axes, out);
-
-    return boxTriSpecialized(A, tri, out);
-}
-
-bool SAT::boxTriSpecialized(Collider& A, Tri& tri, Result& out) {
     const OOBB& box = std::get<OOBB>(A.shape);
     out = {};
     out.depth = FLT_MAX;
@@ -269,23 +261,16 @@ bool SAT::boxTriSpecialized(Collider& A, Tri& tri, Result& out) {
             return true;
         };
 
-    // ---------------------------------------------------
     // 1) Boxens tre face-axlar
-    // ---------------------------------------------------
     if (!testAxis(glm::vec3(1, 0, 0), AxisType::FaceA)) return false;
     if (!testAxis(glm::vec3(0, 1, 0), AxisType::FaceA)) return false;
     if (!testAxis(glm::vec3(0, 0, 1), AxisType::FaceA)) return false;
 
-    // ---------------------------------------------------
     // 2) Triangelns normal
-    // ---------------------------------------------------
     glm::vec3 triNormalLocal = glm::cross(p1 - p0, p2 - p0);
     if (!testAxis(triNormalLocal, AxisType::FaceB)) return false;
 
-    // ---------------------------------------------------
-    // 3) 9 edge-edge axlar
-    //    I boxens lokala rum är boxaxlarna bara x/y/z
-    // ---------------------------------------------------
+    // 3) 9 edge-edge axlar - I boxens lokala rum är boxaxlarna bara x/y/z
     const glm::vec3 ex(1, 0, 0);
     const glm::vec3 ey(0, 1, 0);
     const glm::vec3 ez(0, 0, 1);
@@ -302,9 +287,7 @@ bool SAT::boxTriSpecialized(Collider& A, Tri& tri, Result& out) {
     if (!testAxis(glm::cross(f2, ey), AxisType::EdgeEdge, 2, 1)) return false;
     if (!testAxis(glm::cross(f2, ez), AxisType::EdgeEdge, 2, 2)) return false;
 
-    // ---------------------------------------------------
     // Kolliderar
-    // ---------------------------------------------------
     out.depth = bestDepth;
     out.axisType = bestAxisType;
     out.edgeIndexA = bestEdgeA;
@@ -318,8 +301,7 @@ bool SAT::boxTriSpecialized(Collider& A, Tri& tri, Result& out) {
 
     out.normal = glm::normalize(out.normal);
 
-    // Approx kontaktpunkt:
-    // clampad triangelcentroid i boxens lokala rum tillbaka till world
+    // Approx kontaktpunkt: clampad triangelcentroid i boxens lokala rum tillbaka till world
     glm::vec3 localPoint = glm::clamp(triCenterLocal, -e, e);
     out.point =
         c +
@@ -330,6 +312,9 @@ bool SAT::boxTriSpecialized(Collider& A, Tri& tri, Result& out) {
     return true;
 }
 
+//=======================================================
+//  Sphere-Triangle
+//=======================================================
 bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     Sphere& sphere = std::get<Sphere>(A.shape);
     glm::vec3 P = sphere.centerWorld - tri.normal * glm::dot(sphere.centerWorld - tri.vertices[0], tri.normal); 
@@ -385,287 +370,13 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     return false;
 }
 
-std::pair<float, float> SAT::projectVertices(std::span<const glm::vec3> vertices, const glm::vec3& axis) {
-    float min = std::numeric_limits<float>::max();
-    float max = std::numeric_limits<float>::lowest();
-
-    for (int i = 0; i < vertices.size(); i++)
-    {
-        const glm::vec3& v = vertices[i];
-        float proj = glm::dot(v, axis);
-
-        if (proj < min) { min = proj; }
-        if (proj > max) { max = proj; }
-    }
-
-    return std::make_pair(min, max);
-}
-
-bool SAT::intersectPolygons(
-    std::span<const glm::vec3> vertsA,
-    std::span<const glm::vec3> vertsB,
-    std::span<const glm::vec3> normalsA,
-    std::span<const glm::vec3> normalsB,
-    Result& satResult)
+//=======================================================
+//  Box-Box
+//=======================================================
+bool SAT::boxBox(Collider& colA, Collider& colB, Result& out)
 {
-    static std::vector<glm::vec3> triedAxes; 
-    triedAxes.clear(); 
-    triedAxes.reserve(normalsA.size() + normalsB.size()); 
-
-    // testa normaler från A
-    for (const glm::vec3& A : normalsA) {
-        auto [minA, maxA] = projectVertices(vertsA, A);
-        auto [minB, maxB] = projectVertices(vertsB, A);
-
-        if (minA >= maxB or minB >= maxA)
-            return false;
-
-        float overlapPlus = maxB - minA; 
-        float overlapMinus = maxA - minB; 
-        float axisDepth = std::min(overlapPlus, overlapMinus); 
-
-        if (axisDepth < satResult.depth) {
-            satResult.depth = axisDepth;
-            satResult.normal = A;
-            satResult.axisType = AxisType::FaceA;
-        }
-
-        float sepA_plus = minB - maxA;
-        float sepA_minus = minA - maxB;
-        satResult.separationA = std::max(satResult.separationA, std::max(sepA_plus, sepA_minus)); 
-    }
-
-    // testa normaler från B
-    for (const glm::vec3& B : normalsB) {
-        auto [minA, maxA] = projectVertices(vertsA, B);
-        auto [minB, maxB] = projectVertices(vertsB, B);
-
-        if (minA >= maxB or minB >= maxA)
-            return false;
-
-        float overlapPlus = maxB - minA; 
-        float overlapMinus = maxA - minB; 
-        float axisDepth = std::min(overlapPlus, overlapMinus); 
-
-        if (axisDepth < satResult.depth) {
-            satResult.depth = axisDepth;
-            satResult.normal = B;
-            satResult.axisType = AxisType::FaceB;
-        }
-
-        float sepB_plus = minA - maxB; 
-        float sepB_minus = minB - maxA;
-        satResult.separationB = std::max(satResult.separationB, std::max(sepB_plus, sepB_minus)); 
-    }
-
-    for (const glm::vec3& n : normalsA) triedAxes.push_back(n);
-    for (const glm::vec3& n : normalsB) triedAxes.push_back(n);
-
-    // testa korsprodukter mellan normaler
-    for (int i = 0; i < normalsA.size(); i++) {
-        for (int j = 0; j < normalsB.size(); j++) {
-            const glm::vec3& A = normalsA[i]; 
-            const glm::vec3& B = normalsB[j]; 
-
-            glm::vec3 axis = glm::cross(A, B);
-
-            if (glm::length2(axis) < 1e-6f)
-                continue; // Skip parallel axes
-
-            axis = glm::normalize(axis);
-
-            bool dup = false; 
-            for (auto& t : triedAxes) { 
-                if (glm::abs(glm::dot(axis, t)) > 0.999f) { dup = true; break; }
-            }
-            if (dup) continue; 
-
-            triedAxes.push_back(axis); 
-            auto [minA, maxA] = projectVertices(vertsA, axis);
-            auto [minB, maxB] = projectVertices(vertsB, axis);
-
-            if (minA >= maxB or minB >= maxA)
-                return false;
-
-            float axisDepth = std::min(maxB - minA, maxA - minB);
-
-            if (axisDepth < satResult.depth) {
-                satResult.depth = axisDepth;
-                satResult.normal = axis;
-                satResult.axisType = AxisType::EdgeEdge;
-                satResult.edgeIndexA = i; 
-                satResult.edgeIndexB = j; 
-            }
-        }
-    }
-
-    return true;
-}
-
-bool SAT::boxBoxOBB_NoPrecompute(Collider& ACol, Collider& BCol, Result& out)
-{
-    const OOBB& A = std::get<OOBB>(ACol.shape);
-    const OOBB& B = std::get<OOBB>(BCol.shape);
-
-    const glm::vec3 Au[3] = { A.worldAxes[0], A.worldAxes[1], A.worldAxes[2] };
-    const glm::vec3 Bu[3] = { B.worldAxes[0], B.worldAxes[1], B.worldAxes[2] };
-
-    const glm::vec3 a = A.localHalfExtents * A.scale;
-    const glm::vec3 b = B.localHalfExtents * B.scale;
-
-    const glm::vec3 cA = A.worldCenter;
-    const glm::vec3 cB = B.worldCenter;
-    const glm::vec3 tWorld = cB - cA;
-
-    constexpr float EPS = 1e-6f;
-
-    out = {};
-    out.depth = FLT_MAX;
-
-    auto updateBest = [&](float overlap,
-        const glm::vec3& axisWorld,
-        float signedDistance,
-        AxisType type,
-        int edgeA = -1,
-        int edgeB = -1)
-        {
-            if (overlap < out.depth) {
-                out.depth = overlap;
-                out.normal = (signedDistance < 0.0f) ? -axisWorld : axisWorld;
-                out.axisType = type;
-                out.edgeIndexA = edgeA;
-                out.edgeIndexB = edgeB;
-            }
-        };
-
-    // ---------------------------------------
-    // 1) Face normals från A
-    // ---------------------------------------
-    for (int i = 0; i < 3; ++i) {
-        glm::vec3 L = Au[i];
-
-        float dist = glm::dot(tWorld, L);
-
-        float ra = a[i];
-
-        float rb =
-            b[0] * (std::abs(glm::dot(Bu[0], L)) + EPS) +
-            b[1] * (std::abs(glm::dot(Bu[1], L)) + EPS) +
-            b[2] * (std::abs(glm::dot(Bu[2], L)) + EPS);
-
-        float overlap = (ra + rb) - std::abs(dist);
-        if (overlap < 0.0f) {
-            return false;
-        }
-
-        updateBest(overlap, L, dist, AxisType::FaceA);
-    }
-
-    // ---------------------------------------
-    // 2) Face normals från B
-    // ---------------------------------------
-    for (int j = 0; j < 3; ++j) {
-        glm::vec3 L = Bu[j];
-
-        float dist = glm::dot(tWorld, L);
-
-        float ra =
-            a[0] * (std::abs(glm::dot(Au[0], L)) + EPS) +
-            a[1] * (std::abs(glm::dot(Au[1], L)) + EPS) +
-            a[2] * (std::abs(glm::dot(Au[2], L)) + EPS);
-
-        float rb = b[j];
-
-        float overlap = (ra + rb) - std::abs(dist);
-        if (overlap < 0.0f) {
-            return false;
-        }
-
-        updateBest(overlap, L, dist, AxisType::FaceB);
-    }
-
-    // ---------------------------------------
-    // 3) Edge-edge axlar: cross(A_i, B_j)
-    // ---------------------------------------
-    for (int i = 0; i < 3; ++i) {
-        int i1 = (i + 1) % 3;
-        int i2 = (i + 2) % 3;
-
-        for (int j = 0; j < 3; ++j) {
-            int j1 = (j + 1) % 3;
-            int j2 = (j + 2) % 3;
-
-            glm::vec3 axis = glm::cross(Au[i], Bu[j]);
-            float axisLen2 = glm::dot(axis, axis);
-
-            // parallella axlar => redundant edge-edge-axel
-            if (axisLen2 < 1e-12f) {
-                continue;
-            }
-
-            // Här använder vi samma standardformler som i precompute-versionen,
-            // men räknar alla dot products direkt när de behövs.
-
-            float R_i1_j = glm::dot(Au[i1], Bu[j]);
-            float R_i2_j = glm::dot(Au[i2], Bu[j]);
-            float R_i_j1 = glm::dot(Au[i], Bu[j1]);
-            float R_i_j2 = glm::dot(Au[i], Bu[j2]);
-
-            float t_i1 = glm::dot(tWorld, Au[i1]);
-            float t_i2 = glm::dot(tWorld, Au[i2]);
-
-            float ra =
-                a[i1] * (std::abs(R_i2_j) + EPS) +
-                a[i2] * (std::abs(R_i1_j) + EPS);
-
-            float rb =
-                b[j1] * (std::abs(R_i_j2) + EPS) +
-                b[j2] * (std::abs(R_i_j1) + EPS);
-
-            float dist = std::abs(t_i2 * R_i1_j - t_i1 * R_i2_j);
-
-            float overlap = (ra + rb) - dist;
-            if (overlap < 0.0f) {
-                return false;
-            }
-
-            float axisLen = std::sqrt(axisLen2);
-            glm::vec3 n = axis / axisLen;
-
-            float overlapNormalized = overlap / axisLen;
-            float signedDistance = glm::dot(tWorld, n);
-
-            if (overlapNormalized < out.depth) {
-                out.depth = overlapNormalized;
-                out.normal = (signedDistance < 0.0f) ? -n : n;
-                out.axisType = AxisType::EdgeEdge;
-                out.edgeIndexA = i;
-                out.edgeIndexB = j;
-            }
-        }
-    }
-
-    return true;
-}
-
-enum class AxisType {
-    FaceA,
-    FaceB,
-    EdgeEdge
-};
-
-struct Result {
-    float depth = FLT_MAX;
-    glm::vec3 normal{ 0.0f };
-    AxisType axisType = AxisType::FaceA;
-    int edgeIndexA = -1;
-    int edgeIndexB = -1;
-};
-
-bool SAT::boxBoxOBB(Collider& ACol, Collider& BCol, Result& out)
-{
-    const OOBB& A = std::get<OOBB>(ACol.shape);
-    const OOBB& B = std::get<OOBB>(BCol.shape);
+    const OOBB& A = std::get<OOBB>(colA.shape);
+    const OOBB& B = std::get<OOBB>(colB.shape);
 
     // Boxarnas world-axlar (ska vara normaliserade)
     const glm::vec3 Au[3] = { A.worldAxes[0], A.worldAxes[1], A.worldAxes[2] };
@@ -828,30 +539,153 @@ bool SAT::boxBoxOBB(Collider& ACol, Collider& BCol, Result& out)
     return true;
 }
 
-static inline void SAT::projectTriOntoAxisLocal(
-    const glm::vec3& p0,
-    const glm::vec3& p1,
-    const glm::vec3& p2,
-    const glm::vec3& axis,
-    float& outMin,
-    float& outMax)
-{
-    float d0 = glm::dot(p0, axis);
-    float d1 = glm::dot(p1, axis);
-    float d2 = glm::dot(p2, axis);
+//=======================================================
+//  General SAT
+//=======================================================
+std::pair<float, float> SAT::projectVertices(std::span<const glm::vec3> vertices, const glm::vec3& axis) {
+    float min = std::numeric_limits<float>::max();
+    float max = std::numeric_limits<float>::lowest();
 
-    outMin = std::min(d0, std::min(d1, d2));
-    outMax = std::max(d0, std::max(d1, d2));
+    for (int i = 0; i < vertices.size(); i++)
+    {
+        const glm::vec3& v = vertices[i];
+        float proj = glm::dot(v, axis);
+
+        if (proj < min) { min = proj; }
+        if (proj > max) { max = proj; }
+    }
+
+    return std::make_pair(min, max);
 }
 
-static inline bool SAT::overlapIntervals(
-    float minA, float maxA,
-    float minB, float maxB,
-    float& outOverlap)
+bool SAT::intersectPolygons(
+    std::span<const glm::vec3> vertsA,
+    std::span<const glm::vec3> vertsB,
+    std::span<const glm::vec3> normalsA,
+    std::span<const glm::vec3> normalsB,
+    Result& satResult)
 {
-    if (maxA < minB || maxB < minA)
-        return false;
+    static std::vector<glm::vec3> triedAxes;
+    triedAxes.clear();
+    triedAxes.reserve(normalsA.size() + normalsB.size());
 
-    outOverlap = std::min(maxA, maxB) - std::max(minA, minB);
+    // testa normaler från A
+    for (const glm::vec3& A : normalsA) {
+        auto [minA, maxA] = projectVertices(vertsA, A);
+        auto [minB, maxB] = projectVertices(vertsB, A);
+
+        if (minA >= maxB or minB >= maxA)
+            return false;
+
+        float overlapPlus = maxB - minA;
+        float overlapMinus = maxA - minB;
+        float axisDepth = std::min(overlapPlus, overlapMinus);
+
+        if (axisDepth < satResult.depth) {
+            satResult.depth = axisDepth;
+            satResult.normal = A;
+            satResult.axisType = AxisType::FaceA;
+        }
+
+        float sepA_plus = minB - maxA;
+        float sepA_minus = minA - maxB;
+        satResult.separationA = std::max(satResult.separationA, std::max(sepA_plus, sepA_minus));
+    }
+
+    // testa normaler från B
+    for (const glm::vec3& B : normalsB) {
+        auto [minA, maxA] = projectVertices(vertsA, B);
+        auto [minB, maxB] = projectVertices(vertsB, B);
+
+        if (minA >= maxB or minB >= maxA)
+            return false;
+
+        float overlapPlus = maxB - minA;
+        float overlapMinus = maxA - minB;
+        float axisDepth = std::min(overlapPlus, overlapMinus);
+
+        if (axisDepth < satResult.depth) {
+            satResult.depth = axisDepth;
+            satResult.normal = B;
+            satResult.axisType = AxisType::FaceB;
+        }
+
+        float sepB_plus = minA - maxB;
+        float sepB_minus = minB - maxA;
+        satResult.separationB = std::max(satResult.separationB, std::max(sepB_plus, sepB_minus));
+    }
+
+    for (const glm::vec3& n : normalsA) triedAxes.push_back(n);
+    for (const glm::vec3& n : normalsB) triedAxes.push_back(n);
+
+    // testa korsprodukter mellan normaler
+    for (int i = 0; i < normalsA.size(); i++) {
+        for (int j = 0; j < normalsB.size(); j++) {
+            const glm::vec3& A = normalsA[i];
+            const glm::vec3& B = normalsB[j];
+
+            glm::vec3 axis = glm::cross(A, B);
+
+            if (glm::length2(axis) < 1e-6f)
+                continue; // Skip parallel axes
+
+            axis = glm::normalize(axis);
+
+            bool dup = false;
+            for (auto& t : triedAxes) {
+                if (glm::abs(glm::dot(axis, t)) > 0.999f) { dup = true; break; }
+            }
+            if (dup) continue;
+
+            triedAxes.push_back(axis);
+            auto [minA, maxA] = projectVertices(vertsA, axis);
+            auto [minB, maxB] = projectVertices(vertsB, axis);
+
+            if (minA >= maxB or minB >= maxA)
+                return false;
+
+            float axisDepth = std::min(maxB - minA, maxA - minB);
+
+            if (axisDepth < satResult.depth) {
+                satResult.depth = axisDepth;
+                satResult.normal = axis;
+                satResult.axisType = AxisType::EdgeEdge;
+                satResult.edgeIndexA = i;
+                satResult.edgeIndexB = j;
+            }
+        }
+    }
+
     return true;
 }
+
+
+
+// #TODO: Korrekt hantering av face vs edge-edge för BoxBox
+// 
+// ---- Välja face-face:
+// 
+// float s = dot(A.axis[k], normal);
+// int faceSign = (s >= 0.0f) ? +1 : -1;   // +1 = plus-face, -1 = minus-face
+// vec3 faceCenter = A.center + faceSign * A.axis[k] * A.halfExtents[k];
+// vec3 faceNormal = faceSign * A.axis[k];
+// 
+// Sen använda faceCenter och faceNormal för att välja rätt face för clipping
+//
+// ---- Välja edge-edge:
+// 
+//// inputs: center C, axes U[3], half extents he[3], edge axis i, contact normal n (A->B)
+//int a0 = (i + 1) % 3;
+//int a1 = (i + 2) % 3;
+
+//float s0 = (dot(n, U[a0]) >= 0.0f) ? 1.0f : -1.0f;
+//float s1 = (dot(n, U[a1]) >= 0.0f) ? 1.0f : -1.0f;
+
+//// base point on the "side" of the box (fixed a0/a1 signs)
+//glm::vec3 base = C
+//    + s0 * U[a0] * he[a0]
+//    + s1 * U[a1] * he[a1];
+
+//// edge endpoints (vary along i)
+//glm::vec3 e0 = base + U[i] * he[i];
+//glm::vec3 e1 = base - U[i] * he[i];

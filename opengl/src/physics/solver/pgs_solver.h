@@ -1,7 +1,6 @@
 #pragma once
 
 #include "solver_types.h"
-#include "substeps/physics_scope.h"
 #include <narrowphase/narrowphase_types.h>
 
 class PGSSolver {
