@@ -43,20 +43,30 @@ void PhysicsEngine::step(float dt, EngineState& engine)
 {
     double physicsStart = glfwGetTime() * 1000.0;
 
-    beginPhysicsStep(dt);
-
     const std::vector<RigidBodyHandle>& awake =
         broadphaseManager.getAwakeList();
 
-    // 1. Integrera/synca alla awake bodies
+    if (debugPhase == PhysicsStepDebugPhase::PausedBeforePositionIntegration) {
+        // Resume second half of the step.
+        integratePositionsAndColliders(awake, pausedDt);
+        broadphaseManager.updateBVHs();
+        endPhysicsStep(pausedDt);
+        debugPhase = PhysicsStepDebugPhase::Ready;
+        pausedDt = 0.0f;
+    }
+
+    // 1. Begin step: reset timers, prepare lists and contact cache for the new frame
+    beginPhysicsStep(dt);
+
+    // 2. Integrate forces and velocities
     double start = glfwGetTime() * 1000.0;
-    updateBodiesAndColliders(awake, dt);
+    integrateForcesAndVelocities(awake, dt);
     frameTimers->submit(
         "Sync",
         frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
     );
 
-    // 2. Uppdatera BVH efter sync
+    // 3. Update BVHs
     start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
     frameTimers->submit(
@@ -64,7 +74,7 @@ void PhysicsEngine::step(float dt, EngineState& engine)
         frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
     );
 
-    // 3. Vanliga pairs + speculative pairs
+    // 4. Build pairs and speculative pairs
     start = glfwGetTime() * 1000.0;
     PairBatch pairs;
     broadphaseManager.buildPairs(pairs);
@@ -74,16 +84,17 @@ void PhysicsEngine::step(float dt, EngineState& engine)
         frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // 4. Narrowphase
+    // 5. Narrowphase
     start = glfwGetTime() * 1000.0;
     ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts, dt);
+    contactsGeneratedThisFrame += contacts.size();
     frameTimers->submit(
         "Narrowphase",
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // 5. Sort
+    // 6. Sort
     start = glfwGetTime() * 1000.0;
     contacts.sortByMinY();
     frameTimers->submit(
@@ -91,7 +102,7 @@ void PhysicsEngine::step(float dt, EngineState& engine)
         frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
     );
 
-    // 6. Solver
+    // 7. Solver
     start = glfwGetTime() * 1000.0;
     pgsSolver.solve(
         contacts,
@@ -104,14 +115,23 @@ void PhysicsEngine::step(float dt, EngineState& engine)
         frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
     );
 
+    if (engine.isPaused()) {
+        pausedDt = dt;
+        broadphaseManager.updateBVHs();
+        debugPhase = PhysicsStepDebugPhase::PausedBeforePositionIntegration;
+        return;
+    }
+
+    // 8. Integrate positions
+    integratePositionsAndColliders(awake, dt);
+
+    // 9. End step: update sleep states, contact cache etc.
     endPhysicsStep(dt);
 
     frameTimers->submit(
         "Physics",
         frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
     );
-
-    contactsGeneratedThisFrame += contacts.size();
 }
 
 //=====================================================================

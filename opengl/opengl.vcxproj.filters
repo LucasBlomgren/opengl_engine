@@ -68,7 +68,7 @@
     <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\narrowphase\dynamic_speculative.cpp" />
-    <ClCompile Include="src\physics\narrowphase\narrowphase_emit_contact.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact.cpp" />
     <ClCompile Include="src\physics\API\physics_commands.cpp" />
     <ClCompile Include="src\physics\API\physics_queries.cpp" />
     <ClCompile Include="src\physics\API\physics_scene.cpp" />

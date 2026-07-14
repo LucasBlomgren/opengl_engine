@@ -47,7 +47,7 @@ public:
     );
 
     bool flag_drawUI = true;
-    void drawUI(InputContext& ctx, float deltaTime);
+    void drawUI(bool paused, InputContext& ctx, float deltaTime);
 
     // activate/deactivate editor mode
     void activate();

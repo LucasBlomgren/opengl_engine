@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_set>
 
 #include "narrowphase_types.h"
 #include "runtime_caches.h"
@@ -34,17 +35,42 @@ private:
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;
 
+    std::unordered_set<PairKey, PairKeyHash> normalHitPairs;
+    std::vector<PendingSpeculativeContact> pendingSpeculativeContacts;
+
     //=======================================================
     //     Dispatching to specific pair processing functions
     //=======================================================
-    void processTerrainPair(const TerrainPair& terrainPair, ContactBatch& batch, float dt, NarrowphasePass pass);
-    void processDynamicPair(const DynamicPair& dynamicPair, ContactBatch& batch, float dt, NarrowphasePass pass);
-
-    void processColliderPair(
+    void processTerrainPairs(
+        const TerrainPair& terrainPair, 
         ContactBatch& batch,
+        float dt, 
+        NarrowphasePass pass
+    );
+    void processDynamicPairs(
+        const DynamicPair& pair, 
+        ContactBatch& batch, 
+        float dt);
+
+    void processSpeculativeDynamicPairs(
+
+        const SpeculativeDynamicPair& pair, 
+        float dt
+    );
+    void processSpeculativeTerrainPairs(
+        const SpeculativeTerrainPair& pair, 
+        float dt
+    );
+
+    void processColliderPairNormal(
+        ContactBatch& batch,
+        ContactBuildInput in
+    );
+
+    void processColliderPairSpeculative(
         ContactBuildInput in,
         float dt,
-        NarrowphasePass pass
+        RigidBodyHandle sweepOwner
     );
 
     //=======================================================
@@ -65,6 +91,11 @@ private:
         ContactBatch& batch,
         ContactBuildInput& in,
         DynamicContactCandidate& candidate
+    );
+
+    void emitFilteredSpeculativeContacts(
+        ContactBatch& batch,
+        float dt
     );
 
     bool tryExportExternalContact(

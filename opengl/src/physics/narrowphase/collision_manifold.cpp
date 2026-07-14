@@ -256,6 +256,18 @@ Contact* CollisionManifold::sphereSphere(
     cp.depth = satResult.depth;
     cp.localPos = root->worldToLocalPoint(cp.worldPos);
 
+    cp.speculative = (satResult.hitType == SAT::HitType::Speculative);
+    cp.separation = satResult.separation;
+    cp.toi = satResult.toi;
+
+
+    if (cp.speculative) {
+        cp.depth = cp.separation;
+    }
+
+    std::cout << cp.depth;
+
+
     contact.addPoint(cp);
 
     contact.hashKey = generateKey(colliderA->id, colliderB->id);
@@ -269,8 +281,8 @@ Contact* CollisionManifold::sphereSphere(
 Contact* CollisionManifold::sphereMesh(
     Contact& contact,
     std::unordered_map<size_t, Contact>& cache,
-    std::vector<SAT::Result>& allResults
-) {
+    std::vector<SAT::Result>& allResults) 
+{
     if (allResults.empty())
         return nullptr;
 

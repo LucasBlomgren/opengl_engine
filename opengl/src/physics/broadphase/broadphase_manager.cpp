@@ -204,7 +204,7 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
             awakeBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
             }
         }
         if (asleepBvh.rootIdx != -1) {
@@ -212,7 +212,7 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
             asleepBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
             }
         }
         if (staticBvh.rootIdx != -1) {
@@ -220,14 +220,10 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
             staticBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(DynamicPair{ bodyHandle, otherHandle });
+                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
             }
         }
     }
-
-    //std::cout << "Speculative bodies: " << speculativeBodies.size() << std::endl;
-    //std::cout << "Speculative pairs: " << batch.speculativeDynamicPairs.size() << std::endl;
-    //std::cout << "Speculative terrain pairs: " << batch.speculativeTerrainPairs.size() << std::endl;
 }
 
 void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<RigidBodyHandle>& outBodies, std::vector<AABB>& outAABBs) {

@@ -22,5 +22,18 @@ bool NarrowphaseManager::trySpeculativeSphereSphere(
     DynamicContactCandidate& out,
     float dt)
 {
-    return false;
+    if (!SAT::speculativeSphereSphere(
+        *in.colliderA,
+        *in.colliderB,
+        *in.bodyA,
+        *in.bodyB,
+        dt,
+        out.sat))
+    {
+        return false;
+    }
+
+    out.manifoldType = DynamicManifoldType::SphereSphere;
+
+    return true;
 }

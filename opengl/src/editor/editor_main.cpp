@@ -312,9 +312,21 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 // -----------------------------------
 //        UI rendering
 // -----------------------------------
-void Editor::EditorMain::drawUI(InputContext& ctx, float deltaTime)
+void Editor::EditorMain::drawUI(bool paused, InputContext& ctx, float deltaTime)
 {
     if (!flag_drawUI) return;
+
+    const char* pausedStr = paused ? "PAUSED" : "RUNNING";
+    ImDrawList* drawList = ImGui::GetForegroundDrawList();
+    ImFont* font = ImGui::GetFont();
+
+    drawList->AddText(
+        font,
+        18.0f,
+        ImVec2(1475.0f, 50.0f),
+        IM_COL32(255, 255, 255, 255),
+        pausedStr
+    );
 
     panelManager->renderPanels(deltaTime);
 

@@ -18,6 +18,11 @@ struct ContactPoint {
 
     bool active = false;
 
+    // speculative contact point
+    bool speculative = false;
+    float separation = 0.0f;
+    float toi = 0.0f;
+
     // pre-computed data for impulse solving
     float accumulatedNormalImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
@@ -123,8 +128,7 @@ struct Contact {
         bodyB(handleB),
         runtimeData(data),
         normal(normal)
-    {
-    }
+    {}
 
     // body vs terrain
     Contact(RigidBodyHandle handleA, ContactRuntime& data, glm::vec3& normal) :
@@ -133,8 +137,7 @@ struct Contact {
         bodyA(handleA),
         runtimeData(data),   
         normal(normal)
-    {
-    }
+    {}
 
     Contact() = default;
 };
@@ -184,6 +187,10 @@ private:
     // contact cache integration
     Contact* integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
 
+    void applySatToContactPoint(
+        Contact& contact,
+        const SAT::Result& sat
+    );
 
     struct MeshContactCandidate {
         glm::vec3 worldPos{};

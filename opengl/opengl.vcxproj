@@ -229,7 +229,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\physics\narrowphase\dynamic_speculative.cpp" />
-    <ClCompile Include="src\physics\narrowphase\narrowphase_emit_contact.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact.cpp" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />

@@ -17,24 +17,14 @@ enum class DynamicManifoldType {
     TerrainSphere
 };
 
-struct DynamicContactCandidate {
-    SAT::Result sat{};
-    DynamicManifoldType manifoldType = DynamicManifoldType::None;
-
-    bool speculative = false;
-    float separation = 0.0f;
-    float toi = 0.0f;
-};
-
 enum class TerrainManifoldType {
     BoxMesh,
     SphereMesh
 };
 
-struct TerrainContactCandidate {
-    std::vector<SAT::Result> results;
-    glm::vec3 normal{ 0.0f };
-    TerrainManifoldType manifoldType;
+struct DynamicContactCandidate {
+    SAT::Result sat{};
+    DynamicManifoldType manifoldType = DynamicManifoldType::None;
 };
 
 struct ContactBuildInput {
@@ -57,6 +47,18 @@ struct ContactBuildInput {
         std::swap(bodyA, bodyB);
         std::swap(colliderA, colliderB);
     }
+};
+
+struct PendingSpeculativeContact {
+    ContactBuildInput input;
+    DynamicContactCandidate candidate;
+    RigidBodyHandle sweepOwner;
+};
+
+struct TerrainContactCandidate {
+    std::vector<SAT::Result> results;
+    glm::vec3 normal{ 0.0f };
+    TerrainManifoldType manifoldType;
 };
 
 struct ContactBatch {
@@ -90,4 +92,20 @@ struct ExternalMotionContact {
         float penetration)
         : bodyA(bodyA), bodyB(bodyB), normal(normal), penetration(penetration) {}
     ExternalMotionContact() = default;
+};
+
+struct PairKey {
+    uint64_t a;
+    uint64_t b;
+
+    bool operator==(const PairKey& other) const {
+        return a == other.a && b == other.b;
+    }
+};
+
+struct PairKeyHash {
+    size_t operator()(const PairKey& k) const {
+        uint64_t x = k.a ^ (k.b + 0x9e3779b97f4a7c15ull + (k.a << 6) + (k.a >> 2));
+        return std::hash<uint64_t>{}(x);
+    }
 };

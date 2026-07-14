@@ -1,8 +1,12 @@
 #include "narrowphase_manager.h"
 #include "sleep/wake_sleep_utils.h"
 
+static uint64_t packBodyHandle(RigidBodyHandle h) {
+    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+}
+
 //=======================================================
-//     Contact emission
+//     Emit rigid contact and wake up bodies if needed
 //=======================================================
 void NarrowphaseManager::emitRigidContact(
     ContactBatch& batch,
@@ -62,12 +66,61 @@ void NarrowphaseManager::emitRigidContact(
 }
 
 //=======================================================
+//     Emit filtered speculative contacts
+//=======================================================
+void NarrowphaseManager::emitFilteredSpeculativeContacts(
+    ContactBatch& batch,
+    float dt)
+{
+    std::unordered_map<uint64_t, float> minToiBySweepOwner;
+    minToiBySweepOwner.reserve(pendingSpeculativeContacts.size());
+
+    // Pass 1: find min TOI per sweep owner
+    for (const PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
+        const float toi = pending.candidate.sat.toi;
+
+        uint64_t ownerKey = packBodyHandle(pending.sweepOwner);
+
+        auto it = minToiBySweepOwner.find(ownerKey);
+
+        if (it == minToiBySweepOwner.end() || toi < it->second) {
+            minToiBySweepOwner[ownerKey] = toi;
+        }
+    }
+
+    // Pass 2: emit contacts close to the earliest TOI
+
+    // #TODO: Fundera på vad TOI slop ska vara:
+    // kanske beroende på dt, kropparnas hastighet, kropparnas storlek.
+    const float toiSlop = 0.0f;  /*0.05f * dt;*/
+
+    for (PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
+        uint64_t ownerKey = packBodyHandle(pending.sweepOwner);
+
+        float minToi = minToiBySweepOwner[ownerKey];
+        float toi = pending.candidate.sat.toi;
+
+        if (toi <= minToi + toiSlop) {
+            emitRigidContact(
+                batch,
+                pending.input,
+                pending.candidate
+            );
+        }
+    }
+}
+
+//=======================================================
 //     Export external motion contacts for character controllers
 //=======================================================
 bool NarrowphaseManager::tryExportExternalContact(
     const ContactBuildInput& in,
     const SAT::Result& sat)
 {
+    if (sat.hitType == SAT::HitType::Speculative) {
+        return false;
+    }
+
     bool aCharacter =
         in.bodyA->motionControl == MotionControl::External &&
         in.bodyA->responseMode == ContactResponseMode::Character;

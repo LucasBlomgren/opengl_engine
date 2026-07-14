@@ -3,6 +3,21 @@
 
 #include "terrain_processing.h"
 
+static uint64_t packColliderHandle(ColliderHandle h) {
+    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+}
+
+static PairKey makeColliderPairKey(ColliderHandle a, ColliderHandle b) {
+    uint64_t pa = packColliderHandle(a);
+    uint64_t pb = packColliderHandle(b);
+
+    if (pa > pb) {
+        std::swap(pa, pb);
+    }
+
+    return { pa, pb };
+}
+
 //=======================================================
 //              Initialization
 //=======================================================
@@ -33,40 +48,47 @@ void NarrowphaseManager::narrowPhase(
     float dt)
 {
     externalContacts.clear();
+    normalHitPairs.clear();
+    pendingSpeculativeContacts.clear();
 
+    // Normal terrain
     for (const TerrainPair& pair : pairs.terrainPairs) {
-        processTerrainPair(pair, batch, dt, NarrowphasePass::Normal);
+        processTerrainPairs(pair, batch, dt, NarrowphasePass::Normal);
     }
 
+    // Normal dynamic
     for (const DynamicPair& pair : pairs.dynamicPairs) {
-        processDynamicPair(pair, batch, dt, NarrowphasePass::Normal);
+        processDynamicPairs(pair, batch, dt);
     }
 
-    for (const TerrainPair& pair : pairs.speculativeTerrainPairs) {
-        processTerrainPair(pair, batch, dt, NarrowphasePass::Speculative);
+    // Speculative terrain
+    //for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
+    //    processSpeculativeTerrainPairs(pair, dt);
+    //}
+
+    // Speculative dynamic
+    for (const SpeculativeDynamicPair& pair : pairs.speculativeDynamicPairs) {
+        processSpeculativeDynamicPairs(pair, dt);
     }
 
-    for (const DynamicPair& pair : pairs.speculativeDynamicPairs) {
-        processDynamicPair(pair, batch, dt, NarrowphasePass::Speculative);
-    }
+    emitFilteredSpeculativeContacts(batch, dt);
 }
 
 //=======================================================
-//     Dynamic pair processing
+//     Normal Dynamic pair processing
 //=======================================================
-void NarrowphaseManager::processDynamicPair(
+void NarrowphaseManager::processDynamicPairs(
     const DynamicPair& pair,
     ContactBatch& batch,
-    float dt,
-    NarrowphasePass pass)
+    float dt)
 {
     RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
     RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
 
     if (!bodyA || !bodyB) return;
 
-    if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) &&
-        (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
+    // If both bodies are static or kinematic, do not process them for contacts.
+    if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) && (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
         return;
     }
 
@@ -77,7 +99,7 @@ void NarrowphaseManager::processDynamicPair(
 
             if (!colliderA || !colliderB) continue;
 
-            processColliderPair(
+            processColliderPairNormal(
                 batch,
                 ContactBuildInput{
                     pair.bodyA,
@@ -88,19 +110,15 @@ void NarrowphaseManager::processDynamicPair(
                     bodyB,
                     colliderA,
                     colliderB
-                },
-                dt,
-                pass
+                }
             );
         }
     }
 }
 
-void NarrowphaseManager::processColliderPair(
+void NarrowphaseManager::processColliderPairNormal(
     ContactBatch& batch,
-    ContactBuildInput in,
-    float dt,
-    NarrowphasePass pass)
+    ContactBuildInput in)
 {
     DynamicContactCandidate candidate;
     bool hit = false;
@@ -117,28 +135,123 @@ void NarrowphaseManager::processColliderPair(
         in.colliderA->type == ColliderType::SPHERE &&
         in.colliderB->type == ColliderType::SPHERE;
 
-    if (pass == NarrowphasePass::Normal) {
-        if (boxBox) { hit = tryBoxBox(in, candidate); }
-        else if (boxSphere) { hit = tryBoxSphere(in, candidate); }
-        else if (sphereSphere) { hit = trySphereSphere(in, candidate); }
+    if (boxBox) {
+        hit = tryBoxBox(in, candidate);
     }
-    else {
-        if (boxBox) { hit = trySpeculativeBoxBox(in, candidate, dt); }
-        else if (boxSphere) { hit = trySpeculativeBoxSphere(in, candidate, dt); }
-        else if (sphereSphere) { hit = trySpeculativeSphereSphere(in, candidate, dt); }
+    else if (boxSphere) {
+        hit = tryBoxSphere(in, candidate);
+    }
+    else if (sphereSphere) {
+        hit = trySphereSphere(in, candidate);
     }
 
     if (!hit) {
         return;
     }
 
+    PairKey key = makeColliderPairKey(
+        in.colliderHandleA,
+        in.colliderHandleB
+    );
+
+    normalHitPairs.insert(key);
+
     emitRigidContact(batch, in, candidate);
 }
 
 //=======================================================
-//     Terrain pair processing
+//     Speculative Dynamic pair processing
 //=======================================================
-void NarrowphaseManager::processTerrainPair(const TerrainPair& terrainPair, ContactBatch& batch, float dt, NarrowphasePass pass) {
+void NarrowphaseManager::processSpeculativeDynamicPairs(
+    const SpeculativeDynamicPair& pair,
+    float dt)
+{
+    RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
+    RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
+
+    if (!bodyA || !bodyB) return;
+
+    for (const ColliderHandle& colAH : bodyA->colliderHandles) {
+        for (const ColliderHandle& colBH : bodyB->colliderHandles) {
+            Collider* colliderA = caches->colliders.get(colAH, FUNC_NAME);
+            Collider* colliderB = caches->colliders.get(colBH, FUNC_NAME);
+
+            if (!colliderA || !colliderB) continue;
+
+            processColliderPairSpeculative(
+                ContactBuildInput{
+                    pair.bodyA,
+                    pair.bodyB,
+                    colAH,
+                    colBH,
+                    bodyA,
+                    bodyB,
+                    colliderA,
+                    colliderB
+                },
+                dt,
+                pair.sweepOwner
+            );
+        }
+    }
+}
+
+void NarrowphaseManager::processColliderPairSpeculative(
+    ContactBuildInput in,
+    float dt,
+    RigidBodyHandle sweepOwner)
+{
+    PairKey key = makeColliderPairKey(
+        in.colliderHandleA,
+        in.colliderHandleB
+    );
+
+    // If normal narrowphase already created a real contact,
+    // do not also create speculative contact for same collider pair.
+    if (normalHitPairs.find(key) != normalHitPairs.end()) {
+        return;
+    }
+
+    DynamicContactCandidate candidate;
+    bool hit = false;
+
+    const bool boxBox =
+        in.colliderA->type == ColliderType::CUBOID &&
+        in.colliderB->type == ColliderType::CUBOID;
+
+    const bool boxSphere =
+        (in.colliderA->type == ColliderType::CUBOID && in.colliderB->type == ColliderType::SPHERE) ||
+        (in.colliderA->type == ColliderType::SPHERE && in.colliderB->type == ColliderType::CUBOID);
+
+    const bool sphereSphere =
+        in.colliderA->type == ColliderType::SPHERE &&
+        in.colliderB->type == ColliderType::SPHERE;
+
+    if (boxBox) {
+        hit = trySpeculativeBoxBox(in, candidate, dt);
+    }
+    else if (boxSphere) {
+        hit = trySpeculativeBoxSphere(in, candidate, dt);
+    }
+    else if (sphereSphere) {
+        hit = trySpeculativeSphereSphere(in, candidate, dt);
+    }
+
+    if (!hit) {
+        return;
+    }
+
+    pendingSpeculativeContacts.push_back({
+        in,
+        candidate,
+        sweepOwner
+    });
+}
+
+//=======================================================
+//     Normal Terrain pair processing
+//=======================================================
+void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt, NarrowphasePass pass) {
     RigidBody* body = caches->bodies.get(terrainPair.body, FUNC_NAME);
     if (body->asleep || body->type == BodyType::Kinematic) return;
 

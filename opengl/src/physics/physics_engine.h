@@ -24,9 +24,17 @@ struct DebugData {
     size_t currentSubstepAmount = 0;
 };
 
+enum class PhysicsStepDebugPhase {
+    Ready,
+    PausedBeforePositionIntegration
+};
+
 class PhysicsEngine {
 public:
     void init(World* world, FrameTimers* ft);
+
+    PhysicsStepDebugPhase debugPhase = PhysicsStepDebugPhase::Ready;
+    float pausedDt = 0.0f;
 
     //------------------------
     //     Main functions
@@ -100,7 +108,9 @@ private:
     //------------------------
     //    Update functions
     //------------------------
-    void updateBodiesAndColliders(const std::vector<RigidBodyHandle>& bodies, float dt);
+    void integratePositionsAndColliders(const std::vector<RigidBodyHandle>& bodies, float dt);
+    void integrateForcesAndVelocities(const std::vector<RigidBodyHandle>& bodies, float dt);
+    void updateCollidersAndBodyAABB(RigidBody* body, Transform* rootTransform);
     void updateContactCache();
 
     //------------------------

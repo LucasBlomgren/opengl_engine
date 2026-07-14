@@ -13,12 +13,23 @@ struct DynamicPair {
     RigidBodyHandle bodyB;
 };
 
+struct SpeculativeDynamicPair {
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
+    RigidBodyHandle sweepOwner;
+};
+
+struct SpeculativeTerrainPair {
+    RigidBodyHandle body;
+    std::vector<Tri*> tris;
+};
+
 struct PairBatch {
     std::vector<DynamicPair> dynamicPairs;
     std::vector<TerrainPair> terrainPairs;
 
-    std::vector<DynamicPair> speculativeDynamicPairs;
-    std::vector<TerrainPair> speculativeTerrainPairs;
+    std::vector<SpeculativeDynamicPair> speculativeDynamicPairs;
+    std::vector<SpeculativeTerrainPair> speculativeTerrainPairs;
 
     void clear() {
         dynamicPairs.clear();
