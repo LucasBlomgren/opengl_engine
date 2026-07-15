@@ -78,8 +78,10 @@ public:
 
     int pgsIterations = 8;
 
-    std::vector<AABB> debugSweeps; // public for debug rendering
-    std::unordered_map<size_t, Contact> contactCache; // public for debug rendering
+    // public for debug rendering
+    std::vector<AABB> debugSweeps;
+    std::vector<DebugSpeculativeContact> debugSpeculativeContacts;
+    std::unordered_map<size_t, Contact> contactCache; // render contact normals
 
 private:
     float dt;

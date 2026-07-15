@@ -259,15 +259,6 @@ Contact* CollisionManifold::sphereSphere(
     cp.speculative = (satResult.hitType == SAT::HitType::Speculative);
     cp.separation = satResult.separation;
     cp.toi = satResult.toi;
-
-
-    if (cp.speculative) {
-        cp.depth = cp.separation;
-    }
-
-    std::cout << cp.depth;
-
-
     contact.addPoint(cp);
 
     contact.hashKey = generateKey(colliderA->id, colliderB->id);

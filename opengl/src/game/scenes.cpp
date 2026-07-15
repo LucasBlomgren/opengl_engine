@@ -26,6 +26,36 @@ void SceneBuilder::testFloorScene(int amount) {
     glm::vec3 cellSize = { 50, 1, 50 };
     createGridFloor(offset, cellSize, 10, 8);
 
+    {
+        GameObjectDesc fastSphere;
+        glm::vec3 position{ 0.0, 100.0, -100.0 };
+        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
+        fastSphere.rootTransformHandle = world.createTransform(position, orientation);
+        SubPartDesc part;
+        part.colliderType = ColliderType::SPHERE;
+        part.meshName = "sphere";
+        part.textureName = "checker_gray";
+        part.localTransformHandle = world.createTransform();
+        fastSphere.parts.push_back(part);
+        GameObjectHandle fastSphereHandle = world.createGameObject(fastSphere);
+        RigidBody* fastSphereBody = world.getRigidBody(fastSphereHandle);
+        fastSphereBody->linearVelocity = glm::vec3(-500.0f, 0.0f, 0.0f);
+
+        GameObjectDesc fastSphere2;
+        position = { -75.0, 100.0, -101.0 };
+        orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
+        fastSphere2.rootTransformHandle = world.createTransform(position, orientation);
+        SubPartDesc part2;
+        part2.colliderType = ColliderType::SPHERE;
+        part2.meshName = "sphere";
+        part2.textureName = "checker_magenta";
+        part2.localTransformHandle = world.createTransform();
+        fastSphere2.parts.push_back(part2);
+        GameObjectHandle fastSphere2Handle = world.createGameObject(fastSphere2);
+        RigidBody* fastSphere2Body = world.getRigidBody(fastSphere2Handle);
+        fastSphere2Body->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
+    }
+
     //int maxPerAxis = 30;
     //float spacing = 2.5f;
 
@@ -55,519 +85,519 @@ void SceneBuilder::testFloorScene(int amount) {
     //    box.parts.push_back(part);
     //    world.createGameObject(box);
     //}
-
-    // circular tower of boxes
-    for (int k = 0; k < 5; k++) {
-        for (int l = 0; l < 5; l++) {
-            float angleRad;
-            glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
-            glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
-            glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
-            glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
-
-            int height = 9;
-            for (int i = 0; i < height; i++) {
-                angleRad = glm::radians(static_cast<float>(i) * 15.0);
-
-                for (int j = 0; j < 12; j++) {
-
-                    glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
-
-                    glm::vec3 offset = startPos - center;   // radien från center till startPos
-                    glm::vec3 rotated = q * offset;         // radien vriden runt axeln
-                    glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
-
-                    glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
-                    newCenter.y += i;
-
-                    glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-
-                    GameObjectDesc box;
-                    box.name = "Box";
-                    box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
-                    box.asleep = true;
-                    box.mass = 1.0f;
-                    SubPartDesc part;
-                    part.localTransformHandle = world.createTransform();
-                    part.textureName = "plain";
-                    part.color = randomColor / 255.0f;
-                    box.parts.push_back(part);
-                    world.createGameObject(box);
-
-                    angleRad += glm::radians(30.0f);
-                }
-            }
-        }
-    }
-
-    glm::vec3 offsetpos = glm::vec3(150, 0.25, 150);
-
-    for (int j = 0; j < 500; j++) {   // y
-        for (int k = 0; k < 2; k++) {   // z
-            GameObjectDesc plank;
-            plank.name = "Plank";
-
-            float xPos = 0.0f;
-            float zPos = 0.0f;
-
-            glm::quat rotationShortSide =
-                glm::angleAxis(
-                    glm::radians(90.0f),
-                    glm::vec3(1.0f, 0.0f, 0.0f)
-                );
-
-            glm::quat orientation = rotationShortSide;
-
-            if (j % 2 == 0) {
-                glm::quat rotationY =
-                    glm::angleAxis(
-                        glm::radians(90.0f),
-                        glm::vec3(0.0f, 1.0f, 0.0f)
-                    );
-
-                // Först runt kortsidan X, sedan runt world-Y.
-                orientation = rotationY * rotationShortSide;
-
-                xPos = k * 4.0f - 2.0f;
-                zPos = 2.0f;
-            }
-            else {
-                zPos = k * 4.0f;
-            }
-
-            plank.rootTransformHandle = world.createTransform(
-                glm::vec3(
-                    offsetpos.x + xPos,
-                    offsetpos.y + j/2.0f,
-                    offsetpos.z + zPos),
-                orientation,
-                glm::vec3(5.0f, 1.0f, 0.5f)
-            );
-
-            plank.allowSleep = true;
-            plank.sleepCounterThreshold = 2.5f;
-            plank.mass = 50.0f;
-
-            SubPartDesc part;
-            part.name = "MainPart";
-            part.textureName = "crate";
-            part.localTransformHandle = world.createTransform();
-
-            plank.parts.push_back(part);
-
-            world.createGameObject(plank);
-        }
-    }
-
-
-    // single stack of boxes and a single box with velocity
-    {
-        for (int i = 0; i < 2; i++)   // x
-        for (int j = 0; j < 5; j++)   // y
-        for (int k = 0; k < 2; k++) { // z
-            GameObjectDesc box;
-            box.name = "Box";
-            box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
-            box.allowSleep = true;
-            box.sleepCounterThreshold = 2.5f;
-            box.mass = 1.0f;
-
-            SubPartDesc part;
-            part.name = "MainPart";
-            part.textureName = "crate";
-            part.localTransformHandle = world.createTransform();
-
-            box.parts.push_back(part);
-
-            world.createGameObject(box);
-        }
-    }
-
-    //GameObjectDesc box;
-    //box.name = "Box";
-    //box.rootTransformHandle = world.createTransform(glm::vec3(-5, 4.5, 0.5), glm::quat(), glm::vec3(1.5f));
-    //box.mass = 1.0f;
-    //SubPartDesc boxPart;
-    //boxPart.localTransformHandle = world.createTransform();
-    //boxPart.textureName = "checker_gray";
-    //boxPart.meshName = "cube";
-    //box.parts.push_back(boxPart);
-
-    //GameObjectHandle ha = world.createGameObject(box);
-    //RigidBody* rb = world.getRigidBody(ha);
-    //rb->linearVelocity = glm::vec3(26.7, 0.0, 0.0);
-
-    //// create chairs in a grid pattern
-    //for (int i = 0; i < 10; i++)
-    //    for (int j = 0; j < 15; j++)
-    //        for (int k = 0; k < 10; k++)
-    //        {
-    //            GameObjectDesc chair;
-    //            chair.name = "Chair";
-    //            glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
-    //            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //            glm::vec3 scale{ 2.0f };
-    //            chair.rootTransformHandle = world.createTransform(position, orientation, scale);
-    //            chair.bodyType = BodyType::Dynamic;
-    //            chair.mass = 2.0f;
-
-    //            glm::vec3 color = glm::vec3(
-    //                static_cast<float>(rand()) / RAND_MAX,
-    //                static_cast<float>(rand()) / RAND_MAX,
-    //                static_cast<float>(rand()) / RAND_MAX
-    //            );
-
-    //            // seat
-    //            SubPartDesc seat;
-    //            seat.name = "Seat";
-    //            glm::vec3 positionSeat = { 0,0,0 };
-    //            glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //            glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
-    //            seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
-    //            seat.meshName = "cube";
-    //            seat.textureName = "crate";
-    //            seat.shaderName = "default";
-    //            seat.color = color;
-    //            seat.colliderType = ColliderType::CUBOID;
-    //            chair.parts.push_back(seat);
-
-    //            // backrest
-    //            SubPartDesc backrest;
-    //            backrest.name = "Backrest";
-    //            glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
-    //            glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //            glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
-    //            backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
-    //            backrest.meshName = "cube";
-    //            backrest.textureName = "crate";
-    //            backrest.shaderName = "default";
-    //            backrest.color = color;
-    //            backrest.colliderType = ColliderType::CUBOID;
-    //            chair.parts.push_back(backrest);
-
-    //            // legs
-    //            std::array<glm::vec3, 4> legPositions{
-    //                glm::vec3(-0.4f, -0.6f, -0.4f),
-    //                glm::vec3(0.4f, -0.6f, -0.4f),
-    //                glm::vec3(-0.4f, -0.6f, 0.4f),
-    //                glm::vec3(0.4f, -0.6f, 0.4f)
-    //            };
-    //            for (int i = 0; i < 4; i++) {
-    //                SubPartDesc leg;
-    //                leg.name = "Leg" + std::to_string(i);
-    //                glm::vec3 positionLeg = legPositions[i];
-    //                glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //                glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
-    //                leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
-    //                leg.meshName = "cube";
-    //                leg.textureName = "crate";
-    //                leg.shaderName = "default";
-    //                leg.color = color;
-    //                leg.colliderType = ColliderType::CUBOID;
-    //                chair.parts.push_back(leg);
-    //            }
-
-    //            GameObjectHandle h = world.createGameObject(chair);
-    //        }
-
-
-    //// create objects in a grid pattern
-    //for (int i = 0; i < 10; i++)
-    //    for (int j = 0; j < 7; j++)
-    //        for (int k = 0; k < 10; k++)
-    //        {
-    //            GameObjectDesc object;
-    //            object.name = "Object";
-    //            glm::vec3 position = { i * 10.0f, 25 + j * 15.0f, k * 10.0f };
-    //            glm::quat orientation = glm::angleAxis(glm::radians(240.0f), glm::vec3(1.0, 0.0, 0.0));
-    //            glm::vec3 scale{ 2.0f };
-    //            object.rootTransformHandle = world.createTransform(position, orientation, scale);
-    //            object.bodyType = BodyType::Dynamic;
-    //            object.mass = 2.0f;
-
-    //            glm::vec3 color = glm::vec3(
-    //                static_cast<float>(rand()) / RAND_MAX,
-    //                static_cast<float>(rand()) / RAND_MAX,
-    //                static_cast<float>(rand()) / RAND_MAX
-    //            );
-
-    //            SubPartDesc part1;
-    //            part1.name = "part1";
-    //            glm::vec3 positionPart1 = { 0,0,0 };
-    //            glm::quat orientationPart1 = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
-    //            glm::vec3 scalePart1{ 1.0f, 5.0f, 1.0f };
-    //            part1.localTransformHandle = world.createTransform(positionPart1, orientationPart1, scalePart1);
-    //            part1.meshName = "cube";
-    //            part1.textureName = "crate";
-    //            part1.shaderName = "default";
-    //            part1.color = color;
-    //            part1.colliderType = ColliderType::CUBOID;
-    //            object.parts.push_back(part1);
-
-    //            SubPartDesc part2;
-    //            part2.name = "part2";
-    //            glm::vec3 positionPart2 = { 0.0f, 3.0f, 3.0f };
-    //            glm::quat orientationPart2 = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-    //            glm::vec3 scalePart2{ 1.0f, 5.0f, 1.0f };
-    //            part2.localTransformHandle = world.createTransform(positionPart2, orientationPart2, scalePart2);
-    //            part2.meshName = "cube";
-    //            part2.textureName = "crate";
-    //            part2.shaderName = "default";
-    //            part2.color = color;
-    //            part2.colliderType = ColliderType::CUBOID;
-    //            object.parts.push_back(part2);
-
-    //            GameObjectHandle h = world.createGameObject(object);
-    //        }
-
-    //// 2D pyramid of boxes
-    //{
-    //    for (int col = 0; col < 10; col++) {
-    //        for (int row = 10; row - col > 0; row--) {
-
-    //            float x = 54.5f;
-    //            float y = 1 + col;
-    //            float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
-    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-
-    //            GameObjectDesc box;
-    //            box.name = "Box";
-    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
-    //            box.mass = 1.0f;
-
-    //            SubPartDesc part;
-    //            part.name = "MainPart";
-    //            part.localTransformHandle = world.createTransform();
-    //            part.textureName = "plain";
-    //            part.color = randomColor / 255.0f;
-    //            box.parts.push_back(part);
-
-    //            world.createGameObject(box);
-    //        }
-    //    }
-    //}
-
-    //// 2D pyramid of boxes
-    //{
-    //    for (int i = 0; i < 5; i++)
-    //    for (int col = 0; col < 20; col++) {
-    //        for (int row = 20; row - col > 0; row--) {
-
-    //            float x = 54.5f + i * 10.0f;
-    //            float y = 0.5f + col;
-    //            float z = 150.0f + 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
-    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-
-    //            GameObjectDesc box;
-    //            box.name = "Box";
-    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
-    //            box.mass = 1.0f;
-    //            box.asleep = true;
-
-    //            SubPartDesc part;
-    //            part.name = "MainPart";
-    //            part.localTransformHandle = world.createTransform();
-    //            part.textureName = "checker_magenta";
-    //            part.color = randomColor / 255.0f;
-    //            box.parts.push_back(part);
-
-    //            world.createGameObject(box);
-    //        }
-    //    }
-    //}
-
-    //GameObjectDesc sphere;
-    //sphere.name = "Sphere";
-    //sphere.rootTransformHandle = world.createTransform(glm::vec3(0, 5.5, 160.5), glm::quat(), glm::vec3(5.0f));
-    //sphere.mass = 10000.0f;
-    //SubPartDesc part;
-    //part.localTransformHandle = world.createTransform();
-    //part.textureName = "checker_gray";
-    //part.meshName = "sphere";
-    //part.colliderType = ColliderType::SPHERE;
-    //sphere.parts.push_back(part);
-
-    //GameObjectHandle h = world.createGameObject (sphere);
-    //RigidBody* rba = world.getRigidBody(h);
-    ////rba->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
-    ////rba->angularVelocity = glm::vec3(0.0f, 0.0f, -50.0f);
-
-
-    //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.0f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
-
-
-    //for (int i = 0; i < 1; i++)
-    //for (int j = 0; j < 1; j++)
-    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 10, 8, 1.0, 1.0, 1.0, 0.0, 1, true);
-
-
-
-
-    // rotating cylinder made from box subparts + inner shelves/baffles
-    glm::vec3 axis = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
-
-    glm::vec3 center = glm::vec3(
-        -35.0f + 25.0f,
-        100.5f,
-        -35.0f + 25.0f
-    );
-
-    // ------------------------------------------------------
-    // Cylinder settings
-    // ------------------------------------------------------
-    int wallCount = 12;
-    int shelfCount = 4;
-
-    float radius = 50.0f;
-    float cylinderDepth = 100.0f;
-
-    float angleRad = glm::radians(15.0f);
-    float angleStep = glm::radians(360.0f / static_cast<float>(wallCount));
-
-    // ------------------------------------------------------
-    // Auto-sized wall dimensions
-    // ------------------------------------------------------
-    float wallThickness = 1.0f;
-
-    // Tangential width needed for one wall segment at this radius.
-    // tan() is better here than sin() because the wall segment is flat/tangent.
-    float wallOverlap = 1.10f;
-    float wallWidth = 2.0f * radius * std::tan(angleStep * 0.5f) * wallOverlap;
-
-    // ------------------------------------------------------
-    // Auto-sized shelf / baffle dimensions
-    // ------------------------------------------------------
-    float shelfDepthRatio = 0.15f;   // shelf sticks inward 25% of radius
-    float shelfWidthRatio = 0.15f;   // shelf tangential width relative to wall segment width
-
-    float shelfDepth = radius * shelfDepthRatio;
-    float shelfWidth = wallWidth * shelfWidthRatio;
-    float shelfZ = cylinderDepth;
-
-    // Keep shelf inside the wall.
-    // Shelf's local +X is radial, so scale.x = shelfDepth.
-    float shelfCenterRadius =
-    radius
-    - wallThickness * 0.5f
-    - shelfDepth * 0.5f;
-
-    // ------------------------------------------------------
-    // One root GameObject at the shared cylinder center
-    // ------------------------------------------------------
-    GameObjectDesc cylinder;
-    cylinder.name = "RotatingCylinder";
-
-    cylinder.rootTransformHandle = world.createTransform(
-        center,
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f)
-    );
-
-    cylinder.bodyType = BodyType::Kinematic;
-    cylinder.asleep = false;
-    cylinder.mass = 1.0f;
-
-    // ------------------------------------------------------
-    // Add wall parts around the root center
-    // ------------------------------------------------------
-    for (int j = 0; j < wallCount; j++) {
-        glm::quat localRotation = glm::angleAxis(angleRad, axis);
-
-        // Local position relative to cylinder root center
-        glm::vec3 localOffset = localRotation * glm::vec3(radius, 0.0f, 0.0f);
-
-        //glm::vec3 randomColor = glm::vec3(
-        //    randomRange(0, 255),
-        //    randomRange(0, 255),
-        //    randomRange(0, 255)
-        //);
-
-        glm::vec3 randomColor = glm::vec3(200, 200, 200);
-
-        SubPartDesc part;
-
-        part.localTransformHandle = world.createTransform(
-            localOffset,
-            localRotation,
-            glm::vec3(wallThickness, wallWidth, cylinderDepth)
-        );
-
-        part.textureName = "plain";
-        part.color = randomColor / 255.0f;
-
-        cylinder.parts.push_back(part);
-
-        angleRad += angleStep;
-    }
-
-    // ------------------------------------------------------
-    // Add inner shelves / baffles
-    // ------------------------------------------------------
-    for (int i = 0; i < shelfCount; i++) {
-        float shelfAngle =
-            glm::radians(360.0f * static_cast<float>(i) / static_cast<float>(shelfCount));
-
-        glm::quat shelfRotation = glm::angleAxis(shelfAngle, axis);
-
-        glm::vec3 shelfOffset =
-            shelfRotation * glm::vec3(shelfCenterRadius+2.0f, 0.0f, 0.0f);
-
-        SubPartDesc shelf;
-
-        shelf.localTransformHandle = world.createTransform(
-            shelfOffset,
-            shelfRotation,
-            glm::vec3(shelfDepth, shelfWidth, shelfZ)
-        );
-
-        shelf.textureName = "plain";
-        shelf.color = glm::vec3(0.9f, 0.9f, 0.2f);
-
-        cylinder.parts.push_back(shelf);
-    }
-
-    // ------------------------------------------------------
-    // Create one GameObject and spin the whole thing
-    // ------------------------------------------------------
-    GameObjectHandle h = world.createGameObject(cylinder);
-
-    RigidBody* rb = world.getRigidBody(h);
-    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -0.3f);
-
-
-
-
-    GameObjectDesc tumblerFrontWall;
-    tumblerFrontWall.name = "TumblerFrontWall";
-    tumblerFrontWall.rootTransformHandle = world.createTransform(
-        center - glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
-    );
-    tumblerFrontWall.bodyType = BodyType::Static;
-    SubPartDesc frontWallPart;
-    frontWallPart.seeThrough = true;
-    frontWallPart.localTransformHandle = world.createTransform();
-    frontWallPart.textureName = "plain";
-    frontWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
-    tumblerFrontWall.parts.push_back(frontWallPart);
-    world.createGameObject(tumblerFrontWall);
-
-    GameObjectDesc tumblerBackWall;
-    tumblerBackWall.name = "TumblerBackWall";
-    tumblerBackWall.rootTransformHandle = world.createTransform(
-        center + glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
-    );
-    tumblerBackWall.bodyType = BodyType::Static;
-    SubPartDesc backWallPart;
-    backWallPart.localTransformHandle = world.createTransform();
-    backWallPart.textureName = "plain";
-    backWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
-    tumblerBackWall.parts.push_back(backWallPart);
-    world.createGameObject(tumblerBackWall);
-
+//
+//    // circular tower of boxes
+//    for (int k = 0; k < 5; k++) {
+//        for (int l = 0; l < 5; l++) {
+//            float angleRad;
+//            glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
+//            glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
+//            glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
+//            glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
+//
+//            int height = 9;
+//            for (int i = 0; i < height; i++) {
+//                angleRad = glm::radians(static_cast<float>(i) * 15.0);
+//
+//                for (int j = 0; j < 12; j++) {
+//
+//                    glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
+//
+//                    glm::vec3 offset = startPos - center;   // radien från center till startPos
+//                    glm::vec3 rotated = q * offset;         // radien vriden runt axeln
+//                    glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
+//
+//                    glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
+//                    newCenter.y += i;
+//
+//                    glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+//
+//                    GameObjectDesc box;
+//                    box.name = "Box";
+//                    box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
+//                    box.asleep = true;
+//                    box.mass = 1.0f;
+//                    SubPartDesc part;
+//                    part.localTransformHandle = world.createTransform();
+//                    part.textureName = "plain";
+//                    part.color = randomColor / 255.0f;
+//                    box.parts.push_back(part);
+//                    world.createGameObject(box);
+//
+//                    angleRad += glm::radians(30.0f);
+//                }
+//            }
+//        }
+//    }
+//
+//    glm::vec3 offsetpos = glm::vec3(150, 0.25, 150);
+//
+//    for (int j = 0; j < 500; j++) {   // y
+//        for (int k = 0; k < 2; k++) {   // z
+//            GameObjectDesc plank;
+//            plank.name = "Plank";
+//
+//            float xPos = 0.0f;
+//            float zPos = 0.0f;
+//
+//            glm::quat rotationShortSide =
+//                glm::angleAxis(
+//                    glm::radians(90.0f),
+//                    glm::vec3(1.0f, 0.0f, 0.0f)
+//                );
+//
+//            glm::quat orientation = rotationShortSide;
+//
+//            if (j % 2 == 0) {
+//                glm::quat rotationY =
+//                    glm::angleAxis(
+//                        glm::radians(90.0f),
+//                        glm::vec3(0.0f, 1.0f, 0.0f)
+//                    );
+//
+//                // Först runt kortsidan X, sedan runt world-Y.
+//                orientation = rotationY * rotationShortSide;
+//
+//                xPos = k * 4.0f - 2.0f;
+//                zPos = 2.0f;
+//            }
+//            else {
+//                zPos = k * 4.0f;
+//            }
+//
+//            plank.rootTransformHandle = world.createTransform(
+//                glm::vec3(
+//                    offsetpos.x + xPos,
+//                    offsetpos.y + j/2.0f,
+//                    offsetpos.z + zPos),
+//                orientation,
+//                glm::vec3(5.0f, 1.0f, 0.5f)
+//            );
+//
+//            plank.allowSleep = true;
+//            plank.sleepCounterThreshold = 2.5f;
+//            plank.mass = 50.0f;
+//
+//            SubPartDesc part;
+//            part.name = "MainPart";
+//            part.textureName = "crate";
+//            part.localTransformHandle = world.createTransform();
+//
+//            plank.parts.push_back(part);
+//
+//            world.createGameObject(plank);
+//        }
+//    }
+//
+//
+//    // single stack of boxes and a single box with velocity
+//    {
+//        for (int i = 0; i < 2; i++)   // x
+//        for (int j = 0; j < 5; j++)   // y
+//        for (int k = 0; k < 2; k++) { // z
+//            GameObjectDesc box;
+//            box.name = "Box";
+//            box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
+//            box.allowSleep = true;
+//            box.sleepCounterThreshold = 2.5f;
+//            box.mass = 1.0f;
+//
+//            SubPartDesc part;
+//            part.name = "MainPart";
+//            part.textureName = "crate";
+//            part.localTransformHandle = world.createTransform();
+//
+//            box.parts.push_back(part);
+//
+//            world.createGameObject(box);
+//        }
+//    }
+//
+//    //GameObjectDesc box;
+//    //box.name = "Box";
+//    //box.rootTransformHandle = world.createTransform(glm::vec3(-5, 4.5, 0.5), glm::quat(), glm::vec3(1.5f));
+//    //box.mass = 1.0f;
+//    //SubPartDesc boxPart;
+//    //boxPart.localTransformHandle = world.createTransform();
+//    //boxPart.textureName = "checker_gray";
+//    //boxPart.meshName = "cube";
+//    //box.parts.push_back(boxPart);
+//
+//    //GameObjectHandle ha = world.createGameObject(box);
+//    //RigidBody* rb = world.getRigidBody(ha);
+//    //rb->linearVelocity = glm::vec3(26.7, 0.0, 0.0);
+//
+//    //// create chairs in a grid pattern
+//    //for (int i = 0; i < 10; i++)
+//    //    for (int j = 0; j < 15; j++)
+//    //        for (int k = 0; k < 10; k++)
+//    //        {
+//    //            GameObjectDesc chair;
+//    //            chair.name = "Chair";
+//    //            glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
+//    //            glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+//    //            glm::vec3 scale{ 2.0f };
+//    //            chair.rootTransformHandle = world.createTransform(position, orientation, scale);
+//    //            chair.bodyType = BodyType::Dynamic;
+//    //            chair.mass = 2.0f;
+//
+//    //            glm::vec3 color = glm::vec3(
+//    //                static_cast<float>(rand()) / RAND_MAX,
+//    //                static_cast<float>(rand()) / RAND_MAX,
+//    //                static_cast<float>(rand()) / RAND_MAX
+//    //            );
+//
+//    //            // seat
+//    //            SubPartDesc seat;
+//    //            seat.name = "Seat";
+//    //            glm::vec3 positionSeat = { 0,0,0 };
+//    //            glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+//    //            glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
+//    //            seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
+//    //            seat.meshName = "cube";
+//    //            seat.textureName = "crate";
+//    //            seat.shaderName = "default";
+//    //            seat.color = color;
+//    //            seat.colliderType = ColliderType::CUBOID;
+//    //            chair.parts.push_back(seat);
+//
+//    //            // backrest
+//    //            SubPartDesc backrest;
+//    //            backrest.name = "Backrest";
+//    //            glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
+//    //            glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+//    //            glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
+//    //            backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+//    //            backrest.meshName = "cube";
+//    //            backrest.textureName = "crate";
+//    //            backrest.shaderName = "default";
+//    //            backrest.color = color;
+//    //            backrest.colliderType = ColliderType::CUBOID;
+//    //            chair.parts.push_back(backrest);
+//
+//    //            // legs
+//    //            std::array<glm::vec3, 4> legPositions{
+//    //                glm::vec3(-0.4f, -0.6f, -0.4f),
+//    //                glm::vec3(0.4f, -0.6f, -0.4f),
+//    //                glm::vec3(-0.4f, -0.6f, 0.4f),
+//    //                glm::vec3(0.4f, -0.6f, 0.4f)
+//    //            };
+//    //            for (int i = 0; i < 4; i++) {
+//    //                SubPartDesc leg;
+//    //                leg.name = "Leg" + std::to_string(i);
+//    //                glm::vec3 positionLeg = legPositions[i];
+//    //                glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+//    //                glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
+//    //                leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
+//    //                leg.meshName = "cube";
+//    //                leg.textureName = "crate";
+//    //                leg.shaderName = "default";
+//    //                leg.color = color;
+//    //                leg.colliderType = ColliderType::CUBOID;
+//    //                chair.parts.push_back(leg);
+//    //            }
+//
+//    //            GameObjectHandle h = world.createGameObject(chair);
+//    //        }
+//
+//
+//    //// create objects in a grid pattern
+//    //for (int i = 0; i < 10; i++)
+//    //    for (int j = 0; j < 7; j++)
+//    //        for (int k = 0; k < 10; k++)
+//    //        {
+//    //            GameObjectDesc object;
+//    //            object.name = "Object";
+//    //            glm::vec3 position = { i * 10.0f, 25 + j * 15.0f, k * 10.0f };
+//    //            glm::quat orientation = glm::angleAxis(glm::radians(240.0f), glm::vec3(1.0, 0.0, 0.0));
+//    //            glm::vec3 scale{ 2.0f };
+//    //            object.rootTransformHandle = world.createTransform(position, orientation, scale);
+//    //            object.bodyType = BodyType::Dynamic;
+//    //            object.mass = 2.0f;
+//
+//    //            glm::vec3 color = glm::vec3(
+//    //                static_cast<float>(rand()) / RAND_MAX,
+//    //                static_cast<float>(rand()) / RAND_MAX,
+//    //                static_cast<float>(rand()) / RAND_MAX
+//    //            );
+//
+//    //            SubPartDesc part1;
+//    //            part1.name = "part1";
+//    //            glm::vec3 positionPart1 = { 0,0,0 };
+//    //            glm::quat orientationPart1 = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
+//    //            glm::vec3 scalePart1{ 1.0f, 5.0f, 1.0f };
+//    //            part1.localTransformHandle = world.createTransform(positionPart1, orientationPart1, scalePart1);
+//    //            part1.meshName = "cube";
+//    //            part1.textureName = "crate";
+//    //            part1.shaderName = "default";
+//    //            part1.color = color;
+//    //            part1.colliderType = ColliderType::CUBOID;
+//    //            object.parts.push_back(part1);
+//
+//    //            SubPartDesc part2;
+//    //            part2.name = "part2";
+//    //            glm::vec3 positionPart2 = { 0.0f, 3.0f, 3.0f };
+//    //            glm::quat orientationPart2 = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+//    //            glm::vec3 scalePart2{ 1.0f, 5.0f, 1.0f };
+//    //            part2.localTransformHandle = world.createTransform(positionPart2, orientationPart2, scalePart2);
+//    //            part2.meshName = "cube";
+//    //            part2.textureName = "crate";
+//    //            part2.shaderName = "default";
+//    //            part2.color = color;
+//    //            part2.colliderType = ColliderType::CUBOID;
+//    //            object.parts.push_back(part2);
+//
+//    //            GameObjectHandle h = world.createGameObject(object);
+//    //        }
+//
+//    //// 2D pyramid of boxes
+//    //{
+//    //    for (int col = 0; col < 10; col++) {
+//    //        for (int row = 10; row - col > 0; row--) {
+//
+//    //            float x = 54.5f;
+//    //            float y = 1 + col;
+//    //            float z = 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+//    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+//
+//    //            GameObjectDesc box;
+//    //            box.name = "Box";
+//    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+//    //            box.mass = 1.0f;
+//
+//    //            SubPartDesc part;
+//    //            part.name = "MainPart";
+//    //            part.localTransformHandle = world.createTransform();
+//    //            part.textureName = "plain";
+//    //            part.color = randomColor / 255.0f;
+//    //            box.parts.push_back(part);
+//
+//    //            world.createGameObject(box);
+//    //        }
+//    //    }
+//    //}
+//
+//    //// 2D pyramid of boxes
+//    //{
+//    //    for (int i = 0; i < 5; i++)
+//    //    for (int col = 0; col < 20; col++) {
+//    //        for (int row = 20; row - col > 0; row--) {
+//
+//    //            float x = 54.5f + i * 10.0f;
+//    //            float y = 0.5f + col;
+//    //            float z = 150.0f + 0.5f + row - (col + 0.5f) / 2 + 0.0f * row;
+//    //            glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+//
+//    //            GameObjectDesc box;
+//    //            box.name = "Box";
+//    //            box.rootTransformHandle = world.createTransform(glm::vec3(x, y, z), glm::quat(), glm::vec3(1.0f));
+//    //            box.mass = 1.0f;
+//    //            box.asleep = true;
+//
+//    //            SubPartDesc part;
+//    //            part.name = "MainPart";
+//    //            part.localTransformHandle = world.createTransform();
+//    //            part.textureName = "checker_magenta";
+//    //            part.color = randomColor / 255.0f;
+//    //            box.parts.push_back(part);
+//
+//    //            world.createGameObject(box);
+//    //        }
+//    //    }
+//    //}
+//
+//    //GameObjectDesc sphere;
+//    //sphere.name = "Sphere";
+//    //sphere.rootTransformHandle = world.createTransform(glm::vec3(0, 5.5, 160.5), glm::quat(), glm::vec3(5.0f));
+//    //sphere.mass = 10000.0f;
+//    //SubPartDesc part;
+//    //part.localTransformHandle = world.createTransform();
+//    //part.textureName = "checker_gray";
+//    //part.meshName = "sphere";
+//    //part.colliderType = ColliderType::SPHERE;
+//    //sphere.parts.push_back(part);
+//
+//    //GameObjectHandle h = world.createGameObject (sphere);
+//    //RigidBody* rba = world.getRigidBody(h);
+//    ////rba->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
+//    ////rba->angularVelocity = glm::vec3(0.0f, 0.0f, -50.0f);
+//
+//
+//    //createBlockPyramid("plain", glm::vec3(246, 215, 176), glm::vec3(8, 0.0f, 74.5f), 15, 12, 1.0f, 1.0f, 5.0f, 0, 1.0f, true);
+//
+//
+//    //for (int i = 0; i < 1; i++)
+//    //for (int j = 0; j < 1; j++)
+//    //createBlockPyramid("plain", glm::vec3(-1.0), glm::vec3(30.0 * i, 0.5, 30.0 * j), 10, 8, 1.0, 1.0, 1.0, 0.0, 1, true);
+//
+//
+//
+//
+//    // rotating cylinder made from box subparts + inner shelves/baffles
+//    glm::vec3 axis = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
+//
+//    glm::vec3 center = glm::vec3(
+//        -35.0f + 25.0f,
+//        100.5f,
+//        -35.0f + 25.0f
+//    );
+//
+//    // ------------------------------------------------------
+//    // Cylinder settings
+//    // ------------------------------------------------------
+//    int wallCount = 12;
+//    int shelfCount = 4;
+//
+//    float radius = 50.0f;
+//    float cylinderDepth = 100.0f;
+//
+//    float angleRad = glm::radians(15.0f);
+//    float angleStep = glm::radians(360.0f / static_cast<float>(wallCount));
+//
+//    // ------------------------------------------------------
+//    // Auto-sized wall dimensions
+//    // ------------------------------------------------------
+//    float wallThickness = 1.0f;
+//
+//    // Tangential width needed for one wall segment at this radius.
+//    // tan() is better here than sin() because the wall segment is flat/tangent.
+//    float wallOverlap = 1.10f;
+//    float wallWidth = 2.0f * radius * std::tan(angleStep * 0.5f) * wallOverlap;
+//
+//    // ------------------------------------------------------
+//    // Auto-sized shelf / baffle dimensions
+//    // ------------------------------------------------------
+//    float shelfDepthRatio = 0.15f;   // shelf sticks inward 25% of radius
+//    float shelfWidthRatio = 0.15f;   // shelf tangential width relative to wall segment width
+//
+//    float shelfDepth = radius * shelfDepthRatio;
+//    float shelfWidth = wallWidth * shelfWidthRatio;
+//    float shelfZ = cylinderDepth;
+//
+//    // Keep shelf inside the wall.
+//    // Shelf's local +X is radial, so scale.x = shelfDepth.
+//    float shelfCenterRadius =
+//    radius
+//    - wallThickness * 0.5f
+//    - shelfDepth * 0.5f;
+//
+//    // ------------------------------------------------------
+//    // One root GameObject at the shared cylinder center
+//    // ------------------------------------------------------
+//    GameObjectDesc cylinder;
+//    cylinder.name = "RotatingCylinder";
+//
+//    cylinder.rootTransformHandle = world.createTransform(
+//        center,
+//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+//        glm::vec3(1.0f)
+//    );
+//
+//    cylinder.bodyType = BodyType::Kinematic;
+//    cylinder.asleep = false;
+//    cylinder.mass = 1.0f;
+//
+//    // ------------------------------------------------------
+//    // Add wall parts around the root center
+//    // ------------------------------------------------------
+//    for (int j = 0; j < wallCount; j++) {
+//        glm::quat localRotation = glm::angleAxis(angleRad, axis);
+//
+//        // Local position relative to cylinder root center
+//        glm::vec3 localOffset = localRotation * glm::vec3(radius, 0.0f, 0.0f);
+//
+//        //glm::vec3 randomColor = glm::vec3(
+//        //    randomRange(0, 255),
+//        //    randomRange(0, 255),
+//        //    randomRange(0, 255)
+//        //);
+//
+//        glm::vec3 randomColor = glm::vec3(200, 200, 200);
+//
+//        SubPartDesc part;
+//
+//        part.localTransformHandle = world.createTransform(
+//            localOffset,
+//            localRotation,
+//            glm::vec3(wallThickness, wallWidth, cylinderDepth)
+//        );
+//
+//        part.textureName = "plain";
+//        part.color = randomColor / 255.0f;
+//
+//        cylinder.parts.push_back(part);
+//
+//        angleRad += angleStep;
+//    }
+//
+//    // ------------------------------------------------------
+//    // Add inner shelves / baffles
+//    // ------------------------------------------------------
+//    for (int i = 0; i < shelfCount; i++) {
+//        float shelfAngle =
+//            glm::radians(360.0f * static_cast<float>(i) / static_cast<float>(shelfCount));
+//
+//        glm::quat shelfRotation = glm::angleAxis(shelfAngle, axis);
+//
+//        glm::vec3 shelfOffset =
+//            shelfRotation * glm::vec3(shelfCenterRadius+2.0f, 0.0f, 0.0f);
+//
+//        SubPartDesc shelf;
+//
+//        shelf.localTransformHandle = world.createTransform(
+//            shelfOffset,
+//            shelfRotation,
+//            glm::vec3(shelfDepth, shelfWidth, shelfZ)
+//        );
+//
+//        shelf.textureName = "plain";
+//        shelf.color = glm::vec3(0.9f, 0.9f, 0.2f);
+//
+//        cylinder.parts.push_back(shelf);
+//    }
+//
+//    // ------------------------------------------------------
+//    // Create one GameObject and spin the whole thing
+//    // ------------------------------------------------------
+//    GameObjectHandle h = world.createGameObject(cylinder);
+//
+//    RigidBody* rb = world.getRigidBody(h);
+//    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -0.3f);
+//
+//
+//
+//
+//    GameObjectDesc tumblerFrontWall;
+//    tumblerFrontWall.name = "TumblerFrontWall";
+//    tumblerFrontWall.rootTransformHandle = world.createTransform(
+//        center - glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
+//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+//        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
+//    );
+//    tumblerFrontWall.bodyType = BodyType::Static;
+//    SubPartDesc frontWallPart;
+//    frontWallPart.seeThrough = true;
+//    frontWallPart.localTransformHandle = world.createTransform();
+//    frontWallPart.textureName = "plain";
+//    frontWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
+//    tumblerFrontWall.parts.push_back(frontWallPart);
+//    world.createGameObject(tumblerFrontWall);
+//
+//    GameObjectDesc tumblerBackWall;
+//    tumblerBackWall.name = "TumblerBackWall";
+//    tumblerBackWall.rootTransformHandle = world.createTransform(
+//        center + glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
+//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+//        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
+//    );
+//    tumblerBackWall.bodyType = BodyType::Static;
+//    SubPartDesc backWallPart;
+//    backWallPart.localTransformHandle = world.createTransform();
+//    backWallPart.textureName = "plain";
+//    backWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
+//    tumblerBackWall.parts.push_back(backWallPart);
+//    world.createGameObject(tumblerBackWall);
+//
 }
 
 void SceneBuilder::terrainScene() {

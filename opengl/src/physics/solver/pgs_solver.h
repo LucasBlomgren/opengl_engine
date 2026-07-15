@@ -24,7 +24,7 @@ private:
     std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
 
     std::vector<RigidBody*> solverBodySources;
-    std::vector<uint8_t> solverBodyWriteBack; // yes or no
+    std::vector<uint8_t> solverBodyWriteBack; // yes/no
 
     std::vector<Contact*> constraintSources;
     std::vector<ContactPoint*> pointSources;

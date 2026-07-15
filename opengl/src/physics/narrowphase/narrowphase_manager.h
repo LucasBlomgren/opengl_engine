@@ -12,6 +12,7 @@ class NarrowphaseManager {
 public:
     void init(
         CollisionManifold* collisionManifold,
+        std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
         std::unordered_map<size_t, Contact>* contactCache,
         RuntimeCaches* caches,
         std::vector<RigidBodyHandle>* toWake
@@ -32,6 +33,7 @@ public:
 private:
     // references to caches
     CollisionManifold* collisionManifold = nullptr;
+    std::vector<DebugSpeculativeContact>* debugSpeculativeContacts = nullptr;
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;
 
@@ -93,7 +95,13 @@ private:
         DynamicContactCandidate& candidate
     );
 
-    void emitFilteredSpeculativeContacts(
+    void emitSpeculativeContact(
+        ContactBatch& batch,
+        ContactBuildInput& in,
+        DynamicContactCandidate& candidate
+    );
+
+    void flushPendingSpeculativeContacts(
         ContactBatch& batch,
         float dt
     );
@@ -118,6 +126,13 @@ private:
         Contact& contact,
         DynamicContactCandidate& candidate
     );
+
+    PairKey makeColliderPairKey(
+        ColliderHandle a,
+        ColliderHandle b
+    );
+    uint64_t packColliderHandle(ColliderHandle handle);
+    uint64_t packBodyHandle(RigidBodyHandle h);
 
     //=======================================================
     //     Terrain contact processing

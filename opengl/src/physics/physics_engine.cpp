@@ -150,6 +150,7 @@ void PhysicsEngine::beginPhysicsStep(float outerDt) {
     toSleep.clear();
 
     debugSweeps.clear();
+    debugSpeculativeContacts.clear();
     contactsGeneratedThisFrame = 0;
 
     for (auto& [key, contact] : contactCache) {

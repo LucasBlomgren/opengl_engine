@@ -3,31 +3,19 @@
 
 #include "terrain_processing.h"
 
-static uint64_t packColliderHandle(ColliderHandle h) {
-    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
-}
-
-static PairKey makeColliderPairKey(ColliderHandle a, ColliderHandle b) {
-    uint64_t pa = packColliderHandle(a);
-    uint64_t pb = packColliderHandle(b);
-
-    if (pa > pb) {
-        std::swap(pa, pb);
-    }
-
-    return { pa, pb };
-}
 
 //=======================================================
 //              Initialization
 //=======================================================
 void NarrowphaseManager::init(
     CollisionManifold* collisionManifold,
+    std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
     std::unordered_map<size_t, Contact>* contactCache,
     RuntimeCaches* caches,
     std::vector<RigidBodyHandle>* toWake)
 {
     this->collisionManifold = collisionManifold;
+    this->debugSpeculativeContacts = debugSpeculativeContacts;
     this->contactCache = contactCache;
     this->caches = caches;
     this->toWake = toWake;
@@ -71,7 +59,7 @@ void NarrowphaseManager::narrowPhase(
         processSpeculativeDynamicPairs(pair, dt);
     }
 
-    emitFilteredSpeculativeContacts(batch, dt);
+    flushPendingSpeculativeContacts(batch, dt);
 }
 
 //=======================================================
@@ -87,8 +75,9 @@ void NarrowphaseManager::processDynamicPairs(
 
     if (!bodyA || !bodyB) return;
 
-    // If both bodies are static or kinematic, do not process them for contacts.
-    if ((bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic) && (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic)) {
+    // If both bodies are static or kinematic and not externally controlled, skip contact generation.
+    if ((bodyA->motionControl != MotionControl::External && (bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic)) && 
+        (bodyB->motionControl != MotionControl::External && (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic))) {
         return;
     }
 
@@ -290,7 +279,27 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
 }
 
 //=======================================================
-//      Helper functions
+//     Collider and body handle packing for pair keys
+//=======================================================
+uint64_t NarrowphaseManager::packColliderHandle(ColliderHandle h) {
+    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+}
+uint64_t NarrowphaseManager::packBodyHandle(RigidBodyHandle h) {
+    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+}
+PairKey NarrowphaseManager::makeColliderPairKey(ColliderHandle a, ColliderHandle b) {
+    uint64_t pa = packColliderHandle(a);
+    uint64_t pb = packColliderHandle(b);
+
+    if (pa > pb) {
+        std::swap(pa, pb);
+    }
+
+    return { pa, pb };
+}
+
+//=======================================================
+//     Runtime data generation
 //=======================================================
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA, RigidBody* bodyB,
@@ -319,7 +328,9 @@ ContactRuntime NarrowphaseManager::makeRuntimeData(
     return rt;
 }
 
-// Collects terrain tris whose AABBs intersect with the collider's AABB as candidates for SAT testing
+//=======================================================
+//     Terrain tri candidate collection
+//=======================================================
 void NarrowphaseManager::collectTerrainTriCandidates(
     Collider* collider,
     const std::vector<Tri*>& inputTris,

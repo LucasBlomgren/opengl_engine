@@ -175,6 +175,9 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
     }
 }
 
+//==================================================
+//     Build speculative pairs for narrowphase
+//==================================================
 void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) {
     batch.speculativeDynamicPairs.clear();
     batch.speculativeTerrainPairs.clear();
@@ -191,6 +194,34 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
     // #TODO: Let debug renderer use speculativeAABBs directly instead of copying to debugSweeps.
     debugSweeps = speculativeAABBs;
+    
+    // ----- speculative dynamic vs speculative dynamic -----
+    // #TODO: This is O(n^2) and could be improved with sweep-and-prune
+    for (size_t i = 0; i < speculativeBodies.size(); ++i) {
+        for (size_t j = i + 1; j < speculativeBodies.size(); ++j) {
+            if (!speculativeAABBs[i].intersects(speculativeAABBs[j])) {
+                continue;
+            }
+
+            RigidBodyHandle bodyA = speculativeBodies[i];
+            RigidBodyHandle bodyB = speculativeBodies[j];
+
+            if (bodyA == bodyB) {
+                continue;
+            }
+
+            // Add once for A's sweep ownership.
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ bodyA, bodyB, bodyA }
+            );
+
+            // Add once for B's sweep ownership.
+            // This lets min-TOI filtering consider this pair for both bodies.
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ bodyA, bodyB, bodyB }
+            );
+        }
+    }
 
     static std::vector<RigidBodyHandle> candidates;
     candidates.reserve(BVHTree::MaxCollisionBuf);
@@ -199,28 +230,36 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
         RigidBodyHandle bodyHandle = speculativeBodies[i];
         AABB& sweptAABB = speculativeAABBs[i];
 
+        // ----- speculative dynamic vs awake -----
         if (awakeBvh.rootIdx != -1) { 
             candidates.clear(); 
             awakeBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
+                batch.speculativeDynamicPairs.emplace_back(
+                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
             }
         }
+        // ----- speculative dynamic vs asleep -----
         if (asleepBvh.rootIdx != -1) {
             candidates.clear();
             asleepBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
+                batch.speculativeDynamicPairs.emplace_back(
+                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle }
+                );
             }
         }
+        //----- speculative dynamic vs static -----
         if (staticBvh.rootIdx != -1) {
             candidates.clear();
             staticBvh.singleQuery(sweptAABB, candidates);
             for (auto& otherHandle : candidates) {
                 if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
+                batch.speculativeDynamicPairs.emplace_back(
+                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle }
+                );
             }
         }
     }

@@ -61,7 +61,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
     debugShapeShader->setInt("debug.objectType", 0);
     renderAABBs(objects, world);
     renderColliders(objects, camera, world);
-    renderContactPoints(physics.GetContactCache());
+    renderContactPoints(physics.GetContactCache(), physics.debugSpeculativeContacts);
     renderBVHs(physics);
     renderSweptAABBs(physics.debugSweeps, glm::vec3(1.0f, 1.0f, 0.0f));
 
@@ -242,7 +242,10 @@ void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, cons
         }
     }
 }
-void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact>& cache) const {
+void DebugRenderer::renderContactPoints(
+    const std::unordered_map<size_t, Contact>& cache,
+    const std::vector<DebugSpeculativeContact>& speculativeContacts) const 
+{
     if (!engineState->getShowContactPoints()) return;
 
     debugShapeShader->setInt("debug.objectType", 2);
@@ -268,7 +271,14 @@ void DebugRenderer::renderContactPoints(const std::unordered_map<size_t, Contact
             renderContactPoint(*debugShapeShader, VAO_contactPoint, contact.points[i].worldPos);
         }
     }
+    
+    for (const DebugSpeculativeContact& specContact : speculativeContacts) {
+        debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 255, 0)); // grön för spekulativa kontaktpunkter
+        renderContactPoint(*debugShapeShader, VAO_contactPoint, specContact.worldPos);
+    }
     glEnable(GL_DEPTH_TEST);
+
+    std::cout << "DebugRenderer: Rendered " << cache.size() << " contact points and " << speculativeContacts.size() << " speculative contacts." << std::endl;
 }
 
 //----------------------------------------

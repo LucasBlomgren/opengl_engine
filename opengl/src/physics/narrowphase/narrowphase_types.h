@@ -61,11 +61,30 @@ struct TerrainContactCandidate {
     TerrainManifoldType manifoldType;
 };
 
+struct SpeculativeContact {
+    RigidBodyHandle bodyHandleA;
+    RigidBodyHandle bodyHandleB;
+
+    RigidBody* bodyA = nullptr;
+    RigidBody* bodyB = nullptr;
+
+    glm::vec3 normal{ 0.0f };
+    float separation = 0.0f;
+    float toi = 0.0f;
+
+    bool noSolverResponseA = false;
+    bool noSolverResponseB = false;
+    bool contributesMotionA = false;
+    bool contributesMotionB = false;
+};
+
 struct ContactBatch {
     std::vector<Contact*> contacts;
+    std::vector<SpeculativeContact> speculativeContacts;
 
     void clear() {
         contacts.clear();
+        speculativeContacts.clear();
     }
     size_t size() {
         return contacts.size();
@@ -108,4 +127,11 @@ struct PairKeyHash {
         uint64_t x = k.a ^ (k.b + 0x9e3779b97f4a7c15ull + (k.a << 6) + (k.a >> 2));
         return std::hash<uint64_t>{}(x);
     }
+};  
+
+struct DebugSpeculativeContact {
+    RigidBodyHandle bodyA;
+    RigidBodyHandle bodyB;
+    glm::vec3 worldPos{ 0.0f };
+    // add other debug information as needed
 };

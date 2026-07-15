@@ -14,7 +14,7 @@ void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
     toSleep.reserve(slotCap);
 
     broadphaseManager.init(&physicsWorld, &caches, terrainTris);
-    narrowphaseManager.init(collisionManifold, &contactCache, &caches, &toWake);
+    narrowphaseManager.init(collisionManifold, &debugSpeculativeContacts, &contactCache, &caches, &toWake);
 
     flushBroadphaseCommands();
 }
@@ -22,6 +22,7 @@ void PhysicsEngine::setupScene(std::vector<Tri>* terrainTris) {
 void PhysicsEngine::clear() {
     toWake.clear();
     contactCache.clear();
+    debugSpeculativeContacts.clear();
 
     physicsWorld.clear();
     broadphaseManager.clear();
