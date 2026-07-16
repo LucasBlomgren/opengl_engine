@@ -67,16 +67,18 @@
     <ClCompile Include="src\physics\updateBodiesAndColliders.cpp" />
     <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
-    <ClCompile Include="src\physics\narrowphase\dynamic_speculative.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_normal_contact.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact_normal.cpp" />
     <ClCompile Include="src\physics\API\physics_commands.cpp" />
     <ClCompile Include="src\physics\API\physics_queries.cpp" />
     <ClCompile Include="src\physics\API\physics_scene.cpp" />
     <ClCompile Include="src\physics\raycast\raycast.cpp" />
     <ClCompile Include="src\physics\contactcache\updateContactCache.cpp" />
-    <ClCompile Include="src\physics\narrowphase\dynamic_normal.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_speculative_contacts.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_normal.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
+    <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -188,7 +190,6 @@
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
-    <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

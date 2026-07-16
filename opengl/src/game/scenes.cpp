@@ -31,6 +31,7 @@ void SceneBuilder::testFloorScene(int amount) {
         glm::vec3 position{ 0.0, 100.0, -100.0 };
         glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
         fastSphere.rootTransformHandle = world.createTransform(position, orientation);
+        fastSphere.mass = 2.0f;
         SubPartDesc part;
         part.colliderType = ColliderType::SPHERE;
         part.meshName = "sphere";
@@ -42,9 +43,10 @@ void SceneBuilder::testFloorScene(int amount) {
         fastSphereBody->linearVelocity = glm::vec3(-500.0f, 0.0f, 0.0f);
 
         GameObjectDesc fastSphere2;
-        position = { -75.0, 100.0, -101.0 };
+        position = { -75.0, 100.0, -100.0 };
         orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
         fastSphere2.rootTransformHandle = world.createTransform(position, orientation);
+        fastSphere2.mass = 1.0f;
         SubPartDesc part2;
         part2.colliderType = ColliderType::SPHERE;
         part2.meshName = "sphere";

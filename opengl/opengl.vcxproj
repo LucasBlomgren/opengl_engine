@@ -228,12 +228,13 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\narrowphase\dynamic_speculative.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_normal_contact.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact_normal.cpp" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_speculative_contacts.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
+    <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
     <ClCompile Include="src\physics\narrowphase\sat.cpp" />
     <ClCompile Include="src\physics\physics_engine.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -342,11 +343,11 @@
     <ClInclude Include="src\physics\colliders\tri.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
     <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
-    <ClCompile Include="src\physics\narrowphase\dynamic_normal.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_normal.cpp" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_types.h" />
     <ClInclude Include="src\physics\narrowphase\sat.h" />
-    <ClInclude Include="src\physics\narrowphase\terrain_processing.h" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
     <ClInclude Include="src\physics\physics_engine.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\physics_world.h" />

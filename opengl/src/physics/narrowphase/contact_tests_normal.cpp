@@ -20,7 +20,7 @@ bool NarrowphaseManager::tryBoxBox(
     glm::vec3 centerB = std::get<OOBB>(in.colliderB->shape).worldCenter;
     SAT::reverseNormal(centerA, centerB, out.sat.normal);
 
-    out.manifoldType = DynamicManifoldType::BoxBox;
+    out.manifoldType = ManifoldType::BoxBox;
     return true;
 }
 
@@ -41,7 +41,7 @@ bool NarrowphaseManager::tryBoxSphere(
         return false;
     }
 
-    out.manifoldType = DynamicManifoldType::BoxSphere;
+    out.manifoldType = ManifoldType::BoxSphere;
     return true;
 }
 
@@ -56,6 +56,6 @@ bool NarrowphaseManager::trySphereSphere(
         return false;
     }
 
-    out.manifoldType = DynamicManifoldType::SphereSphere;
+    out.manifoldType = ManifoldType::SphereSphere;
     return true;
 }

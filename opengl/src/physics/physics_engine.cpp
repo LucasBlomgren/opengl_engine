@@ -77,8 +77,21 @@ void PhysicsEngine::step(float dt, EngineState& engine)
     // 4. Build pairs and speculative pairs
     start = glfwGetTime() * 1000.0;
     PairBatch pairs;
+    double pairBuildStart = glfwGetTime() * 1000.0;
     broadphaseManager.buildPairs(pairs);
+    double pairBuildEnd = glfwGetTime() * 1000.0;
+    double pairBuildElapsed = pairBuildEnd - pairBuildStart;
+    /*std::cout << "======================================================================" << std::endl;
+    std::cout << "BROADPHASE DEBUG INFO" << std::endl;
+    std::cout << "Dynamic pairs: " << pairs.dynamicPairs.size() << std::endl;
+    std::cout << "buildPairs took " << pairBuildElapsed << " ms" << std::endl;*/
+    double speculativePairBuildStart = glfwGetTime() * 1000.0;
     broadphaseManager.buildSpeculativePairs(dt, pairs, debugSweeps);
+    double speculativePairBuildEnd = glfwGetTime() * 1000.0;
+    double speculativePairBuildElapsed = speculativePairBuildEnd - speculativePairBuildStart;
+    /*std::cout << "Speculative dynamic pairs: " << pairs.speculativeDynamicPairs.size() << std::endl;
+    std::cout << "buildSpeculativePairs took " << speculativePairBuildElapsed << " ms" << std::endl;
+    std::cout << "======================================================================" << std::endl;*/
     frameTimers->submit(
         "Broadphase",
         frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
@@ -88,7 +101,7 @@ void PhysicsEngine::step(float dt, EngineState& engine)
     start = glfwGetTime() * 1000.0;
     ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts, dt);
-    contactsGeneratedThisFrame += contacts.size();
+    contactsGeneratedThisFrame += contacts.contacts.size() + contacts.speculativeContacts.size();
     frameTimers->submit(
         "Narrowphase",
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start

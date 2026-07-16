@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+static constexpr uint32_t InvalidSolverBody = std::numeric_limits<uint32_t>::max();
 
 struct SolverBody {
     glm::vec3 linVelocity;
@@ -20,28 +20,42 @@ enum ContactFlags : uint8_t {
     CanApplyImpulseB = 1 << 5,
 };
 struct ContactConstraint {
-    uint32_t bodyA; // index into solverBodies
-    uint32_t bodyB;
-    glm::vec3 normal;
-    glm::vec3 t1;
-    glm::vec3 t2;
-    float invMassTwist;
-    float accumulatedTwistImpulse;
-    uint32_t firstPoint; // index into contactPoints
-    uint8_t pointCount;  // number of contact points in this constraint
-    uint8_t flags;       // ContactFlags as bitmask
+    uint32_t bodyA = InvalidSolverBody; // index into solverBodies
+    uint32_t bodyB = InvalidSolverBody;
+    glm::vec3 normal{ 0.0f };
+    glm::vec3 t1{ 0.0f };
+    glm::vec3 t2{ 0.0f };
+    float invMassTwist = 0.0f;
+    float accumulatedTwistImpulse = 0.0f;
+    uint32_t firstPoint = 0; // index into contactPoints
+    uint8_t pointCount = 0;  // number of contact points in this constraint
+    uint8_t flags = 0;       // ContactFlags as bitmask
 }; // 60 bytes = 1 cache line
 
 struct ContactConstraintPoint {
-    glm::vec3 rA;
-    glm::vec3 rB;
-    float m_eff;
-    float invMassT1;
-    float invMassT2;
-    float targetBounce;
-    float biasVelocity;
-    float nImpulse;
-    float fImpulse1;
-    float fImpulse2;
-    float biasImpulse;
+    glm::vec3 rA{ 0.0f };
+    glm::vec3 rB{ 0.0f };
+    float m_eff = 0.0f;
+    float invMassT1 = 0.0f;
+    float invMassT2 = 0.0f;
+    float targetBounce = 0.0f;
+    float biasVelocity = 0.0f;
+    float nImpulse = 0.0f;
+    float fImpulse1 = 0.0f;
+    float fImpulse2 = 0.0f;
+    float biasImpulse = 0.0f;
 }; // 60 bytes = 1 cache line
+
+struct SpeculativeConstraint {
+    uint32_t bodyA = InvalidSolverBody;
+    uint32_t bodyB = InvalidSolverBody;
+    glm::vec3 normal{ 0.0f };
+    float separation = 0.0f;
+    float accumulatedImpulse = 0.0f;
+
+    // stored before speculative solve for post-restitution velocity calculation
+    float incomingNormalVelocity = 0.0f; 
+    float restitution = 0.5f;
+
+    uint8_t flags = 0;
+}; // 44 bytes = 1 cache line

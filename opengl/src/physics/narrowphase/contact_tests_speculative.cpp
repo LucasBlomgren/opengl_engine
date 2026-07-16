@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "narrowphase_manager.h"
 
 bool NarrowphaseManager::trySpeculativeBoxBox(
@@ -33,7 +32,9 @@ bool NarrowphaseManager::trySpeculativeSphereSphere(
         return false;
     }
 
-    out.manifoldType = DynamicManifoldType::SphereSphere;
+    out.manifoldType = ManifoldType::SphereSphere;
+    out.partnerTypeA = ContactPartnerType::RigidBody;
+    out.partnerTypeB = ContactPartnerType::RigidBody;
 
     return true;
 }

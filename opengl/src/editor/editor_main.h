@@ -71,7 +71,8 @@ public:
     void updateSelectedObject(float fixedTimeStep);
 
     // raycast for selection
-    RaycastHit rayCast(float length);
+    glm::vec3 getRayVectorToMouseLocation();
+    RaycastHit rayCastMousePos(float length);
 
     glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
     bool objectRainBlocks = false;
@@ -104,6 +105,7 @@ private:
 
     bool viewportCapturedRMB = false;
     bool viewportCapturedLMB = false;
+    bool viewportCapturedMMB = false;
     float viewportMouseX = 0.0f;
     float viewportMouseY = 0.0f;
     float viewportDisplayW = 0.0f;

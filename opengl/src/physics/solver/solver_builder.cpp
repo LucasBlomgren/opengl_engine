@@ -12,6 +12,8 @@ void PGSSolver::buildSolverData(
     solverBodies.clear();
     contactConstraints.clear();
     contactPoints.clear();
+    speculativeConstraints.clear();
+
     solverBodyIndexBySlot.clear();
     solverBodySources.clear();
     solverBodyWriteBack.clear();
@@ -27,13 +29,15 @@ void PGSSolver::buildSolverData(
     solverBodies.reserve(caches.bodies.sm->dense().size());
     contactConstraints.reserve(batch.contacts.size());
     contactPoints.reserve(batch.contacts.size() * 4);
+    speculativeConstraints.reserve(batch.speculativeContacts.size());
 
     solverBodySources.reserve(caches.bodies.sm->dense().size());
     solverBodyWriteBack.reserve(caches.bodies.sm->dense().size());
     constraintSources.reserve(batch.contacts.size());
     pointSources.reserve(batch.contacts.size() * 4);
 
-    // #TODO: inte super effektivt att loopa igenom en linked list av contacts. Kan optimera senare om det behövs.
+    // #TODO: inte super effektivt att loopa igenom en linked list av contacts. 
+    // Kan optimera senare om det behövs.
     for (Contact* contact : batch.contacts) {
         if (!contact) {
             continue;
@@ -44,10 +48,10 @@ void PGSSolver::buildSolverData(
         uint32_t bodyAIndex = InvalidSolverBody;
         uint32_t bodyBIndex = InvalidSolverBody;
 
-        if (contact->partnerTypeA == ContactPartnerType::RigidBody && rt.bodyA != nullptr) {
+        if (contact->partnerTypeA == ContactPartnerType::RigidBody && rt.bodyA) {
             bodyAIndex = getOrCreateSolverBody(contact->bodyA, rt.bodyA);
         }
-        if (contact->partnerTypeB == ContactPartnerType::RigidBody && rt.bodyB != nullptr) {
+        if (contact->partnerTypeB == ContactPartnerType::RigidBody && rt.bodyB) {
             bodyBIndex = getOrCreateSolverBody(contact->bodyB, rt.bodyB);
         }
 
@@ -62,11 +66,8 @@ void PGSSolver::buildSolverData(
 
         cc.invMassTwist = contact->invMassTwist;
         cc.accumulatedTwistImpulse = contact->accumulatedTwistImpulse;
-
         cc.firstPoint = static_cast<uint32_t>(contactPoints.size());
-        cc.pointCount = 0;
 
-        cc.flags = 0;
         if (bodyAIndex != InvalidSolverBody && contact->contributesMotionA) {
             cc.flags |= ContributesMotionA;
         }
@@ -114,13 +115,87 @@ void PGSSolver::buildSolverData(
             constraintSources.push_back(contact);
         }
     }
+
+    for (const SpeculativeContact& src : batch.speculativeContacts) {
+        uint32_t bodyAIndex = InvalidSolverBody;
+        uint32_t bodyBIndex = InvalidSolverBody;
+
+        if (src.partnerTypeA == ContactPartnerType::RigidBody && src.bodyA) {
+            bodyAIndex = getOrCreateSolverBody(src.bodyHandleA, src.bodyA);
+        }
+
+        if (src.partnerTypeB == ContactPartnerType::RigidBody && src.bodyB) {
+            bodyBIndex = getOrCreateSolverBody(src.bodyHandleB, src.bodyB);
+        }
+
+        SpeculativeConstraint c{};
+        c.bodyA = bodyAIndex;
+        c.bodyB = bodyBIndex;
+
+        c.normal = src.normal;
+        c.separation = src.separation;
+
+        // Compute incoming normal velocity for post-solve restitution calculation
+        glm::vec3 vA{ 0.0f };
+        glm::vec3 vB{ 0.0f };
+        if (src.partnerTypeA == ContactPartnerType::RigidBody &&
+            src.bodyA &&
+            src.contributesMotionA) 
+        {
+            vA = src.bodyA->linearVelocity;
+        }
+        if (src.partnerTypeB == ContactPartnerType::RigidBody &&
+            src.bodyB &&
+            src.contributesMotionB) 
+        {
+            vB = src.bodyB->linearVelocity;
+        }
+
+        glm::vec3 relativeVelocity = vB - vA;
+        c.incomingNormalVelocity = glm::dot(relativeVelocity, c.normal);
+
+        // No cross-frame warmstart for MVP.
+        c.accumulatedImpulse = 0.0f;
+
+        if (bodyAIndex != InvalidSolverBody && src.contributesMotionA) {
+            c.flags |= ContributesMotionA;
+        }
+        if (bodyBIndex != InvalidSolverBody && src.contributesMotionB) {
+            c.flags |= ContributesMotionB;
+        }
+        if (src.noSolverResponseA) c.flags |= NoSolverResponseA;
+        if (src.noSolverResponseB) c.flags |= NoSolverResponseB;
+        if (bodyAIndex != InvalidSolverBody &&
+            src.partnerTypeA == ContactPartnerType::RigidBody &&
+            !src.noSolverResponseA)
+        {
+            c.flags |= CanApplyImpulseA;
+            solverBodyWriteBack[bodyAIndex] = 1;
+        }
+        if (bodyBIndex != InvalidSolverBody &&
+            src.partnerTypeB == ContactPartnerType::RigidBody &&
+            !src.noSolverResponseB)
+        {
+            c.flags |= CanApplyImpulseB;
+            solverBodyWriteBack[bodyBIndex] = 1;
+        }
+
+        if ((c.flags & (CanApplyImpulseA | CanApplyImpulseB)) == 0) {
+            continue;
+        }
+
+        speculativeConstraints.push_back(c);
+    }
 }
 
 //==========================================================
 //  Returns the index of the solver body in solverBodies, 
 //  or InvalidSolverBody if the body is null.
 //==========================================================
-uint32_t PGSSolver::getOrCreateSolverBody(RigidBodyHandle bodyHandle, RigidBody* body) {
+uint32_t PGSSolver::getOrCreateSolverBody(
+    RigidBodyHandle bodyHandle, 
+    RigidBody* body) 
+{
     if (!body) {
         return InvalidSolverBody;
     }
@@ -160,10 +235,10 @@ void PGSSolver::packInvInertia(const glm::mat3& m, float out[6]) {
     out[5] = m[1][2]; // yz
 }
 
-//====================================================================================
+//===================================================================================
 //  Prepare contact point for Baumgarte stabilization and warm starting.
 //  Returns true if the contact point is active and should be included in the solver
-//====================================================================================
+//===================================================================================
 bool PGSSolver::hasFlag(uint8_t flags, uint8_t flag) {
     return (flags & flag) != 0;
 }

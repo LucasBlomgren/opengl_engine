@@ -1,8 +1,6 @@
 #include "pch.h"
 #include "narrowphase_manager.h"
 
-#include "terrain_processing.h"
-
 
 //=======================================================
 //              Initialization
@@ -41,13 +39,20 @@ void NarrowphaseManager::narrowPhase(
 
     // Normal terrain
     for (const TerrainPair& pair : pairs.terrainPairs) {
-        processTerrainPairs(pair, batch, dt, NarrowphasePass::Normal);
+        processTerrainPairs(pair, batch, dt);
     }
 
     // Normal dynamic
+    double start = glfwGetTime();
     for (const DynamicPair& pair : pairs.dynamicPairs) {
         processDynamicPairs(pair, batch, dt);
     }
+    double end = glfwGetTime();
+    double elapsed = end - start;
+    /*std::cout << "NARROWPHASE DEBUG INFO" << std::endl;
+    std::cout << pairs.dynamicPairs.size() << " dynamic pairs processed" << std::endl;
+    std::cout << "processDynamicPairs took " << elapsed * 1000.0 << " ms" << std::endl;
+    std::cout << "Per pair time: " << (elapsed * 1000.0) / pairs.dynamicPairs.size() << " ms" << std::endl;*/
 
     // Speculative terrain
     //for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
@@ -55,11 +60,17 @@ void NarrowphaseManager::narrowPhase(
     //}
 
     // Speculative dynamic
+    start = glfwGetTime();
     for (const SpeculativeDynamicPair& pair : pairs.speculativeDynamicPairs) {
         processSpeculativeDynamicPairs(pair, dt);
     }
 
     flushPendingSpeculativeContacts(batch, dt);
+    end = glfwGetTime();
+    elapsed = end - start;
+    /*std::cout << pairs.speculativeDynamicPairs.size() << " speculative dynamic pairs processed" << std::endl;
+    std::cout << "processSpeculativeDynamicPairs took " << elapsed * 1000.0 << " ms" << std::endl;
+    std::cout << "Per pair time: " << (elapsed * 1000.0) / pairs.speculativeDynamicPairs.size() << " ms" << std::endl;*/
 }
 
 //=======================================================
@@ -240,7 +251,7 @@ void NarrowphaseManager::processColliderPairSpeculative(
 //=======================================================
 //     Normal Terrain pair processing
 //=======================================================
-void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt, NarrowphasePass pass) {
+void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
     RigidBody* body = caches->bodies.get(terrainPair.body, FUNC_NAME);
     if (body->asleep || body->type == BodyType::Kinematic) return;
 

@@ -69,21 +69,21 @@ Contact* NarrowphaseManager::createManifold(
     DynamicContactCandidate& candidate)
 {
     switch (candidate.manifoldType) {
-    case DynamicManifoldType::BoxBox:
+    case ManifoldType::BoxBox:
         return collisionManifold->boxBox(
             contact,
             *contactCache,
             candidate.sat
         );
 
-    case DynamicManifoldType::BoxSphere:
+    case ManifoldType::BoxSphere:
         return collisionManifold->boxSphere(
             contact,
             *contactCache,
             candidate.sat
         );
 
-    case DynamicManifoldType::SphereSphere:
+    case ManifoldType::SphereSphere:
         return collisionManifold->sphereSphere(
             contact,
             *contactCache,

@@ -100,6 +100,11 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         part.shader = shaderManager.getShader(partDesc.shaderName);
         part.mesh = meshManager.getMesh(partDesc.meshName);
 
+        if (part.mesh == nullptr) {
+            std::cerr << "[World] Warning: Mesh not found for part '" << partDesc.name << "' of GameObject '" << objDesc.name << "'. Using default cube mesh.\n";
+            part.mesh = meshManager.getMesh("cube");
+        }
+
         if (partDesc.textureName == "plain") {
             part.textureId = 999;
         } else {

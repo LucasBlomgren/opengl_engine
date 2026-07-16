@@ -1,7 +1,9 @@
 #pragma once
 
 #include "solver_types.h"
+#include "runtime_caches.h"
 #include <narrowphase/narrowphase_types.h>
+#include <narrowphase/collision_manifold.h>
 
 class PGSSolver {
 public:
@@ -16,16 +18,16 @@ public:
     );
 
 private:
-    static constexpr uint32_t InvalidSolverBody = std::numeric_limits<uint32_t>::max();
-
-    std::vector<SolverBody> solverBodies;          // hot data
+    // Solver data structures
+    std::vector<SolverBody> solverBodies;
     std::vector<ContactConstraint> contactConstraints;
     std::vector<ContactConstraintPoint> contactPoints;
-    std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
+    std::vector<SpeculativeConstraint> speculativeConstraints;
 
+    // Build and write-back
+    std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
     std::vector<RigidBody*> solverBodySources;
     std::vector<uint8_t> solverBodyWriteBack; // yes/no
-
     std::vector<Contact*> constraintSources;
     std::vector<ContactPoint*> pointSources;
 
@@ -77,6 +79,9 @@ private:
         const int PGSiterations,
         const float dt
     );
+
+    std::pair<float, float> solveNormalContactsOneIteration(int i);
+    float solveSpeculativeContactsOneIteration(float dt);
 
     // post-solve: update RigidBody velocities and bias velocities based on solver results
     void postSolve(

@@ -1,11 +1,12 @@
 #pragma once
+
 #include <unordered_set>
+#include <unordered_map>
+#include <vector>
 
 #include "narrowphase_types.h"
 #include "runtime_caches.h"
-#include "rigidbody.h"
 #include "collision_manifold.h"
-#include "sat.h"
 #include "broadphase/broadphase_types.h"
 
 class NarrowphaseManager {
@@ -46,8 +47,7 @@ private:
     void processTerrainPairs(
         const TerrainPair& terrainPair, 
         ContactBatch& batch,
-        float dt, 
-        NarrowphasePass pass
+        float dt
     );
     void processDynamicPairs(
         const DynamicPair& pair, 

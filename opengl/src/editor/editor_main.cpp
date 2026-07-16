@@ -106,9 +106,15 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
     if (viewportCapturedRMB and !in.mouseDown[GLFW_MOUSE_BUTTON_2])
         viewportCapturedRMB = false;
 
+    if (!viewportCapturedMMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_3])
+        viewportCapturedMMB = true;
+    if (viewportCapturedMMB and !in.mouseDown[GLFW_MOUSE_BUTTON_3])
+        viewportCapturedMMB = false;
+
     // handle non-viewport input capture
     ImGuiIO* io = &ImGui::GetIO();
-    if (io->WantCaptureMouse and !(viewportCapturedLMB or viewportCapturedRMB)) {
+    if (io->WantCaptureMouse && 
+        !(viewportCapturedLMB || viewportCapturedRMB || viewportCapturedMMB)) {
         wants.cameraLook = false;
         wants.captureMouse = false;
         consumed.mouse = true;
@@ -130,11 +136,11 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (!selectedObjectHandle.isValid()) {
-                rayCast(SELECT_RANGE);
+                rayCastMousePos(SELECT_RANGE);
                 selectObject(ctx);
             }
             else {
-                RaycastHit hitData = rayCast(SELECT_RANGE);
+                RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
 
                 if (!hitData.hit) {
                     dropObject();
@@ -144,7 +150,7 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     GameObjectHandle hitObjHandle = hitBody->gameObjectHandle;
                     if (hitObjHandle.slot != selectedObjectHandle.slot) {
                         dropObject();
-                        rayCast(SELECT_RANGE);
+                        rayCastMousePos(SELECT_RANGE);
                         selectObject(ctx);
                     }
                     else {
@@ -183,14 +189,25 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             SubPartDesc part;
             part.localTransformHandle = world->createTransform();
             part.colliderType = ColliderType::SPHERE;
-            part.textureName = "checker_gray";
+            part.textureName = "checker_magenta";
             part.meshName = "sphere";
             newObj.parts.push_back(part);
 
             // create new object & apply shoot velocity
             GameObjectHandle newObject = world->createGameObject(newObj);
             RigidBody* rb = world->getRigidBody(newObject);
-            rb->linearVelocity = camera->front * shootVelocity;
+
+            // apply shoot velocity
+            glm::vec3 dir{ 0.0f };
+            // if RMB is held down, shoot in camera direction, 
+            // otherwise shoot towards mouse location
+            if (viewportCapturedRMB) {
+                dir = camera->front;
+            }
+            else {
+                dir = getRayVectorToMouseLocation();
+            }
+            rb->linearVelocity = dir * shootVelocity;
         }
 
         // continuous shooting while RMB held down
@@ -245,7 +262,18 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     // create new object & apply shoot velocity
                     GameObjectHandle newObject = world->createGameObject(newObj);
                     RigidBody* rb = world->getRigidBody(newObject);
-                    rb->linearVelocity = camera->front * shootVelocity;
+
+                    // apply shoot velocity
+                    glm::vec3 dir{ 0.0f };
+                    // if RMB is held down, shoot in camera direction, 
+                    // otherwise shoot towards mouse location
+                    if (viewportCapturedRMB) {
+                        dir = camera->front;
+                    }
+                    else {
+                        dir = getRayVectorToMouseLocation();
+                    }
+                    rb->linearVelocity = dir * shootVelocity;
                 }
             }
             else {
@@ -403,7 +431,7 @@ void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
 void Editor::EditorMain::update(Shader& shader) {
 
     // raycast for hover
-    RaycastHit raycast = rayCast(SELECT_RANGE);
+    RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // set new hover state
     if (raycast.hit && !selectedObjectIsBeingMoved) {
@@ -435,7 +463,7 @@ void Editor::EditorMain::syncSelectionOffset() {
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
     if (selectedObjectHandle.isValid()) return;
 
-    RaycastHit raycast = rayCast(SELECT_RANGE);
+    RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // no hit return
     if (!raycast.hit) {
@@ -535,8 +563,18 @@ void Editor::EditorMain::dropObject() {
 }
 
 // Raycast from camera through mouse cursor into world
-RaycastHit Editor::EditorMain::rayCast(float length)
+RaycastHit Editor::EditorMain::rayCastMousePos(float length)
 {
+    glm::vec3 dir = getRayVectorToMouseLocation();
+
+    float rLength = length;
+    Ray r(camera->position, dir, SELECT_RANGE);
+    RaycastHit hitData = physicsEngine->performRaycast(r);
+
+    return hitData;
+}
+
+glm::vec3 Editor::EditorMain::getRayVectorToMouseLocation() {
     // 0) Normalisera musen i viewport-bilden (display space)
     float u = viewportMouseX / viewportDisplayW;
     float v = viewportMouseY / viewportDisplayH;
@@ -566,14 +604,5 @@ RaycastHit Editor::EditorMain::rayCast(float length)
 
     // 3) Eye → World(inverse view) och normalisera
     glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
-
-    // 4) Bygg rayen
-    glm::vec3 origin = camera->position;
-    glm::vec3 dir = rayWorld;
-
-    float rLength = length;
-    Ray r(camera->position, dir, SELECT_RANGE);
-    RaycastHit hitData = physicsEngine->performRaycast(r);
-
-    return hitData;
+    return rayWorld;
 }

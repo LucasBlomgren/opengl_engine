@@ -5,6 +5,7 @@
 #include "rigidbody.h"
 #include "sat.h"
 #include "collider_pose.h"
+#include "narrowphase_types.h"
 
 // for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
 struct Plane {
@@ -40,12 +41,6 @@ struct ContactPoint {
 
     bool wasUsedThisFrame = true;
     bool wasWarmStarted = false;
-};
-
-// to distinguish between body vs body and body vs terrain contacts, since they have different response and contact point generation logic
-enum class ContactPartnerType {
-    RigidBody,
-    Terrain
 };
 
 // runtime data for contact point generation and impulse solving, not stored in contact cache
