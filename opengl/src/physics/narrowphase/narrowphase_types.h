@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include "slot_map.h"
-#include "sat.h"
+#include "SAT/sat.h"
 
 // forward declarations
 class RigidBody;
@@ -16,8 +16,8 @@ enum class ManifoldType {
     BoxBox,
     BoxSphere,
     SphereSphere,
-    TerrainBox,
-    TerrainSphere
+    SphereTriangle,
+    BoxTriangle,
 };
 
 enum class ContactPartnerType {

@@ -60,7 +60,7 @@
     <ClCompile Include="src\graphics\renderer\debug_renderer.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
-    <ClCompile Include="src\physics\narrowphase\sat.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\sat.cpp" />
     <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
@@ -79,6 +79,13 @@
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_box.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\normal_sphere_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\normal_sphere_sphere.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -175,7 +182,7 @@
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
     <ClInclude Include="src\physics\colliders\collider_pose.h" />
     <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
-    <ClInclude Include="src\physics\narrowphase\sat.h" />
+    <ClInclude Include="src\physics\narrowphase\SAT\sat.h" />
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
@@ -190,6 +197,7 @@
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
     <ClInclude Include="src\physics\runtime_caches.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
+    <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -38,3 +38,26 @@ bool NarrowphaseManager::trySpeculativeSphereSphere(
 
     return true;
 }
+
+bool NarrowphaseManager::trySpeculativeSphereTriangle(
+    ContactBuildInput& in,
+    Tri* tri,
+    DynamicContactCandidate& out,
+    float dt)
+{
+    if (!SAT::speculativeSphereTriangle(
+        *in.colliderA,
+        *in.bodyA,
+        *tri,
+        dt,
+        out.sat))
+    {
+        return false;
+    }
+
+    out.manifoldType = ManifoldType::SphereTriangle;
+    out.partnerTypeA = ContactPartnerType::RigidBody;
+    out.partnerTypeB = ContactPartnerType::Terrain;
+
+    return true;
+}

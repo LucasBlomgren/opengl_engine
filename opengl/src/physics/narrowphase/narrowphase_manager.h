@@ -85,6 +85,8 @@ private:
     bool trySpeculativeBoxBox(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
     bool trySpeculativeBoxSphere(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
     bool trySpeculativeSphereSphere(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
+    bool trySpeculativeSphereTriangle(ContactBuildInput& in, Tri* tri, DynamicContactCandidate& out, float dt);
+
 
     //=======================================================
     //     Contact emission

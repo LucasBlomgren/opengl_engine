@@ -70,59 +70,107 @@ void NarrowphaseManager::emitSpeculativeContact(
     ContactBuildInput& in,
     DynamicContactCandidate& candidate)
 {
-    in.bodyA->totalCollisionCount++;
-    in.bodyB->totalCollisionCount++;
+    const bool isRigidA =
+        candidate.partnerTypeA == ContactPartnerType::RigidBody && in.bodyA;
 
-    WakeSleep::WakeUpInfo wakeInfo =
-        WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);
+    const bool isRigidB =
+        candidate.partnerTypeB == ContactPartnerType::RigidBody && in.bodyB;
 
-    WakeSleep::enqueueWakeRequests(
-        wakeInfo,
-        *in.bodyA,
-        *in.bodyB,
-        in.bodyHandleA,
-        in.bodyHandleB,
-        *toWake
-    );
-
-    bool noSolverResponseA = computeNoSolverResponse(*in.bodyA, wakeInfo.A);
-    bool noSolverResponseB = computeNoSolverResponse(*in.bodyB, wakeInfo.B);
-
-    if (noSolverResponseA && noSolverResponseB) {
+    if (!isRigidA && !isRigidB) {
         return;
     }
 
-    batch.speculativeContacts.emplace_back();
-    SpeculativeContact& c = batch.speculativeContacts.back();
-    c.bodyHandleA = in.bodyHandleA;
-    c.bodyHandleB = in.bodyHandleB;
-    c.bodyA = in.bodyA;
-    c.bodyB = in.bodyB;
+    // Count speculative collisions too, if you want them included in collision debug/stats.
+    if (isRigidA) {
+        in.bodyA->totalCollisionCount++;
+    }
 
-    c.normal = candidate.sat.normal;
-    c.separation = candidate.sat.separation;
-    c.toi = candidate.sat.toi;
+    if (isRigidB) {
+        in.bodyB->totalCollisionCount++;
+    }
 
-    c.noSolverResponseA = noSolverResponseA;
-    c.noSolverResponseB = noSolverResponseB;
+    bool wakeA = false;
+    bool wakeB = false;
 
-    c.contributesMotionA = computeContributesMotion(
-        ContactPartnerType::RigidBody,
-        *in.bodyA,
-        wakeInfo.A
-    );
+    // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
+    // Sphere-vs-terrain does not wake terrain and does not need WakeSleep::computeWakeUpInfo.
+    if (isRigidA && isRigidB) {
+        WakeSleep::WakeUpInfo wakeInfo =
+            WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);
 
-    c.contributesMotionB = computeContributesMotion(
-        ContactPartnerType::RigidBody,
-        *in.bodyB,
-        wakeInfo.B
-    );
+        WakeSleep::enqueueWakeRequests(
+            wakeInfo,
+            *in.bodyA,
+            *in.bodyB,
+            in.bodyHandleA,
+            in.bodyHandleB,
+            *toWake
+        );
 
-    // Debug visualization only.
-    // #TODO: Should be activated by a debug flag, not always.
-    debugSpeculativeContacts->emplace_back();
-    DebugSpeculativeContact& debugContact = debugSpeculativeContacts->back();
-    debugContact.bodyA = in.bodyHandleA;
-    debugContact.bodyB = in.bodyHandleB;
-    debugContact.worldPos = candidate.sat.point;
+        wakeA = wakeInfo.A;
+        wakeB = wakeInfo.B;
+    }
+
+    SpeculativeContact contact{};
+
+    contact.partnerTypeA = candidate.partnerTypeA;
+    contact.partnerTypeB = candidate.partnerTypeB;
+
+    contact.bodyHandleA = in.bodyHandleA;
+    contact.bodyHandleB = in.bodyHandleB;
+
+    contact.bodyA = in.bodyA;
+    contact.bodyB = in.bodyB;
+
+    contact.normal = candidate.sat.normal;
+    contact.separation = candidate.sat.separation;
+    contact.toi = candidate.sat.toi;
+
+    if (isRigidA) {
+        contact.noSolverResponseA =
+            computeNoSolverResponse(*in.bodyA, wakeA);
+
+        contact.contributesMotionA =
+            computeContributesMotion(
+                candidate.partnerTypeA,
+                *in.bodyA,
+                wakeA
+            );
+    }
+    else {
+        contact.noSolverResponseA = true;
+        contact.contributesMotionA = false;
+    }
+
+    if (isRigidB) {
+        contact.noSolverResponseB =
+            computeNoSolverResponse(*in.bodyB, wakeB);
+
+        contact.contributesMotionB =
+            computeContributesMotion(
+                candidate.partnerTypeB,
+                *in.bodyB,
+                wakeB
+            );
+    }
+    else {
+        // Terrain / missing body
+        contact.noSolverResponseB = true;
+        contact.contributesMotionB = false;
+    }
+
+    if (contact.noSolverResponseA && contact.noSolverResponseB) {
+        return;
+    }
+
+    batch.speculativeContacts.push_back(contact);
+
+    if (debugSpeculativeContacts) {
+        DebugSpeculativeContact debugContact{};
+        debugContact.bodyA = in.bodyHandleA;
+        debugContact.bodyB = in.bodyHandleB;
+        debugContact.worldPos = candidate.sat.point;
+
+        debugSpeculativeContacts->push_back(debugContact);
+    }
 }

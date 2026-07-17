@@ -224,7 +224,9 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
     }
 
     static std::vector<RigidBodyHandle> candidates;
+    static std::vector<Tri*> terrainCandidates;
     candidates.reserve(BVHTree::MaxCollisionBuf);
+    terrainCandidates.reserve(BVHTree::MaxCollisionBuf);
 
     for (int i = 0; i < speculativeBodies.size(); ++i) {
         RigidBodyHandle bodyHandle = speculativeBodies[i];
@@ -261,6 +263,15 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
                     SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle }
                 );
             }
+        }
+
+        // ----- speculative dynamic vs terrain -----
+        if (terrainBvh.rootIdx != -1) {
+            candidates.clear();
+            terrainBvh.singleQuery(sweptAABB, terrainCandidates);
+            batch.speculativeTerrainPairs.emplace_back(
+                SpeculativeTerrainPair{ bodyHandle, std::move(terrainCandidates) }
+            );
         }
     }
 }

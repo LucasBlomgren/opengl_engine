@@ -489,8 +489,8 @@ void CollisionManifold::clipPoints(
     const std::array<glm::vec3, 4>& referenceFace,
     const std::array<glm::vec3, 4>& incidentFace,
     int incidentCount,
-    const glm::vec3& referenceFaceNormal
-) {
+    const glm::vec3& referenceFaceNormal) 
+{
     createClippingPlanes(referenceFace, referenceFaceNormal);
 
     clippedPointCount = 0;

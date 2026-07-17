@@ -55,9 +55,9 @@ void NarrowphaseManager::narrowPhase(
     std::cout << "Per pair time: " << (elapsed * 1000.0) / pairs.dynamicPairs.size() << " ms" << std::endl;*/
 
     // Speculative terrain
-    //for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
-    //    processSpeculativeTerrainPairs(pair, dt);
-    //}
+    for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
+        processSpeculativeTerrainPairs(pair, dt);
+    }
 
     // Speculative dynamic
     start = glfwGetTime();
@@ -285,6 +285,70 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
         case ColliderType::SPHERE:
             processTerrainTriSphere(batch, collider->rigidBodyHandle, collider, body, *candidates);
             break;
+        }
+    }
+}
+
+//=======================================================
+//     Speculative Terrain pair processing
+//=======================================================
+void NarrowphaseManager::processSpeculativeTerrainPairs(
+    const SpeculativeTerrainPair& pair,
+    float dt)
+{
+    RigidBody* body = caches->bodies.get(pair.body, FUNC_NAME);
+
+    if (!body || body->asleep || body->type == BodyType::Kinematic) {
+        return;
+    }
+
+    for (const ColliderHandle& colH : body->colliderHandles) {
+        Collider* collider = caches->colliders.get(colH, FUNC_NAME);
+
+        const std::vector<Tri*>* candidates = &pair.tris;
+
+        if (body->isCompound()) {
+            terrainTriCandidates.clear();
+            terrainTriCandidates.reserve(pair.tris.size());
+
+            collectTerrainTriCandidates(collider, pair.tris, terrainTriCandidates);
+
+            if (terrainTriCandidates.empty()) {
+                continue;
+            }
+
+            candidates = &terrainTriCandidates;
+        }
+
+        if (collider->type != ColliderType::SPHERE) {
+            continue; // börja bara med sphere-terrain speculative
+        }
+
+        for (Tri* tri : *candidates) {
+            ContactBuildInput in{};
+            in.bodyHandleA = pair.body;
+            in.colliderHandleA = colH;
+            in.bodyA = body;
+            in.colliderA = collider;
+
+            // B = terrain
+            in.bodyB = nullptr;
+            in.colliderB = nullptr;
+
+            DynamicContactCandidate candidate{};
+            candidate.partnerTypeA = ContactPartnerType::RigidBody;
+            candidate.partnerTypeB = ContactPartnerType::Terrain;
+
+            if (!trySpeculativeSphereTriangle(in, tri, candidate, dt)) {
+                continue;
+            }
+
+            PendingSpeculativeContact pending{};
+            pending.input = in;
+            pending.candidate = candidate;
+            pending.sweepOwner = pair.body;
+
+            pendingSpeculativeContacts.push_back(pending);
         }
     }
 }
