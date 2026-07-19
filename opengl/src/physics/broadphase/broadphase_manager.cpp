@@ -16,9 +16,10 @@ void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::ve
     SlotMap<RigidBody, RigidBodyHandle>* bMap = caches->bodies.sm; // sm=slotmap
     size_t slotCap = bMap->dense().capacity();
 
-    awakeBvh.init(world, caches, slotCap);
-    asleepBvh.init(world, caches, slotCap);
-    staticBvh.init(world, caches, slotCap);
+    awakeBvh.init(world, caches, slotCap, true);
+    asleepBvh.init(world, caches, slotCap, true);
+    staticBvh.init(world, caches, slotCap, true);
+    speculativeBvh.init(world, caches, slotCap, false); // speculative pairs don't need to write leaf indices
 
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);
@@ -35,6 +36,7 @@ void BroadphaseManager::clear() {
     awakeBvh.clear();
     asleepBvh.clear();
     staticBvh.clear();
+    speculativeBvh.clear();
 
     pairsBufDynamic.clear();
     pairsBufTerrain.clear();
@@ -175,10 +177,8 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
     }
 }
 
-//==================================================
-//     Build speculative pairs for narrowphase
-//==================================================
-void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) {
+void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) 
+{
     batch.speculativeDynamicPairs.clear();
     batch.speculativeTerrainPairs.clear();
     batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
@@ -192,86 +192,105 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
     speculativeAABBs.clear();
     determineSpeculativeBodies(dt, speculativeBodies, speculativeAABBs);
 
-    // #TODO: Let debug renderer use speculativeAABBs directly instead of copying to debugSweeps.
-    debugSweeps = speculativeAABBs;
-    
-    // ----- speculative dynamic vs speculative dynamic -----
-    // #TODO: This is O(n^2) and could be improved with sweep-and-prune
-    for (size_t i = 0; i < speculativeBodies.size(); ++i) {
-        for (size_t j = i + 1; j < speculativeBodies.size(); ++j) {
-            if (!speculativeAABBs[i].intersects(speculativeAABBs[j])) {
-                continue;
-            }
+    speculativeBvh.clear();
+    speculativeBvh.build(speculativeBodies, speculativeAABBs);
 
-            RigidBodyHandle bodyA = speculativeBodies[i];
-            RigidBodyHandle bodyB = speculativeBodies[j];
+    // ----- dynamic vs terrain -----
+    if (terrainBvh.rootIdx != -1) {
+        pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
+        pairsBufTerrain.clear();
+        treeVsTreeQuery(speculativeBvh, terrainBvh, pairsBufTerrain);
 
-            if (bodyA == bodyB) {
-                continue;
-            }
+        // Sort terrain pairs by RigidBody to avoid duplicates 
+        std::unordered_map<RigidBodyHandle, std::vector<Tri*>> temp;
+        temp.reserve(pairsBufTerrain.size());
+        if (temp.bucket_count() < pairsBufTerrain.size())
+            temp.reserve(pairsBufTerrain.size());
 
-            // Add once for A's sweep ownership.
+        for (int i = 0; i < pairsBufTerrain.size(); i++) {
+            auto [rigidBody, tri] = pairsBufTerrain[i];
+            temp[rigidBody].push_back(tri);
+        }
+
+        // Finalize terrain pairs
+        batch.speculativeTerrainPairs.clear();
+        int cap = static_cast<int>(temp.size());
+        batch.speculativeTerrainPairs.resize(cap);
+        int sp = 0;
+
+        for (auto& [bodyHandle, trisVec] : temp) {
+            batch.speculativeTerrainPairs[sp++] = SpeculativeTerrainPair{ bodyHandle, std::move(trisVec) };
+        }
+        batch.speculativeTerrainPairs.resize(sp);
+    }
+
+    // ----- speculative vs speculative -----
+    if (speculativeBvh.rootIdx != -1) {
+        pairsBufDynamic.clear();
+        treeVsSameTreeQuery(speculativeBvh, pairsBufDynamic);
+
+        int cap = static_cast<int>(pairsBufDynamic.size());
+        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+        int sp = 0;
+
+        for (auto& hp : pairsBufDynamic) {
+            RigidBodyHandle a = hp.first;
+            RigidBodyHandle b = hp.second;
+
+            // A's sweep ownership.
             batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ bodyA, bodyB, bodyA }
+                SpeculativeDynamicPair{ a, b, a }
             );
-
-            // Add once for B's sweep ownership.
-            // This lets min-TOI filtering consider this pair for both bodies.
+            // B's sweep ownership.
             batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ bodyA, bodyB, bodyB }
+                SpeculativeDynamicPair{ a, b, b }
             );
         }
     }
 
-    static std::vector<RigidBodyHandle> candidates;
-    static std::vector<Tri*> terrainCandidates;
-    candidates.reserve(BVHTree::MaxCollisionBuf);
-    terrainCandidates.reserve(BVHTree::MaxCollisionBuf);
+    // ----- speculative vs awake -----
+    if (awakeBvh.rootIdx != -1) {
+        pairsBufDynamic.clear();
+        treeVsTreeQuery(speculativeBvh, awakeBvh, pairsBufDynamic);
 
-    for (int i = 0; i < speculativeBodies.size(); ++i) {
-        RigidBodyHandle bodyHandle = speculativeBodies[i];
-        AABB& sweptAABB = speculativeAABBs[i];
+        int cap = static_cast<int>(pairsBufDynamic.size());
+        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+        int sp = 0;
 
-        // ----- speculative dynamic vs awake -----
-        if (awakeBvh.rootIdx != -1) { 
-            candidates.clear(); 
-            awakeBvh.singleQuery(sweptAABB, candidates);
-            for (auto& otherHandle : candidates) {
-                if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(
-                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle });
-            }
-        }
-        // ----- speculative dynamic vs asleep -----
-        if (asleepBvh.rootIdx != -1) {
-            candidates.clear();
-            asleepBvh.singleQuery(sweptAABB, candidates);
-            for (auto& otherHandle : candidates) {
-                if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(
-                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle }
-                );
-            }
-        }
-        //----- speculative dynamic vs static -----
-        if (staticBvh.rootIdx != -1) {
-            candidates.clear();
-            staticBvh.singleQuery(sweptAABB, candidates);
-            for (auto& otherHandle : candidates) {
-                if (bodyHandle == otherHandle) continue;
-                batch.speculativeDynamicPairs.emplace_back(
-                    SpeculativeDynamicPair{ bodyHandle, otherHandle, bodyHandle }
-                );
-            }
-        }
-
-        // ----- speculative dynamic vs terrain -----
-        if (terrainBvh.rootIdx != -1) {
-            candidates.clear();
-            terrainBvh.singleQuery(sweptAABB, terrainCandidates);
-            batch.speculativeTerrainPairs.emplace_back(
-                SpeculativeTerrainPair{ bodyHandle, std::move(terrainCandidates) }
+        for (auto& hp : pairsBufDynamic) {
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ hp.first, hp.second }
             );
+        }
+    }
+
+    // ----- speculative vs asleep -----
+    if (asleepBvh.rootIdx != -1) {
+        pairsBufDynamic.clear();
+        treeVsTreeQuery(speculativeBvh, asleepBvh, pairsBufDynamic);
+
+        int cap = static_cast<int>(pairsBufDynamic.size());
+        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+        int sp = 0;
+
+        for (auto& hp : pairsBufDynamic) {
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ hp.first, hp.second });
+        }
+    }
+
+    // ----- speculative vs static -----
+    if (staticBvh.rootIdx != -1) {
+        pairsBufDynamic.clear();
+        treeVsTreeQuery(speculativeBvh, staticBvh, pairsBufDynamic);
+
+        int cap = static_cast<int>(pairsBufDynamic.size());
+        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+        int sp = 0;
+
+        for (auto& hp : pairsBufDynamic) {
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ hp.first, hp.second });
         }
     }
 }

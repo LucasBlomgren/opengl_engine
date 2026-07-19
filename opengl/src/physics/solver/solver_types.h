@@ -55,7 +55,7 @@ struct SpeculativeConstraint {
 
     // stored before speculative solve for post-restitution velocity calculation
     float incomingNormalVelocity = 0.0f; 
-    float restitution = 0.5f;
+    float restitution = 0.1f;
 
     uint8_t flags = 0;
 }; // 44 bytes = 1 cache line

@@ -277,8 +277,6 @@ void DebugRenderer::renderContactPoints(
         renderContactPoint(*debugShapeShader, VAO_contactPoint, specContact.worldPos);
     }
     glEnable(GL_DEPTH_TEST);
-
-    std::cout << "DebugRenderer: Rendered " << cache.size() << " contact points and " << speculativeContacts.size() << " speculative contacts." << std::endl;
 }
 
 //----------------------------------------

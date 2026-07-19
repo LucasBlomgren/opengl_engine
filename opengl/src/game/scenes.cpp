@@ -26,111 +26,49 @@ void SceneBuilder::testFloorScene(int amount) {
     glm::vec3 cellSize = { 50, 1, 50 };
     createGridFloor(offset, cellSize, 10, 8);
 
-    {
-        GameObjectDesc fastSphere;
-        glm::vec3 position{ 0.0, 100.0, -100.0 };
-        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
-        fastSphere.rootTransformHandle = world.createTransform(position, orientation);
-        fastSphere.mass = 2.0f;
-        SubPartDesc part;
-        part.colliderType = ColliderType::SPHERE;
-        part.meshName = "sphere";
-        part.textureName = "checker_gray";
-        part.localTransformHandle = world.createTransform();
-        fastSphere.parts.push_back(part);
-        GameObjectHandle fastSphereHandle = world.createGameObject(fastSphere);
-        RigidBody* fastSphereBody = world.getRigidBody(fastSphereHandle);
-        fastSphereBody->linearVelocity = glm::vec3(-500.0f, 0.0f, 0.0f);
+    // circular tower of boxes
+    for (int k = 0; k < 5; k++) {
+        for (int l = 0; l < 5; l++) {
+            float angleRad;
+            glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
+            glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
+            glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
+            glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
 
-        GameObjectDesc fastSphere2;
-        position = { -75.0, 100.0, -100.0 };
-        orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0, 0.0, 0.0));
-        fastSphere2.rootTransformHandle = world.createTransform(position, orientation);
-        fastSphere2.mass = 1.0f;
-        SubPartDesc part2;
-        part2.colliderType = ColliderType::SPHERE;
-        part2.meshName = "sphere";
-        part2.textureName = "checker_magenta";
-        part2.localTransformHandle = world.createTransform();
-        fastSphere2.parts.push_back(part2);
-        GameObjectHandle fastSphere2Handle = world.createGameObject(fastSphere2);
-        RigidBody* fastSphere2Body = world.getRigidBody(fastSphere2Handle);
-        fastSphere2Body->linearVelocity = glm::vec3(500.0f, 0.0f, 0.0f);
+            int height = 9;
+            for (int i = 0; i < height; i++) {
+                angleRad = glm::radians(static_cast<float>(i) * 15.0);
+
+                for (int j = 0; j < 12; j++) {
+
+                    glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
+
+                    glm::vec3 offset = startPos - center;   // radien från center till startPos
+                    glm::vec3 rotated = q * offset;         // radien vriden runt axeln
+                    glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
+
+                    glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
+                    newCenter.y += i;
+
+                    glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+
+                    GameObjectDesc box;
+                    box.name = "Box";
+                    box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
+                    box.asleep = true;
+                    box.mass = 1.0f;
+                    SubPartDesc part;
+                    part.localTransformHandle = world.createTransform();
+                    part.textureName = "plain";
+                    part.color = randomColor / 255.0f;
+                    box.parts.push_back(part);
+                    world.createGameObject(box);
+
+                    angleRad += glm::radians(30.0f);
+                }
+            }
+        }
     }
-
-    //int maxPerAxis = 30;
-    //float spacing = 2.5f;
-
-    //for (int n = 0; n < amount; n++) {
-    //    int x = n % maxPerAxis;
-    //    int z = (n / maxPerAxis) % maxPerAxis;
-    //    int y = n / (maxPerAxis * maxPerAxis);
-
-    //    if (y >= maxPerAxis) {
-    //        break; // max 10x10x10 = 1000 objekt
-    //    }
-
-    //    glm::vec3 pos = glm::vec3(
-    //        x * spacing,
-    //        y * spacing + 0.5f,
-    //        z * spacing
-    //    );
-
-    //    GameObjectDesc box;
-    //    box.name = "Box";
-    //    box.rootTransformHandle = world.createTransform(pos, glm::quat(1.0, 0.0, 0.0, 0.0), glm::vec3(1.0, 1.0, 1.0));
-    //    box.asleep = false;
-    //    box.mass = 1.0f;
-    //    SubPartDesc part;
-    //    part.localTransformHandle = world.createTransform();
-    //    part.textureName = "plain";
-    //    box.parts.push_back(part);
-    //    world.createGameObject(box);
-    //}
-//
-//    // circular tower of boxes
-//    for (int k = 0; k < 5; k++) {
-//        for (int l = 0; l < 5; l++) {
-//            float angleRad;
-//            glm::vec3 axis = glm::normalize(glm::vec3(0.0, 1.0, 0.0));
-//            glm::vec3 center = glm::vec3(-35.0 + k * 25, 0.5, -35.0 + l * 25);
-//            glm::vec3 startPos = center + glm::vec3(0.0, 0.0, 5.5);
-//            glm::quat oldOrientation = glm::quat(1.0, 0.0, 0.0, 0.0);
-//
-//            int height = 9;
-//            for (int i = 0; i < height; i++) {
-//                angleRad = glm::radians(static_cast<float>(i) * 15.0);
-//
-//                for (int j = 0; j < 12; j++) {
-//
-//                    glm::quat q = glm::angleAxis(angleRad, glm::normalize(axis));
-//
-//                    glm::vec3 offset = startPos - center;   // radien från center till startPos
-//                    glm::vec3 rotated = q * offset;         // radien vriden runt axeln
-//                    glm::vec3 newCenter = center + rotated; // placera den vridna radien med bas i center
-//
-//                    glm::quat orientation = glm::angleAxis(angleRad, glm::normalize(axis));
-//                    newCenter.y += i;
-//
-//                    glm::vec3 randomColor = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
-//
-//                    GameObjectDesc box;
-//                    box.name = "Box";
-//                    box.rootTransformHandle = world.createTransform(newCenter, orientation, glm::vec3(2.5, 1.0, 1.0));
-//                    box.asleep = true;
-//                    box.mass = 1.0f;
-//                    SubPartDesc part;
-//                    part.localTransformHandle = world.createTransform();
-//                    part.textureName = "plain";
-//                    part.color = randomColor / 255.0f;
-//                    box.parts.push_back(part);
-//                    world.createGameObject(box);
-//
-//                    angleRad += glm::radians(30.0f);
-//                }
-//            }
-//        }
-//    }
 //
 //    glm::vec3 offsetpos = glm::vec3(150, 0.25, 150);
 //
@@ -435,171 +373,170 @@ void SceneBuilder::testFloorScene(int amount) {
 //
 //
 //
-//    // rotating cylinder made from box subparts + inner shelves/baffles
-//    glm::vec3 axis = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
-//
-//    glm::vec3 center = glm::vec3(
-//        -35.0f + 25.0f,
-//        100.5f,
-//        -35.0f + 25.0f
-//    );
-//
-//    // ------------------------------------------------------
-//    // Cylinder settings
-//    // ------------------------------------------------------
-//    int wallCount = 12;
-//    int shelfCount = 4;
-//
-//    float radius = 50.0f;
-//    float cylinderDepth = 100.0f;
-//
-//    float angleRad = glm::radians(15.0f);
-//    float angleStep = glm::radians(360.0f / static_cast<float>(wallCount));
-//
-//    // ------------------------------------------------------
-//    // Auto-sized wall dimensions
-//    // ------------------------------------------------------
-//    float wallThickness = 1.0f;
-//
-//    // Tangential width needed for one wall segment at this radius.
-//    // tan() is better here than sin() because the wall segment is flat/tangent.
-//    float wallOverlap = 1.10f;
-//    float wallWidth = 2.0f * radius * std::tan(angleStep * 0.5f) * wallOverlap;
-//
-//    // ------------------------------------------------------
-//    // Auto-sized shelf / baffle dimensions
-//    // ------------------------------------------------------
-//    float shelfDepthRatio = 0.15f;   // shelf sticks inward 25% of radius
-//    float shelfWidthRatio = 0.15f;   // shelf tangential width relative to wall segment width
-//
-//    float shelfDepth = radius * shelfDepthRatio;
-//    float shelfWidth = wallWidth * shelfWidthRatio;
-//    float shelfZ = cylinderDepth;
-//
-//    // Keep shelf inside the wall.
-//    // Shelf's local +X is radial, so scale.x = shelfDepth.
-//    float shelfCenterRadius =
-//    radius
-//    - wallThickness * 0.5f
-//    - shelfDepth * 0.5f;
-//
-//    // ------------------------------------------------------
-//    // One root GameObject at the shared cylinder center
-//    // ------------------------------------------------------
-//    GameObjectDesc cylinder;
-//    cylinder.name = "RotatingCylinder";
-//
-//    cylinder.rootTransformHandle = world.createTransform(
-//        center,
-//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-//        glm::vec3(1.0f)
-//    );
-//
-//    cylinder.bodyType = BodyType::Kinematic;
-//    cylinder.asleep = false;
-//    cylinder.mass = 1.0f;
-//
-//    // ------------------------------------------------------
-//    // Add wall parts around the root center
-//    // ------------------------------------------------------
-//    for (int j = 0; j < wallCount; j++) {
-//        glm::quat localRotation = glm::angleAxis(angleRad, axis);
-//
-//        // Local position relative to cylinder root center
-//        glm::vec3 localOffset = localRotation * glm::vec3(radius, 0.0f, 0.0f);
-//
-//        //glm::vec3 randomColor = glm::vec3(
-//        //    randomRange(0, 255),
-//        //    randomRange(0, 255),
-//        //    randomRange(0, 255)
-//        //);
-//
-//        glm::vec3 randomColor = glm::vec3(200, 200, 200);
-//
-//        SubPartDesc part;
-//
-//        part.localTransformHandle = world.createTransform(
-//            localOffset,
-//            localRotation,
-//            glm::vec3(wallThickness, wallWidth, cylinderDepth)
-//        );
-//
-//        part.textureName = "plain";
-//        part.color = randomColor / 255.0f;
-//
-//        cylinder.parts.push_back(part);
-//
-//        angleRad += angleStep;
-//    }
-//
-//    // ------------------------------------------------------
-//    // Add inner shelves / baffles
-//    // ------------------------------------------------------
-//    for (int i = 0; i < shelfCount; i++) {
-//        float shelfAngle =
-//            glm::radians(360.0f * static_cast<float>(i) / static_cast<float>(shelfCount));
-//
-//        glm::quat shelfRotation = glm::angleAxis(shelfAngle, axis);
-//
-//        glm::vec3 shelfOffset =
-//            shelfRotation * glm::vec3(shelfCenterRadius+2.0f, 0.0f, 0.0f);
-//
-//        SubPartDesc shelf;
-//
-//        shelf.localTransformHandle = world.createTransform(
-//            shelfOffset,
-//            shelfRotation,
-//            glm::vec3(shelfDepth, shelfWidth, shelfZ)
-//        );
-//
-//        shelf.textureName = "plain";
-//        shelf.color = glm::vec3(0.9f, 0.9f, 0.2f);
-//
-//        cylinder.parts.push_back(shelf);
-//    }
-//
-//    // ------------------------------------------------------
-//    // Create one GameObject and spin the whole thing
-//    // ------------------------------------------------------
-//    GameObjectHandle h = world.createGameObject(cylinder);
-//
-//    RigidBody* rb = world.getRigidBody(h);
-//    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -0.3f);
-//
-//
-//
-//
-//    GameObjectDesc tumblerFrontWall;
-//    tumblerFrontWall.name = "TumblerFrontWall";
-//    tumblerFrontWall.rootTransformHandle = world.createTransform(
-//        center - glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
-//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-//        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
-//    );
-//    tumblerFrontWall.bodyType = BodyType::Static;
-//    SubPartDesc frontWallPart;
-//    frontWallPart.seeThrough = true;
-//    frontWallPart.localTransformHandle = world.createTransform();
-//    frontWallPart.textureName = "plain";
-//    frontWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
-//    tumblerFrontWall.parts.push_back(frontWallPart);
-//    world.createGameObject(tumblerFrontWall);
-//
-//    GameObjectDesc tumblerBackWall;
-//    tumblerBackWall.name = "TumblerBackWall";
-//    tumblerBackWall.rootTransformHandle = world.createTransform(
-//        center + glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
-//        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-//        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
-//    );
-//    tumblerBackWall.bodyType = BodyType::Static;
-//    SubPartDesc backWallPart;
-//    backWallPart.localTransformHandle = world.createTransform();
-//    backWallPart.textureName = "plain";
-//    backWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
-//    tumblerBackWall.parts.push_back(backWallPart);
-//    world.createGameObject(tumblerBackWall);
-//
+    // rotating cylinder made from box subparts + inner shelves/baffles
+    glm::vec3 axis = glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f));
+
+    glm::vec3 center = glm::vec3(
+        -35.0f + 25.0f,
+        100.5f,
+        -35.0f + 25.0f
+    );
+
+    // ------------------------------------------------------
+    // Cylinder settings
+    // ------------------------------------------------------
+    int wallCount = 12;
+    int shelfCount = 4;
+
+    float radius = 50.0f;
+    float cylinderDepth = 100.0f;
+
+    float angleRad = glm::radians(15.0f);
+    float angleStep = glm::radians(360.0f / static_cast<float>(wallCount));
+
+    // ------------------------------------------------------
+    // Auto-sized wall dimensions
+    // ------------------------------------------------------
+    float wallThickness = 1.0f;
+
+    // Tangential width needed for one wall segment at this radius.
+    // tan() is better here than sin() because the wall segment is flat/tangent.
+    float wallOverlap = 1.10f;
+    float wallWidth = 2.0f * radius * std::tan(angleStep * 0.5f) * wallOverlap;
+
+    // ------------------------------------------------------
+    // Auto-sized shelf / baffle dimensions
+    // ------------------------------------------------------
+    float shelfDepthRatio = 0.15f;   // shelf sticks inward 25% of radius
+    float shelfWidthRatio = 0.15f;   // shelf tangential width relative to wall segment width
+
+    float shelfDepth = radius * shelfDepthRatio;
+    float shelfWidth = wallWidth * shelfWidthRatio;
+    float shelfZ = cylinderDepth;
+
+    // Keep shelf inside the wall.
+    // Shelf's local +X is radial, so scale.x = shelfDepth.
+    float shelfCenterRadius =
+    radius
+    - wallThickness * 0.5f
+    - shelfDepth * 0.5f;
+
+    // ------------------------------------------------------
+    // One root GameObject at the shared cylinder center
+    // ------------------------------------------------------
+    GameObjectDesc cylinder;
+    cylinder.name = "RotatingCylinder";
+
+    cylinder.rootTransformHandle = world.createTransform(
+        center,
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f)
+    );
+
+    cylinder.bodyType = BodyType::Kinematic;
+    cylinder.asleep = false;
+    cylinder.mass = 1.0f;
+
+    // ------------------------------------------------------
+    // Add wall parts around the root center
+    // ------------------------------------------------------
+    for (int j = 0; j < wallCount; j++) {
+        glm::quat localRotation = glm::angleAxis(angleRad, axis);
+
+        // Local position relative to cylinder root center
+        glm::vec3 localOffset = localRotation * glm::vec3(radius, 0.0f, 0.0f);
+
+        //glm::vec3 randomColor = glm::vec3(
+        //    randomRange(0, 255),
+        //    randomRange(0, 255),
+        //    randomRange(0, 255)
+        //);
+
+        glm::vec3 randomColor = glm::vec3(200, 200, 200);
+
+        SubPartDesc part;
+
+        part.localTransformHandle = world.createTransform(
+            localOffset,
+            localRotation,
+            glm::vec3(wallThickness, wallWidth, cylinderDepth)
+        );
+
+        part.textureName = "plain";
+        part.color = randomColor / 255.0f;
+
+        cylinder.parts.push_back(part);
+
+        angleRad += angleStep;
+    }
+
+    // ------------------------------------------------------
+    // Add inner shelves / baffles
+    // ------------------------------------------------------
+    for (int i = 0; i < shelfCount; i++) {
+        float shelfAngle =
+            glm::radians(360.0f * static_cast<float>(i) / static_cast<float>(shelfCount));
+
+        glm::quat shelfRotation = glm::angleAxis(shelfAngle, axis);
+
+        glm::vec3 shelfOffset =
+            shelfRotation * glm::vec3(shelfCenterRadius+2.0f, 0.0f, 0.0f);
+
+        SubPartDesc shelf;
+
+        shelf.localTransformHandle = world.createTransform(
+            shelfOffset,
+            shelfRotation,
+            glm::vec3(shelfDepth, shelfWidth, shelfZ)
+        );
+
+        shelf.textureName = "plain";
+        shelf.color = glm::vec3(0.9f, 0.9f, 0.2f);
+
+        cylinder.parts.push_back(shelf);
+    }
+
+    // ------------------------------------------------------
+    // Create one GameObject and spin the whole thing
+    // ------------------------------------------------------
+    GameObjectHandle h = world.createGameObject(cylinder);
+
+    RigidBody* rb = world.getRigidBody(h);
+    rb->angularVelocity = glm::vec3(0.0f, 0.0f, -0.3f);
+
+
+
+
+    GameObjectDesc tumblerFrontWall;
+    tumblerFrontWall.name = "TumblerFrontWall";
+    tumblerFrontWall.rootTransformHandle = world.createTransform(
+        center - glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
+    );
+    tumblerFrontWall.bodyType = BodyType::Static;
+    SubPartDesc frontWallPart;
+    frontWallPart.seeThrough = true;
+    frontWallPart.localTransformHandle = world.createTransform();
+    frontWallPart.textureName = "plain";
+    frontWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
+    tumblerFrontWall.parts.push_back(frontWallPart);
+    world.createGameObject(tumblerFrontWall);
+
+    GameObjectDesc tumblerBackWall;
+    tumblerBackWall.name = "TumblerBackWall";
+    tumblerBackWall.rootTransformHandle = world.createTransform(
+        center + glm::vec3(0.0f, 0.0f, shelfZ * 0.5f + wallThickness * 0.5f),
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(radius * 2.0f, radius * 2.0f, wallThickness)
+    );
+    tumblerBackWall.bodyType = BodyType::Static;
+    SubPartDesc backWallPart;
+    backWallPart.localTransformHandle = world.createTransform();
+    backWallPart.textureName = "plain";
+    backWallPart.color = glm::vec3(0.8f, 0.8f, 0.8f);
+    tumblerBackWall.parts.push_back(backWallPart);
+    world.createGameObject(tumblerBackWall);
 }
 
 void SceneBuilder::terrainScene() {
@@ -1822,11 +1759,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(255.0f, 0.0f, 255.0f)
     );
 
-    // Grey brick walls
-    createBrickWall(glm::vec3(-10.0f, 0.0f, 194.0f), 0, 50, 21, glm::vec3(1.0f), 0.0f, 1, 0, glm::vec2(95.0f, 110.0f), false);
-    createBrickWall(glm::vec3(-10.0f, 0.0f, 215.0f), 0, 50, 21, glm::vec3(1.0f), 0.0f, 1, 0, glm::vec2(95.0f, 110.0f), false);
-    createBrickWall(glm::vec3(-10.0f, 0.0f, 195.0f), 1, 50, 20, glm::vec3(1.0f), 0.0f, 1, 0, glm::vec2(95.0f, 110.0f), false);
-    createBrickWall(glm::vec3(10.0f, 0.0f, 195.0f), 1, 50, 20, glm::vec3(1.0f), 0.0f, 1, 0, glm::vec2(95.0f, 110.0f), false);
 
     glm::quat modelOrientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 

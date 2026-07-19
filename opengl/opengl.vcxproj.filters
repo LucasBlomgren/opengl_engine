@@ -81,11 +81,14 @@
     <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_box.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\normal_sphere_tri.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_tri.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\normal_sphere_sphere.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\normal_box_sphere.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_box.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_sphere.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_sphere.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
+    <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

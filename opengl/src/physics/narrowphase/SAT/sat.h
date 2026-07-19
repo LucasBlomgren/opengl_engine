@@ -29,13 +29,40 @@ namespace SAT {
     //=======================================================
     //     Speculative contact tests
     //=======================================================
+    bool speculativeBoxBox(
+        const Collider& colliderA,
+        const Collider& colliderB,
+        const RigidBody& bodyA,
+        const RigidBody& bodyB,
+        float dt,
+        SAT::Result& out
+    );
+
+    bool speculativeBoxSphere(
+        const Collider& boxCollider,
+        const Collider& sphereCollider,
+        const RigidBody& boxBody,
+        const RigidBody& sphereBody,
+        float dt,
+        SAT::Result& out
+    );
+
+    bool speculativeBoxTriangle(
+        const Collider& boxCollider,
+        const RigidBody& boxBody,
+        const Tri& tri,
+        float dt,
+        SAT::Result& out
+    );
+
     bool speculativeSphereSphere(
         const Collider& colliderA,
         const Collider& colliderB,
         const RigidBody& bodyA,
         const RigidBody& bodyB,
         float dt,
-        SAT::Result& out);
+        SAT::Result& out
+    );
 
     bool speculativeSphereTriangle(
         const Collider& sphereCollider,

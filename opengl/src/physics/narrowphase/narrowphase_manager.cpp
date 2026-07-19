@@ -227,6 +227,7 @@ void NarrowphaseManager::processColliderPairSpeculative(
         in.colliderA->type == ColliderType::SPHERE &&
         in.colliderB->type == ColliderType::SPHERE;
 
+
     if (boxBox) {
         hit = trySpeculativeBoxBox(in, candidate, dt);
     }
@@ -320,10 +321,6 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
             candidates = &terrainTriCandidates;
         }
 
-        if (collider->type != ColliderType::SPHERE) {
-            continue; // börja bara med sphere-terrain speculative
-        }
-
         for (Tri* tri : *candidates) {
             ContactBuildInput in{};
             in.bodyHandleA = pair.body;
@@ -339,8 +336,15 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
             candidate.partnerTypeA = ContactPartnerType::RigidBody;
             candidate.partnerTypeB = ContactPartnerType::Terrain;
 
-            if (!trySpeculativeSphereTriangle(in, tri, candidate, dt)) {
-                continue;
+            if (collider->type == ColliderType::CUBOID) {
+                if (!trySpeculativeBoxTriangle(in, tri, candidate, dt)) {
+                    continue;
+                }
+            }
+            else if (collider->type == ColliderType::SPHERE) {
+                if (!trySpeculativeSphereTriangle(in, tri, candidate, dt)) {
+                    continue;
+                }
             }
 
             PendingSpeculativeContact pending{};

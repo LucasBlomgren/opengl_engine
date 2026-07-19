@@ -35,7 +35,7 @@ public:
 
     // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
     using Element = RigidBodyHandle;
-    void init(PhysicsWorld* world, RuntimeCaches* caches, size_t allocSize);
+    void init(PhysicsWorld* world, RuntimeCaches* caches, size_t allocSize, bool writeBodyLeafIndices);
     void clear();
 
     bool dirty = false;
@@ -66,7 +66,18 @@ public:
     static constexpr int MaxStackSize = 512;
     static constexpr int MaxCollisionBuf = 25000;
 
-    void build(std::vector<RigidBodyHandle>& objects);
+    void build(const std::vector<RigidBodyHandle>& objects);
+
+    // for speculative pairs, using speculative AABBs
+    void build(
+        const std::vector<RigidBodyHandle>& handles,
+        const std::vector<AABB>& boxes
+    );
+
+    void createPrimitivesFromBodyAABBs(const std::vector<RigidBodyHandle>& handles);
+    void createPrimitivesFromExternalAABBs(const std::vector<RigidBodyHandle>& handles, const std::vector<AABB>& boxes);
+    void buildFromPrimitives();
+
     void update(std::vector<RigidBodyHandle>& objects);
     void singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const;
     bool queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const;
@@ -86,6 +97,8 @@ public:
 private:
     PhysicsWorld* world = nullptr;
     RuntimeCaches* caches = nullptr;
+
+    bool writeBodyLeafIndices = true;
 
     int rebuildCooldown = 10;
     int rebuildCooldownCounter = 0;

@@ -29,7 +29,7 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
 
     // #TODO: Fundera på vad TOI slop ska vara:
     // kanske beroende på dt, kropparnas hastighet, kropparnas storlek.
-    const float toiSlop = 1e-6f;
+    const float toiSlop = 5.5f;
 
     for (PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
         const uint64_t ownerKey = packBodyHandle(pending.sweepOwner);

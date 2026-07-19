@@ -199,7 +199,7 @@ namespace sap {
 
     void SweepAndPrune::query(
         RuntimeCaches* caches,
-        std::vector<DynamicPair>& out)
+        std::vector<SpeculativeDynamicPair>& out)
     {
         if (mode == Mode::Empty) {
             return;
@@ -272,7 +272,7 @@ namespace sap {
     }
 
     void SweepAndPrune::querySameSet(
-        std::vector<DynamicPair>& out)
+        std::vector<SpeculativeDynamicPair>& out)
     {
         const int count = static_cast<int>(aItems.size());
 
@@ -303,6 +303,12 @@ namespace sap {
                         aItems[itemIdx].handle,
                         aItems[otherIdx].handle
                     );
+
+                    // Also add the reverse pair for for speculative sweep ownership.
+                    out.emplace_back(
+                        aItems[otherIdx].handle,
+                        aItems[itemIdx].handle
+                    );
                 }
 
                 activeA.add(itemIdx);
@@ -314,7 +320,7 @@ namespace sap {
     }
 
     void SweepAndPrune::queryTwoSets(
-        std::vector<DynamicPair>& out)
+        std::vector<SpeculativeDynamicPair>& out)
     {
         if (aItems.empty() || bItems.empty()) {
             return;

@@ -76,7 +76,10 @@ private:
     BVHTree awakeBvh;
     BVHTree asleepBvh;
     BVHTree staticBvh;
+    BVHTree speculativeBvh;
     TerrainBVH terrainBvh;
+
+    sap::SweepAndPrune sap;
 
     // pairs buffers
     std::vector<std::pair<RigidBodyHandle, Tri*>> pairsBufTerrain;

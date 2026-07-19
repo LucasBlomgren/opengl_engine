@@ -7,10 +7,12 @@
 void BVHTree::init(
     PhysicsWorld* world,
     RuntimeCaches* caches,
-    size_t allocSize) 
+    size_t allocSize,
+    bool writeBodyLeafIndices) 
 {
     this->world = world;
     this->caches = caches;
+    this->writeBodyLeafIndices = writeBodyLeafIndices;
 
     nodes.reserve(allocSize * 2);
     prims.reserve(allocSize);
@@ -360,38 +362,109 @@ void BVHTree::refitNode(int nodeIdx) {
 //========================================================
 //      Build
 //========================================================
-void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
+void BVHTree::build(const std::vector<RigidBodyHandle>& handles)
+{
+    createPrimitivesFromBodyAABBs(handles);
+    buildFromPrimitives();
+}
+
+void BVHTree::build(
+    const std::vector<RigidBodyHandle>& handles,
+    const std::vector<AABB>& boxes)
+{
+    createPrimitivesFromExternalAABBs(handles, boxes);
+    buildFromPrimitives();
+}
+
+void BVHTree::createPrimitivesFromBodyAABBs(
+    const std::vector<RigidBodyHandle>& handles)
+{
+    prims.clear();
+    prims.reserve(handles.size());
+
+    for (const RigidBodyHandle& bodyH : handles) {
+        RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
+
+        if (writeBodyLeafIndices) {
+            body->broadphaseHandle.leafIdx = -1;
+        }
+
+        const AABB& box = body->aabb;
+
+        BVHPrimitive prim{};
+        prim.min = box.worldMin;
+        prim.max = box.worldMax;
+        prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
+        prim.element = bodyH;
+        prims.push_back(prim);
+    }
+}
+
+void BVHTree::createPrimitivesFromExternalAABBs(
+    const std::vector<RigidBodyHandle>& handles,
+    const std::vector<AABB>& boxes)
+{
+    prims.clear();
+
+    if (handles.size() != boxes.size()) {
+        return;
+    }
+
+    prims.reserve(handles.size());
+
+    for (size_t i = 0; i < handles.size(); ++i) {
+        const RigidBodyHandle& bodyH = handles[i];
+        const AABB& box = boxes[i];
+
+        if (writeBodyLeafIndices) {
+            RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
+            body->broadphaseHandle.leafIdx = -1;
+        }
+
+        BVHPrimitive prim{};
+        prim.min = box.worldMin;
+        prim.max = box.worldMax;
+        prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
+        prim.element = bodyH;
+        prims.push_back(prim);
+    }
+}
+
+void BVHTree::buildFromPrimitives()
+{
     nodes.clear();
-    // Fill prims vector with primitives from handles
-    createPrimitives(handles);
 
     rootIdx = -1;
 
-    if (prims.empty()) return;
+    if (prims.empty()) {
+        return;
+    }
 
     numRefits = 0;
-    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
 
-    // Pre-allocate nodes, max number of nodes is 2n-1 (full binary tree)
+    rebuildThreshold = std::max(
+        minRebuildThreshold,
+        int(prims.size() * rebuildRatio + 0.5f)
+    );
+
     nodes.reserve(prims.size() * 2);
 
-    // Create root node
     rootIdx = 0;
     nodes.emplace_back();
+
     Node& root = nodes[rootIdx];
     root.selfIdx = rootIdx;
     root.start = 0;
-    root.count = prims.size();
+    root.count = static_cast<int>(prims.size());
 
-    // Calculate root AABB as union of all primitives
     root.fatBox.worldMin = prims[0].min;
     root.fatBox.worldMax = prims[0].max;
-    for (int i = 1; i < prims.size(); i++) {
+
+    for (int i = 1; i < static_cast<int>(prims.size()); i++) {
         root.fatBox.growToInclude(prims[i].min);
         root.fatBox.growToInclude(prims[i].max);
     }
 
-    // split into children
     int depth = 0;
     split(rootIdx, depth);
 
@@ -399,15 +472,68 @@ void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
         if (n.isLeaf) {
             n.fatBox.grow(fatBoxMargin);
 
-            if (shouldUpdateRenderData)
+            if (shouldUpdateRenderData) {
                 updateRenderData(n);
+            }
         }
         else {
             n.dirty = true;
         }
     }
-    if (rootIdx != -1) refitNode(rootIdx);
+
+    if (rootIdx != -1) {
+        refitNode(rootIdx);
+    }
 }
+
+//void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
+//    nodes.clear();
+//    // Fill prims vector with primitives from handles
+//    createPrimitives(handles);
+//
+//    rootIdx = -1;
+//
+//    if (prims.empty()) return;
+//
+//    numRefits = 0;
+//    rebuildThreshold = std::max(minRebuildThreshold, int(prims.size() * rebuildRatio + 0.5f));
+//
+//    // Pre-allocate nodes, max number of nodes is 2n-1 (full binary tree)
+//    nodes.reserve(prims.size() * 2);
+//
+//    // Create root node
+//    rootIdx = 0;
+//    nodes.emplace_back();
+//    Node& root = nodes[rootIdx];
+//    root.selfIdx = rootIdx;
+//    root.start = 0;
+//    root.count = prims.size();
+//
+//    // Calculate root AABB as union of all primitives
+//    root.fatBox.worldMin = prims[0].min;
+//    root.fatBox.worldMax = prims[0].max;
+//    for (int i = 1; i < prims.size(); i++) {
+//        root.fatBox.growToInclude(prims[i].min);
+//        root.fatBox.growToInclude(prims[i].max);
+//    }
+//
+//    // split into children
+//    int depth = 0;
+//    split(rootIdx, depth);
+//
+//    for (auto& n : nodes) {
+//        if (n.isLeaf) {
+//            n.fatBox.grow(fatBoxMargin);
+//
+//            if (shouldUpdateRenderData)
+//                updateRenderData(n);
+//        }
+//        else {
+//            n.dirty = true;
+//        }
+//    }
+//    if (rootIdx != -1) refitNode(rootIdx);
+//}
 
 void BVHTree::createPrimitives(std::vector<RigidBodyHandle>& handles) {
     prims.clear();
@@ -491,18 +617,33 @@ void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int
     }
 }
 
-void BVHTree::makeLeaf(int nodeIdx) {
+void BVHTree::makeLeaf(int nodeIdx)
+{
     Node& leaf = nodes[nodeIdx];
 
     leaf.selfIdx = nodeIdx;
     leaf.isLeaf = true;
-    leaf.element = prims[leaf.start].element;
+    leaf.childAIdx = -1;
+    leaf.childBIdx = -1;
 
-    RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
-    body->broadphaseHandle.leafIdx = leaf.selfIdx;
+    const BVHPrimitive& prim = prims[leaf.start];
 
-    leaf.tightBox = body->aabb;
-    leaf.fatBox = body->aabb;
+    leaf.element = prim.element;
+
+    leaf.tightBox.worldMin = prim.min;
+    leaf.tightBox.worldMax = prim.max;
+
+    leaf.tightBox.worldCenter =
+        (leaf.tightBox.worldMin + leaf.tightBox.worldMax) * 0.5f;
+    leaf.tightBox.worldHalfExtents =
+        (leaf.tightBox.worldMax - leaf.tightBox.worldMin) * 0.5f;
+
+    leaf.fatBox = leaf.tightBox;
+
+    if (writeBodyLeafIndices) {
+        RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
+        body->broadphaseHandle.leafIdx = leaf.selfIdx;
+    }
 }
 
 //========================================================

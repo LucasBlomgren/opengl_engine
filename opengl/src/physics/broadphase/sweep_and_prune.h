@@ -43,7 +43,7 @@ namespace sap {
         // Does not clear out.
         void query(
             RuntimeCaches* caches,
-            std::vector<DynamicPair>& out
+            std::vector<SpeculativeDynamicPair>& out
         );
 
         Mode getMode() const {
@@ -119,8 +119,8 @@ namespace sap {
         void updateEdgeValues();
         void sortEdges();
 
-        void querySameSet(std::vector<DynamicPair>& out);
-        void queryTwoSets(std::vector<DynamicPair>& out);
+        void querySameSet(std::vector<SpeculativeDynamicPair>& out);
+        void queryTwoSets(std::vector<SpeculativeDynamicPair>& out);
     };
 
 } // namespace sap
