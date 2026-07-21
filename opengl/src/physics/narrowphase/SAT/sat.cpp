@@ -11,6 +11,10 @@ void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) {
     }
 }
 
+//=======================================================
+//      Find 4 best triangles for manifold generation
+//      and sort them by depth
+//=======================================================
 void SAT::findBestTriangles(std::vector<SAT::Result>& results) { 
     if (results.size() <= 4)
         return; 

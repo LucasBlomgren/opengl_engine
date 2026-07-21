@@ -2,6 +2,21 @@
 #include "physics_engine.h"
 
 //====================================
+//  Sync
+//====================================
+void PhysicsEngine::syncBodyFromTransform(RigidBodyHandle bodyH)
+{
+    RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+    Transform* rootTransform =
+        caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
+
+    rootTransform->updateCache();
+    body->updateInertiaWorld(*rootTransform);
+
+    updateCollidersAndBodyAABB(body, rootTransform);
+}
+
+//====================================
 //    BVH 
 //====================================
 void PhysicsEngine::setBVHDirty(RigidBodyHandle& handle) {

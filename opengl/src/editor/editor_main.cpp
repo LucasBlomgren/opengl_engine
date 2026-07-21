@@ -188,9 +188,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
             SubPartDesc part;
             part.localTransformHandle = world->createTransform();
-            part.colliderType = ColliderType::CUBOID;
+            part.colliderType = ColliderType::SPHERE;
             part.textureName = "checker_magenta";
-            part.meshName = "cube";
+            part.meshName = "sphere";
             newObj.parts.push_back(part);
 
             // create new object & apply shoot velocity
@@ -254,9 +254,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
                     SubPartDesc part;
                     part.localTransformHandle = world->createTransform();
-                    part.colliderType = ColliderType::CUBOID;
+                    part.colliderType = ColliderType::SPHERE;
                     part.textureName = "checker_gray";
-                    part.meshName = "cube";
+                    part.meshName = "sphere";
                     newObj.parts.push_back(part);
 
                     // create new object & apply shoot velocity

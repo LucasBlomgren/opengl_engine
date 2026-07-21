@@ -27,6 +27,10 @@ bool NarrowphaseManager::trySpeculativeBoxSphere(
     DynamicContactCandidate& out,
     float dt)
 {
+    if (in.colliderA->type != ColliderType::CUBOID) {
+        in.swapAB();
+    }
+
     if (!SAT::speculativeBoxSphere(
         *in.colliderA,
         *in.colliderB,

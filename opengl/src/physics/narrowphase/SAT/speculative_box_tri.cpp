@@ -216,6 +216,48 @@ bool SAT::speculativeBoxTriangle(
         return false;
     }
 
+    //=======================================================
+    // Terrain speculative MVP fix:
+    // Do not emit edge/vertex contacts against triangle terrain.
+    // Internal triangle edges can create ghost normals that push objects
+    // sideways/down into the terrain.
+    //=======================================================
+    constexpr bool terrainFaceOnly = true;
+    constexpr bool oneSidedTerrain = true;
+
+    if (terrainFaceOnly) {
+        if (bestType != SAT::AxisType::TriFace) {
+            return false;
+        }
+
+        // For terrain, assume triNormal is the valid surface normal.
+        // Since A = box and B = terrain, the solver normal should point
+        // from box -> terrain, i.e. opposite the terrain normal when the
+        // box is above/front-side of the triangle.
+        if (oneSidedTerrain) {
+            if (glm::dot(bestAxis, triNormal) > -0.5f) {
+                return false; // backside hit
+            }
+
+            bestAxis = -triNormal;
+        }
+        else {
+            bestAxis =
+                (glm::dot(bestAxis, triNormal) < 0.0f)
+                ? -triNormal
+                : triNormal;
+        }
+
+        // Extra safety: only speculative hit if box is moving toward terrain.
+        if (glm::dot(boxVelocity, bestAxis) <= eps) {
+            return false;
+        }
+
+        bestType = SAT::AxisType::TriFace;
+        bestBoxAxis = -1;
+        bestTriEdge = -1;
+    }
+
     glm::vec3 boxCenterAtHit = boxCenter + boxVelocity * enterTime;
 
     auto supportPointBox = [&](
@@ -250,7 +292,15 @@ bool SAT::speculativeBoxTriangle(
         };
 
     glm::vec3 pointA = supportPointBox(boxCenterAtHit, bestAxis);
-    glm::vec3 pointB = supportPointTriangle(-bestAxis);
+    glm::vec3 pointB;
+
+    if (bestType == SAT::AxisType::TriFace) {
+        // Project box support point onto triangle plane.
+        pointB = pointA - triNormal * glm::dot(pointA - triA, triNormal);
+    }
+    else {
+        pointB = supportPointTriangle(-bestAxis);
+    }
 
     out.hitType = SAT::HitType::Speculative;
     out.normal = bestAxis; // A -> B

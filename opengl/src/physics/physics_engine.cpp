@@ -41,6 +41,9 @@ void PhysicsEngine::prepareStepLoop() {
 //====================================
 void PhysicsEngine::step(float dt, EngineState& engine)
 {
+    if (engine.isPaused() && !engine.getAdvanceStep())
+        return;
+
     double physicsStart = glfwGetTime() * 1000.0;
 
     const std::vector<RigidBodyHandle>& awake =
@@ -48,11 +51,15 @@ void PhysicsEngine::step(float dt, EngineState& engine)
 
     if (debugPhase == PhysicsStepDebugPhase::PausedBeforePositionIntegration) {
         // Resume second half of the step.
-        integratePositionsAndColliders(awake, pausedDt);
-        broadphaseManager.updateBVHs();
-        endPhysicsStep(pausedDt);
+        integratePositionsAndColliders(awake, dt);
+        //broadphaseManager.updateBVHs();
+        endPhysicsStep(dt);
         debugPhase = PhysicsStepDebugPhase::Ready;
-        pausedDt = 0.0f;
+
+        frameTimers->submit(
+            "Physics",
+            frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart + savedPhysicsSurpassedTime
+        );
     }
 
     // 1. Begin step: reset timers, prepare lists and contact cache for the new frame
@@ -129,9 +136,9 @@ void PhysicsEngine::step(float dt, EngineState& engine)
     );
 
     if (engine.isPaused()) {
-        pausedDt = dt;
         broadphaseManager.updateBVHs();
         debugPhase = PhysicsStepDebugPhase::PausedBeforePositionIntegration;
+        savedPhysicsSurpassedTime = glfwGetTime() * 1000.0 - physicsStart;
         return;
     }
 
@@ -152,6 +159,7 @@ void PhysicsEngine::step(float dt, EngineState& engine)
 //   reset timers, prepare lists and contact cache for the new frame
 //=====================================================================
 void PhysicsEngine::beginPhysicsStep(float outerDt) {
+    double start = glfwGetTime() * 1000.0;
     flushBroadphaseCommands();
 
     uint32_t bodiesSlotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
@@ -176,11 +184,16 @@ void PhysicsEngine::beginPhysicsStep(float outerDt) {
         }
     }
 
-    double start = glfwGetTime() * 1000.0;
-    broadphaseManager.updateBVHs();
+    //double startBvh = glfwGetTime() * 1000.0;
+    //broadphaseManager.updateBVHs();
+    //frameTimers->submit(
+    //    "BVH update",
+    //    frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - startBvh
+    //);
+
     frameTimers->submit(
-        "BVH update",
-        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+        "Pre step",
+        frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start
     );
 }
 

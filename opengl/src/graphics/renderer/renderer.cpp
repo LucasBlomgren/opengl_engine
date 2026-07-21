@@ -476,25 +476,34 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
 
     // --- Wireframe setup: skapas bara en gång ----
     if (VAO == 0) {
-        glGenVertexArrays(1, &VAO); glcount::incVAO();
-        glGenBuffers(1, &VBO); glcount::incVBO();
+        constexpr float textureTileSize = 5.0f;
+
+        for (Vertex& vertex : vertices) {
+            vertex.texCoords = glm::vec2(vertex.position.x / textureTileSize, vertex.position.z / textureTileSize);
+        }
+
+        glGenVertexArrays(1, &VAO);
+        glcount::incVAO();
+
+        glGenBuffers(1, &VBO);
+        glcount::incVBO();
 
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
 
+        glGenBuffers(1, &EBO);
+        glcount::incEBO();
 
-        glGenBuffers(1, &EBO); glcount::incEBO();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
 
-        // position attribute
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
         glEnableVertexAttribArray(0);
-        // normal attribute
+
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
         glEnableVertexAttribArray(1);
-        // texture coord attribute 
+
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
         glEnableVertexAttribArray(2);
 
@@ -519,11 +528,17 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
             defaultShader->setMat4("model", model);
             defaultShader->setBool("useTexture", true);
             defaultShader->setBool("useRandomColor", false);
-            defaultShader->setVec3("uColor", glm::vec3(0, 1, 0));
+            defaultShader->setVec3("uColor", glm::vec3(0.0f, 1.0f, 0.0f));
+
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, 5);
+            defaultShader->setInt("texture1", 0);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         }
 
-        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
     }
     if (renderWireframe) {
         if (!shadowPass) {

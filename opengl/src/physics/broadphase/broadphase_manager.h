@@ -7,7 +7,6 @@
 #include "bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
-#include "broadphase/sweep_and_prune.h"
 
 class RigidBody;
 class Tri;
@@ -78,8 +77,6 @@ private:
     BVHTree staticBvh;
     BVHTree speculativeBvh;
     TerrainBVH terrainBvh;
-
-    sap::SweepAndPrune sap;
 
     // pairs buffers
     std::vector<std::pair<RigidBodyHandle, Tri*>> pairsBufTerrain;

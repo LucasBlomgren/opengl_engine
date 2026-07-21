@@ -310,9 +310,14 @@ int main() {
 			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
 			{
 				// physics step & player update if in player mode
-				if (engineState.isPlayerMode()) player.updateBody(fixedTimeStep);
+				if (engineState.isPlayerMode()) {
+					player.updateBody(fixedTimeStep);
+					physicsEngine.syncBodyFromTransform(player.getPlayerRigidBodyHandle());
+				}
 				physicsEngine.step(fixedTimeStep, engineState);
-				if (engineState.isPlayerMode()) player.resolveExternalContact();
+				if (engineState.isPlayerMode()) {
+					player.resolveExternalContact();
+				}
 
 				accumulator -= fixedTimeStep;
 				steps++;

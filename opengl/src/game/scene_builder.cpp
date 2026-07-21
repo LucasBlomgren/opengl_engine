@@ -104,7 +104,7 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
 
     physicsEngine.setupScene(&terrainData.triangles);
 
-    //glcount::print();
+    glcount::print();
 }
 
 //----------------------------------
@@ -156,7 +156,7 @@ void SceneBuilder::generateFlatTerrain(
         }
     }
 
-    smoothHeightMap(heightMap, 0.5f, 75);
+    smoothHeightMap(heightMap, 0.5f, 150);
 
     std::vector<Tri>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices;

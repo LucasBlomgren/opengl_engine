@@ -51,6 +51,7 @@ public:
     void processWakeList();
     void processSleepList(float outerDt);
 
+    void syncBodyFromTransform(RigidBodyHandle bodyH);
     void sleepAllObjects();
     void awakenAllObjects();
 
@@ -90,6 +91,8 @@ private:
     FrameTimers* frameTimers;
 
     uint32_t contactsGeneratedThisFrame = 0;
+
+    float savedPhysicsSurpassedTime = 0;
 
     //-----------------------------
     //  Broadphase Add/Remove/Move

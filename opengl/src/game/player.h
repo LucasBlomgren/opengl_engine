@@ -9,6 +9,8 @@ class Player : public IInputReceiver {
 public:
     GameObjectHandle playerHandle;
 
+    RigidBodyHandle getPlayerRigidBodyHandle();
+
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
     void setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* renderer, Camera* camera);
 

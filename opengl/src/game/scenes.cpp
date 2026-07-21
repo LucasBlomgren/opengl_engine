@@ -717,8 +717,8 @@ void SceneBuilder::terrainScene() {
 
     generateFlatTerrain(
         /*offset*/glm::vec3(-50.0, -90.0, -50.0),
-        /*gridX=*/144,
-        /*gridZ=*/144,
+        /*gridX=*/344,
+        /*gridZ=*/344,
         /*cellSize=*/3.0,
         /*maxHeight=*/240.0
     );

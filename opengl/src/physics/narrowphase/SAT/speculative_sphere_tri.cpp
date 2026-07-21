@@ -210,31 +210,37 @@ bool SAT::speculativeSphereTriangle(
             }
         }
 
-        // Optional two-sided terrain.
-        // If your terrain triangles should be hit from the back too.
-        if (dist < -radius && vn > eps) {
-            glm::vec3 n = -triN;
-            float backDist = -dist;
-            float backVn = glm::dot(velocity, n);
-
-            float t = (radius - backDist) / backVn;
-
-            if (t >= 0.0f && t <= dt) {
-                glm::vec3 centerAtHit = center + velocity * t;
-                glm::vec3 pointOnPlane = centerAtHit - n * radius;
-
-                if (pointInTriangle(pointOnPlane, triA, triB, triC)) {
-                    float separation = backDist - radius;
-
-                    acceptHit(
-                        t,
-                        n, // terrain -> sphere
-                        separation,
-                        SAT::AxisType::TriFace
-                    );
-                }
-            }
+        // Terrain MVP: no edge/vertex ghost contacts.
+        constexpr bool terrainFaceOnly = true;
+        if (terrainFaceOnly) {
+            return hit;
         }
+
+        //// Optional two-sided terrain.
+        //// If your terrain triangles should be hit from the back too.
+        //if (dist < -radius && vn > eps) {
+        //    glm::vec3 n = -triN;
+        //    float backDist = -dist;
+        //    float backVn = glm::dot(velocity, n);
+
+        //    float t = (radius - backDist) / backVn;
+
+        //    if (t >= 0.0f && t <= dt) {
+        //        glm::vec3 centerAtHit = center + velocity * t;
+        //        glm::vec3 pointOnPlane = centerAtHit - n * radius;
+
+        //        if (pointInTriangle(pointOnPlane, triA, triB, triC)) {
+        //            float separation = backDist - radius;
+
+        //            acceptHit(
+        //                t,
+        //                n, // terrain -> sphere
+        //                separation,
+        //                SAT::AxisType::TriFace
+        //            );
+        //        }
+        //    }
+        //}
     }
 
     // =====================================================

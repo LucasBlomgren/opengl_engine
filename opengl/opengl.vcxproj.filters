@@ -68,13 +68,13 @@
     <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_contact_normal.cpp" />
+    <ClCompile Include="src\physics\narrowphase\emit_contact_standard.cpp" />
     <ClCompile Include="src\physics\API\physics_commands.cpp" />
     <ClCompile Include="src\physics\API\physics_queries.cpp" />
     <ClCompile Include="src\physics\API\physics_scene.cpp" />
     <ClCompile Include="src\physics\raycast\raycast.cpp" />
     <ClCompile Include="src\physics\contactcache\updateContactCache.cpp" />
-    <ClCompile Include="src\physics\narrowphase\contact_tests_normal.cpp" />
+    <ClCompile Include="src\physics\narrowphase\contact_tests_standard.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_contact_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />

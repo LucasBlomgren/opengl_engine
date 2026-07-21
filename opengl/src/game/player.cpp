@@ -8,6 +8,14 @@ void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* r
     this->renderer = renderer;
     this->camera = camera;
 }
+
+RigidBodyHandle Player::getPlayerRigidBodyHandle() {
+    GameObject* player = world->getGameObject(playerHandle);
+    if (player) {
+        return player->rigidBodyHandle;
+    }
+    return RigidBodyHandle{};
+}
  
 //------------------------------------------------------
 // INPUT HANDLING
@@ -35,9 +43,9 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
             SubPartDesc part;
             part.localTransformHandle = world->createTransform();
-            part.colliderType = ColliderType::CUBOID;
+            part.colliderType = ColliderType::SPHERE;
             part.textureName = "checker_gray";
-            part.meshName = "cube";
+            part.meshName = "sphere";
             newObj.parts.push_back(part);
 
             // create new object & apply shoot velocity
@@ -264,8 +272,8 @@ void Player::resolveExternalContact() {
         bool playerInContact = false;
 
         if (c.bodyA == playerObj->rigidBodyHandle && c.bodyA.isValid()) {
-            playerIsA = true;
             playerInContact = true;
+            playerIsA = true;
         }
         else if (c.bodyB == playerObj->rigidBodyHandle && c.bodyB.isValid()) {
             playerIsA = false;
@@ -274,22 +282,29 @@ void Player::resolveExternalContact() {
 
         if (!playerInContact) continue;
 
-        glm::vec3 up;
-        float skin = 0.001f;
-        float correction = std::max(c.penetration - skin, 0.0f);
-
+        glm::vec3 normal = c.normal;
         if (playerIsA) {
-            transform->position -= c.normal * correction;
-            up = glm::vec3(0.0f, -1.0f, 0.0f);
-        }
-        else {
-            transform->position += c.normal * correction;
-            up = glm::vec3(0.0f, 1.0f, 0.0f);
+            normal = -normal;
         }
 
-        if (glm::dot(up, c.normal) > ON_GROUND_ANGLE_THRESHOLD) {
+        if (c.terrainContact) {
+            if (normal.x <= 1e-1f) {
+                normal.x = 0.0f;
+            }
+            if (normal.z <= 1e-1f) {
+                normal.z = 0.0f;
+            }
+        }
+
+        constexpr glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+        constexpr float penetrationSlop = 0.005f;
+        float correction = std::max(c.penetration - penetrationSlop, 0.0f);
+
+        if (glm::dot(up, normal) > ON_GROUND_ANGLE_THRESHOLD) {
             onGround = true;
         }
+
+        transform->position += normal * correction;
     }
 
     if (onGround) {

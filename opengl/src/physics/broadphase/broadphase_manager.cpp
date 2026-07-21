@@ -4,7 +4,8 @@
 #include "tri.h"
 #include "bvh/query_treetree.h"
 #include "bvh/query_sametree.h"
-#include "sweep_and_prune.h"
+
+#include <unordered_set>
 
 //=======================================
 //    Init & Clear
@@ -195,6 +196,65 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
     speculativeBvh.clear();
     speculativeBvh.build(speculativeBodies, speculativeAABBs);
 
+    struct SpecKey {
+        uint64_t owner;
+        uint64_t a;
+        uint64_t b;
+
+        bool operator==(const SpecKey& other) const {
+            return owner == other.owner &&
+                a == other.a &&
+                b == other.b;
+        }
+    };
+
+    struct SpecKeyHash {
+        size_t operator()(const SpecKey& k) const {
+            size_t h = std::hash<uint64_t>{}(k.owner);
+            h ^= std::hash<uint64_t>{}(k.a + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
+            h ^= std::hash<uint64_t>{}(k.b + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
+            return h;
+        }
+    };
+
+    static std::unordered_set<SpecKey, SpecKeyHash> seenSpecPairs;
+    seenSpecPairs.clear();
+
+    auto packHandle = [](RigidBodyHandle h) -> uint64_t {
+        return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+        };
+
+    auto addSpecPair = [&](
+        RigidBodyHandle a,
+        RigidBodyHandle b,
+        RigidBodyHandle owner)
+        {
+            if (a == b) {
+                return;
+            }
+
+            uint64_t ak = packHandle(a);
+            uint64_t bk = packHandle(b);
+            uint64_t ok = packHandle(owner);
+
+            if (bk < ak) {
+                std::swap(ak, bk);
+            }
+
+            SpecKey key{};
+            key.owner = ok;
+            key.a = ak;
+            key.b = bk;
+
+            if (!seenSpecPairs.insert(key).second) {
+                return;
+            }
+
+            batch.speculativeDynamicPairs.emplace_back(
+                SpeculativeDynamicPair{ a, b, owner }
+            );
+        };
+
     // ----- dynamic vs terrain -----
     if (terrainBvh.rootIdx != -1) {
         pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
@@ -231,20 +291,13 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
         int cap = static_cast<int>(pairsBufDynamic.size());
         batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-        int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
             RigidBodyHandle a = hp.first;
             RigidBodyHandle b = hp.second;
 
-            // A's sweep ownership.
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ a, b, a }
-            );
-            // B's sweep ownership.
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ a, b, b }
-            );
+            addSpecPair(a, b, a); // A's owner
+            addSpecPair(a, b, b); // B's owner
         }
     }
 
@@ -255,12 +308,9 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
         int cap = static_cast<int>(pairsBufDynamic.size());
         batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-        int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ hp.first, hp.second }
-            );
+            addSpecPair(hp.first, hp.second, hp.first);
         }
     }
 
@@ -271,11 +321,11 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
         int cap = static_cast<int>(pairsBufDynamic.size());
         batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-        int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
             batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ hp.first, hp.second });
+                SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
+            );
         }
     }
 
@@ -286,11 +336,11 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
         int cap = static_cast<int>(pairsBufDynamic.size());
         batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-        int sp = 0;
 
         for (auto& hp : pairsBufDynamic) {
             batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ hp.first, hp.second });
+                SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
+            );
         }
     }
 }
@@ -300,6 +350,10 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<RigidBo
         RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
         Collider* mainCollider = caches->colliders.get(body->colliderHandles[0], FUNC_NAME);
         Transform* rootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
+
+        if (body->motionControl != MotionControl::Physics) {
+            continue;
+        }
 
         constexpr float safeFraction = 0.50f;
         constexpr float minSafeDistance = 0.02f;
