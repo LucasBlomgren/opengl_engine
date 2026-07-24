@@ -1,5 +1,7 @@
 #pragma once
+
 #include <vector>
+
 #include "core/slot_map.h"
 
 class Tri;

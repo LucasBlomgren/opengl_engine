@@ -1,11 +1,13 @@
 #pragma once
 
 #include <unordered_map>
+
+#include "SAT/sat.h"
+#include "narrowphase_types.h"
+
 #include "physics/world/runtime_caches.h"
 #include "physics/bodies/rigidbody.h"
-#include "physics/narrowphase/SAT/sat.h"
 #include "physics/colliders/collider_pose.h"
-#include "physics/narrowphase/narrowphase_types.h"
 
 // for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
 struct Plane {

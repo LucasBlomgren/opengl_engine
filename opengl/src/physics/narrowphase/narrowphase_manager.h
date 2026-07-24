@@ -4,9 +4,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "physics/narrowphase/narrowphase_types.h"
+#include "narrowphase_types.h"
+#include "collision_manifold.h"
+
 #include "physics/world/runtime_caches.h"
-#include "physics/narrowphase/collision_manifold.h"
 #include "physics/broadphase/broadphase_types.h"
 
 class NarrowphaseManager {

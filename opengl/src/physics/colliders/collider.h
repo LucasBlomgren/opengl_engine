@@ -1,11 +1,11 @@
 #pragma once
-
 #include <variant>
+
+#include "core/slot_map.h"
 
 #include "aabb.h"
 #include "oobb.h"
 #include "sphere.h"
-#include "core/slot_map.h"
 #include "collider_pose.h"
 
 using ColliderShape = std::variant<OOBB, Sphere>;

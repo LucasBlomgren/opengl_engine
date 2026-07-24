@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include <algorithm>
+
 #include "physics/public/physics_engine.h"
 #include "physics/engine/physics_engine_impl.h"
-
-#include <algorithm>
-#include <utility>
 
 PhysicsEngine::PhysicsEngine() : impl(std::make_unique<Impl>()) {}
 

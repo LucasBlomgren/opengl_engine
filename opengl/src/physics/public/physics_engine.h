@@ -4,18 +4,19 @@
 #include <unordered_map>
 #include <vector>
 
-#include "physics/public/physics_debug_types.h"
+#include "physics_debug_types.h"
 
-#include "physics/bodies/rigidbody.h"
 #include "physics/world/physics_world.h"
-
 #include "physics/broadphase/rigidbody_broadphase_types.h"
-#include "physics/bvh/bvh.h"
-#include "physics/bvh/bvh_terrain.h"
-#include "physics/colliders/aabb.h"
 #include "physics/narrowphase/collision_manifold.h"
 #include "physics/raycast/raycast.h"
+
+#include "physics/bvh/bvh.h"
+#include "physics/bvh/bvh_terrain.h"
+
+#include "physics/colliders/aabb.h"
 #include "physics/colliders/tri.h"
+
 
 class EngineState;
 class FrameTimers;
@@ -37,7 +38,6 @@ public:
     void clear();
 
     void prepareStepLoop();
-    int computeGlobalSubsteps(float dt);
     void step(float deltaTime, EngineState& engine);
 
     void sleepAllObjects();

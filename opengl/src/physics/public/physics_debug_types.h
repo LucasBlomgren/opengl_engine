@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstddef>
-
 struct DebugData {
     size_t awake = 0;
     size_t asleep = 0;

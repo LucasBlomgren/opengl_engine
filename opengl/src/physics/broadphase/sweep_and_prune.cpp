@@ -1,8 +1,8 @@
-#include "pch.h"
-#include "sweep_and_prune.h"
-
 #include <algorithm>
 #include <cassert>
+
+#include "pch.h"
+#include "sweep_and_prune.h"
 
 #include "physics/bodies/rigidbody.h"
 

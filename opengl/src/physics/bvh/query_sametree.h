@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <utility>
 #include <glm/ext/vector_float3.hpp>
+
 #include "core/slot_map.h"
 #include "physics/colliders/aabb.h"
 
