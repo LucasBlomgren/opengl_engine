@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <string>
-#include "vertex.h"
+#include "geometry/vertex.h"
 
 // Laddar vertex-data från en txt-fil
 std::vector<Vertex> loadVerticesFromTxt(const std::string& path);

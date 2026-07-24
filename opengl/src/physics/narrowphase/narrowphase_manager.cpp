@@ -6,13 +6,13 @@
 //              Initialization
 //=======================================================
 void NarrowphaseManager::init(
-    CollisionManifold* collisionManifold,
+    std::unique_ptr<CollisionManifold> collisionManifold,
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
     std::unordered_map<size_t, Contact>* contactCache,
     RuntimeCaches* caches,
     std::vector<RigidBodyHandle>* toWake)
 {
-    this->collisionManifold = collisionManifold;
+    this->collisionManifold = std::move(collisionManifold);
     this->debugSpeculativeContacts = debugSpeculativeContacts;
     this->contactCache = contactCache;
     this->caches = caches;

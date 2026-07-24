@@ -11,16 +11,16 @@
 #include "imgui.h"
 
 #include "physics/physics_engine.h"
-#include "scene_builder.h"
-#include "renderer/renderer.h"
-#include "textures/texture_manager.h"
-#include "mesh/mesh_manager.h"
-#include "shaders/shader_manager.h"
-#include "skybox/skybox_manager.h"
-#include "lighting/light_manager.h"
-#include "lighting/shadow_manager.h"
+#include "game/scene_builder.h"
+#include "graphics/renderer/renderer.h"
+#include "graphics/textures/texture_manager.h"
+#include "graphics/mesh/mesh_manager.h"
+#include "graphics/shaders/shader_manager.h"
+#include "graphics/skybox/skybox_manager.h"
+#include "graphics/lighting/light_manager.h"
+#include "graphics/lighting/shadow_manager.h"
 #include "editor/editor_main.h"
-#include "player.h"
+#include "game/player.h"
 
 float loadTimeStart = (float)glfwGetTime();
 

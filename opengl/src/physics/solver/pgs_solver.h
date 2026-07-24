@@ -1,9 +1,9 @@
 #pragma once
 
 #include "solver_types.h"
-#include "runtime_caches.h"
-#include <narrowphase/narrowphase_types.h>
-#include <narrowphase/collision_manifold.h>
+#include "physics/world/runtime_caches.h"
+#include "physics/narrowphase/narrowphase_types.h"
+#include "physics/narrowphase/collision_manifold.h"
 
 class PGSSolver {
 public:

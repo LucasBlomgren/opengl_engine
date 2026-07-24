@@ -1,10 +1,10 @@
 #include "pch.h"
-#include "physics_engine.h"
+#include "physics/engine/physics_engine_impl.h"
 
 //==============================================================
 //   Integrate Forces / Velocities
 //==============================================================
-void PhysicsEngine::integrateForcesAndVelocities(
+void PhysicsEngine::Impl::integrateForcesAndVelocities(
     const std::vector<RigidBodyHandle>& bodies,
     float dt)
 {
@@ -27,7 +27,7 @@ void PhysicsEngine::integrateForcesAndVelocities(
 //==============================================================
 //   Integrate Positions and Update Colliders
 //==============================================================
-void PhysicsEngine::integratePositionsAndColliders(
+void PhysicsEngine::Impl::integratePositionsAndColliders(
     const std::vector<RigidBodyHandle>& bodies,
     float dt)
 {
@@ -50,7 +50,7 @@ void PhysicsEngine::integratePositionsAndColliders(
 //==============================================================
 //   Update Collider Poses and Body AABB
 //==============================================================
-void PhysicsEngine::updateCollidersAndBodyAABB(
+void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
     RigidBody* body,
     Transform* rootTransform)
 {

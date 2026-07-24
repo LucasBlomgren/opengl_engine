@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "rigidbody.h"
+#include "physics/bodies/rigidbody.h"
 
 namespace WakeSleep
 {

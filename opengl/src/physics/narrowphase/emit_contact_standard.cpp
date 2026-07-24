@@ -1,5 +1,5 @@
 #include "narrowphase_manager.h"
-#include "sleep/wake_sleep_utils.h"
+#include "physics/sleep/wake_sleep_utils.h"
 
 //=======================================================
 //     Emit rigid contact and wake up bodies if needed

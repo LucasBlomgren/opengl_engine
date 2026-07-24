@@ -1,7 +1,7 @@
 #pragma once
 
-#include "shaders/shader.h"
-#include "colliders/oobb.h"
+#include "graphics/shaders/shader.h"
+#include "physics/colliders/oobb.h"
 
 class OOBBRenderer { 
 public:

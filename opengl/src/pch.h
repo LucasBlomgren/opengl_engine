@@ -22,7 +22,7 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtx/io.hpp>
 
-#include "shaders/shader.h"
+#include "graphics/shaders/shader.h"
 #include "engine/camera.h"
 
 #include <atomic>

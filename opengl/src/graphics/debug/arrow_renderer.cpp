@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "arrow_renderer.h"
-#include "mesh/mesh_manager.h"
+#include "graphics/mesh/mesh_manager.h"
 
 glm::mat4 ArrowRenderer::getModelMatrix(const glm::vec3& origin, const glm::vec3& dirN, const glm::vec3& scale) {
     glm::mat4 R = makeBasisFromY(dirN);

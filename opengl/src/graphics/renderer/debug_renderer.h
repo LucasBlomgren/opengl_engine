@@ -2,14 +2,14 @@
 
 #include "engine/engine_state.h"
 #include "physics/physics_engine.h"
-#include "mesh/mesh_manager.h"
-#include "shaders/shader_manager.h"
+#include "graphics/mesh/mesh_manager.h"
+#include "graphics/shaders/shader_manager.h"
 
-#include "debug/sphere_outline_renderer.h"
-#include "debug/arrow_renderer.h"
-#include "debug/normals_renderer.h"
-#include "debug/aabb_renderer.h"
-#include "debug/oobb_renderer.h"
+#include "graphics/debug/sphere_outline_renderer.h"
+#include "graphics/debug/arrow_renderer.h"
+#include "graphics/debug/normals_renderer.h"
+#include "graphics/debug/aabb_renderer.h"
+#include "graphics/debug/oobb_renderer.h"
 
 class Renderer;
 

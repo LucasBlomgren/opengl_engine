@@ -1,6 +1,6 @@
 #pragma once
 
-#include "broadphase/rigidbody_broadphase_types.h"
+#include "physics/broadphase/rigidbody_broadphase_types.h"
 #include "game/transform.h"
 #include "core/ring_buffer.h"
 #include "core/slot_map.h"

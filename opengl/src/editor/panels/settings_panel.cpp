@@ -3,8 +3,8 @@
 #include "editor/panel.h"
 #include "imgui.h"
 #include "engine/engine_state.h"
-#include "scene_builder.h"
-#include "skybox/skybox_manager.h"
+#include "game/scene_builder.h"
+#include "graphics/skybox/skybox_manager.h"
 #include "physics/bvh/bvh.h"
 
 void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
@@ -24,9 +24,9 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
     }
 
     ImGui::Text("PGS iterations");
-    int pgsIterations = ctx.physicsEngine->pgsIterations;
+    int pgsIterations = ctx.physicsEngine->getPgsIterations();
     if (ImGui::SliderInt("##PGSIterations", &pgsIterations, 1, 64)) {
-        ctx.physicsEngine->pgsIterations = pgsIterations;
+        ctx.physicsEngine->setPgsIterations(pgsIterations);
     }
 
 

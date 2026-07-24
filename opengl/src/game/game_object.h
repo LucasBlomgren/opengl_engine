@@ -3,8 +3,8 @@
 #include "pch.h"
 
 #include "core/slot_map.h"
-#include "shaders/shader.h"
-#include "mesh/mesh.h"
+#include "graphics/shaders/shader.h"
+#include "graphics/mesh/mesh.h"
 
 struct SubPart {
     std::string name = "SubPart";

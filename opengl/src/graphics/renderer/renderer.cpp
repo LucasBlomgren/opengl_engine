@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "renderer.h"
-#include "mesh/mesh_manager.h"
+#include "graphics/mesh/mesh_manager.h"
 
 //-----------------------------
 //           Init

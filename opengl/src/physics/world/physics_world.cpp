@@ -27,6 +27,13 @@ SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() {
 SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() { 
     return rigidBodies; 
 }
+const SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() const {
+    return colliders;
+}
+
+const SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() const {
+    return rigidBodies;
+}
 
 AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
     if (body.colliderHandles.empty()) {

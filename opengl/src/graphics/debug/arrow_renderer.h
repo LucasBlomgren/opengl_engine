@@ -1,11 +1,7 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <algorithm>
-#include <vector>
 
-#include "mesh/mesh.h"
-#include "geometry/vertex.h"
+#include <glm/gtc/matrix_transform.hpp>
+#include "graphics/mesh/mesh.h"
 
 class ArrowRenderer {
 public:

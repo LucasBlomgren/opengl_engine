@@ -3,8 +3,8 @@
 #include "game/world.h"
 #include "editor/editor_main.h"
 #include "physics/physics_engine.h"
-#include "game_object.h"
-#include "tri.h"
+#include "game/game_object.h"
+#include "physics/colliders/tri.h"
 
 class Player;
 class Editor::EditorMain;

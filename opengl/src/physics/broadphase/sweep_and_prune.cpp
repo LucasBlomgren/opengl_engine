@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cassert>
 
-#include "rigidbody.h"
+#include "physics/bodies/rigidbody.h"
 
 namespace sap {
 

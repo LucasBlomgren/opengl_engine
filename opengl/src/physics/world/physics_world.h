@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/slot_map.h"
-#include "physics/rigidbody.h"
+#include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 
 class PhysicsEngine;
@@ -17,6 +17,9 @@ public:
 
     SlotMap<Collider, ColliderHandle>& getCollidersMap();
     SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap();
+
+    const SlotMap<Collider, ColliderHandle>& getCollidersMap() const;
+    const SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap() const;
 
     // creation and deletion
     RigidBodyHandle createRigidBody();

@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "bvh_terrain.h"
-#include "tri.h"
+#include "physics/colliders/tri.h"
 
 //------------------------------
 //        Single Query

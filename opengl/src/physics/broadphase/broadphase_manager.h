@@ -2,9 +2,9 @@
 #include <vector>
 
 #include "core/slot_map.h"
-#include "../runtime_caches.h"
-#include "bvh/bvh.h"
-#include "bvh/bvh_terrain.h"
+#include "physics/world/runtime_caches.h"
+#include "physics/bvh/bvh.h"
+#include "physics/bvh/bvh_terrain.h"
 #include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
 

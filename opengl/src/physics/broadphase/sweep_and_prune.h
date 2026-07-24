@@ -2,9 +2,9 @@
 
 #include <vector>
 
-#include "../runtime_caches.h"
-#include "colliders/aabb.h"
-#include "broadphase_types.h"
+#include "physics/world/runtime_caches.h"
+#include "physics/colliders/aabb.h"
+#include "physics/broadphase/broadphase_types.h"
 
 struct RuntimeCaches;
 

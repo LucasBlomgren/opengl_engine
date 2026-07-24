@@ -25,7 +25,7 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	const DebugData data = physicsEngine->getDebugData();
 	ctx.amountAwakeObjects = data.awake;
 	ctx.amountAsleepObjects = data.asleep;
-	ctx.amountStaticObjects = data.Static;
+	ctx.amountStaticObjects = data.staticBodies;
 	ctx.amountTerrainTris = data.terrainTris;
 	ctx.amountContacts = data.contacts;
 	ctx.amountColliders = data.colliders;

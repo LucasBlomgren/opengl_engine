@@ -3,21 +3,21 @@
 #include "engine/engine_state.h"
 #include "engine/camera.h"
 
-#include "shaders/shader.h"
-#include "shaders/shader_manager.h"
+#include "graphics/shaders/shader.h"
+#include "graphics/shaders/shader_manager.h"
 
-#include "game_object.h"
+#include "game/game_object.h"
 #include "physics/physics_engine.h"
-#include "lighting/light_manager.h"
-#include "lighting/shadow_manager.h"
-#include "skybox/skybox_manager.h"
-#include "debug/quad_renderer.h"
+#include "graphics/lighting/light_manager.h"
+#include "graphics/lighting/shadow_manager.h"
+#include "graphics/skybox/skybox_manager.h"
+#include "graphics/debug/quad_renderer.h"
 
-#include "renderer/debug_renderer.h"
+#include "graphics/renderer/debug_renderer.h"
 
-#include "scene_builder.h"
+#include "game/scene_builder.h"
 #include "editor/editor_main.h"
-#include "player.h"
+#include "game/player.h"
 
 class Renderer {
 public:

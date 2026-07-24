@@ -1,6 +1,6 @@
 #pragma once
-#include "broadphase/rigidbody_broadphase_types.h"
-#include "aabb.h"
+#include "physics/broadphase/rigidbody_broadphase_types.h"
+#include "physics/colliders/aabb.h"
 
 class Tri {
 public:

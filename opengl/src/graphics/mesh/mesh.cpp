@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include "renderer/renderer.h"
+#include "graphics/renderer/renderer.h"
 
 void Mesh::draw() const {
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);

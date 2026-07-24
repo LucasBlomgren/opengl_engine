@@ -1,5 +1,5 @@
 #pragma once
-#include "colliders/aabb.h"
+#include "physics/colliders/aabb.h"
 
 class Tri;
 

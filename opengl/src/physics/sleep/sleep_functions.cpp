@@ -1,11 +1,11 @@
 #include "pch.h"
-#include "physics_engine.h"
-#include "wake_sleep_utils.h"
+#include "physics/engine/physics_engine_impl.h"
+#include "physics/sleep/wake_sleep_utils.h"
 
 //====================================
 //   Process wake list
 //====================================
-void PhysicsEngine::processWakeList() {
+void PhysicsEngine::Impl::processWakeList() {
     for (RigidBodyHandle rb : toWake) {
         broadphaseManager.moveToAwake(rb);
 
@@ -21,7 +21,7 @@ void PhysicsEngine::processWakeList() {
 //====================================
 //    Process sleep list
 //====================================
-void PhysicsEngine::processSleepList(float outerDt) {
+void PhysicsEngine::Impl::processSleepList(float outerDt) {
     toSleep.clear();
 
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
@@ -57,7 +57,7 @@ void PhysicsEngine::processSleepList(float outerDt) {
 //====================================
 //       Sleep Thresholds
 //====================================
-void PhysicsEngine::updateSleepThresholds() {
+void PhysicsEngine::Impl::updateSleepThresholds() {
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const RigidBodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
@@ -95,7 +95,7 @@ void PhysicsEngine::updateSleepThresholds() {
 //====================================
 //      Sleep damping
 //====================================
-void PhysicsEngine::addSleepDamping() {
+void PhysicsEngine::Impl::addSleepDamping() {
     const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const RigidBodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);

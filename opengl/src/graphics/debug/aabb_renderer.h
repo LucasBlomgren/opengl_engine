@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include "shaders/shader.h"
-#include "aabb.h"
+#include "graphics/shaders/shader.h"
+#include "physics/colliders/aabb.h"
 
 class AABBRenderer {
 public:

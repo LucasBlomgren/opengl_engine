@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "../runtime_caches.h"
-#include "physics_world.h"
-#include "rigidbody.h"
-#include "colliders/aabb.h"
+#include "physics/world/runtime_caches.h"
+#include "physics/world/physics_world.h"
+#include "physics/bodies/rigidbody.h"
+#include "physics/colliders/aabb.h"
 
 // #TODO: optimize nodes for cache size:
 // Het array — bara det traverseringen rör. Indexeras parallellt med cold[].

@@ -1,6 +1,6 @@
 #include "pch.h"
-#include "debug_renderer.h"
-#include "debug/render_contact_points.h"
+#include "graphics/renderer/debug_renderer.h"
+#include "graphics/debug/render_contact_points.h"
 #include "physics/colliders/collider_pose.h"
 #include "game/world.h"
 
@@ -61,7 +61,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
     debugShapeShader->setInt("debug.objectType", 0);
     renderAABBs(objects, world);
     renderColliders(objects, camera, world);
-    renderContactPoints(physics.GetContactCache(), physics.debugSpeculativeContacts);
+    renderContactPoints(physics.getContactCache(), physics.getDebugSpeculativeContacts());
     renderBVHs(physics);
     //renderSweptAABBs(physics.debugSweeps, glm::vec3(1.0f, 1.0f, 0.0f));
 
@@ -84,7 +84,7 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
     if (!engineState->getShowCollisionNormals()) return;
 
-    for (const auto& pair : physics.contactCache) {
+    for (const auto& pair : physics.getContactCache()) {
         const Contact* c = &pair.second;
         if (!c->wasUsedThisFrame) continue;
 

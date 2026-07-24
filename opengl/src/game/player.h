@@ -3,7 +3,7 @@
 #include "scene_builder.h"
 #include "physics/physics_engine.h"
 #include "engine/camera.h"
-#include "renderer/renderer.h"
+#include "graphics/renderer/renderer.h"
 
 class Player : public IInputReceiver {
 public:

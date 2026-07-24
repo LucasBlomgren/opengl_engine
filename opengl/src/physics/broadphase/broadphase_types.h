@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <slot_map.h>
+#include "core/slot_map.h"
 
 class Tri;
 

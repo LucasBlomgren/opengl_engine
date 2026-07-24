@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shaders/shader.h"
+#include "graphics/shaders/shader.h"
 
 class SphereOutlineRenderer {
 public:

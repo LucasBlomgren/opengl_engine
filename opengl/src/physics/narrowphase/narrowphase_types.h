@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <cstdint>
-#include "slot_map.h"
+#include "core/slot_map.h"
 #include "SAT/sat.h"
 
 // forward declarations

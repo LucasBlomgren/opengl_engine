@@ -1,10 +1,10 @@
 #include "pch.h"
 #include "world.h"
 
-#include "renderer/renderer.h"
-#include "textures/texture_manager.h"
-#include "mesh/mesh_manager.h"
-#include "shaders/shader_manager.h"
+#include "graphics/renderer/renderer.h"
+#include "graphics/textures/texture_manager.h"
+#include "graphics/mesh/mesh_manager.h"
+#include "graphics/shaders/shader_manager.h"
 #include "physics/physics_engine.h"
 
 void World::clear() {

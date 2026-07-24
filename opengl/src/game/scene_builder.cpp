@@ -2,8 +2,8 @@
 #include "scene_builder.h"
 
 #include "geometry/vertex.h"
-#include "renderer/renderer.h"
-#include "lighting/light_manager.h"
+#include "graphics/renderer/renderer.h"
+#include "graphics/lighting/light_manager.h"
 #include "physics/physics_engine.h"
 
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {

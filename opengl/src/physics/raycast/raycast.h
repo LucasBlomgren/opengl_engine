@@ -1,10 +1,10 @@
 #pragma once
   
-#include "slot_map.h"
-#include "bvh/bvh.h"
-#include "game_object.h"
-#include "colliders/collider.h"
-#include "rigidbody.h"
+#include "game/game_object.h"
+#include "core/slot_map.h"
+#include "physics/bvh/bvh.h"
+#include "physics/colliders/collider.h"
+#include "physics/bodies/rigidbody.h"
 
 struct Ray {
     float length;

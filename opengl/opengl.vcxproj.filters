@@ -6,7 +6,6 @@
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\engine\engine_state.cpp" />
-    <ClCompile Include="src\physics\physics_engine.cpp" />
     <ClCompile Include="src\graphics\lighting\light.cpp" />
     <ClCompile Include="src\graphics\lighting\light_manager.cpp" />
     <ClCompile Include="src\graphics\renderer\renderer.cpp" />
@@ -55,8 +54,8 @@
     <ClCompile Include="src\editor\editor_main.cpp" />
     <ClCompile Include="src\editor\panel_manager.cpp" />
     <ClCompile Include="src\game\player.cpp" />
-    <ClCompile Include="src\physics\physics_world.cpp" />
-    <ClCompile Include="src\physics\rigidbody.cpp" />
+    <ClCompile Include="src\physics\world\physics_world.cpp" />
+    <ClCompile Include="src\physics\bodies\rigidbody.cpp" />
     <ClCompile Include="src\graphics\renderer\debug_renderer.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
@@ -69,9 +68,6 @@
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_contact_standard.cpp" />
-    <ClCompile Include="src\physics\API\physics_commands.cpp" />
-    <ClCompile Include="src\physics\API\physics_queries.cpp" />
-    <ClCompile Include="src\physics\API\physics_scene.cpp" />
     <ClCompile Include="src\physics\raycast\raycast.cpp" />
     <ClCompile Include="src\physics\contactcache\updateContactCache.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_standard.cpp" />
@@ -89,6 +85,11 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine.cpp" />
+    <ClCompile Include="src\physics\engine\physics_step.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_commands.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_queries.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -176,8 +177,8 @@
     <ClInclude Include="src\editor\panel_manager.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\game\player.h" />
-    <ClInclude Include="src\physics\physics_world.h" />
-    <ClInclude Include="src\physics\rigidbody.h" />
+    <ClInclude Include="src\physics\world\physics_world.h" />
+    <ClInclude Include="src\physics\bodies\rigidbody.h" />
     <ClInclude Include="src\graphics\renderer\debug_renderer.h" />
     <ClInclude Include="src\core\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
@@ -198,9 +199,12 @@
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
-    <ClInclude Include="src\physics\runtime_caches.h" />
+    <ClInclude Include="src\physics\world\runtime_caches.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
+    <ClInclude Include="src\physics\public\physics_debug_types.h" />
+    <ClInclude Include="src\physics\public\physics_engine.h" />
+    <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -2,10 +2,10 @@
 
 #include "sat_types.h"
 #include <span>
-#include "tri.h"
-#include "collider_pose.h"
-#include "collider.h"
-#include "rigidbody.h"
+#include "physics/colliders/tri.h"
+#include "physics/colliders/collider_pose.h"
+#include "physics/colliders/collider.h"
+#include "physics/bodies/rigidbody.h"
 
 namespace SAT {
     //======================================================

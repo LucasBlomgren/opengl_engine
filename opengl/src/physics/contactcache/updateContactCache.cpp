@@ -1,10 +1,10 @@
 #include "pch.h"
-#include "physics_engine.h"
+#include "physics/engine/physics_engine_impl.h"
 
 //=================================================
 //       Contact Cache
 //=================================================
-void PhysicsEngine::updateContactCache() {
+void PhysicsEngine::Impl::updateContactCache() {
     constexpr int maxFramesWithoutCollision = 5;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
         if (!it->second.wasUsedThisFrame) {

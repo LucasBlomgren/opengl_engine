@@ -3,8 +3,8 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <vector>
-#include "shaders/shader.h"
-#include "vertex.h"
+#include "graphics/shaders/shader.h"
+#include "geometry/vertex.h"
 
 class Mesh {
 public:

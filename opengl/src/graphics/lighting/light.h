@@ -2,7 +2,7 @@
 
 #include "pch.h"
 
-#include "shaders/shader.h"
+#include "graphics/shaders/shader.h"
 
 class Light {
 public:

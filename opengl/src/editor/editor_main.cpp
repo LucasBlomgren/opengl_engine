@@ -4,12 +4,12 @@
 #include "game/world.h"
 #include "imgui.h"
 #include "engine/input_manager.h"
-#include "scene_builder.h"
+#include "game/scene_builder.h"
 #include "physics/physics_engine.h"
 #include "graphics/renderer/renderer.h"
-#include "game_object.h"
-#include "aabb.h"
-#include "shaders/shader.h"
+#include "game/game_object.h"
+#include "physics/colliders/aabb.h"
+#include "graphics/shaders/shader.h"
 #include "physics/raycast/raycast.h"
 
 #include <glm/gtc/random.hpp>

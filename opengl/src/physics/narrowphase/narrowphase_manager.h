@@ -4,15 +4,15 @@
 #include <unordered_map>
 #include <vector>
 
-#include "narrowphase_types.h"
-#include "runtime_caches.h"
-#include "collision_manifold.h"
-#include "broadphase/broadphase_types.h"
+#include "physics/narrowphase/narrowphase_types.h"
+#include "physics/world/runtime_caches.h"
+#include "physics/narrowphase/collision_manifold.h"
+#include "physics/broadphase/broadphase_types.h"
 
 class NarrowphaseManager {
 public:
     void init(
-        CollisionManifold* collisionManifold,
+        std::unique_ptr<CollisionManifold> collisionManifold,
         std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
         std::unordered_map<size_t, Contact>* contactCache,
         RuntimeCaches* caches,
@@ -33,7 +33,7 @@ public:
 
 private:
     // references to caches
-    CollisionManifold* collisionManifold = nullptr;
+    std::unique_ptr<CollisionManifold> collisionManifold;
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts = nullptr;
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
     RuntimeCaches* caches = nullptr;
