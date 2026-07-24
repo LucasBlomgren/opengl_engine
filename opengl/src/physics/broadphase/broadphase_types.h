@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "core/slot_map.h"
+#include "physics/public/physics_handles.h"
 
 class Tri;
 

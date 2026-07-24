@@ -17,15 +17,15 @@ bool SAT::speculativeBoxBox(
     const OOBB& boxA = std::get<OOBB>(colliderA.shape);
     const OOBB& boxB = std::get<OOBB>(colliderB.shape);
 
-    glm::vec3 centerA = colliderA.pose.position;
-    glm::vec3 centerB = colliderB.pose.position;
+    glm::vec3 centerA = colliderA.worldPose.position;
+    glm::vec3 centerB = colliderB.worldPose.position;
 
     // Adjust these names to your actual OOBB fields.
     glm::vec3 halfExtentsA = boxA.localHalfExtents * boxA.scale;
     glm::vec3 halfExtentsB = boxB.localHalfExtents * boxB.scale;
 
-    glm::mat3 rotA = glm::mat3_cast(colliderA.pose.orientation);
-    glm::mat3 rotB = glm::mat3_cast(colliderB.pose.orientation);
+    glm::mat3 rotA = glm::mat3_cast(colliderA.worldPose.orientation);
+    glm::mat3 rotB = glm::mat3_cast(colliderB.worldPose.orientation);
 
     glm::vec3 axesA[3] = {
         glm::normalize(rotA[0]),

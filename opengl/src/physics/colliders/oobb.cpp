@@ -1,62 +1,81 @@
 #include "pch.h"
 #include "oobb.h"
 
-void OOBB::init(const std::vector<glm::vec3>& verts, const ColliderPose& pose) {
-    glm::vec3 lMin(+FLT_MAX), lMax(-FLT_MAX); 
-    for (auto const& v : verts) { 
-        lMin = glm::min(lMin, v);  
-        lMax = glm::max(lMax, v); 
-    }
+#include <glm/common.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-    localHalfExtents = (lMax - lMin) * 0.5f;
-
-    localCenter = (lMin + lMax) * 0.5f;
-
-    localVertices = {
-        glm::vec3(lMin.x, lMin.y, lMin.z), 
-        glm::vec3(lMax.x, lMin.y, lMin.z),
-        glm::vec3(lMax.x, lMax.y, lMin.z), 
-        glm::vec3(lMin.x, lMax.y, lMin.z), 
-
-        glm::vec3(lMin.x, lMin.y, lMax.z), 
-        glm::vec3(lMax.x, lMin.y, lMax.z), 
-        glm::vec3(lMax.x, lMax.y, lMax.z), 
-        glm::vec3(lMin.x, lMax.y, lMax.z)  
-    };
-
-    worldAxes = {
-        glm::vec3(1,  0,  0),
-        glm::vec3(0,  1,  0),
-        glm::vec3(0,  0,  1),
-    };
-
-    // transform world corners
-    for (int i = 0; i < 8; ++i) {
-        worldVertices[i] = glm::vec3(pose.modelMatrix * glm::vec4(localVertices[i], 1.0f));
-    }
+OOBB::OOBB(const std::vector<glm::vec3>& vertices) {
+    init(vertices);
 }
 
-void OOBB::update(const ColliderPose& pose) {
-    //  transform world axes
-    for (int i = 0; i < 3; i++) {
-        worldAxes[i] = glm::normalize(pose.rotationMatrix * localAxes[i]);
+OOBB::OOBB(const glm::vec3& halfExtents, const glm::vec3& center) {
+    setLocalBounds(center, halfExtents);
+}
+
+void OOBB::init(const std::vector<glm::vec3>& vertices) {
+    if (vertices.empty()) {
+        setLocalBounds(glm::vec3(0.0f), glm::vec3(0.5f));
+        return;
     }
 
-    // transform world corners
-    for (int i = 0; i < 8; ++i) {
-        worldVertices[i] = glm::vec3(pose.modelMatrix * glm::vec4(localVertices[i], 1.0f));
+    glm::vec3 minimum = vertices.front();
+    glm::vec3 maximum = vertices.front();
+
+    for (const glm::vec3& vertex : vertices) {
+        minimum = glm::min(minimum, vertex);
+        maximum = glm::max(maximum, vertex);
     }
 
-    worldCenter = glm::vec3(pose.modelMatrix * glm::vec4(localCenter, 1.0f));
-    scale = pose.scale;
+    glm::vec3 center = (minimum + maximum) * 0.5f;
+    glm::vec3 halfExtents = (maximum - minimum) * 0.5f;
+
+    setLocalBounds(center, halfExtents);
+}
+
+void OOBB::setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents) {
+    localCenter = center;
+    localHalfExtents = glm::abs(halfExtents);
+    rebuildLocalVertices();
+}
+
+void OOBB::rebuildLocalVertices() {
+    const glm::vec3& center = localCenter;
+    const glm::vec3& half = localHalfExtents;
+
+    localVertices[0] = center + glm::vec3(-half.x, -half.y, -half.z);
+    localVertices[1] = center + glm::vec3(half.x, -half.y, -half.z);
+    localVertices[2] = center + glm::vec3(half.x, half.y, -half.z);
+    localVertices[3] = center + glm::vec3(-half.x, half.y, -half.z);
+    localVertices[4] = center + glm::vec3(-half.x, -half.y, half.z);
+    localVertices[5] = center + glm::vec3(half.x, -half.y, half.z);
+    localVertices[6] = center + glm::vec3(half.x, half.y, half.z);
+    localVertices[7] = center + glm::vec3(-half.x, half.y, half.z);
+}
+
+void OOBB::update(const PhysicsPose& worldPose, const glm::vec3& worldScale) {
+    scale = worldScale;
+
+    glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
+
+    worldAxes[0] = rotation * LOCAL_AXES[0];
+    worldAxes[1] = rotation * LOCAL_AXES[1];
+    worldAxes[2] = rotation * LOCAL_AXES[2];
+
+    worldCenter = worldPose.position + rotation * (worldScale * localCenter);
+
+    for (size_t i = 0; i < localVertices.size(); ++i) {
+        glm::vec3 scaledLocalVertex = worldScale * localVertices[i];
+        worldVertices[i] = worldPose.position + rotation * scaledLocalVertex;
+    }
 }
 
 std::array<glm::vec3, 4> OOBB::getLocalFace(FaceId face) const {
-    const auto& idx = FACE_INDICES[static_cast<int>(face)];
+    const std::array<int, 4>& indices = FACE_INDICES[static_cast<size_t>(face)];
+
     return {
-        localVertices[idx[0]],
-        localVertices[idx[1]],
-        localVertices[idx[2]],
-        localVertices[idx[3]]
+        localVertices[indices[0]],
+        localVertices[indices[1]],
+        localVertices[indices[2]],
+        localVertices[indices[3]]
     };
 }

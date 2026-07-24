@@ -498,7 +498,7 @@ void BroadphaseManager::moveToAwake(RigidBodyHandle& handle) {
 void BroadphaseManager::moveToAsleep(RigidBodyHandle& handle) {
     RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
     Transform* transform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
-    body->setAsleep(*transform);
+    body->setAsleep();
 
     if (body->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         return;

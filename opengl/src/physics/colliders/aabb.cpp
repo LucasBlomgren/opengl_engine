@@ -26,9 +26,9 @@ void AABB::init(const std::vector<glm::vec3>& vertices) {
 //--------------------------------------------
 // Standard AABB functions
 //--------------------------------------------
-void AABB::update(const ColliderPose& pose) {
-    glm::mat3 model3x3 = glm::mat3(pose.modelMatrix);
-    transform_withRotation(model3x3, pose.position);
+void AABB::update(const ColliderTransformCache& transformCache) {
+    glm::mat3 model3x3 = glm::mat3(transformCache.modelMatrix);
+    transform_withRotation(model3x3, glm::vec3(transformCache.modelMatrix[3]));
 
     worldCenter = (worldMin + worldMax) * 0.5f;
     worldHalfExtents = (worldMax - worldMin) * 0.5f;
@@ -130,7 +130,7 @@ glm::vec3 AABB::getCollisionNormal(const AABB& other) const {
     float combinedHalfY = worldHalfExtents.y + other.worldHalfExtents.y;
     float combinedHalfZ = worldHalfExtents.z + other.worldHalfExtents.z;
 
-    // Överlapp längs vardera axel
+    // Ã–verlapp lÃ¤ngs vardera axel
     float overlapX = combinedHalfX - std::fabs(dx);
     float overlapY = combinedHalfY - std::fabs(dy);
     float overlapZ = combinedHalfZ - std::fabs(dz);
@@ -141,11 +141,11 @@ glm::vec3 AABB::getCollisionNormal(const AABB& other) const {
     }
 
     if (overlapX < overlapY && overlapX < overlapZ) {
-        // om other ligger åt +X så vill vi separera längs -X
+        // om other ligger Ã¥t +X sÃ¥ vill vi separera lÃ¤ngs -X
         float signX = (dx >= 0.0f) ? -1.0f : 1.0f;
         return glm::vec3(signX, 0.0f, 0.0f);
     }
-    // motsvarande för Y och Z:
+    // motsvarande fÃ¶r Y och Z:
     else if (overlapY < overlapZ) {
         float signY = (dy >= 0.0f) ? -1.0f : 1.0f;
         return glm::vec3(0.0f, signY, 0.0f);
@@ -166,12 +166,12 @@ glm::vec3 AABB::getOverlapDepth(const AABB& other) const {
     float combinedHalfY = worldHalfExtents.y + other.worldHalfExtents.y;
     float combinedHalfZ = worldHalfExtents.z + other.worldHalfExtents.z;
 
-    // Beräkna överlapp (kan vara negativt om ingen kollision)
+    // BerÃ¤kna Ã¶verlapp (kan vara negativt om ingen kollision)
     float overlapX = combinedHalfX - std::fabs(dx);
     float overlapY = combinedHalfY - std::fabs(dy);
     float overlapZ = combinedHalfZ - std::fabs(dz);
 
-    // Kläm överlapp till noll
+    // KlÃ¤m Ã¶verlapp till noll
     float depthX = (overlapX > 0.0f) ? overlapX : 0.0f;
     float depthY = (overlapY > 0.0f) ? overlapY : 0.0f;
     float depthZ = (overlapZ > 0.0f) ? overlapZ : 0.0f;

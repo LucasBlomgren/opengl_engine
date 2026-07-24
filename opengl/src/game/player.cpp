@@ -122,11 +122,13 @@ void Player::createPlayerObject() {
     if (part.seeThrough) {
         renderer->addObjectToBatch(playerHandle);
     }
+
+    Transform* rootTransform = world->getTransform(player->rootTransformHandle);
+    rb->pose.position = rootTransform->position;
+    rb->pose.orientation = rootTransform->orientation;
 }
 
 void Player::destroyPlayerObject() {
-    GameObject* player = world->getGameObject(playerHandle);
-    physicsEngine->queueRemove(player->rigidBodyHandle);
     world->deleteGameObject(playerHandle);
     playerHandle = GameObjectHandle{};
 }
@@ -258,6 +260,10 @@ void Player::updateBody(float dt) {
     rb->linearVelocity = v;
     t->lastPosition = t->position;
     t->position += rb->linearVelocity * dt;
+
+    Transform* rootTransform = world->getTransform(player->rootTransformHandle);
+    rb->pose.position = rootTransform->position;
+    rb->pose.orientation = rootTransform->orientation;
 }
 
 void Player::resolveExternalContact() {
@@ -320,13 +326,10 @@ void Player::resolveExternalContact() {
 void Player::moveSelectedObject(float dt) {
     if (!selectedObjectHandle.isValid()) return;
 
-    GameObject* playerObject = world->getGameObject(playerHandle);
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     Transform* selectedTransform = world->getTransform(selectedObject->rootTransformHandle);
 
     RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
-    RigidBody* playerRb = world->getRigidBody(playerObject->rigidBodyHandle);
-    Collider* selectedCollider = world->getCollider(selectedRb->colliderHandles[0]);
 
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
@@ -341,12 +344,7 @@ void Player::moveSelectedObject(float dt) {
 
     selectedTransform->updateCache();
 
-    // #rigidbody vector: loop over all the colliders
-    Transform* localTransform = world->getTransform(selectedCollider->localTransformHandle);
-    selectedCollider->pose.combineIntoColliderPose(*selectedTransform, *localTransform);
-    selectedCollider->pose.ensureModelMatrix();
-    selectedCollider->updateAABB(selectedCollider->pose);
-    selectedCollider->updateCollider(selectedCollider->pose);
+    physicsEngine->syncBodyFromTransform(selectedObject->rigidBodyHandle);
 }
 
 //------------------------------------------------------

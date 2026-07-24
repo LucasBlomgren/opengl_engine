@@ -303,6 +303,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='O2|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\physics\engine\physics_engine.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_bodies.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_colliders.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_commands.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_queries.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_scene.cpp" />
@@ -320,6 +322,12 @@
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\sat.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_box.cpp" />
+    <ClInclude Include="src\core\handle.h" />
+    <ClInclude Include="src\ecs\component_storage.h" />
+    <ClInclude Include="src\ecs\ECSWorld.h" />
+    <ClInclude Include="src\ecs\entity.h" />
+    <ClInclude Include="src\ecs\entity_pool.h" />
+    <ClInclude Include="src\game\game_handles.h" />
     <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
@@ -361,10 +369,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="debug_config.h" />
-    <ClInclude Include="src\ecs\component_storage.h" />
-    <ClInclude Include="src\ecs\ECSWorld.h" />
-    <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\engine\camera.h" />
     <ClInclude Include="src\engine\engine_state.h" />
     <ClInclude Include="src\engine\opengl_init.h" />
@@ -420,7 +424,7 @@
     <ClInclude Include="src\physics\colliders\aabb.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\colliders\collider.h" />
-    <ClInclude Include="src\physics\colliders\collider_pose.h" />
+    <ClInclude Include="src\physics\colliders\collider_transform_cache.h" />
     <ClInclude Include="src\physics\colliders\oobb.h" />
     <ClInclude Include="src\physics\colliders\sphere.h" />
     <ClInclude Include="src\physics\colliders\tri.h" />
@@ -432,8 +436,14 @@
     <ClInclude Include="src\physics\narrowphase\SAT\sat.h" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
     <ClInclude Include="src\physics\physics_engine.h" />
+    <ClInclude Include="src\physics\public\collider_desc.h" />
+    <ClInclude Include="src\physics\public\collider_state.h" />
     <ClInclude Include="src\physics\public\physics_debug_types.h" />
     <ClInclude Include="src\physics\public\physics_engine.h" />
+    <ClInclude Include="src\physics\public\physics_handles.h" />
+    <ClInclude Include="src\physics\public\physics_types.h" />
+    <ClInclude Include="src\physics\public\rigid_body_desc.h" />
+    <ClInclude Include="src\physics\public\rigid_body_state.h" />
     <ClInclude Include="src\physics\world\runtime_caches.h" />
     <ClInclude Include="src\physics\world\physics_world.h" />
     <ClInclude Include="src\core\pointer_cache.h" />

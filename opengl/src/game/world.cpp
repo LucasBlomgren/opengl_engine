@@ -5,7 +5,12 @@
 #include "graphics/textures/texture_manager.h"
 #include "graphics/mesh/mesh_manager.h"
 #include "graphics/shaders/shader_manager.h"
+
 #include "physics/physics_engine.h"
+#include "physics/public/physics_handles.h"
+
+#include "game/game_handles.h"
+
 
 void World::clear() {
     gameObjects.clear();
@@ -47,53 +52,53 @@ TransformHandle World::createTransform(const glm::vec3& position, const glm::qua
 }
 
 GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
+    Transform* rootTransform = transforms.try_get(objDesc.rootTransformHandle);
+    if (!rootTransform) {
+        std::cerr << "[World] Cannot create GameObject '" << objDesc.name
+            << "': invalid root transform.\n";
+        return {};
+    }
+
     GameObjectHandle gameObjectHandle = gameObjects.create(objectId, objDesc.rootTransformHandle);
     GameObject& gameObject = *gameObjects.try_get(gameObjectHandle);
     gameObject.name = objDesc.name;
 
-    PhysicsWorld* physicsWorld = physicsEngine.getPhysicsWorld();
-    Transform* rootTransform = transforms.try_get(objDesc.rootTransformHandle);
+    RigidBodyDesc bodyDesc;
+    bodyDesc.pose.position = rootTransform->position;
+    bodyDesc.pose.orientation = rootTransform->orientation;
+    bodyDesc.scale = rootTransform->scale;
+    bodyDesc.type = objDesc.bodyType;
+    bodyDesc.mass = objDesc.mass;
+    bodyDesc.allowSleep = objDesc.allowSleep;
+    bodyDesc.startAsleep = objDesc.asleep;
+    bodyDesc.sleepCounterThreshold = objDesc.sleepCounterThreshold;
 
-    // create rigid body
-    RigidBodyHandle bodyHandle = physicsWorld->createRigidBody();
+    RigidBodyHandle bodyHandle = physicsEngine.createRigidBody(bodyDesc);
+    if (!bodyHandle.isValid()) {
+        std::cerr << "[World] Cannot create physics body for GameObject '"
+            << objDesc.name << "'.\n";
+        gameObjects.destroy(gameObjectHandle);
+        return {};
+    }
+
     gameObject.rigidBodyHandle = bodyHandle;
 
-    RigidBody& body = *physicsWorld->getRigidBodiesMap().try_get(bodyHandle);
-    body.gameObjectHandle = gameObjectHandle;
-    body.rootTransformHandle = objDesc.rootTransformHandle;
-    body.type = objDesc.bodyType;
-    body.mass = objDesc.mass;
-
-    if (objDesc.bodyType == BodyType::Static || objDesc.bodyType == BodyType::Kinematic) {
-        body.invMass = 0.0f;
-    } else {
-        body.invMass = 1.0f / objDesc.mass;
+    // Temporary GameObject/Transform binding used by the current renderer,
+    // editor and raycast code. Body creation itself goes through the public API.
+    RigidBody* body = getRigidBody(bodyHandle);
+    if (body) {
+        body->gameObjectHandle = gameObjectHandle;
+        body->rootTransformHandle = objDesc.rootTransformHandle;
     }
 
-    body.asleep = objDesc.asleep;
-    body.allowSleep = objDesc.allowSleep;
-    body.sleepCounterThreshold = objDesc.sleepCounterThreshold;
-    body.anchorPoint = rootTransform->position;
-    body.invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));
-
-    // broadphase bucket
-    BroadphaseBucket target;
-    switch (objDesc.bodyType) {
-    case BodyType::Dynamic:
-        target = objDesc.asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
-        break;
-    case BodyType::Kinematic:
-        target = BroadphaseBucket::Awake;
-        break;
-    case BodyType::Static:
-        target = BroadphaseBucket::Static;
-        break;
-    }
-    body.broadphaseHandle.bucket = target;
-
-    // create parts
     for (const SubPartDesc& partDesc : objDesc.parts) {
         Transform* partTransform = transforms.try_get(partDesc.localTransformHandle);
+        if (!partTransform) {
+            std::cerr << "[World] Skipping part '" << partDesc.name
+                << "' with invalid local transform.\n";
+            continue;
+        }
+
         SubPart part;
         part.name = partDesc.name;
         part.localTransformHandle = partDesc.localTransformHandle;
@@ -114,88 +119,63 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
         part.color = partDesc.color;
         part.seeThrough = partDesc.seeThrough;
 
-        // create collider for part
-        ColliderHandle colliderHandle = physicsWorld->createCollider();
-        Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
-        collider.rigidBodyHandle = bodyHandle;
-        collider.type = partDesc.colliderType;
-        collider.localTransformHandle = partDesc.localTransformHandle;
-
-        collider.pose.position = partTransform->position;
-        collider.pose.orientation = partTransform->orientation;
-        collider.pose.scale = partTransform->scale;
-        collider.pose.combineIntoColliderPose(*rootTransform, *partTransform);
-        collider.pose.ensureModelMatrix();
-
-        // aabb init
         std::vector<glm::vec3> verticesPositions;
         for (const Vertex& vertex : part.mesh->vertices) {
             verticesPositions.push_back(vertex.position);
         }
-        collider.aabb.init(verticesPositions);
-        collider.aabb.update(collider.pose);
 
-        // collider shape init
+        glm::vec3 localCenter{ 0.0f };
+        glm::vec3 localHalfExtents{ 0.5f };
+        if (!verticesPositions.empty()) {
+            glm::vec3 minimum = verticesPositions.front();
+            glm::vec3 maximum = verticesPositions.front();
+            for (const glm::vec3& vertex : verticesPositions) {
+                minimum = glm::min(minimum, vertex);
+                maximum = glm::max(maximum, vertex);
+            }
+            localCenter = (minimum + maximum) * 0.5f;
+            localHalfExtents = (maximum - minimum) * 0.5f;
+        }
+
+        ColliderDesc colliderDesc;
+        colliderDesc.localPose.position = partTransform->position;
+        colliderDesc.localPose.orientation = partTransform->orientation;
+        colliderDesc.localScale = partTransform->scale;
+
         if (partDesc.colliderType == ColliderType::CUBOID) {
-            OOBB box(verticesPositions, collider.pose);
-            collider.shape = box;
+            colliderDesc.shape = BoxShapeDesc{ localCenter, localHalfExtents };
         }
         else if (partDesc.colliderType == ColliderType::SPHERE) {
-            Sphere sphere(collider.pose);
-            collider.shape = sphere;
+            float radius = 0.5f;
+            if (!verticesPositions.empty()) {
+                radius = 0.0f;
+                for (const glm::vec3& vertex : verticesPositions) {
+                    radius = (std::max)(radius, glm::length(vertex - localCenter));
+                }
+            }
+            colliderDesc.shape = SphereShapeDesc{ localCenter, radius };
+        }
+
+        ColliderHandle colliderHandle = physicsEngine.createCollider(bodyHandle, colliderDesc);
+        if (!colliderHandle.isValid()) {
+            std::cerr << "[World] Failed to create collider for part '"
+                << partDesc.name << "'.\n";
+            continue;
         }
 
         part.colliderHandle = colliderHandle;
+        if (Collider* collider = getCollider(colliderHandle)) {
+            collider->localTransformHandle = partDesc.localTransformHandle;
+        }
 
         gameObject.parts.push_back(part);
-        body.colliderHandles.push_back(colliderHandle);
     }
 
-    if (body.colliderHandles.empty()) {
+    if (!body || body->colliderHandles.empty()) {
         std::cerr << "[World] Warning: Created GameObject with no colliders. GameObject ID: " << gameObject.id << "\n";
     }
 
-    // Update colliders
-    for (const ColliderHandle& colH : body.colliderHandles) {
-        Collider* collider = getCollider(colH);
-        Transform* localTransform = getTransform(collider->localTransformHandle);
-
-        collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
-        collider->pose.ensureModelMatrix();
-        collider->updateAABB(collider->pose);
-        collider->updateCollider(collider->pose);
-    }
-
-    // update body AABB
-    Collider* mainCollider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
-    body.aabb = mainCollider->getAABB();
-
-    if (body.isCompound()) {
-        for (size_t i = 1; i < body.colliderHandles.size(); ++i) {
-            Collider* c = physicsWorld->getCollidersMap().try_get(body.colliderHandles[i]);
-
-            // grow body AABB to include all colliders
-            body.aabb.growToInclude(c->getAABB().worldMin);
-            body.aabb.growToInclude(c->getAABB().worldMax);
-        }
-
-        body.aabb.worldCenter = (body.aabb.worldMin + body.aabb.worldMax) * 0.5f;
-        body.aabb.worldHalfExtents = (body.aabb.worldMax - body.aabb.worldMin) * 0.5f;
-        body.aabb.setSurfaceArea();
-    }
-
-    // inertia init 
-    // #TODO: refactor to support multiple colliders per rigid body (compound objects)
-    Collider* collider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
-    body.calculateInverseInertia(objDesc.parts[0].colliderType, *collider, *rootTransform);
-
-    // add body to broadphase
-    physicsEngine.queueAdd(bodyHandle, body.broadphaseHandle.bucket);
-
-
-    // #TODO: should add parts instead of whole game object
     renderer.addObjectToBatch(gameObjectHandle);
-
 
     objectId++;
     return gameObjectHandle;
@@ -207,7 +187,7 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
 void World::deleteGameObject(GameObjectHandle handle) {
     GameObject* obj = gameObjects.try_get(handle);
     if (obj) {
-        physicsEngine.queueRemove(obj->rigidBodyHandle);
+        physicsEngine.destroyRigidBody(obj->rigidBodyHandle);
         renderer.removeObjectFromBatch(handle);
         gameObjects.destroy(handle);
     }

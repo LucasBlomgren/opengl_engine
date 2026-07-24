@@ -19,8 +19,11 @@ struct PointerCache {
 
     T* get(Handle h, const char* func) {
         if (h.slot >= cache.size()) {
-            std::cout << "[" << func << "] Error: Invalid " << name << " handle.\n";
-            return nullptr;
+            cache.resize(sm->slot_capacity(), nullptr);
+            if (h.slot >= cache.size()) {
+                std::cout << "[" << func << "] Error: Invalid " << name << " handle.\n";
+                return nullptr;
+            }
         }
 
         T*& slot = cache[h.slot];

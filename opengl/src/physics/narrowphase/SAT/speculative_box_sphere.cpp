@@ -17,14 +17,14 @@ bool SAT::speculativeBoxSphere(
     const OOBB& box = std::get<OOBB>(boxCollider.shape);
     const Sphere& sphere = std::get<Sphere>(sphereCollider.shape);
 
-    const glm::vec3 boxCenter = boxCollider.pose.position;
-    const glm::vec3 sphereCenter = sphereCollider.pose.position;
+    const glm::vec3 boxCenter = boxCollider.worldPose.position;
+    const glm::vec3 sphereCenter = sphereCollider.worldPose.position;
 
     // Adjust these names to your actual fields.
     const glm::vec3 half = box.localHalfExtents * box.scale; // half extents in local space
     const float radius = sphere.radiusWorld;
 
-    glm::mat3 rot = glm::mat3_cast(boxCollider.pose.orientation);
+    glm::mat3 rot = glm::mat3_cast(boxCollider.worldPose.orientation);
 
     glm::vec3 boxAxes[3] = {
         glm::normalize(rot[0]),

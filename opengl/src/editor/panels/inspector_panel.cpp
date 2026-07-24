@@ -2,12 +2,17 @@
 #include "inspector_panel.h"
 #include "editor/panel.h"
 #include "imgui.h"
-#include "game/game_object.h"
+
 #include "graphics/mesh/mesh_manager.h"
 #include "graphics/mesh/mesh.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/textures/texture_manager.h"
+
+#include "game/game_object.h"
 #include "game/world.h"
+#include "game/game_handles.h"
+
+#include "physics/public/physics_handles.h"
 
 bool DrawSection(const char* title, ImVec2 innerSize = ImVec2(0, 0))
 {
@@ -232,51 +237,9 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             return ImGui::ColorEdit3(id, &color.x, ImGuiColorEditFlags_DisplayRGB);
         };
 
-    auto RebuildRigidBodyAABB = [&]()
-        {
-            if (rb->colliderHandles.empty())
-                return;
-
-            Collider* mainCollider = ctx.world->getCollider(rb->colliderHandles[0]);
-            if (!mainCollider)
-                return;
-
-            rb->aabb = mainCollider->getAABB();
-
-            if (rb->isCompound())
-            {
-                for (size_t i = 1; i < rb->colliderHandles.size(); ++i)
-                {
-                    Collider* c = ctx.world->getCollider(rb->colliderHandles[i]);
-                    if (!c) continue;
-
-                    rb->aabb.growToInclude(c->getAABB().worldMin);
-                    rb->aabb.growToInclude(c->getAABB().worldMax);
-                }
-
-                rb->aabb.worldCenter = (rb->aabb.worldMin + rb->aabb.worldMax) * 0.5f;
-                rb->aabb.worldHalfExtents = (rb->aabb.worldMax - rb->aabb.worldMin) * 0.5f;
-                rb->aabb.setSurfaceArea();
-            }
-        };
-
     auto SyncAllCollidersFromRoot = [&]()
         {
-            for (ColliderHandle& handle : rb->colliderHandles)
-            {
-                Collider* collider = ctx.world->getCollider(handle);
-                if (!collider) continue;
-
-                Transform* localTransform = ctx.world->getTransform(collider->localTransformHandle);
-                if (!localTransform) continue;
-
-                collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
-                collider->pose.ensureModelMatrix();
-                collider->updateAABB(collider->pose);
-                collider->updateCollider(collider->pose);
-            }
-
-            RebuildRigidBodyAABB();
+            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
         };
 
     auto SyncSingleSubPartCollider = [&](int subPartIndex)
@@ -286,19 +249,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
             if (subPartIndex >= (int)rb->colliderHandles.size())
                 return;
 
-            Collider* collider = ctx.world->getCollider(rb->colliderHandles[subPartIndex]);
-            if (!collider)
-                return;
-
-            Transform* localTransform = ctx.world->getTransform(collider->localTransformHandle);
-            if (!localTransform)
-                return;
-
-            collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
-            collider->updateAABB(collider->pose);
-            collider->updateCollider(collider->pose);
-
-            RebuildRigidBodyAABB();
+            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
         };
 
     auto RebuildObjectRenderBatches = [&]()
@@ -344,7 +295,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         if (collider)
                         {
                             rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld(*rootTransform);
+                            rb->updateInertiaWorld();
                             rb->invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));
                         }
                     }
@@ -423,7 +374,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         if (rb->allowSleep && rb->asleep)
                         {
                             target = BroadphaseBucket::Asleep;
-                            rb->setAsleep(*rootTransform);
+                            rb->setAsleep();
                         }
                         else
                         {
@@ -459,7 +410,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         if (collider)
                         {
                             rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld(*rootTransform);
+                            rb->updateInertiaWorld();
                         }
                     }
 
@@ -507,7 +458,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         if (collider)
                         {
                             rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld(*rootTransform);
+                            rb->updateInertiaWorld();
                         }
                     }
                 }
@@ -530,7 +481,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     BroadphaseBucket target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
                     if (rb->asleep) {
-                        rb->setAsleep(*rootTransform);
+                        rb->setAsleep();
                     } else {
                         rb->setAwake();
                     }
@@ -552,7 +503,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         if (collider)
                         {
                             rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld(*rootTransform);
+                            rb->updateInertiaWorld();
                         }
                     }
                 }
@@ -627,66 +578,41 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 part.mesh = obj->parts[0].mesh;
                 part.textureId = 999; // plain
 
-                // create collider for part
-                PhysicsWorld* physicsWorld = ctx.physicsEngine->getPhysicsWorld();
-                ColliderHandle colliderHandle = physicsWorld->createCollider();
-                Collider& collider = *physicsWorld->getCollidersMap().try_get(colliderHandle);
-                collider.rigidBodyHandle = obj->rigidBodyHandle;
-                collider.type = ColliderType::CUBOID;
-                collider.localTransformHandle = partTransformHandle;
-
-                collider.pose.position = partTransform->position;
-                collider.pose.orientation = partTransform->orientation;
-                collider.pose.scale = partTransform->scale;
-                collider.pose.combineIntoColliderPose(*rootTransform, *partTransform);
-                collider.pose.ensureModelMatrix();
-
-                // aabb init
                 std::vector<glm::vec3> verticesPositions;
                 for (const Vertex& vertex : part.mesh->vertices) {
                     verticesPositions.push_back(vertex.position);
                 }
-                collider.aabb.init(verticesPositions);
-                collider.aabb.update(collider.pose);
 
-                // collider shape init
-                OOBB box(verticesPositions, collider.pose);
-                collider.shape = box;
-
-                part.colliderHandle = colliderHandle;
-
-                obj->parts.push_back(part);
-                rb->colliderHandles.push_back(colliderHandle);
-
-                Collider* mainCollider = physicsWorld->getCollidersMap().try_get(rb->colliderHandles[0]);
-                rb->aabb = mainCollider->getAABB();
-
-                if (rb->isCompound()) {
-                    for (size_t i = 1; i < rb->colliderHandles.size(); ++i) {
-                        Collider* c = physicsWorld->getCollidersMap().try_get(rb->colliderHandles[i]);
-
-                        // grow body AABB to include all colliders
-                        rb->aabb.growToInclude(c->getAABB().worldMin);
-                        rb->aabb.growToInclude(c->getAABB().worldMax);
+                glm::vec3 localCenter{ 0.0f };
+                glm::vec3 localHalfExtents{ 0.5f };
+                if (!verticesPositions.empty()) {
+                    glm::vec3 minimum = verticesPositions.front();
+                    glm::vec3 maximum = verticesPositions.front();
+                    for (const glm::vec3& vertex : verticesPositions) {
+                        minimum = glm::min(minimum, vertex);
+                        maximum = glm::max(maximum, vertex);
                     }
-
-                    rb->aabb.worldCenter = (rb->aabb.worldMin + rb->aabb.worldMax) * 0.5f;
-                    rb->aabb.worldHalfExtents = (rb->aabb.worldMax - rb->aabb.worldMin) * 0.5f;
-                    rb->aabb.setSurfaceArea();
+                    localCenter = (minimum + maximum) * 0.5f;
+                    localHalfExtents = (maximum - minimum) * 0.5f;
                 }
 
-                //// inertia init 
-                //// #TODO: refactor to support multiple colliders per rigid body (compound objects)
-                //Collider* collider = physicsWorld->getCollidersMap().try_get(body.colliderHandles[0]);
-                //body.calculateInverseInertia(obj->parts[0].colliderType, *collider, *rootTransform);
+                ColliderDesc colliderDesc;
+                colliderDesc.localPose.position = partTransform->position;
+                colliderDesc.localPose.orientation = partTransform->orientation;
+                colliderDesc.localScale = partTransform->scale;
+                colliderDesc.shape = BoxShapeDesc{ localCenter, localHalfExtents };
 
-                // add body to broadphase
-                ctx.physicsEngine->queueRemove(obj->rigidBodyHandle);
-                ctx.physicsEngine->queueAdd(obj->rigidBodyHandle, rb->broadphaseHandle.bucket);
-
-                // #TODO: should add parts instead of whole game object
-                ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
-                ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
+                ColliderHandle colliderHandle =
+                    ctx.physicsEngine->createCollider(obj->rigidBodyHandle, colliderDesc);
+                if (colliderHandle.isValid()) {
+                    part.colliderHandle = colliderHandle;
+                    if (Collider* collider = ctx.world->getCollider(colliderHandle)) {
+                        collider->localTransformHandle = partTransformHandle;
+                    }
+                    obj->parts.push_back(part);
+                    ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+                    RebuildObjectRenderBatches();
+                }
             }
 
             ImGui::EndTable();
@@ -785,20 +711,19 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                             }
 
                             if (colliderChoice == 0) {
-                                OOBB box(verticesPositions, collider->pose);
+                                OOBB box(verticesPositions);
                                 collider->type = ColliderType::CUBOID;
                                 collider->shape = box;
                             }
                             else if (colliderChoice == 1) {
-                                Sphere sphere(collider->pose);
+                                Sphere sphere(1.0f);
                                 collider->type = ColliderType::SPHERE;
                                 collider->shape = sphere;
                             }
 
-                            collider->aabb.init(verticesPositions);
-                            collider->updateAABB(collider->pose);
-                            collider->updateCollider(collider->pose);
-                            RebuildRigidBodyAABB();
+                            collider->updateShape();
+                            collider->updateAABB();
+                            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
                         }
                     }
                 }
@@ -859,19 +784,18 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                             if (collider)
                             {
                                 if (collider->type == ColliderType::CUBOID) {
-                                    OOBB box(verticesPositions, collider->pose);
+                                    OOBB box(verticesPositions);
                                     collider->shape = box;
                                 }
                                 else if (collider->type == ColliderType::SPHERE) {
-                                    Sphere sphere(collider->pose);
+                                    Sphere sphere(1.0f);
                                     collider->shape = sphere;
                                 }
                             }
 
-                            collider->aabb.init(verticesPositions);
-                            collider->updateAABB(collider->pose);
-                            collider->updateCollider(collider->pose);
-                            RebuildRigidBodyAABB();
+                            collider->updateShape();
+                            collider->updateAABB();
+                            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
                         }
                     }
                 }

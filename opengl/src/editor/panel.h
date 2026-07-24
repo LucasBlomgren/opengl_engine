@@ -1,6 +1,7 @@
 #pragma once
 
-#include "core/slot_map.h"
+#include "game/game_handles.h"
+
 
 class PhysicsEngine;
 class GameObject;

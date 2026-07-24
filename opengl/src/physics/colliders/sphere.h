@@ -1,20 +1,29 @@
 #pragma once
+
+#include <algorithm>
+
 #include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
+#include <glm/gtc/quaternion.hpp>
+
+#include "physics/public/physics_types.h"
 
 class Sphere {
 public:
-    glm::vec3 centerWorld{ 0.0f };
     glm::vec3 centerLocal{ 0.0f };
-    float     radiusWorld = 0.0f;
+    glm::vec3 centerWorld{ 0.0f };
 
-    Sphere(const ColliderPose& pose) {
-        centerWorld = glm::vec3(pose.modelMatrix * glm::vec4(centerLocal, 1.0f));
-        radiusWorld = pose.scale.x; // sphere mesh has diameter = 2 [-1.0f, 1.0f] in local space
-    }
+    float radiusLocal = 0.5f;
+    float radiusWorld = 0.5f;
 
-    void update(const ColliderPose& pose) {
-        centerWorld = glm::vec3(pose.modelMatrix * glm::vec4(centerLocal, 1.0f));
-        radiusWorld = pose.scale.x;
+    Sphere() = default;
+
+    explicit Sphere(float radius) : radiusLocal(radius), radiusWorld(radius) {}
+
+    void update(const PhysicsPose& worldPose, const glm::vec3& worldScale) {
+        glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
+        centerWorld = worldPose.position + rotation * (worldScale * centerLocal);
+
+        const glm::vec3 absScale = glm::abs(worldScale);
+        radiusWorld = radiusLocal * (std::max)({ absScale.x, absScale.y, absScale.z });
     }
 };

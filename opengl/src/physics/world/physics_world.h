@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/slot_map.h"
+
+#include "physics/public/physics_handles.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 
@@ -11,8 +13,12 @@ public:
     void clear();
 
     // getters
-    RigidBody* getRigidBody(RigidBodyHandle& handle);
-    Collider* getCollider(ColliderHandle& handle);
+    RigidBody* getRigidBody(RigidBodyHandle handle);
+    const RigidBody* getRigidBody(RigidBodyHandle handle) const;
+
+    Collider* getCollider(ColliderHandle handle);
+    const Collider* getCollider(ColliderHandle handle) const;
+
     AABB computeBodyAABB(const RigidBody& body);
 
     SlotMap<Collider, ColliderHandle>& getCollidersMap();

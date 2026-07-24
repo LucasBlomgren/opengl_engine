@@ -10,8 +10,15 @@ void PhysicsEngine::Impl::integrateForcesAndVelocities(
 {
     for (const RigidBodyHandle& bodyH : bodies) {
         RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+        if (!body || body->colliderHandles.empty()) {
+            continue;
+        }
+
         Collider* mainCollider =
             caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+        if (!mainCollider) {
+            continue;
+        }
 
         // For solo spheres.
         if (body->colliderHandles.size() == 1) {
@@ -33,15 +40,25 @@ void PhysicsEngine::Impl::integratePositionsAndColliders(
 {
     for (const RigidBodyHandle& bodyH : bodies) {
         RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+        if (!body) {
+            continue;
+        }
+
         Transform* rootTransform =
             caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
 
         // This assumes integrateVelocities() means:
         // position/orientation += velocity/angularVelocity * dt
-        body->integrateVelocities(*rootTransform, dt);
+        body->integratePose(dt);
 
-        rootTransform->updateCache();
-        body->updateInertiaWorld(*rootTransform);
+        if (rootTransform) {
+            rootTransform->lastPosition = rootTransform->position;
+            rootTransform->position = body->pose.position;
+            rootTransform->orientation = body->pose.orientation;
+            rootTransform->updateCache();
+        }
+
+        body->updateInertiaWorld();
 
         updateCollidersAndBodyAABB(body, rootTransform);
     }
@@ -59,17 +76,22 @@ void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
 
     for (const ColliderHandle& colH : body->colliderHandles) {
         Collider* collider = caches.colliders.get(colH, FUNC_NAME);
+        if (!collider || !collider->enabled) {
+            continue;
+        }
+
         Transform* localTransform =
             caches.transforms.get(collider->localTransformHandle, FUNC_NAME);
 
-        collider->pose.combineIntoColliderPose(
-            *rootTransform,
-            *localTransform
-        );
+        if (localTransform) {
+            collider->localPose.position = localTransform->position;
+            collider->localPose.orientation = localTransform->orientation;
+            collider->localScale = localTransform->scale;
+        }
 
-        collider->pose.ensureModelMatrix();
-        collider->updateAABB(collider->pose);
-        collider->updateCollider(collider->pose);
+        collider->updateWorldPose(body->pose, body->scale);
+        collider->updateShape();
+        collider->updateAABB();
 
         const AABB& colliderAABB = collider->getAABB();
 

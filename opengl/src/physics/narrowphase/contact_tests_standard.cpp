@@ -35,9 +35,9 @@ bool NarrowphaseManager::tryBoxSphere(
         in.swapAB();
     }
 
-    in.colliderA->pose.ensureInvModelMatrix();
+    in.colliderA->transformCache.ensureInvModelMatrix(in.colliderA->worldPose);
 
-    if (!SAT::boxSphere(*in.colliderA, *in.colliderB, in.colliderA->pose, out.sat)) {
+    if (!SAT::boxSphere(*in.colliderA, *in.colliderB, in.colliderA->transformCache, out.sat)) {
         return false;
     }
 

@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "graphics/renderer/debug_renderer.h"
 #include "graphics/debug/render_contact_points.h"
-#include "physics/colliders/collider_pose.h"
 #include "game/world.h"
 
 //-----------------------------
@@ -145,13 +144,11 @@ void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& obj
 
     // subpart selected: use local transform + collider pose of subpart instead of root transform, to visualize local normals in the correct orientation/position
     if (selectedSubPartIndex >= 0 && selectedSubPartIndex < selectedObject->parts.size()) {
-        Transform* localTransform = world.getTransform(selectedObject->parts[selectedSubPartIndex].localTransformHandle);
         Collider* col = world.getCollider(selectedObject->parts[selectedSubPartIndex].colliderHandle);
-        ColliderPose pose = col->pose;
-        pose.combineIntoColliderPose(*rootTransform, *localTransform);
-
-        orientationToUse = &pose.orientation;
-        positionToUse = &pose.position;
+        if (col) {
+            orientationToUse = &col->worldPose.orientation;
+            positionToUse = &col->worldPose.position;
+        }
     }
 
     // build baseTR from obj.modelMatrix: same position + rotation, but no scale

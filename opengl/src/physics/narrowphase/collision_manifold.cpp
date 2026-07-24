@@ -38,7 +38,8 @@ Contact* CollisionManifold::boxBox(
     if (contact.objBisReference) {
         selectOOBBCollisionRefFaceAndNormal(
             colliderB,
-            colliderB->pose,
+            colliderB->worldPose,
+            colliderB->transformCache,
             -satResult.normal,
             contact.referenceFace,
             contact.referenceFaceNormal
@@ -46,7 +47,8 @@ Contact* CollisionManifold::boxBox(
 
         selectOOBBCollisionIncidentFace(
             colliderA,
-            colliderA->pose,
+            colliderA->worldPose,
+            colliderA->transformCache,
             satResult.normal,
             contact.incidentFace
         );
@@ -54,7 +56,8 @@ Contact* CollisionManifold::boxBox(
     else {
         selectOOBBCollisionRefFaceAndNormal(
             colliderA,
-            colliderA->pose,
+            colliderA->worldPose,
+            colliderA->transformCache,
             satResult.normal,
             contact.referenceFace,
             contact.referenceFaceNormal
@@ -62,7 +65,8 @@ Contact* CollisionManifold::boxBox(
 
         selectOOBBCollisionIncidentFace(
             colliderB,
-            colliderB->pose,
+            colliderB->worldPose,
+            colliderB->transformCache,
             -satResult.normal,
             contact.incidentFace
         );
@@ -170,7 +174,8 @@ Contact* CollisionManifold::boxMesh(
 
         selectOOBBCollisionRefFaceAndNormal(
             colliderA,
-            colliderA->pose,
+            colliderA->worldPose,
+            colliderA->transformCache,
             satResult.normal,
             contact.referenceFace,
             contact.referenceFaceNormal
@@ -401,14 +406,14 @@ void CollisionManifold::addFurthestPoint() {
 //============================================================================
 //  Select OOBB Reference face & normal for clipping based on contact normal
 //============================================================================
-void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal) {
-    pose.ensureInvRotationMatrix();
-    pose.ensureModelMatrix();
+void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal) {
+    transformCache.ensureInvModelMatrix(pose);
+    transformCache.ensureModelMatrix(pose);
 
     const OOBB& box = std::get<OOBB>(collider->shape);
 
     // rotate the contact normal into the box's local space
-    glm::vec3 rotated = pose.invRotationMatrix * normal;
+    glm::vec3 rotated = transformCache.invModelMatrix * glm::vec4(normal, 0.0f);
     glm::vec3 absN = glm::abs(rotated);
 
     // choose the face whose normal is most aligned with the contact normal (in local space)
@@ -428,8 +433,8 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* coll
     }
 
     // transform the four local face vertices to world space using the box's model matrix (which includes rotation and scale)
-    glm::mat3 M3 = glm::mat3(pose.modelMatrix);
-    glm::vec3 T3 = glm::vec3(pose.modelMatrix[3]);
+    glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
+    glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
 
     for (int i = 0; i < localFace.size(); i++) {
         outFace[i] = M3 * localFace[i] + T3;
@@ -444,14 +449,14 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* coll
 //=================================================================
 // Select OOBB Incident face for clipping based on contact normal
 //=================================================================
-void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
-    pose.ensureInvRotationMatrix();
-    pose.ensureModelMatrix();
+void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
+    transformCache.ensureInvRotationMatrix(pose);
+    transformCache.ensureModelMatrix(pose);
 
     const OOBB& box = std::get<OOBB>(collider->shape);
 
     // rotate the contact normal into the box's local space
-    glm::vec3 rotated = pose.invRotationMatrix * normal;
+    glm::vec3 rotated = transformCache.invRotationMatrix * normal;
     glm::vec3 absN = glm::abs(rotated);
 
     // choose the face whose normal is most aligned with the contact normal (in local space)
@@ -474,8 +479,8 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider
     }
 
     // transform the four local face vertices to world space using the box's model matrix (which includes rotation and scale)
-    glm::mat3 M3 = glm::mat3(pose.modelMatrix);
-    glm::vec3 T3 = glm::vec3(pose.modelMatrix[3]);
+    glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
+    glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
 
     for (int i = 0; i < localFace.size(); i++) {
         outFace[i] = M3 * localFace[i] + T3;

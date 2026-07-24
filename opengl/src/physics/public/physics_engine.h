@@ -3,6 +3,13 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <optional>
+
+#include "collider_desc.h"
+#include "collider_state.h"
+#include "physics_handles.h"
+#include "rigid_body_desc.h"
+#include "rigid_body_state.h"
 
 #include "physics_debug_types.h"
 
@@ -73,6 +80,24 @@ public:
     void queueRemove(RigidBodyHandle& handle);
     void queueMove(RigidBodyHandle& handle, BroadphaseBucket& target);
     void setBVHDirty(RigidBodyHandle& handle);
+
+
+    [[nodiscard]] RigidBodyHandle createRigidBody(const RigidBodyDesc& desc);
+    bool destroyRigidBody(RigidBodyHandle body);
+
+    [[nodiscard]] ColliderHandle createCollider(RigidBodyHandle body, const ColliderDesc& desc);
+    bool destroyCollider(ColliderHandle collider);
+
+    std::optional<RigidBodyState> getRigidBodyState(RigidBodyHandle body) const;
+    std::optional<ColliderState> getColliderState(ColliderHandle collider) const;
+
+    bool applyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
+    bool setLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    bool setKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
+
+    bool setColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
+    bool setColliderEnabled(ColliderHandle collider, bool enabled);
+    bool setColliderTrigger(ColliderHandle collider, bool isTrigger);
 
 private:
     struct Impl;

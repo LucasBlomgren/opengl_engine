@@ -7,7 +7,7 @@
 
 #include "physics/world/runtime_caches.h"
 #include "physics/bodies/rigidbody.h"
-#include "physics/colliders/collider_pose.h"
+#include "physics/colliders/collider_transform_cache.h"
 
 // for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
 struct Plane {
@@ -158,8 +158,8 @@ private:
     RuntimeCaches* caches = nullptr;
 
     // reference face selection for box-box and box-mesh collisions
-    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
-    void selectOOBBCollisionIncidentFace(const Collider* collider, ColliderPose& pose, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
+    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
+    void selectOOBBCollisionIncidentFace(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
 
     // furthest point selection for terrain collisions
     void pickFourFurthestPoints();

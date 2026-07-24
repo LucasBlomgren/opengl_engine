@@ -336,12 +336,16 @@ int main() {
 		}
 
         // Delete out of bounds objects
+        std::vector<GameObjectHandle> outOfBoundsObjects;
         for (const RigidBodyHandle& handle : physicsEngine.getAwakeList()) {
             RigidBody* rb = world.getRigidBody(handle);
             Transform* t = world.getTransform(rb->rootTransformHandle);
 			if (t->position.y < -1000.0f || t->position.y > 5000.0f) {
-                world.deleteGameObject(rb->gameObjectHandle);
+                outOfBoundsObjects.push_back(rb->gameObjectHandle);
 			}
+        }
+        for (GameObjectHandle handle : outOfBoundsObjects) {
+            world.deleteGameObject(handle);
         }
 
 		//=============================================================

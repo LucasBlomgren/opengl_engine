@@ -18,7 +18,7 @@ bool SAT::speculativeSphereTriangle(
 
     const Sphere& sphere = std::get<Sphere>(sphereCollider.shape);
 
-    const glm::vec3 center = sphereCollider.pose.position;
+    const glm::vec3 center = sphereCollider.worldPose.position;
     const glm::vec3 velocity = sphereBody.linearVelocity;
     const float radius = sphere.radiusWorld;
 

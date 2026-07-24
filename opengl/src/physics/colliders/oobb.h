@@ -3,15 +3,20 @@
 #include <array>
 #include <vector>
 
-#include "collider_pose.h"
+#include <glm/vec3.hpp>
+
+#include "physics/public/physics_types.h"
 
 enum class FaceId {
-    MinX, MaxX,
-    MinY, MaxY,
-    MinZ, MaxZ
+    MinX,
+    MaxX,
+    MinY,
+    MaxY,
+    MinZ,
+    MaxZ
 };
 
-static constexpr std::array<std::array<int, 4>, 6> FACE_INDICES = { {
+inline constexpr std::array<std::array<int, 4>, 6> FACE_INDICES = { {
     {{0, 4, 7, 3}}, // MinX
     {{5, 1, 2, 6}}, // MaxX
     {{1, 5, 4, 0}}, // MinY
@@ -20,33 +25,40 @@ static constexpr std::array<std::array<int, 4>, 6> FACE_INDICES = { {
     {{4, 5, 6, 7}}  // MaxZ
 } };
 
-static constexpr std::array<glm::vec3, 3>  localAxes = {
-  glm::vec3(1,  0,  0),
-  glm::vec3(0,  1,  0),
-  glm::vec3(0,  0,  1),
+inline const std::array<glm::vec3, 3> LOCAL_AXES = {
+    glm::vec3(1.0f, 0.0f, 0.0f),
+    glm::vec3(0.0f, 1.0f, 0.0f),
+    glm::vec3(0.0f, 0.0f, 1.0f)
 };
 
 class OOBB {
 public:
-    //constructor
     OOBB() = default;
-    OOBB(const std::vector<glm::vec3>& verts, const ColliderPose& pose) {
-        init(verts, pose);
-        update(pose);
-    };
+    explicit OOBB(const std::vector<glm::vec3>& vertices);
+    explicit OOBB(const glm::vec3& halfExtents, const glm::vec3& center = glm::vec3(0.0f));
 
-    void init(const std::vector<glm::vec3>& verts, const ColliderPose& pose);
+    void init(const std::vector<glm::vec3>& vertices);
+    void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
+    void update(const PhysicsPose& worldPose, const glm::vec3& worldScale);
 
-    void update(const ColliderPose& pose);
     std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 
-    std::array<glm::vec3, 8> worldVertices;
-    std::array<glm::vec3, 3> worldAxes;
-    glm::vec3 worldCenter;
-    glm::vec3 localHalfExtents;
-    glm::vec3 scale;
+    std::array<glm::vec3, 8> worldVertices{};
+    std::array<glm::vec3, 3> worldAxes{
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f)
+    };
+
+    glm::vec3 worldCenter{ 0.0f };
+    glm::vec3 localHalfExtents{ 0.5f };
+
+    // Temporary while scale still comes from ECS/game transforms.
+    glm::vec3 scale{ 1.0f };
 
 private:
-    glm::vec3 localCenter;
-    std::array<glm::vec3, 8> localVertices;
+    void rebuildLocalVertices();
+
+    glm::vec3 localCenter{ 0.0f };
+    std::array<glm::vec3, 8> localVertices{};
 };

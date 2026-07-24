@@ -616,9 +616,9 @@ void PGSSolver::postSolve(
                 FUNC_NAME
             );
 
-            body->commitBiasImpulses(t, dt);
+            body->commitBiasImpulses(dt);
             t.updateCache();
-            body->updateInertiaWorld(t);
+            body->updateInertiaWorld();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include <vector>
-#include "collider_pose.h"
+#include "collider_transform_cache.h"
 
 class AABB {
 public:
@@ -17,7 +17,7 @@ public:
     float surfaceArea = 0.0f;
 
     void init(const std::vector<glm::vec3>& vertices);
-    void update(const ColliderPose& pose);
+    void update(const ColliderTransformCache& transformCache);
     bool intersects(const AABB& b) const;
 
     // BVH functions

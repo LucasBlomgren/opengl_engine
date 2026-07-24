@@ -3,7 +3,7 @@
 #include "sat_types.h"
 #include <span>
 #include "physics/colliders/tri.h"
-#include "physics/colliders/collider_pose.h"
+#include "physics/colliders/collider_transform_cache.h"
 #include "physics/colliders/collider.h"
 #include "physics/bodies/rigidbody.h"
 
@@ -20,7 +20,7 @@ namespace SAT {
     //     Normal contact tests
     //=======================================================
     bool boxBox(Collider& A, Collider& B, Result& out);
-    bool boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& out);
+    bool boxSphere(Collider& A, Collider& B, const ColliderTransformCache& transformCache, Result& out);
     bool boxTri(Collider& A, Tri& tri, Result& out);
     bool sphereSphere(Collider& A, Collider& B, Result& out);
     bool sphereTri(Collider& A, Tri& tri, Result& out);

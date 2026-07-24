@@ -14,8 +14,8 @@ bool SAT::speculativeSphereSphere(
     const Sphere& sphereA = std::get<Sphere>(colliderA.shape);
     const Sphere& sphereB = std::get<Sphere>(colliderB.shape);
 
-    glm::vec3 centerA = colliderA.pose.position;
-    glm::vec3 centerB = colliderB.pose.position;
+    glm::vec3 centerA = colliderA.worldPose.position;
+    glm::vec3 centerB = colliderB.worldPose.position;
 
     float radiusA = sphereA.radiusWorld;
     float radiusB = sphereB.radiusWorld;

@@ -524,32 +524,7 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     // velocity
     //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
 
-    for (ColliderHandle& handle : rb->colliderHandles) {
-        Collider* collider = world->getCollider(handle);
-        Transform* localTransform = world->getTransform(collider->localTransformHandle);
-        collider->pose.combineIntoColliderPose(*rootTransform, *localTransform);
-        collider->pose.ensureModelMatrix();
-        collider->updateAABB(collider->pose);
-        collider->updateCollider(collider->pose);
-    }
-
-    Collider* mainCollider = world->getCollider(rb->colliderHandles[0]);
-    rb->aabb = mainCollider->getAABB();
-
-    // update compound body AABB
-    if (rb->isCompound()) {
-        for (size_t i = 1; i < rb->colliderHandles.size(); ++i) {
-            Collider* c = world->getCollider(rb->colliderHandles[i]);
-            rb->aabb.growToInclude(c->getAABB().worldMin);
-            rb->aabb.growToInclude(c->getAABB().worldMax);
-        }
-
-        rb->aabb.worldCenter = (rb->aabb.worldMin + rb->aabb.worldMax) * 0.5f;
-        rb->aabb.worldHalfExtents = (rb->aabb.worldMax - rb->aabb.worldMin) * 0.5f;
-        rb->aabb.setSurfaceArea();
-    }
-
-    physicsEngine->setBVHDirty(selectedObject->rigidBodyHandle);
+    physicsEngine->syncBodyFromTransform(selectedObject->rigidBodyHandle);
 }
 
 // drop selected object

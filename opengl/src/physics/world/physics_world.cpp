@@ -15,12 +15,22 @@ void PhysicsWorld::clear() {
 //===========================================
 // Getters
 //===========================================
-RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle& handle) {
-    return rigidBodies.try_get(handle); 
+RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle handle) {
+    return rigidBodies.try_get(handle);
 }
-Collider* PhysicsWorld::getCollider(ColliderHandle& handle) { 
-    return colliders.try_get(handle); 
+
+const RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle handle) const {
+    return rigidBodies.try_get(handle);
 }
+
+Collider* PhysicsWorld::getCollider(ColliderHandle handle) {
+    return colliders.try_get(handle);
+}
+
+const Collider* PhysicsWorld::getCollider(ColliderHandle handle) const {
+    return colliders.try_get(handle);
+}
+
 SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() { 
     return colliders; 
 }

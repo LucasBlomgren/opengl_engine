@@ -2,7 +2,9 @@
 
 #include "pch.h"
 
-#include "core/slot_map.h"
+#include "physics/public/physics_handles.h"
+#include "game/game_handles.h"
+
 #include "graphics/shaders/shader.h"
 #include "graphics/mesh/mesh.h"
 

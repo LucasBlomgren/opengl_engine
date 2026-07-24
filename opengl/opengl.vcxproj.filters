@@ -90,6 +90,8 @@
     <ClCompile Include="src\physics\engine\physics_engine_commands.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_queries.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_scene.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_bodies.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_colliders.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -184,13 +186,9 @@
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
-    <ClInclude Include="src\physics\colliders\collider_pose.h" />
+    <ClInclude Include="src\physics\colliders\collider_transform_cache.h" />
     <ClInclude Include="src\physics\narrowphase\collision_manifold.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat.h" />
-    <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\ecs\entity_pool.h" />
-    <ClInclude Include="src\ecs\component_storage.h" />
-    <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\physics\bvh\query_sametree.h" />
     <ClInclude Include="debug_config.h" />
     <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
@@ -205,6 +203,18 @@
     <ClInclude Include="src\physics\public\physics_debug_types.h" />
     <ClInclude Include="src\physics\public\physics_engine.h" />
     <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
+    <ClInclude Include="src\physics\public\physics_handles.h" />
+    <ClInclude Include="src\core\handle.h" />
+    <ClInclude Include="src\game\game_handles.h" />
+    <ClInclude Include="src\physics\public\physics_types.h" />
+    <ClInclude Include="src\physics\public\collider_desc.h" />
+    <ClInclude Include="src\physics\public\collider_state.h" />
+    <ClInclude Include="src\physics\public\rigid_body_desc.h" />
+    <ClInclude Include="src\physics\public\rigid_body_state.h" />
+    <ClInclude Include="src\ecs\component_storage.h" />
+    <ClInclude Include="src\ecs\ECSWorld.h" />
+    <ClInclude Include="src\ecs\entity_pool.h" />
+    <ClInclude Include="src\ecs\entity.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -1,27 +1,13 @@
 #pragma once
 
 #include "core/ring_buffer.h"
-#include "core/slot_map.h"
 #include "game/transform.h"
+#include "game/game_handles.h"
 
+#include "physics/public/physics_handles.h"
+#include "physics/public/physics_types.h"
 #include "physics/broadphase/rigidbody_broadphase_types.h"
 #include "physics/colliders/collider.h"
-
-enum class BodyType {
-    Dynamic,
-    Kinematic,
-    Static
-};
-
-enum class MotionControl {
-    Physics,
-    External
-};
-
-enum class ContactResponseMode {
-    Normal,
-    Character
-};
 
 // #TODO: decide what is private/public in RigidBody
 class RigidBody {
@@ -33,6 +19,9 @@ public:
 
     // #TODO: lägga till COM
     // annars fungerar fysiken bara om collidernas lokala transform är centrerade runt COM
+
+    PhysicsPose pose;
+    glm::vec3 scale{ 1.0f };
 
     // handles
     GameObjectHandle gameObjectHandle;
@@ -80,19 +69,19 @@ public:
 
     void pushBiasImpulseLinear(const glm::vec3& impulse);
     void pushBiasImpulseAngular(const glm::vec3& impulse);
-    void commitBiasImpulses(Transform& t, float dt);
+    void commitBiasImpulses(float dt);
 
     void applyImpulseLinear(const glm::vec3& impulse);
     void applyImpulseAngular(const glm::vec3& impulse);
 
-    void setAsleep(Transform& t);
+    void setAsleep();
     void setAwake();
     void setStatic();
     void setExternalControl(bool controlled);
 
-    void integrateVelocities(Transform& t, float dt);
+    void integratePose(float dt);
     void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
-    void updateInertiaWorld(Transform& t);
+    void updateInertiaWorld();
 
     void applyGravity(float dt);
     void applyVelocityDamping(float dt);

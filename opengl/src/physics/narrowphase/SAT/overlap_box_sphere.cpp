@@ -3,14 +3,14 @@
 //=======================================================
 //  Box-Sphere
 //=======================================================
-bool SAT::boxSphere(Collider& A, Collider& B, const ColliderPose& pose, Result& out) {
+bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& transformCache, Result& out) {
     // Plocka alltid ut cuboid i A och sphere i B
     OOBB* box = std::get_if<OOBB>(&A.shape);
     Sphere* sph = std::get_if<Sphere>(&B.shape);
 
     // Matriser från GameObject (samma som du använder för rendering och OOBB/AABB)
-    const glm::mat4& M = pose.modelMatrix;
-    const glm::mat4& iM = pose.invModelMatrix;
+    const glm::mat4& M = transformCache.modelMatrix;
+    const glm::mat4& iM = transformCache.invModelMatrix;
 
     // Sphere center i värld
     glm::vec3 worldC = sph->centerWorld;

@@ -14,7 +14,7 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
     // Box data once, since collider pose is same for all terrain triangles.
     const OOBB& box = std::get<OOBB>(collider->shape);
 
-    glm::mat3 R = glm::mat3_cast(collider->pose.orientation);
+    glm::mat3 R = glm::mat3_cast(collider->worldPose.orientation);
 
     glm::vec3 boxAxes[3] = {
         glm::normalize(R[0]),
@@ -25,7 +25,7 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
     // Anpassa om din scale sitter på annan plats.
     glm::vec3 half = box.localHalfExtents * box.scale;
 
-    glm::vec3 boxCenter = collider->pose.position;
+    glm::vec3 boxCenter = collider->worldPose.position;
 
     // SAT for each tri
     for (Tri* tri : candidates) {

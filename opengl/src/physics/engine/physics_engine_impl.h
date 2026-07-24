@@ -27,8 +27,25 @@
 #include "physics/raycast/raycast.h"
 #include "physics/solver/pgs_solver.h"
 
-class PhysicsEngine::Impl {
+struct PhysicsEngine::Impl {
 public:
+    [[nodiscard]] RigidBodyHandle createRigidBody(const RigidBodyDesc& desc);
+    bool destroyRigidBody(RigidBodyHandle body);
+
+    [[nodiscard]] ColliderHandle createCollider(RigidBodyHandle body, const ColliderDesc& desc);
+    bool destroyCollider(ColliderHandle collider);
+
+    std::optional<RigidBodyState> getRigidBodyState(RigidBodyHandle body) const;
+    std::optional<ColliderState> getColliderState(ColliderHandle collider) const;
+
+    bool applyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
+    bool setLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    bool setKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
+
+    bool setColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
+    bool setColliderEnabled(ColliderHandle collider, bool enabled);
+    bool setColliderTrigger(ColliderHandle collider, bool isTrigger);
+
     void init(World* world, FrameTimers* frameTimers);
     void setupScene(std::vector<Tri>* terrainTriangles);
     void clear();

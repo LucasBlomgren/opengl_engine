@@ -4,23 +4,22 @@
 //--------------------------------------
 //   Velocity integration
 //--------------------------------------
-void RigidBody::integrateVelocities(Transform& t, float dt) {
+void RigidBody::integratePose(float dt) {
 	if (type == BodyType::Static || 
-		motionControl == MotionControl::External || 
-		asleep)
+		motionControl == MotionControl::External ||
+		asleep) 
+	{
 		return;
+	}
 
-	// fake constraints
 	if (!canMoveLinearly) {
 		linearVelocity = glm::vec3(0.0f);
 		angularVelocity.x = 0.0f;
 		angularVelocity.y = 0.0f;
 	}
 
-	// update position and orientation
-	t.lastPosition = t.position;
-	t.position += linearVelocity * dt;
-	updateOrientation(t.orientation, angularVelocity, dt);
+	pose.position += linearVelocity * dt;
+	updateOrientation(pose.orientation, angularVelocity, dt);
 }
 
 //--------------------------------------
@@ -106,9 +105,9 @@ void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angul
 	orientation = glm::normalize(orientation);
 }
 
-void RigidBody::updateInertiaWorld(Transform& t) {
-	glm::mat3 R = glm::mat3_cast(t.orientation);
-	invInertiaWorld = R * invInertiaLocal * glm::transpose(R);
+void RigidBody::updateInertiaWorld() {
+	glm::mat3 rotation = glm::mat3_cast(pose.orientation);
+	invInertiaWorld = rotation * invInertiaLocal * glm::transpose(rotation);
 }
 
 //---------------------------------
@@ -126,31 +125,15 @@ void RigidBody::pushBiasImpulseLinear(const glm::vec3& j) {
 void RigidBody::pushBiasImpulseAngular(const glm::vec3& j) {
     biasAngularVelocity += j * invInertiaWorld;
 }
-void RigidBody::commitBiasImpulses(Transform& t, float dt) {
-	//constexpr float maxBiasLinearSpeed = 2.0f;
-	//constexpr float maxBiasAngularSpeed = 0.5f;
-
-	//float linLen = glm::length(biasLinearVelocity);
-	//if (linLen > maxBiasLinearSpeed) {
-	//	biasLinearVelocity *= maxBiasLinearSpeed / linLen;
-	//}
-
-	//float angLen = glm::length(biasAngularVelocity);
-	//if (angLen > maxBiasAngularSpeed) {
-	//	biasAngularVelocity *= maxBiasAngularSpeed / angLen;
-	//}
-
-
-	// fake constraints
+void RigidBody::commitBiasImpulses(float dt) {
 	if (!canMoveLinearly) {
 		biasLinearVelocity = glm::vec3(0.0f);
 		biasAngularVelocity.x = 0.0f;
 		biasAngularVelocity.y = 0.0f;
 	}
 
-
-	t.position += biasLinearVelocity * dt;
-	updateOrientation(t.orientation, biasAngularVelocity, dt);
+	pose.position += biasLinearVelocity * dt;
+	updateOrientation(pose.orientation, biasAngularVelocity, dt);
 
 	biasLinearVelocity = glm::vec3(0.0f);
 	biasAngularVelocity = glm::vec3(0.0f);
@@ -159,18 +142,21 @@ void RigidBody::commitBiasImpulses(Transform& t, float dt) {
 //---------------------------------
 //     Asleep and awake
 //---------------------------------
-void RigidBody::setAsleep(Transform& t) {
-	if (type == BodyType::Static || type == BodyType::Kinematic)
+void RigidBody::setAsleep() {
+	if (type == BodyType::Static || type == BodyType::Kinematic) {
 		return;
+	}
 
-	linearVelocity = glm::vec3(0, 0, 0);
-	angularVelocity = glm::vec3(0, 0, 0);
+	linearVelocity = glm::vec3(0.0f);
+	angularVelocity = glm::vec3(0.0f);
+	biasLinearVelocity = glm::vec3(0.0f);
+	biasAngularVelocity = glm::vec3(0.0f);
 
 	asleep = true;
 	sleepCounter = 0.0f;
 
 	anchorTimer = 0.0f;
-	anchorPoint = t.position;
+	anchorPoint = pose.position;
 }
 
 void RigidBody::setAwake() {
@@ -222,7 +208,7 @@ void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const 
 	}
 
 	invInertiaWorld = invInertiaLocal;
-	updateInertiaWorld(t);
+	updateInertiaWorld();
 }
 
 void RigidBody::inertiaCube(float side) {

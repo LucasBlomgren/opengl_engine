@@ -1,35 +1,8 @@
 #pragma once
+
 #include <cstdint>
-#include <vector>
 #include <utility>
-
-template<class Tag>
-struct HandleT {
-    uint32_t slot = 0xFFFFFFFFu;
-    uint32_t gen = 0xFFFFFFFFu;
-
-    bool isValid() const {
-        return slot != 0xFFFFFFFFu;
-    }
-
-    friend bool operator==(const HandleT& a, const HandleT& b) noexcept {
-        return a.slot == b.slot && a.gen == b.gen;
-    }
-};
-
-template<class Tag>
-struct std::hash<HandleT<Tag>> {
-    size_t operator()(const HandleT<Tag>& h) const noexcept {
-        // kombinera slot+gen till 64-bit och hash:a
-        uint64_t x = (uint64_t(h.gen) << 32) | uint64_t(h.slot);
-        return std::hash<uint64_t>{}(x);
-    }
-};
-
-using GameObjectHandle = HandleT<struct GameObjectTag>;
-using TransformHandle = HandleT<struct TransformTag>;
-using ColliderHandle = HandleT<struct ColliderTag>;
-using RigidBodyHandle = HandleT<struct RigidBodyTag>;
+#include <vector>
 
 template<class T, class Id>
 class SlotMap {
@@ -44,21 +17,26 @@ public:
         m_dense.reserve(100000);
     }
 
-    bool alive(Id h) const {
-        return h.slot < m_slotGen.size() && m_slotGen[h.slot] == h.gen && m_slotToDense[h.slot] != INVALID;
+    bool alive(Id handle) const {
+        return handle.slot < m_slotGen.size() && m_slotGen[handle.slot] == handle.gen && m_slotToDense[handle.slot] != INVALID;
     }
 
-    T* get(Id h) {
-        return &m_dense[m_slotToDense[h.slot]];
+    T* get(Id handle) {
+        return &m_dense[m_slotToDense[handle.slot]];
     }
 
-    T* try_get(Id h) {
-        if (!alive(h)) return nullptr;
-        return &m_dense[m_slotToDense[h.slot]];
+    const T* get(Id handle) const {
+        return &m_dense[m_slotToDense[handle.slot]];
     }
-    const T* try_get(Id h) const {
-        if (!alive(h)) return nullptr;
-        return &m_dense[m_slotToDense[h.slot]];
+
+    T* try_get(Id handle) {
+        if (!alive(handle)) return nullptr;
+        return &m_dense[m_slotToDense[handle.slot]];
+    }
+
+    const T* try_get(Id handle) const {
+        if (!alive(handle)) return nullptr;
+        return &m_dense[m_slotToDense[handle.slot]];
     }
 
     Id handle_from_dense_index(uint32_t denseIndex) const {
@@ -67,49 +45,52 @@ public:
     }
 
     uint32_t slot_capacity() const {
-        return (uint32_t)m_slotGen.size();
+        return static_cast<uint32_t>(m_slotGen.size());
     }
 
     template<class... Args>
     Id create(Args&&... args) {
-        uint32_t slot = alloc_slot_();
-        uint32_t di = (uint32_t)m_dense.size();
+        uint32_t slot = allocSlot();
+        uint32_t denseIndex = static_cast<uint32_t>(m_dense.size());
 
         m_dense.emplace_back(std::forward<Args>(args)...);
 
         m_denseToSlot.push_back(slot);
-        m_slotToDense[slot] = di;
+        m_slotToDense[slot] = denseIndex;
 
         return Id{ slot, m_slotGen[slot] };
     }
 
-    void destroy(Id h) {
-        if (!alive(h)) return;
+    void destroy(Id handle) {
+        if (!alive(handle)) return;
 
-        uint32_t di = m_slotToDense[h.slot];
-        uint32_t last = (uint32_t)m_dense.size() - 1;
+        uint32_t denseIndex = m_slotToDense[handle.slot];
+        uint32_t lastDenseIndex = static_cast<uint32_t>(m_dense.size()) - 1;
 
-        if (di != last) {
-            m_dense[di] = std::move(m_dense[last]);
+        if (denseIndex != lastDenseIndex) {
+            m_dense[denseIndex] = std::move(m_dense[lastDenseIndex]);
 
-            uint32_t movedSlot = m_denseToSlot[last];
-            m_denseToSlot[di] = movedSlot;
-            m_slotToDense[movedSlot] = di;
+            uint32_t movedSlot = m_denseToSlot[lastDenseIndex];
+            m_denseToSlot[denseIndex] = movedSlot;
+            m_slotToDense[movedSlot] = denseIndex;
         }
 
         m_dense.pop_back();
         m_denseToSlot.pop_back();
 
-        m_slotToDense[h.slot] = INVALID;
-        m_slotGen[h.slot]++;              // invalidate old handles (ABA-safe)
-        m_freeSlots.push_back(h.slot);
+        m_slotToDense[handle.slot] = INVALID;
+        ++m_slotGen[handle.slot];
+        m_freeSlots.push_back(handle.slot);
     }
 
-    // Dense iteration (hot paths: broadphase, solver, etc.)
-    std::vector<T>& dense() { return m_dense; }
-    const std::vector<T>& dense() const { return m_dense; }
+    std::vector<T>& dense() {
+        return m_dense;
+    }
 
-    // Clear all data
+    const std::vector<T>& dense() const {
+        return m_dense;
+    }
+
     void clear() {
         m_slotGen.clear();
         m_slotToDense.clear();
@@ -119,21 +100,24 @@ public:
     }
 
 private:
-    uint32_t alloc_slot_() {
+    uint32_t allocSlot() {
         if (!m_freeSlots.empty()) {
             uint32_t slot = m_freeSlots.back();
             m_freeSlots.pop_back();
             return slot;
         }
-        uint32_t slot = (uint32_t)m_slotGen.size();
+
+        uint32_t slot = static_cast<uint32_t>(m_slotGen.size());
+
         m_slotGen.push_back(0);
         m_slotToDense.push_back(INVALID);
+
         return slot;
     }
 
-    std::vector<uint32_t> m_slotGen;      // slot -> gen
-    std::vector<uint32_t> m_slotToDense;  // slot -> dense index
-    std::vector<uint32_t> m_denseToSlot;  // dense index -> slot (needed for swap-pop remap)
-    std::vector<uint32_t> m_freeSlots;    // reusable slots
-    std::vector<T>        m_dense;        // dense storage
+    std::vector<uint32_t> m_slotGen;
+    std::vector<uint32_t> m_slotToDense;
+    std::vector<uint32_t> m_denseToSlot;
+    std::vector<uint32_t> m_freeSlots;
+    std::vector<T> m_dense;
 };
