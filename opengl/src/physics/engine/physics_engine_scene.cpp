@@ -3,6 +3,9 @@
 #include "physics/engine/physics_engine_impl.h"
 #include "game/world.h"
 
+//====================================
+// Scene setup
+//====================================
 void PhysicsEngine::Impl::setupScene(std::vector<Tri>* terrainTris) {
     terrainTriangles = terrainTris;
 
@@ -10,18 +13,21 @@ void PhysicsEngine::Impl::setupScene(std::vector<Tri>* terrainTris) {
     caches.colliders.init(physicsWorld.getCollidersMap(), "Collider");
     caches.bodies.init(physicsWorld.getRigidBodiesMap(), "RigidBody");
 
-    uint32_t slotCap = physicsWorld.getCollidersMap().slot_capacity();
+    uint32_t colliderSlotCapacity = physicsWorld.getCollidersMap().slot_capacity();
 
-    toWake.reserve(slotCap);
-    toSleep.reserve(slotCap);
+    toWake.reserve(colliderSlotCapacity);
+    toSleep.reserve(colliderSlotCapacity);
 
     broadphaseManager.init(&physicsWorld, &caches, terrainTris);
     narrowphaseManager.init(std::make_unique<CollisionManifold>(), &debugSpeculativeContacts, &contactCache, &caches, &toWake);
-
-    flushBroadphaseCommands();
 }
 
+//====================================
+// Scene cleanup
+//====================================
 void PhysicsEngine::Impl::clear() {
+    externalCommands.clear();
+
     toWake.clear();
     toSleep.clear();
 
@@ -33,7 +39,6 @@ void PhysicsEngine::Impl::clear() {
     narrowphaseManager.clear();
     pgsSolver.clear();
 
-    pending.clear();
-
     physicsWorld.clear();
+    caches.clear();
 }

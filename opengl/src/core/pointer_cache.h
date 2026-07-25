@@ -14,6 +14,10 @@ struct PointerCache {
         cache.assign(sm->slot_capacity(), nullptr);
     }
     void clear() { 
+        if (!sm) {
+            cache.clear();
+            return;
+        }
         cache.assign(sm->slot_capacity(), nullptr); 
     }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "core/slot_map.h"
 
 #include "physics/public/physics_handles.h"
@@ -31,12 +33,25 @@ public:
     RigidBodyHandle createRigidBody();
     ColliderHandle createCollider();
 
+    bool activateRigidBody(RigidBodyHandle handle);
+    bool activateCollider(ColliderHandle handle);
+
+    void discardPendingRigidBody(RigidBodyHandle handle);
+    void discardPendingCollider(ColliderHandle handle);
+
     void deleteRigidBody(RigidBodyHandle handle);
     void deleteCollider(ColliderHandle handle);
+
+    bool isRigidBodyActive(RigidBodyHandle handle) const;
+    bool isColliderActive(ColliderHandle handle) const;
+    bool isRigidBodyPending(RigidBodyHandle handle) const;
+    bool isColliderPending(ColliderHandle handle) const;
 
 private:
     int colliderId = 0;
     int rigidBodyId = 0;
     SlotMap<Collider, ColliderHandle> colliders;
     SlotMap<RigidBody, RigidBodyHandle> rigidBodies;
+    std::unordered_map<ColliderHandle, Collider> pendingColliders;
+    std::unordered_map<RigidBodyHandle, RigidBody> pendingRigidBodies;
 };

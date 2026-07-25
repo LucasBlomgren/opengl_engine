@@ -359,63 +359,24 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 RowLabelOnly("Body Type");
                 ImGui::SetNextItemWidth(-FLT_MIN);
 
-                if (ImGui::Combo("##body_type", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems)))
-                {
-                    BroadphaseBucket target = BroadphaseBucket::Awake;
+                if (ImGui::Combo("##body_type", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems))) {
+                    BodyType selectedType = BodyType::Dynamic;
 
-                    switch (currentType)
-                    {
+                    switch (currentType) {
                     case 0:
-                        rb->type = BodyType::Dynamic;
-                        if (rb->mass <= 0.0f) rb->mass = 1.0f;
-                        rb->invMass = 1.0f / rb->mass;
-                        rb->sleepCounterThreshold = 1.5f;
-
-                        if (rb->allowSleep && rb->asleep)
-                        {
-                            target = BroadphaseBucket::Asleep;
-                            rb->setAsleep();
-                        }
-                        else
-                        {
-                            target = BroadphaseBucket::Awake;
-                            rb->setAwake();
-                        }
+                        selectedType = BodyType::Dynamic;
                         break;
 
                     case 1:
-                        rb->type = BodyType::Kinematic;
-                        rb->invMass = 0.0f;
-                        rb->linearVelocity = glm::vec3(0.0f);
-                        rb->angularVelocity = glm::vec3(0.0f);
-                        rb->setAwake();
-                        target = BroadphaseBucket::Awake;
+                        selectedType = BodyType::Kinematic;
                         break;
 
                     case 2:
-                        rb->type = BodyType::Static;
-                        rb->mass = 0.0f;
-                        rb->invMass = 0.0f;
-                        rb->linearVelocity = glm::vec3(0.0f);
-                        rb->angularVelocity = glm::vec3(0.0f);
-                        target = BroadphaseBucket::Static;
+                        selectedType = BodyType::Static;
                         break;
                     }
 
-                    rootTransform->updateCache();
-
-                    if (!rb->colliderHandles.empty())
-                    {
-                        Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);
-                        if (collider)
-                        {
-                            rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld();
-                        }
-                    }
-
-                    ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
-                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
+                    ctx.physicsEngine->setRigidBodyType(obj->rigidBodyHandle, selectedType);
                 }
             }
 
@@ -467,11 +428,8 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 if (RowCheckbox("Allow sleep", "##allow_sleep", allowSleep))
                 {
                     rb->allowSleep = allowSleep;
-                    if (!rb->allowSleep)
-                    {
-                        rb->setAwake();
-                        BroadphaseBucket target = rb->asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
-                        ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
+                    if (!allowSleep) {
+                        ctx.physicsEngine->setRigidBodyAwake(obj->rigidBodyHandle);
                     }
                 }
 
@@ -479,13 +437,12 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 ImGui::BeginDisabled(!rb->allowSleep);
                 if (RowCheckbox("Asleep", "##asleep", asleep))
                 {
-                    BroadphaseBucket target = asleep ? BroadphaseBucket::Asleep : BroadphaseBucket::Awake;
-                    if (rb->asleep) {
-                        rb->setAsleep();
-                    } else {
-                        rb->setAwake();
+                    if (asleep) {
+                        ctx.physicsEngine->setRigidBodyAsleep(obj->rigidBodyHandle);
                     }
-                    ctx.physicsEngine->queueMove(obj->rigidBodyHandle, target);
+                    else {
+                        ctx.physicsEngine->setRigidBodyAwake(obj->rigidBodyHandle);
+                    }
                 }
                 ImGui::EndDisabled();
 

@@ -4,6 +4,7 @@
 #include "physics/physics_engine.h"
 #include "engine/camera.h"
 #include "graphics/renderer/renderer.h"
+#include "physics/raycast/raycast.h"
 
 class Player : public IInputReceiver {
 public:
@@ -39,7 +40,7 @@ public:
     void moveSelectedObject(float dt);
 
     // raycast for placement/selection/etc
-    RaycastHit rayCast(float length);
+    Raycast::RaycastHit raycast(float length);
     AABB aabbToPlace;
     bool placementObstructed = true;
     void placeObject();

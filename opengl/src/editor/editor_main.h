@@ -72,7 +72,7 @@ public:
 
     // raycast for selection
     glm::vec3 getRayVectorToMouseLocation();
-    RaycastHit rayCastMousePos(float length);
+    Raycast::RaycastHit rayCastMousePos(float length);
 
     glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
     bool objectRainBlocks = false;

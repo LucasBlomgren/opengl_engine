@@ -136,11 +136,11 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (!selectedObjectHandle.isValid()) {
-                rayCastMousePos(SELECT_RANGE);
+                Raycast::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
                 selectObject(ctx);
             }
             else {
-                RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
+                Raycast::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
 
                 if (!hitData.hit) {
                     dropObject();
@@ -431,7 +431,7 @@ void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
 void Editor::EditorMain::update(Shader& shader) {
 
     // raycast for hover
-    RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+    Raycast::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // set new hover state
     if (raycast.hit && !selectedObjectIsBeingMoved) {
@@ -463,7 +463,7 @@ void Editor::EditorMain::syncSelectionOffset() {
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
     if (selectedObjectHandle.isValid()) return;
 
-    RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+    Raycast::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // no hit return
     if (!raycast.hit) {
@@ -538,13 +538,13 @@ void Editor::EditorMain::dropObject() {
 }
 
 // Raycast from camera through mouse cursor into world
-RaycastHit Editor::EditorMain::rayCastMousePos(float length)
+Raycast::RaycastHit Editor::EditorMain::rayCastMousePos(float length)
 {
     glm::vec3 dir = getRayVectorToMouseLocation();
 
     float rLength = length;
-    Ray r(camera->position, dir, SELECT_RANGE);
-    RaycastHit hitData = physicsEngine->performRaycast(r);
+    Raycast::Ray r(camera->position, dir, SELECT_RANGE);
+    Raycast::RaycastHit hitData = physicsEngine->raycast(r);
 
     return hitData;
 }

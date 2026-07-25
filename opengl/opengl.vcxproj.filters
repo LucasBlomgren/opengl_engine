@@ -92,6 +92,8 @@
     <ClCompile Include="src\physics\engine\physics_engine_scene.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_bodies.cpp" />
     <ClCompile Include="src\physics\engine\physics_engine_colliders.cpp" />
+    <ClCompile Include="src\physics\engine\commands\physics_external_command_buffer.cpp" />
+    <ClCompile Include="src\physics\engine\physics_engine_command_flush.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -215,6 +217,7 @@
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
+    <ClInclude Include="src\physics\engine\commands\physics_external_command_buffer.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

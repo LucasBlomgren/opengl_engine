@@ -2,6 +2,10 @@
 
 #include "physics/public/physics_types.h"
 
+//=====================================================
+// For use with PhysicsEngine::getRigidBodyState() to 
+// retrieve the current state of a rigid body.
+//=====================================================
 struct RigidBodyState {
     PhysicsPose pose;
 

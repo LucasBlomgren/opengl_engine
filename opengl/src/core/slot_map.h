@@ -50,15 +50,42 @@ public:
 
     template<class... Args>
     Id create(Args&&... args) {
-        uint32_t slot = allocSlot();
-        uint32_t denseIndex = static_cast<uint32_t>(m_dense.size());
+        Id handle = reserve();
+        create_reserved(handle, std::forward<Args>(args)...);
+        return handle;
+    }
 
+    Id reserve() {
+        uint32_t slot = allocSlot();
+        return Id{ slot, m_slotGen[slot] };
+    }
+
+    template<class... Args>
+    T* create_reserved(Id handle, Args&&... args) {
+        if (handle.slot >= m_slotGen.size() ||
+            m_slotGen[handle.slot] != handle.gen ||
+            m_slotToDense[handle.slot] != INVALID) {
+            return nullptr;
+        }
+
+        uint32_t denseIndex = static_cast<uint32_t>(m_dense.size());
         m_dense.emplace_back(std::forward<Args>(args)...);
 
-        m_denseToSlot.push_back(slot);
-        m_slotToDense[slot] = denseIndex;
+        m_denseToSlot.push_back(handle.slot);
+        m_slotToDense[handle.slot] = denseIndex;
 
-        return Id{ slot, m_slotGen[slot] };
+        return &m_dense.back();
+    }
+
+    void release_reserved(Id handle) {
+        if (handle.slot >= m_slotGen.size() ||
+            m_slotGen[handle.slot] != handle.gen ||
+            m_slotToDense[handle.slot] != INVALID) {
+            return;
+        }
+
+        ++m_slotGen[handle.slot];
+        m_freeSlots.push_back(handle.slot);
     }
 
     void destroy(Id handle) {

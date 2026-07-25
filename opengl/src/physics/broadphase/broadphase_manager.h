@@ -41,15 +41,15 @@ public:
     );
 
     // add/remove from current list
-    void add(RigidBodyHandle& handle, BroadphaseBucket dst);
-    void remove(RigidBodyHandle& handle);
+    void add(const RigidBodyHandle& handle, BroadphaseBucket dst);
+    void remove(const RigidBodyHandle& handle);
 
     // move between lists
-    void moveToAwake(RigidBodyHandle& handle);
-    void moveToAsleep(RigidBodyHandle& handle);
-    void moveToStatic(RigidBodyHandle& handle);
+    void moveToAwake(const RigidBodyHandle& handle);
+    void moveToAsleep(const RigidBodyHandle& handle);
+    void moveToStatic(const RigidBodyHandle& handle);
 
-    void setBVHDirty(RigidBodyHandle& handle);
+    void setBVHDirty(const RigidBodyHandle& handle);
 
     // get lists of indices
     const std::vector<RigidBodyHandle>& getAwakeList()  const { return awakeHandles; }
@@ -86,7 +86,7 @@ private:
     std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>> pairsBufDynamic;
 
     // helpers
-    void swapAndPop(RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list);
+    void swapAndPop(const RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list);
     BVHTree& bvhFor(BroadphaseBucket b);
     std::vector<RigidBodyHandle>& listFor(BroadphaseBucket b);
 };

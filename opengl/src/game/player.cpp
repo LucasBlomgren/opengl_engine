@@ -190,7 +190,7 @@ void Player::updateObjectSelection(Shader& shader) {
     }
 
     // raycast for hover
-    RaycastHit raycast = rayCast(SELECT_RANGE);
+    Raycast::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
     // set new hover state
     if (raycast.hit && !selectedObjectHandle.isValid()) {
@@ -355,7 +355,7 @@ void Player::moveSelectedObject(float dt) {
 void Player::selectObject() {
     if (selectedObjectHandle.isValid()) return;
 
-    RaycastHit raycast = rayCast(SELECT_RANGE);
+    Raycast::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
     // no hit return
     if (!raycast.hit) return;
@@ -372,9 +372,7 @@ void Player::selectObject() {
     rb->asleep = false;
     rb->setExternalControl(true);
 
-    BroadphaseBucket bpBucket;
-    bpBucket = BroadphaseBucket::Awake;
-    physicsEngine->queueMove(raycast.bodyHandle, bpBucket);
+    physicsEngine->setRigidBodyAwake(raycast.bodyHandle);
 
     transform->lastPosition = transform->position;
 
@@ -431,7 +429,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     aabb.worldCenter = camera->position + camera->front * OBJ_PLACE_DISTANCE;
     aabb.worldHalfExtents = glm::vec3(size / 2.0f);
 
-    RaycastHit hitData = rayCast(OBJ_PLACE_DISTANCE);
+    Raycast::RaycastHit hitData = raycast(OBJ_PLACE_DISTANCE);
     glm::vec3 normal = hitData.normal;
     if (hitData.hit) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)
@@ -493,9 +491,9 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     }
 }
 
-RaycastHit Player::rayCast(float length) {
+Raycast::RaycastHit Player::raycast(float length) {
     float rLength = length;
-    Ray r(camera->position, camera->front, rLength);
-    RaycastHit hitData = physicsEngine->performRaycast(r);
+    Raycast::Ray r(camera->position, camera->front, rLength);
+    Raycast::RaycastHit hitData = physicsEngine->raycast(r);
     return hitData;
 }

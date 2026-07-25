@@ -5,6 +5,9 @@
 #include "engine/engine_state.h"
 #include "game/world.h"
 
+//==============================
+// Initialization
+//==============================
 void PhysicsEngine::Impl::init(World* world, FrameTimers* frameTimers) {
     this->world = world;
     this->frameTimers = frameTimers;
@@ -12,9 +15,12 @@ void PhysicsEngine::Impl::init(World* world, FrameTimers* frameTimers) {
     collisionManifold = std::make_unique<CollisionManifold>();
     collisionManifold->init(&caches);
 
-    pending.reserve(50000);
+    externalCommands.reserve(1024, 4096, 4096);
 }
 
+//==============================
+// Step-loop preparation
+//==============================
 void PhysicsEngine::Impl::prepareStepLoop() {
     caches.clear();
 
@@ -29,6 +35,9 @@ void PhysicsEngine::Impl::prepareStepLoop() {
     frameTimers->reset("Post step");
 }
 
+//==============================
+// Simulation
+//==============================
 void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
     if (engine.isPaused() && !engine.getAdvanceStep()) {
         return;
@@ -37,23 +46,21 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
     double physicsStart = glfwGetTime() * 1000.0;
     const std::vector<RigidBodyHandle>& awake = broadphaseManager.getAwakeList();
 
-    // handle the case where the physics step was paused after collision resolution but before position integration
+    // Resume a step paused after collision resolution
     if (debugPhase == PhysicsStepDebugPhase::PausedBeforePositionIntegration) {
         integratePositionsAndColliders(awake, dt);
         endPhysicsStep(dt);
-
         debugPhase = PhysicsStepDebugPhase::Ready;
-
         frameTimers->submit(
             "Physics", 
             frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart + savedPhysicsSurpassedTime
         );
     }
 
-    // begin the physics step by processing wake/sleep lists, clearing contact cache, etc.
+    // Step initialization
     beginPhysicsStep(dt);
 
-    // integrate forces and velocities for awake bodies
+    // Force and velocity integration
     double start = glfwGetTime() * 1000.0;
     integrateForcesAndVelocities(awake, dt);
     frameTimers->submit(
@@ -61,7 +68,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
     );
 
-    // update BVHs for awake, asleep, and static bodies
+    // BVH update
     start = glfwGetTime() * 1000.0;
     broadphaseManager.updateBVHs();
     frameTimers->submit(
@@ -69,7 +76,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
     );
 
-    // build pairs for narrowphase and speculative contacts
+    // Broadphase
     start = glfwGetTime() * 1000.0;
     PairBatch pairs;
     broadphaseManager.buildPairs(pairs);
@@ -79,7 +86,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // narrowphase collision detection and contact generation
+    // Narrowphase
     start = glfwGetTime() * 1000.0;
     ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts, dt);
@@ -89,7 +96,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // sort contacts by minY for better stability in resting contacts
+    // Contact collection
     start = glfwGetTime() * 1000.0;
     contacts.sortByMinY();
     frameTimers->submit(
@@ -97,7 +104,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
     );
 
-    // collision resolution using PGS solver
+    // Collision resolution
     start = glfwGetTime() * 1000.0;
     pgsSolver.solve(contacts, caches, pgsIterations, dt);
     frameTimers->submit(
@@ -105,7 +112,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
     );
 
-    // handle pause state after collision resolution but before position integration
+    // Debug pause before position integration
     if (engine.isPaused()) {
         broadphaseManager.updateBVHs();
 
@@ -115,10 +122,10 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         return;
     }
 
-    // integrate positions and colliders for awake bodies
+    // Position integration
     integratePositionsAndColliders(awake, dt);
 
-    // finalize the physics step by processing wake/sleep lists, updating contact cache, etc.
+    // Step finalization
     endPhysicsStep(dt);
 
     frameTimers->submit(
@@ -127,36 +134,43 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
     );
 }
 
+//==============================
+// Step initialization
+//==============================
 void PhysicsEngine::Impl::beginPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
-    flushBroadphaseCommands();
+    flushExternalCommands();
 
-    uint32_t bodiesSlotCap = physicsWorld.getRigidBodiesMap().slot_capacity();
+    uint32_t bodySlotCapacity = physicsWorld.getRigidBodiesMap().slot_capacity();
 
-    toWake.reserve(bodiesSlotCap);
-    toSleep.reserve(bodiesSlotCap);
+    toWake.reserve(bodySlotCapacity);
+    toSleep.reserve(bodySlotCapacity);
 
     toWake.clear();
     toSleep.clear();
 
     debugSweeps.clear();
     debugSpeculativeContacts.clear();
+
     contactsGeneratedThisFrame = 0;
 
     for (auto& [key, contact] : contactCache) {
         contact.wasUsedThisFrame = false;
 
         for (size_t i = 0; i < contact.numPoints; ++i) {
-            ContactPoint& cp = contact.points[i];
-            cp.wasUsedThisFrame = false;
-            cp.wasWarmStarted = false;
+            ContactPoint& contactPoint = contact.points[i];
+            contactPoint.wasUsedThisFrame = false;
+            contactPoint.wasWarmStarted = false;
         }
     }
 
     frameTimers->submit("Pre step", frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start);
 }
 
+//==============================
+// Step finalization
+//==============================
 void PhysicsEngine::Impl::endPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
