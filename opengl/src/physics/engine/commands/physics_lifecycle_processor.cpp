@@ -5,25 +5,42 @@
 
 #include "physics/engine/physics_engine_impl.h"
 
+//=========================================
+// Helper functions
+//=========================================
 namespace {
     template<class Handle>
-    bool containsHandle(const std::vector<Handle>& handles, Handle handle) {
+    bool containsHandle(
+        const std::vector<Handle>& handles,
+        Handle handle) {
         return std::find(handles.begin(), handles.end(), handle) != handles.end();
     }
 
     template<class Handle>
-    void addUniqueHandle(std::vector<Handle>& handles, Handle handle) {
+    void addUniqueHandle(
+        std::vector<Handle>& handles, 
+        Handle handle) 
+    {
         if (!containsHandle(handles, handle)) {
             handles.push_back(handle);
         }
     }
 
     template<class Handle>
-    void eraseHandle(std::vector<Handle>& handles, Handle handle) {
-        handles.erase(std::remove(handles.begin(), handles.end(), handle), handles.end());
+    void eraseHandle(
+        std::vector<Handle>& handles, 
+        Handle handle) {
+        handles.erase(std::remove(
+            handles.begin(), 
+            handles.end(), 
+            handle), 
+            handles.end()
+        );
     }
 
-    BroadphaseBucket getBodyBucket(const RigidBody& body) {
+    BroadphaseBucket getBodyBucket(
+        const RigidBody& body) 
+    {
         if (body.type == BodyType::Static) {
             return BroadphaseBucket::Static;
         }
@@ -37,7 +54,10 @@ namespace {
         return BroadphaseBucket::Awake;
     }
 
-    bool hasEnabledCollider(PhysicsWorld& physicsWorld, const RigidBody& body) {
+    bool hasEnabledCollider(
+        PhysicsWorld& physicsWorld, 
+        const RigidBody& body) 
+    {
         for (ColliderHandle colliderHandle : body.colliderHandles) {
             if (!physicsWorld.isColliderActive(colliderHandle)) {
                 continue;
@@ -53,7 +73,10 @@ namespace {
         return false;
     }
 
-    void refreshBodyInertia(PhysicsWorld& physicsWorld, RigidBody& body) {
+    void refreshBodyInertia(
+        PhysicsWorld& physicsWorld, 
+        RigidBody& body) 
+    {
         if (body.type != BodyType::Dynamic || body.colliderHandles.empty()) {
             return;
         }
@@ -93,23 +116,11 @@ namespace {
 }
 
 //=========================================
-// External command processing
-//=========================================
-void PhysicsEngine::Impl::flushExternalCommands() {
-    PhysicsExternalCommandBuffer::Batch batch = externalCommands.take();
-
-    if (batch.empty()) {
-        return;
-    }
-
-    processLifecycleCommands(batch);
-    processMutationCommands(batch.mutations);
-}
-
-//=========================================
 // Lifecycle command processing
 //=========================================
-void PhysicsEngine::Impl::processLifecycleCommands(const PhysicsExternalCommandBuffer::Batch& batch) {
+void PhysicsEngine::Impl::processLifecycleCommands(
+    const PhysicsCommandBuffer::Batch& batch)
+{
     if (batch.bodyCreates.empty() &&
         batch.colliderCreates.empty() &&
         batch.bodyDestroys.empty() &&
@@ -365,110 +376,4 @@ void PhysicsEngine::Impl::processLifecycleCommands(const PhysicsExternalCommandB
     // #TODO: Can't clear contact cache here because it may contain contacts for bodies that are still active. 
     // Need to implement a more selective contact cache clearing mechanism.
     //contactCache.clear();
-}
-
-//=========================================
-// Mutation command processing
-//=========================================
-void PhysicsEngine::Impl::processMutationCommands(const std::vector<PhysicsExternalCommandBuffer::Mutation>& mutations) {
-    for (const PhysicsExternalCommandBuffer::Mutation& mutation : mutations) {
-        std::visit([this](const auto& command) {
-            using CommandType = std::decay_t<decltype(command)>;
-
-            if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::ApplyLinearImpulse>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetLinearVelocity>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetAngularVelocity>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetKinematicTarget>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetRigidBodyAwake>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetRigidBodyAsleep>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetRigidBodyType>) {
-                RigidBody* body = physicsWorld.getRigidBody(command.body);
-
-                if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
-                    return;
-                }
-
-                body->type = command.type;
-
-                switch (command.type) {
-                case BodyType::Dynamic:
-                    if (body->mass <= 0.0f) {
-                        body->mass = 1.0f;
-                    }
-
-                    body->invMass = 1.0f / body->mass;
-
-                    if (body->sleepCounterThreshold <= 0.0f) {
-                        body->sleepCounterThreshold = 1.5f;
-                    }
-
-                    refreshBodyInertia(physicsWorld, *body);
-
-                    if (body->allowSleep && body->asleep) {
-                        body->setAsleep();
-                        broadphaseManager.moveToAsleep(command.body);
-                    }
-                    else {
-                        body->setAwake();
-                        broadphaseManager.moveToAwake(command.body);
-                    }
-
-                    break;
-
-                case BodyType::Kinematic:
-                    body->invMass = 0.0f;
-                    body->linearVelocity = glm::vec3(0.0f);
-                    body->angularVelocity = glm::vec3(0.0f);
-                    body->setAwake();
-                    broadphaseManager.moveToAwake(command.body);
-                    break;
-
-                case BodyType::Static:
-                    body->mass = 0.0f;
-                    body->invMass = 0.0f;
-                    body->linearVelocity = glm::vec3(0.0f);
-                    body->angularVelocity = glm::vec3(0.0f);
-                    broadphaseManager.moveToStatic(command.body);
-                    break;
-                }
-
-                // #TODO: Can't clear contact cache here because it may contain contacts for bodies that are still active. 
-                // Need to implement a more selective contact cache clearing mechanism.
-                //contactCache.clear();
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetRigidBodyMotionControl>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetColliderLocalPose>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetColliderEnabled>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SetColliderTrigger>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SleepAllObjects>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::AwakenAllObjects>) {
-                // Implementation.
-            }
-            else if constexpr (std::is_same_v<CommandType, PhysicsExternalCommandBuffer::SyncBodyFromTransform>) {
-                // Temporary legacy implementation.
-            }
-            }, mutation);
-    }
 }

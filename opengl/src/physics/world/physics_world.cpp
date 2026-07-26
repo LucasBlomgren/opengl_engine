@@ -98,14 +98,14 @@ AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
 //===========================================
 // Creation
 //===========================================
-RigidBodyHandle PhysicsWorld::createRigidBody() {
+RigidBodyHandle PhysicsWorld::createPendingRigidBody() {
     RigidBodyHandle handle = rigidBodies.reserve();
     RigidBody& body = pendingRigidBodies[handle];
     body.id = rigidBodyId++;
     return handle;
 }
 
-ColliderHandle PhysicsWorld::createCollider() {
+ColliderHandle PhysicsWorld::createPendingCollider() {
     ColliderHandle handle = colliders.reserve();
     Collider& collider = pendingColliders[handle];
     collider.id = colliderId++;

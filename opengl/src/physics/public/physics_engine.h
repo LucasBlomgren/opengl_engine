@@ -14,7 +14,6 @@
 #include "physics_debug_types.h"
 
 #include "physics/world/physics_world.h"
-#include "physics/broadphase/rigidbody_broadphase_types.h"
 #include "physics/narrowphase/collision_manifold.h"
 #include "physics/raycast/raycast.h"
 

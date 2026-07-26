@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "commands/physics_external_command_buffer.h"
+#include "commands/physics_command_buffer.h"
 
 #include "core/timer.h"
 
@@ -37,58 +37,58 @@ public:
     void step(float deltaTime, EngineState& engine);
 
     //=========================================
-    // Rigid body creation and destruction
+    // Command submission: rigid bodies
     //=========================================
-    [[nodiscard]] RigidBodyHandle createRigidBody(
+    [[nodiscard]] RigidBodyHandle submitCreateRigidBody(
         const RigidBodyDesc& desc
     );
-    bool destroyRigidBody(RigidBodyHandle body);
+    bool submitDestroyRigidBody(RigidBodyHandle body);
 
-    //=========================================
-    // Collider creation and destruction
-    //=========================================
-    [[nodiscard]] ColliderHandle createCollider(
+    [[nodiscard]] ColliderHandle submitCreateCollider(
         RigidBodyHandle body, 
         const ColliderDesc& desc
     );
-    bool destroyCollider(ColliderHandle collider);
+    bool submitDestroyCollider(ColliderHandle collider);
 
-    //=========================================
-    // Rigid body commands
-    //=========================================
-    bool applyLinearImpulse(
+    bool submitApplyLinearImpulse(
         RigidBodyHandle body, 
         const glm::vec3& impulse
     );
-    bool setLinearVelocity(
+    bool submitSetLinearVelocity(
         RigidBodyHandle body, 
         const glm::vec3& velocity
     );
-    bool setAngularVelocity(
+    bool submitSetAngularVelocity(
         RigidBodyHandle body, 
         const glm::vec3& velocity
     );
-    bool setKinematicTarget(
+    bool submitSetKinematicTarget(
         RigidBodyHandle body, 
         const PhysicsPose& target
     );
-    bool setRigidBodyAwake(RigidBodyHandle body);
-    bool setRigidBodyAsleep(RigidBodyHandle body);
-    bool setRigidBodyType(RigidBodyHandle body, BodyType type);
-    bool setRigidBodyMotionControl(
+    bool submitSetRigidBodyAwake(RigidBodyHandle body, bool awake);
+    bool submitSetRigidBodyType(RigidBodyHandle body, BodyType type);
+    bool submitSetRigidBodyMotionControl(
         RigidBodyHandle body, 
         MotionControl motionControl
     );
 
     //=========================================
-    // Collider commands
+    // Command submission: colliders
     //=========================================
-    bool setColliderLocalPose(
+    bool submitSetColliderLocalPose(
         ColliderHandle collider, 
         const PhysicsPose& localPose
     );
-    bool setColliderEnabled(ColliderHandle collider, bool enabled);
-    bool setColliderTrigger(ColliderHandle collider, bool isTrigger);
+    bool submitSetColliderEnabled(ColliderHandle collider, bool enabled);
+    bool submitSetColliderTrigger(ColliderHandle collider, bool isTrigger);
+
+    //=========================================
+    // Command submission: scene
+    //=========================================
+    void submitSleepAllObjects();
+    void submitAwakenAllObjects();
+    void submitSyncBodyFromTransform(RigidBodyHandle body);
 
     //=========================================
     // State queries
@@ -104,12 +104,6 @@ public:
     // Physics queries
     //=========================================
     Raycast::RaycastHit raycast(Raycast::Ray& ray);
-
-    //=========================================
-    // Scene-wide commands
-    //=========================================
-    void sleepAllObjects();
-    void awakenAllObjects();
 
     //=========================================
     // Simulation output
@@ -169,20 +163,33 @@ public:
     void addSleepDamping();
 
     //=========================================
-    // Internal external-command processing
+    // Pending command processing
     //=========================================
-    void flushExternalCommands();
+    void processPendingCommands();
     void processLifecycleCommands(
-        const PhysicsExternalCommandBuffer::Batch& batch
+        const PhysicsCommandBuffer::Batch& batch
     );
-    void processMutationCommands(
-        const std::vector<PhysicsExternalCommandBuffer::Mutation>& mutations
+    void applyMutationCommands(
+        const std::vector<PhysicsCommandBuffer::Mutation>& mutations
     );
+    void applyCommand(const PhysicsCommandBuffer::ApplyLinearImpulse& command);
+    void applyCommand(const PhysicsCommandBuffer::SetLinearVelocity& command);
+    void applyCommand(const PhysicsCommandBuffer::SetAngularVelocity& command);
+    void applyCommand(const PhysicsCommandBuffer::SetKinematicTarget& command);
+    void applyCommand(const PhysicsCommandBuffer::SetRigidBodyAwake& command);
+    void applyCommand(const PhysicsCommandBuffer::SetRigidBodyType& command);
+    void applyCommand(const PhysicsCommandBuffer::SetRigidBodyMotionControl& command);
+    void applyCommand(const PhysicsCommandBuffer::SetColliderLocalPose& command);
+    void applyCommand(const PhysicsCommandBuffer::SetColliderEnabled& command);
+    void applyCommand(const PhysicsCommandBuffer::SetColliderTrigger& command);
+    void applyCommand(const PhysicsCommandBuffer::SleepAllObjects& command);
+    void applyCommand(const PhysicsCommandBuffer::AwakenAllObjects& command);
+    void applyCommand(const PhysicsCommandBuffer::SyncBodyFromTransform& command);
 
     //=========================================
     // Internal broadphase processing
     //=========================================
-    void setBVHDirty(RigidBodyHandle& handle);
+    void setBVHDirty(const RigidBodyHandle& handle);
 
     //=========================================
     // Internal contact processing
@@ -194,9 +201,6 @@ public:
     // Temporary legacy API
     //=========================================
     PhysicsWorld* getPhysicsWorld();
-    void syncBodyFromTransform(RigidBodyHandle body);
-
-    //=========================================
     // Simulation state
     //=========================================
     PhysicsStepDebugPhase debugPhase = PhysicsStepDebugPhase::Ready;
@@ -217,9 +221,9 @@ public:
     std::vector<Tri>* terrainTriangles = nullptr;
 
     //=========================================
-    // External command buffer
+    // Command buffer
     //=========================================
-    PhysicsExternalCommandBuffer externalCommands;
+    PhysicsCommandBuffer commandBuffer;
 
     //=========================================
     // Physics world and runtime caches

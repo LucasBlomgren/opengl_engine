@@ -30,8 +30,8 @@ public:
     const SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap() const;
 
     // creation and deletion
-    RigidBodyHandle createRigidBody();
-    ColliderHandle createCollider();
+    RigidBodyHandle createPendingRigidBody();
+    ColliderHandle createPendingCollider();
 
     bool activateRigidBody(RigidBodyHandle handle);
     bool activateCollider(ColliderHandle handle);

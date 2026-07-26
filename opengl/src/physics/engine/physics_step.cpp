@@ -15,7 +15,7 @@ void PhysicsEngine::Impl::init(World* world, FrameTimers* frameTimers) {
     collisionManifold = std::make_unique<CollisionManifold>();
     collisionManifold->init(&caches);
 
-    externalCommands.reserve(1024, 4096, 4096);
+    commandBuffer.reserve(1024, 4096, 4096);
 }
 
 //==============================
@@ -90,7 +90,10 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
     start = glfwGetTime() * 1000.0;
     ContactBatch contacts;
     narrowphaseManager.narrowPhase(pairs, contacts, dt);
-    contactsGeneratedThisFrame += static_cast<uint32_t>(contacts.contacts.size() + contacts.speculativeContacts.size());
+
+    contactsGeneratedThisFrame +=
+        static_cast<uint32_t>(contacts.contacts.size() + contacts.speculativeContacts.size());
+
     frameTimers->submit(
         "Narrowphase", 
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
@@ -140,9 +143,10 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 void PhysicsEngine::Impl::beginPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
-    flushExternalCommands();
+    processPendingCommands();
 
-    uint32_t bodySlotCapacity = physicsWorld.getRigidBodiesMap().slot_capacity();
+    uint32_t bodySlotCapacity =
+        physicsWorld.getRigidBodiesMap().slot_capacity();
 
     toWake.reserve(bodySlotCapacity);
     toSleep.reserve(bodySlotCapacity);
@@ -165,7 +169,10 @@ void PhysicsEngine::Impl::beginPhysicsStep(float outerDt) {
         }
     }
 
-    frameTimers->submit("Pre step", frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start);
+    frameTimers->submit(
+        "Pre step",
+        frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start
+    );
 }
 
 //==============================
@@ -180,5 +187,8 @@ void PhysicsEngine::Impl::endPhysicsStep(float outerDt) {
     addSleepDamping();
     updateContactCache();
 
-    frameTimers->submit("Post step", frameTimers->get("Post step") + glfwGetTime() * 1000.0 - start);
+    frameTimers->submit(
+        "Post step",
+        frameTimers->get("Post step") + glfwGetTime() * 1000.0 - start
+    );
 }

@@ -30,7 +30,6 @@ Transform* World::getTransform(const TransformHandle& h) {
     return transforms.get(h);
 }
 
-// physics getters, #TODO: refactor to world only dependent on physics world, not physics engine
 RigidBody* World::getRigidBody(const GameObjectHandle& h) {
     GameObject* obj = gameObjects.try_get(h);
     if (!obj) return nullptr;

@@ -302,14 +302,16 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='O2|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\engine\commands\physics_external_command_buffer.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_bodies.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_colliders.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_commands.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_command_flush.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_queries.cpp" />
-    <ClCompile Include="src\physics\engine\physics_engine_scene.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_engine.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_body_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_collider_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_scene_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_query_api.cpp" />
+    <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
+    <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
+    <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
+    <ClCompile Include="src\physics\engine\commands\physics_mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\physics_scene.cpp" />
     <ClCompile Include="src\physics\engine\physics_step.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
@@ -330,7 +332,7 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
-    <ClInclude Include="src\physics\engine\commands\physics_external_command_buffer.h" />
+    <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
     <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />

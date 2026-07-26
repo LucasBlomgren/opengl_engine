@@ -9,7 +9,7 @@
 #include "physics/public/physics_handles.h"
 #include "physics/public/physics_types.h"
 
-class PhysicsExternalCommandBuffer {
+class PhysicsCommandBuffer {
 public:
     //=========================================
     // Rigid body mutation commands
@@ -37,10 +37,6 @@ public:
     struct SetRigidBodyAwake {
         RigidBodyHandle body;
         bool awake;
-    };
-
-    struct SetRigidBodyAsleep {
-        RigidBodyHandle body;
     };
 
     struct SetRigidBodyType {
@@ -88,7 +84,6 @@ public:
         SetAngularVelocity,
         SetKinematicTarget,
         SetRigidBodyAwake,
-        SetRigidBodyAsleep,
         SetRigidBodyType,
         SetRigidBodyMotionControl,
         SetColliderLocalPose,
@@ -142,28 +137,27 @@ public:
     //=========================================
     // Rigid body command recording
     //=========================================
-    void queueApplyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
-    void queueSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
-    void queueSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
-    void queueSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
-    void queueSetRigidBodyAwake(RigidBodyHandle body);
-    void queueSetRigidBodyAsleep(RigidBodyHandle body);
-    void queueSetRigidBodyType(RigidBodyHandle body, BodyType type);
-    void queueSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
+    void recordApplyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
+    void recordSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    void recordSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    void recordSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
+    void recordSetRigidBodyAwake(RigidBodyHandle body, bool awake);
+    void recordSetRigidBodyType(RigidBodyHandle body, BodyType type);
+    void recordSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
 
     //=========================================
     // Collider command recording
     //=========================================
-    void queueSetColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
-    void queueSetColliderEnabled(ColliderHandle collider, bool enabled);
-    void queueSetColliderTrigger(ColliderHandle collider, bool isTrigger);
+    void recordSetColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
+    void recordSetColliderEnabled(ColliderHandle collider, bool enabled);
+    void recordSetColliderTrigger(ColliderHandle collider, bool isTrigger);
 
     //=========================================
     // Scene-wide command recording
     //=========================================
-    void queueSleepAllObjects();
-    void queueAwakenAllObjects();
-    void queueSyncBodyFromTransform(RigidBodyHandle body);
+    void recordSleepAllObjects();
+    void recordAwakenAllObjects();
+    void recordSyncBodyFromTransform(RigidBodyHandle body);
 
 private:
     std::vector<RigidBodyHandle> bodyCreates;
