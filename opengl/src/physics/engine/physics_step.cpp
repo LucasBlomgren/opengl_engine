@@ -78,9 +78,9 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 
     // Broadphase
     start = glfwGetTime() * 1000.0;
-    PairBatch pairs;
-    broadphaseManager.buildPairs(pairs);
-    broadphaseManager.buildSpeculativePairs(dt, pairs, debugSweeps);
+    pairBatch.clear();
+    broadphaseManager.buildPairs(pairBatch);
+    broadphaseManager.buildSpeculativePairs(dt, pairBatch, debugSweeps);
     frameTimers->submit(
         "Broadphase", 
         frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
@@ -88,11 +88,23 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 
     // Narrowphase
     start = glfwGetTime() * 1000.0;
-    ContactBatch contacts;
-    narrowphaseManager.narrowPhase(pairs, contacts, dt);
+    contactBatch.clear();
+
+    contactBatch.contacts.reserve(
+        pairBatch.dynamicPairs.size() + 
+        pairBatch.terrainPairs.size()
+    );
+    contactBatch.speculativeContacts.reserve(
+        pairBatch.dynamicPairs.size() + 
+        pairBatch.terrainPairs.size()
+    );
+    narrowphaseManager.narrowPhase(pairBatch, contactBatch, dt);
 
     contactsGeneratedThisFrame +=
-        static_cast<uint32_t>(contacts.contacts.size() + contacts.speculativeContacts.size());
+        static_cast<uint32_t>(
+            contactBatch.contacts.size() + 
+            contactBatch.speculativeContacts.size()
+            );
 
     frameTimers->submit(
         "Narrowphase", 
@@ -101,7 +113,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 
     // Contact collection
     start = glfwGetTime() * 1000.0;
-    contacts.sortByMinY();
+    contactBatch.sortByMinY();
     frameTimers->submit(
         "Contact collection", 
         frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
@@ -109,7 +121,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 
     // Collision resolution
     start = glfwGetTime() * 1000.0;
-    pgsSolver.solve(contacts, caches, pgsIterations, dt);
+    pgsSolver.solve(contactBatch, caches, pgsIterations, dt);
     frameTimers->submit(
         "Collision resolution", 
         frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start

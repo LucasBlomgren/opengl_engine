@@ -618,7 +618,7 @@ void SceneBuilder::terrainScene() {
     {
         GameObjectDesc chair;
         chair.name = "Chair";
-        glm::vec3 position = { i * 5.0f, 25 + j * 5.0f, k * 5.0f };
+        glm::vec3 position = { i * 5.0f, 75 + j * 5.0f, k * 5.0f };
         glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
         glm::vec3 scale{ 2.0f };
         chair.rootTransformHandle = world.createTransform(position, orientation, scale);

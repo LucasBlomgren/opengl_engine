@@ -226,10 +226,12 @@ public:
     PhysicsCommandBuffer commandBuffer;
 
     //=========================================
-    // Physics world and runtime caches
+    // Physics world and caches
     //=========================================
     PhysicsWorld physicsWorld;
     RuntimeCaches caches;
+    PairBatch pairBatch;
+    ContactBatch contactBatch;
 
     //=========================================
     // Physics subsystems

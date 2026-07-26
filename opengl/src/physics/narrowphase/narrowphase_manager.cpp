@@ -86,7 +86,7 @@ void NarrowphaseManager::processDynamicPairs(
 
     if (!bodyA || !bodyB) return;
 
-    // If both bodies are static or kinematic and not externally controlled, skip contact generation.
+    // If both bodies are static or kinematic and not externally controlled, skip contact generation
     if ((bodyA->motionControl != MotionControl::External && (bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic)) && 
         (bodyB->motionControl != MotionControl::External && (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic))) {
         return;
@@ -98,6 +98,13 @@ void NarrowphaseManager::processDynamicPairs(
             Collider* colliderB = caches->colliders.get(colBH, FUNC_NAME);
 
             if (!colliderA || !colliderB) continue;
+
+            // If either body is compound, check if the colliders' AABBs intersect
+            if (bodyA->isCompound() || bodyB->isCompound()) {
+                if (!colliderA->aabb.intersects(colliderB->aabb)) {
+                    continue;
+                }
+            }
 
             processColliderPairNormal(
                 batch,
@@ -177,6 +184,13 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
             Collider* colliderB = caches->colliders.get(colBH, FUNC_NAME);
 
             if (!colliderA || !colliderB) continue;
+
+            // If either body is compound, check if the colliders' AABBs intersect
+            if (bodyA->isCompound() || bodyB->isCompound()) {
+                if (!colliderA->aabb.intersects(colliderB->aabb)) {
+                    continue;
+                }
+            }
 
             processColliderPairSpeculative(
                 ContactBuildInput{
