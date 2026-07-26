@@ -36,11 +36,13 @@ public:
     PhysicsEngine();
     ~PhysicsEngine();
 
-    PhysicsEngine(const PhysicsEngine&) = delete; // Prevent copying
-    PhysicsEngine& operator=(const PhysicsEngine&) = delete; // Prevent copying
+    // Disable copy semantics
+    PhysicsEngine(const PhysicsEngine&) = delete;
+    PhysicsEngine& operator=(const PhysicsEngine&) = delete;
 
-    PhysicsEngine(PhysicsEngine&&) noexcept; // Allow moving
-    PhysicsEngine& operator=(PhysicsEngine&&) noexcept; // Allow moving
+    // Allow move semantics
+    PhysicsEngine(PhysicsEngine&&) noexcept;
+    PhysicsEngine& operator=(PhysicsEngine&&) noexcept;
 
     //======================================
     // Initialization and scene lifetime
@@ -55,15 +57,12 @@ public:
     void prepareStepLoop();
     void step(float deltaTime, EngineState& engine);
 
-    //======================================
-    // Rigid body creation and destruction
-    //======================================
+    //================================================
+    // Rigid body & collider creation and destruction
+    //================================================
     [[nodiscard]] RigidBodyHandle createRigidBody(const RigidBodyDesc& desc);
     bool destroyRigidBody(RigidBodyHandle body);
 
-    //======================================
-    // Collider creation and destruction
-    //======================================
     [[nodiscard]] ColliderHandle createCollider(RigidBodyHandle body, const ColliderDesc& desc);
     bool destroyCollider(ColliderHandle collider);
 
@@ -120,7 +119,6 @@ public:
     //======================================
     DebugData getDebugData() const;
     PhysicsStepDebugPhase getDebugPhase() const;
-    float getPausedDt() const;
 
     //======================================
     // Debug visualization

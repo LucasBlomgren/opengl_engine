@@ -302,15 +302,21 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='O2|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\engine\api\physics_engine.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_engine_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_body_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_collider_api.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_scene_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_query_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_debug_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_legacy_api.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\physics_body_submission.cpp" />
+    <ClCompile Include="src\physics\engine\physics_collider_submission.cpp" />
+    <ClCompile Include="src\physics\engine\physics_queries.cpp" />
+    <ClCompile Include="src\physics\engine\physics_debug.cpp" />
+    <ClCompile Include="src\physics\engine\physics_legacy.cpp" />
     <ClCompile Include="src\physics\engine\physics_scene.cpp" />
     <ClCompile Include="src\physics\engine\physics_step.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />

@@ -50,3 +50,30 @@ void PhysicsEngine::Impl::clear() {
     physicsWorld.clear();
     caches.clear();
 }
+
+//====================================
+// Scene-wide command submission
+//====================================
+void PhysicsEngine::Impl::submitSleepAllObjects() {
+    commandBuffer.recordSleepAllObjects();
+}
+
+void PhysicsEngine::Impl::submitAwakenAllObjects() {
+    commandBuffer.recordAwakenAllObjects();
+}
+
+//====================================
+// Temporary legacy submission
+//====================================
+void PhysicsEngine::Impl::submitSyncBodyFromTransform(
+    RigidBodyHandle body) {
+    commandBuffer.recordSyncBodyFromTransform(body);
+}
+
+//====================================
+// BVH management
+//====================================
+void PhysicsEngine::Impl::setBVHDirty(
+    RigidBodyHandle handle) {
+    broadphaseManager.setBVHDirty(handle);
+}

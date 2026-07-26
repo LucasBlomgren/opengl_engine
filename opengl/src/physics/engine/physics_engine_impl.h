@@ -23,6 +23,10 @@
 
 struct PhysicsEngine::Impl {
 public:
+//######################################################################################
+//   PhysicsEngine facade interface
+//######################################################################################
+
     //=========================================
     // Initialization and scene lifetime
     //=========================================
@@ -37,54 +41,37 @@ public:
     void step(float deltaTime, EngineState& engine);
 
     //=========================================
-    // Command submission: rigid bodies
+    // Solver configuration
     //=========================================
-    [[nodiscard]] RigidBodyHandle submitCreateRigidBody(
-        const RigidBodyDesc& desc
-    );
+    int getPgsIterations() const;
+    void setPgsIterations(int iterations);
+
+    //=========================================
+    // Rigid body command submission
+    //=========================================
+    [[nodiscard]] RigidBodyHandle submitCreateRigidBody(const RigidBodyDesc& desc);
     bool submitDestroyRigidBody(RigidBodyHandle body);
 
-    [[nodiscard]] ColliderHandle submitCreateCollider(
-        RigidBodyHandle body, 
-        const ColliderDesc& desc
-    );
-    bool submitDestroyCollider(ColliderHandle collider);
-
-    bool submitApplyLinearImpulse(
-        RigidBodyHandle body, 
-        const glm::vec3& impulse
-    );
-    bool submitSetLinearVelocity(
-        RigidBodyHandle body, 
-        const glm::vec3& velocity
-    );
-    bool submitSetAngularVelocity(
-        RigidBodyHandle body, 
-        const glm::vec3& velocity
-    );
-    bool submitSetKinematicTarget(
-        RigidBodyHandle body, 
-        const PhysicsPose& target
-    );
+    bool submitApplyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
+    bool submitSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    bool submitSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
+    bool submitSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
     bool submitSetRigidBodyAwake(RigidBodyHandle body, bool awake);
     bool submitSetRigidBodyType(RigidBodyHandle body, BodyType type);
-    bool submitSetRigidBodyMotionControl(
-        RigidBodyHandle body, 
-        MotionControl motionControl
-    );
+    bool submitSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
 
     //=========================================
-    // Command submission: colliders
+    // Collider command submission
     //=========================================
-    bool submitSetColliderLocalPose(
-        ColliderHandle collider, 
-        const PhysicsPose& localPose
-    );
+    [[nodiscard]] ColliderHandle submitCreateCollider(RigidBodyHandle body, const ColliderDesc& desc);
+    bool submitDestroyCollider(ColliderHandle collider);
+
+    bool submitSetColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
     bool submitSetColliderEnabled(ColliderHandle collider, bool enabled);
     bool submitSetColliderTrigger(ColliderHandle collider, bool isTrigger);
 
     //=========================================
-    // Command submission: scene
+    // Scene command submission
     //=========================================
     void submitSleepAllObjects();
     void submitAwakenAllObjects();
@@ -93,15 +80,11 @@ public:
     //=========================================
     // State queries
     //=========================================
-    std::optional<RigidBodyState> getRigidBodyState(
-        RigidBodyHandle body
-    ) const;
-    std::optional<ColliderState> getColliderState(
-        ColliderHandle collider
-    ) const;
+    std::optional<RigidBodyState> getRigidBodyState(RigidBodyHandle body) const;
+    std::optional<ColliderState> getColliderState(ColliderHandle collider) const;
 
     //=========================================
-    // Physics queries
+    // Spatial queries
     //=========================================
     Raycast::RaycastHit raycast(Raycast::Ray& ray);
 
@@ -111,18 +94,13 @@ public:
     std::vector<ExternalMotionContact>& getExternalMotionContacts();
 
     //=========================================
-    // Debug state
+    // Debug queries
     //=========================================
     DebugData getDebugData() const;
-
-    //=========================================
-    // Debug visualization
-    //=========================================
-    void updateBVHRenderData(const BVHType& type, bool update);
-
-    //=========================================
-    // Debug spatial data
-    //=========================================
+    PhysicsStepDebugPhase getDebugPhase() const;
+    const std::vector<AABB>& getDebugSweeps() const;
+    const std::vector<DebugSpeculativeContact>&
+        getDebugSpeculativeContacts() const;
     const std::vector<RigidBodyHandle>& getAwakeList() const;
     const BVHTree& getDynamicAwakeBvh() const;
     const BVHTree& getDynamicAsleepBvh() const;
@@ -131,30 +109,36 @@ public:
     const std::unordered_map<size_t, Contact>& getContactCache() const;
 
     //=========================================
-    // Internal simulation phases
+    // Debug visualization
+    //=========================================
+    void updateBVHRenderData(const BVHType& type, bool update);
+
+    //=========================================
+    // Temporary legacy access
+    //=========================================
+    PhysicsWorld* getPhysicsWorld();
+
+
+//######################################################################################
+//  Internal physics runtime: operations
+//######################################################################################
+
+    //=========================================
+    // Simulation phases
     //=========================================
     void beginPhysicsStep(float outerDt);
     void stepDiscrete(float deltaTime);
     void endPhysicsStep(float outerDt);
 
     //=========================================
-    // Internal body integration
+    // Body integration and collider updates
     //=========================================
-    void integrateForcesAndVelocities(
-        const std::vector<RigidBodyHandle>& bodies, 
-        float dt
-    );
-    void integratePositionsAndColliders(
-        const std::vector<RigidBodyHandle>& bodies, 
-        float dt
-    );
-    void updateCollidersAndBodyAABB(
-        RigidBody* body, 
-        Transform* rootTransform
-    );
+    void integrateForcesAndVelocities(const std::vector<RigidBodyHandle>& bodies, float dt);
+    void integratePositionsAndColliders(const std::vector<RigidBodyHandle>& bodies, float dt);
+    void updateCollidersAndBodyAABB(RigidBody* body, Transform* rootTransform);
 
     //=========================================
-    // Internal sleep and wake processing
+    // Sleep and wake processing
     //=========================================
     void processWakeList();
     void processSleepList(float outerDt);
@@ -166,12 +150,12 @@ public:
     // Pending command processing
     //=========================================
     void processPendingCommands();
-    void processLifecycleCommands(
-        const PhysicsCommandBuffer::Batch& batch
-    );
-    void applyMutationCommands(
-        const std::vector<PhysicsCommandBuffer::Mutation>& mutations
-    );
+    void processLifecycleCommands(const PhysicsCommandBuffer::Batch& batch);
+    void applyMutationCommands(const std::vector<PhysicsCommandBuffer::Mutation>& mutations);
+
+    //=========================================
+    // Rigid body command application
+    //=========================================
     void applyCommand(const PhysicsCommandBuffer::ApplyLinearImpulse& command);
     void applyCommand(const PhysicsCommandBuffer::SetLinearVelocity& command);
     void applyCommand(const PhysicsCommandBuffer::SetAngularVelocity& command);
@@ -179,38 +163,46 @@ public:
     void applyCommand(const PhysicsCommandBuffer::SetRigidBodyAwake& command);
     void applyCommand(const PhysicsCommandBuffer::SetRigidBodyType& command);
     void applyCommand(const PhysicsCommandBuffer::SetRigidBodyMotionControl& command);
+
+    //=========================================
+    // Collider command application
+    //=========================================
     void applyCommand(const PhysicsCommandBuffer::SetColliderLocalPose& command);
     void applyCommand(const PhysicsCommandBuffer::SetColliderEnabled& command);
     void applyCommand(const PhysicsCommandBuffer::SetColliderTrigger& command);
+
+    //=========================================
+    // Scene command application
+    //=========================================
     void applyCommand(const PhysicsCommandBuffer::SleepAllObjects& command);
     void applyCommand(const PhysicsCommandBuffer::AwakenAllObjects& command);
     void applyCommand(const PhysicsCommandBuffer::SyncBodyFromTransform& command);
 
     //=========================================
-    // Internal broadphase processing
+    // Broadphase maintenance
     //=========================================
-    void setBVHDirty(const RigidBodyHandle& handle);
+    void setBVHDirty(RigidBodyHandle handle);
 
     //=========================================
-    // Internal contact processing
+    // Contact processing
     //=========================================
     void updateContactCache();
     void resolveCollisions();
 
+
+//######################################################################################
+//  Internal physics runtime: state
+//######################################################################################
+
     //=========================================
-    // Temporary legacy API
-    //=========================================
-    PhysicsWorld* getPhysicsWorld();
     // Simulation state
     //=========================================
     PhysicsStepDebugPhase debugPhase = PhysicsStepDebugPhase::Ready;
 
-    float pausedDt = 0.0f;
     float dt = 0.0f;
     float savedPhysicsSurpassedTime = 0.0f;
 
     uint32_t contactsGeneratedThisFrame = 0;
-
     int pgsIterations = 8;
 
     //=========================================
@@ -221,15 +213,19 @@ public:
     std::vector<Tri>* terrainTriangles = nullptr;
 
     //=========================================
-    // Command buffer
+    // External command input
     //=========================================
     PhysicsCommandBuffer commandBuffer;
 
     //=========================================
-    // Physics world and caches
+    // World storage and runtime caches
     //=========================================
     PhysicsWorld physicsWorld;
     RuntimeCaches caches;
+
+    //=========================================
+    // Step-local working data
+    //=========================================
     PairBatch pairBatch;
     ContactBatch contactBatch;
 
@@ -239,7 +235,6 @@ public:
     BroadphaseManager broadphaseManager;
     NarrowphaseManager narrowphaseManager;
     PGSSolver pgsSolver;
-
     std::unique_ptr<CollisionManifold> collisionManifold;
 
     //=========================================
@@ -249,9 +244,13 @@ public:
     std::vector<RigidBodyHandle> toSleep;
 
     //=========================================
-    // Contact and debug data
+    // Persistent contact data
+    //=========================================
+    std::unordered_map<size_t, Contact> contactCache;
+
+    //=========================================
+    // Debug data
     //=========================================
     std::vector<AABB> debugSweeps;
     std::vector<DebugSpeculativeContact> debugSpeculativeContacts;
-    std::unordered_map<size_t, Contact> contactCache;
 };

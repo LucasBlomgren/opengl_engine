@@ -85,16 +85,22 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_engine.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_engine_api.cpp" />
     <ClCompile Include="src\physics\engine\physics_step.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_scene_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_query_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_debug_api.cpp" />
+    <ClCompile Include="src\physics\engine\api\physics_legacy_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_body_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_collider_api.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\physics_body_submission.cpp" />
+    <ClCompile Include="src\physics\engine\physics_collider_submission.cpp" />
+    <ClCompile Include="src\physics\engine\physics_queries.cpp" />
+    <ClCompile Include="src\physics\engine\physics_debug.cpp" />
+    <ClCompile Include="src\physics\engine\physics_legacy.cpp" />
     <ClCompile Include="src\physics\engine\physics_scene.cpp" />
   </ItemGroup>
   <ItemGroup>

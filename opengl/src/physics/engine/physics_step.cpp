@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <algorithm>
+
 #include "physics/engine/physics_engine_impl.h"
 
 #include "engine/engine_state.h"
@@ -33,6 +35,18 @@ void PhysicsEngine::Impl::prepareStepLoop() {
     frameTimers->reset("Contact collection");
     frameTimers->reset("Collision resolution");
     frameTimers->reset("Post step");
+}
+
+//==============================
+// Solver configuration
+//==============================
+int PhysicsEngine::Impl::getPgsIterations() const {
+    return pgsIterations;
+}
+
+void PhysicsEngine::Impl::setPgsIterations(
+    int iterations) {
+    pgsIterations = (std::max)(1, iterations);
 }
 
 //==============================
