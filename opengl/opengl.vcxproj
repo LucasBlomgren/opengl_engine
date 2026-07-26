@@ -339,6 +339,7 @@
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
     <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
+    <ClInclude Include="src\physics\error_logging.h" />
     <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
@@ -646,7 +647,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLM_ENABLE_EXPERIMENTAL;PHYSICS_ENABLE_LOGGING</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard>stdcpp20</LanguageStandard>

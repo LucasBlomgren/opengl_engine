@@ -27,8 +27,6 @@
 
 #include <atomic>
 
-#include "../debug_config.h"
-
 #define FUNC_NAME __FUNCTION__
 
 

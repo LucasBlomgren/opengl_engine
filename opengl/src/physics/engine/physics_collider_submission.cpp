@@ -14,7 +14,8 @@ ColliderHandle PhysicsEngine::Impl::submitCreateCollider(
 {
     RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
 
-    if (!body || commandBuffer.isBodyPendingDestroy(bodyHandle)) {
+    if (!body || 
+        commandBuffer.isBodyPendingDestroy(bodyHandle)) {
         return {};
     }
 
@@ -43,10 +44,7 @@ ColliderHandle PhysicsEngine::Impl::submitCreateCollider(
         }
         else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
             collider->type = ColliderType::SPHERE;
-
-            Sphere sphere(shapeDesc.radius);
-            sphere.centerLocal = shapeDesc.center;
-            collider->shape = sphere;
+            collider->shape = Sphere(shapeDesc.radius, shapeDesc.center);
         }
         else {
             validShape = false;

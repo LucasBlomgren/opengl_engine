@@ -43,14 +43,10 @@ bool PhysicsEngine::setKinematicTarget(
     return impl->submitSetKinematicTarget(body, target);
 }
 
-bool PhysicsEngine::setRigidBodyAwake(
-    RigidBodyHandle body) {
-    return impl->submitSetRigidBodyAwake(body, true);
-}
-
-bool PhysicsEngine::setRigidBodyAsleep(
-    RigidBodyHandle body) {
-    return impl->submitSetRigidBodyAwake(body, false);
+bool PhysicsEngine::setRigidBodySleepState(
+    RigidBodyHandle body,
+    bool asleep) {
+    return impl->submitSetRigidBodySleepState(body, asleep);
 }
 
 bool PhysicsEngine::setRigidBodyType(

@@ -83,9 +83,22 @@ void PhysicsEngine::Impl::applyCommand(
 }
 
 void PhysicsEngine::Impl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyAwake& command)
+    const PhysicsCommandBuffer::SetRigidBodySleepState& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+        return;
+    }
+
+    if (command.asleep) {
+        body->setAsleep();
+        broadphaseManager.moveToAsleep(command.body);
+    }
+    else {
+        body->setAwake();
+        broadphaseManager.moveToAwake(command.body);
+    }
 }
 
 void PhysicsEngine::Impl::applyCommand(

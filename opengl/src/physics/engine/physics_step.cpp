@@ -82,13 +82,13 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
         frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
     );
 
-    // BVH update
-    start = glfwGetTime() * 1000.0;
-    broadphaseManager.updateBVHs();
-    frameTimers->submit(
-        "BVH update", 
-        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-    );
+    //// BVH update
+    //start = glfwGetTime() * 1000.0;
+    //broadphaseManager.updateBVHs();
+    //frameTimers->submit(
+    //    "BVH update", 
+    //    frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+    //);
 
     // Broadphase
     start = glfwGetTime() * 1000.0;
@@ -153,6 +153,14 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 
     // Position integration
     integratePositionsAndColliders(awake, dt);
+
+    // BVH update
+    start = glfwGetTime() * 1000.0;
+    broadphaseManager.updateBVHs();
+    frameTimers->submit(
+        "BVH update",
+        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+    );
 
     // Step finalization
     endPhysicsStep(dt);

@@ -17,7 +17,11 @@ public:
 
     Sphere() = default;
 
-    explicit Sphere(float radius) : radiusLocal(radius), radiusWorld(radius) {}
+    explicit Sphere(float radius, const glm::vec3& centerLocal) 
+        : radiusLocal(radius), 
+        radiusWorld(radius),
+        centerLocal(centerLocal)
+    {}
 
     void update(const PhysicsPose& worldPose, const glm::vec3& worldScale) {
         glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);

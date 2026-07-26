@@ -56,7 +56,7 @@ public:
     bool submitSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
     bool submitSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
     bool submitSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
-    bool submitSetRigidBodyAwake(RigidBodyHandle body, bool awake);
+    bool submitSetRigidBodySleepState(RigidBodyHandle body, bool asleep);
     bool submitSetRigidBodyType(RigidBodyHandle body, BodyType type);
     bool submitSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
 
@@ -160,7 +160,7 @@ public:
     void applyCommand(const PhysicsCommandBuffer::SetLinearVelocity& command);
     void applyCommand(const PhysicsCommandBuffer::SetAngularVelocity& command);
     void applyCommand(const PhysicsCommandBuffer::SetKinematicTarget& command);
-    void applyCommand(const PhysicsCommandBuffer::SetRigidBodyAwake& command);
+    void applyCommand(const PhysicsCommandBuffer::SetRigidBodySleepState& command);
     void applyCommand(const PhysicsCommandBuffer::SetRigidBodyType& command);
     void applyCommand(const PhysicsCommandBuffer::SetRigidBodyMotionControl& command);
 

@@ -115,7 +115,5 @@ void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
     combinedAABB.worldHalfExtents =
         (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
 
-    combinedAABB.setSurfaceArea();
-
     body->aabb = combinedAABB;
 }

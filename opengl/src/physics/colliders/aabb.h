@@ -14,7 +14,6 @@ public:
 
     glm::vec3 worldCenter{ 0.0f };
     glm::vec3 worldHalfExtents{ 0.0f };
-    float surfaceArea = 0.0f;
 
     void init(const std::vector<glm::vec3>& vertices);
     void update(const ColliderTransformCache& transformCache);
@@ -25,7 +24,7 @@ public:
     void grow(glm::vec3 m);
     void growToInclude(const glm::vec3& p);
     float getMergedSurfaceArea(const AABB& a, const AABB& b);
-    void setSurfaceArea();
+    float getSurfaceArea() const;
 
     // Editor functions
     glm::vec3 getCollisionNormal(const AABB& other) const;

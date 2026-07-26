@@ -226,6 +226,7 @@
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
+    <ClInclude Include="src\physics\error_logging.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -51,18 +51,14 @@ void Collider::rebuildAABB() {
         aabb.worldMax = maximum;
         aabb.worldCenter = (minimum + maximum) * 0.5f;
         aabb.worldHalfExtents = (maximum - minimum) * 0.5f;
-        aabb.setSurfaceArea();
-
-        return;
     }
 
-    if (type == ColliderType::SPHERE) {
+    else if (type == ColliderType::SPHERE) {
         const Sphere& sphere = std::get<Sphere>(shape);
 
         aabb.worldMin = sphere.centerWorld - glm::vec3(sphere.radiusWorld);
         aabb.worldMax = sphere.centerWorld + glm::vec3(sphere.radiusWorld);
         aabb.worldCenter = sphere.centerWorld;
         aabb.worldHalfExtents = glm::vec3(sphere.radiusWorld);
-        aabb.setSurfaceArea();
     }
 }

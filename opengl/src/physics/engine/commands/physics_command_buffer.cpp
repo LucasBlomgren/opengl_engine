@@ -153,10 +153,10 @@ void PhysicsCommandBuffer::recordSetKinematicTarget(
     mutations.emplace_back(SetKinematicTarget{ body, target });
 }
 
-void PhysicsCommandBuffer::recordSetRigidBodyAwake(
+void PhysicsCommandBuffer::recordSetRigidBodySleepState(
     RigidBodyHandle body,
-    bool awake) {
-    mutations.emplace_back(SetRigidBodyAwake{ body, awake });
+    bool asleep) {
+    mutations.emplace_back(SetRigidBodySleepState{ body, asleep });
 }
 
 void PhysicsCommandBuffer::recordSetRigidBodyType(

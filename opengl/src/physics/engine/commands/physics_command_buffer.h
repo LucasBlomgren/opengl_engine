@@ -34,9 +34,9 @@ public:
         PhysicsPose target;
     };
 
-    struct SetRigidBodyAwake {
+    struct SetRigidBodySleepState {
         RigidBodyHandle body;
-        bool awake;
+        bool asleep;
     };
 
     struct SetRigidBodyType {
@@ -83,7 +83,7 @@ public:
         SetLinearVelocity,
         SetAngularVelocity,
         SetKinematicTarget,
-        SetRigidBodyAwake,
+        SetRigidBodySleepState,
         SetRigidBodyType,
         SetRigidBodyMotionControl,
         SetColliderLocalPose,
@@ -141,7 +141,7 @@ public:
     void recordSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
     void recordSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
     void recordSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
-    void recordSetRigidBodyAwake(RigidBodyHandle body, bool awake);
+    void recordSetRigidBodySleepState(RigidBodyHandle body, bool asleep);
     void recordSetRigidBodyType(RigidBodyHandle body, BodyType type);
     void recordSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
 

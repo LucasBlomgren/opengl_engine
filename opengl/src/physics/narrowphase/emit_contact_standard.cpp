@@ -105,12 +105,10 @@ bool NarrowphaseManager::tryExportExternalContact(
         return false;
     }
 
-    bool aCharacter =
-        in.bodyA->motionControl == MotionControl::External &&
+    bool aCharacter = in.bodyA->motionControl == MotionControl::External && 
         in.bodyA->responseMode == ContactResponseMode::Character;
 
-    bool bCharacter =
-        in.bodyB->motionControl == MotionControl::External &&
+    bool bCharacter = in.bodyB->motionControl == MotionControl::External &&
         in.bodyB->responseMode == ContactResponseMode::Character;
 
     if (!aCharacter && !bCharacter) {

@@ -429,7 +429,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     rb->allowSleep = allowSleep;
                     if (!allowSleep) {
-                        ctx.physicsEngine->setRigidBodyAwake(obj->rigidBodyHandle);
+                        ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, false);
                     }
                 }
 
@@ -437,12 +437,13 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 ImGui::BeginDisabled(!rb->allowSleep);
                 if (RowCheckbox("Asleep", "##asleep", asleep))
                 {
+                    bool shouldSleep = false;
                     if (asleep) {
-                        ctx.physicsEngine->setRigidBodyAsleep(obj->rigidBodyHandle);
+                        shouldSleep = true;
+                    } else {
+                        shouldSleep = false;
                     }
-                    else {
-                        ctx.physicsEngine->setRigidBodyAwake(obj->rigidBodyHandle);
-                    }
+                    ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, shouldSleep);
                 }
                 ImGui::EndDisabled();
 
@@ -673,7 +674,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                                 collider->shape = box;
                             }
                             else if (colliderChoice == 1) {
-                                Sphere sphere(1.0f);
+                                Sphere sphere(1.0f, glm::vec3(0.0f));
                                 collider->type = ColliderType::SPHERE;
                                 collider->shape = sphere;
                             }
@@ -745,7 +746,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                                     collider->shape = box;
                                 }
                                 else if (collider->type == ColliderType::SPHERE) {
-                                    Sphere sphere(1.0f);
+                                    Sphere sphere(1.0f, glm::vec3(0.0f));
                                     collider->shape = sphere;
                                 }
                             }

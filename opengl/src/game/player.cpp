@@ -116,6 +116,7 @@ void Player::createPlayerObject() {
     player->player = true;
 
     RigidBody* rb = world->getRigidBody(playerHandle);
+    rb->motionControl = MotionControl::External;
     rb->responseMode = ContactResponseMode::Character;
     rb->setExternalControl(true);
 
@@ -369,10 +370,9 @@ void Player::selectObject() {
 
     GameObject* obj = world->getGameObject(handle);
     Transform* transform = world->getTransform(obj->rootTransformHandle);
-    rb->asleep = false;
     rb->setExternalControl(true);
 
-    physicsEngine->setRigidBodyAwake(raycast.bodyHandle);
+    physicsEngine->setRigidBodySleepState(raycast.bodyHandle, false);
 
     transform->lastPosition = transform->position;
 

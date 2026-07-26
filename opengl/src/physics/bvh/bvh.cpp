@@ -186,11 +186,11 @@ int BVHTree::findBestSibling(AABB& box)
         float mergedSurfaceA = box.getMergedSurfaceArea(A->fatBox, box);
         float mergedSurfaceB = box.getMergedSurfaceArea(B->fatBox, box);
 
-        A->fatBox.setSurfaceArea();
-        B->fatBox.setSurfaceArea();
+        float surfaceAreaA = A->fatBox.getSurfaceArea();
+        float surfaceAreaB = B->fatBox.getSurfaceArea();
 
-        float incA = mergedSurfaceA - A->fatBox.surfaceArea;
-        float incB = mergedSurfaceB - B->fatBox.surfaceArea;
+        float incA = mergedSurfaceA - surfaceAreaA;
+        float incB = mergedSurfaceB - surfaceAreaB;
 
         n = (incA < incB) ? A : B;
     }

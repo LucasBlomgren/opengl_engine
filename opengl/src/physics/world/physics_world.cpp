@@ -69,7 +69,11 @@ const SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() con
 
 AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
     if (body.colliderHandles.empty()) {
-        std::cout << "[PhysicsWorld] Warning: RigidBody with id " << body.id << " has no colliders. Returning empty AABB." << std::endl;
+        std::cout 
+            << "[PhysicsWorld] Warning: RigidBody with id " 
+            << body.id 
+            << " has no colliders. Returning empty AABB." 
+            << std::endl;
         return AABB{};
     }
 

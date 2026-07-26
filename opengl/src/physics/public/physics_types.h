@@ -10,13 +10,13 @@ enum class BodyType {
 };
 
 enum class MotionControl {
-    Physics,
-    External
+    Physics, 
+    External // editor/player selected (no physics response)
 };
 
 enum class ContactResponseMode {
-    Normal,
-    Character
+    Normal, // for normal physics response
+    Character // for exporting contacts to character controllers
 };
 
 struct PhysicsPose {

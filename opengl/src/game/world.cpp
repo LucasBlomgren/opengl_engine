@@ -308,7 +308,6 @@ GameObjectHandle World::createGameObject(GameObjectDesc& objDesc) {
 
     body->aabb.worldCenter = (body->aabb.worldMin + body->aabb.worldMax) * 0.5f;
     body->aabb.worldHalfExtents = (body->aabb.worldMax - body->aabb.worldMin) * 0.5f;
-    body->aabb.setSurfaceArea();
 
     const float boundingRadius = glm::length(body->aabb.worldHalfExtents);
     body->invRadius = boundingRadius > 0.0f ? 1.0f / boundingRadius : 0.0f;

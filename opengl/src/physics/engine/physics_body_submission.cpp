@@ -1,5 +1,4 @@
 #include "pch.h"
-
 #include "physics/engine/physics_engine_impl.h"
 
 //=========================================
@@ -8,12 +7,16 @@
 RigidBodyHandle PhysicsEngine::Impl::submitCreateRigidBody(
     const RigidBodyDesc& desc)
 {
-    if (desc.type == BodyType::Dynamic && desc.mass <= 0.0f) {
+    if (desc.type == BodyType::Dynamic && 
+        desc.mass <= 0.0f) {
         return {};
     }
 
-    RigidBodyHandle bodyHandle = physicsWorld.createPendingRigidBody();
-    RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
+    RigidBodyHandle bodyHandle = 
+        physicsWorld.createPendingRigidBody();
+
+    RigidBody* body = 
+        physicsWorld.getRigidBody(bodyHandle);
 
     if (!body) {
         return {};
@@ -64,12 +67,12 @@ bool PhysicsEngine::Impl::submitDestroyRigidBody(
 {
     RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
 
-    if (!body || commandBuffer.isBodyPendingDestroy(bodyHandle)) {
+    if (!body || 
+        commandBuffer.isBodyPendingDestroy(bodyHandle)) {
         return false;
     }
 
     commandBuffer.recordBodyDestroy(bodyHandle);
-
     return true;
 }
 
@@ -114,7 +117,8 @@ bool PhysicsEngine::Impl::submitSetAngularVelocity(
 {
     const RigidBody* body = physicsWorld.getRigidBody(handle);
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle) ||
+    if (!body || 
+        commandBuffer.isBodyPendingDestroy(handle) ||
         body->type == BodyType::Static) {
         return false;
     }
@@ -139,9 +143,9 @@ bool PhysicsEngine::Impl::submitSetKinematicTarget(
     return true;
 }
 
-bool PhysicsEngine::Impl::submitSetRigidBodyAwake(
+bool PhysicsEngine::Impl::submitSetRigidBodySleepState(
     RigidBodyHandle handle,
-    bool awake)
+    bool asleep)
 {
     const RigidBody* body = physicsWorld.getRigidBody(handle);
 
@@ -151,12 +155,12 @@ bool PhysicsEngine::Impl::submitSetRigidBodyAwake(
         return false;
     }
 
-    if (!body->allowSleep ||
-        body->motionControl == MotionControl::External) {
+    if (!body->allowSleep /*||
+        body->motionControl == MotionControl::External*/) {
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyAwake(handle, awake);
+    commandBuffer.recordSetRigidBodySleepState(handle, asleep);
     return true;
 }
 
@@ -166,7 +170,8 @@ bool PhysicsEngine::Impl::submitSetRigidBodyType(
 {
     const RigidBody* body = physicsWorld.getRigidBody(handle);
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body || 
+        commandBuffer.isBodyPendingDestroy(handle)) {
         return false;
     }
 

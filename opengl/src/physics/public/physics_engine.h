@@ -74,8 +74,7 @@ public:
     bool setAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
     bool setKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
 
-    bool setRigidBodyAwake(RigidBodyHandle body);
-    bool setRigidBodyAsleep(RigidBodyHandle body);
+    bool setRigidBodySleepState(RigidBodyHandle body, bool awake);
     bool setRigidBodyType(RigidBodyHandle body, BodyType type);
     bool setRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
 

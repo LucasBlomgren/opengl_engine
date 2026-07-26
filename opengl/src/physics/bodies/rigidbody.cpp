@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "rigidbody.h"
 
-//--------------------------------------
+//===============================================
 //   Velocity integration
-//--------------------------------------
+//===============================================
 void RigidBody::integratePose(float dt) {
 	if (type == BodyType::Static || 
 		motionControl == MotionControl::External ||
@@ -22,9 +22,9 @@ void RigidBody::integratePose(float dt) {
 	updateOrientation(pose.orientation, angularVelocity, dt);
 }
 
-//--------------------------------------
+//===============================================
 //  Gravity and friction/damping
-//--------------------------------------
+//===============================================
 void RigidBody::applyGravity(float dt) {
 	if (!allowGravity ||
 		asleep ||
@@ -96,9 +96,9 @@ void RigidBody::applyAntistuckFriction(float dt) {
 	}
 }
 
-//--------------------------------------
+//===============================================
 //    Orientation and inertia updates
-//--------------------------------------
+//===============================================
 void RigidBody::updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt) {
 	glm::quat omegaQuat(0.0f, angularVelocity.x, angularVelocity.y, angularVelocity.z);
 	orientation += 0.5f * dt * (omegaQuat * orientation);
@@ -110,9 +110,9 @@ void RigidBody::updateInertiaWorld() {
 	invInertiaWorld = rotation * invInertiaLocal * glm::transpose(rotation);
 }
 
-//---------------------------------
+//===============================================
 //     Applying impulses
-//---------------------------------
+//===============================================
 void RigidBody::applyImpulseLinear(const glm::vec3& j) {
     linearVelocity += j * invMass;
 }
@@ -139,9 +139,9 @@ void RigidBody::commitBiasImpulses(float dt) {
 	biasAngularVelocity = glm::vec3(0.0f);
 }
 
-//---------------------------------
+//===============================================
 //     Asleep and awake
-//---------------------------------
+//===============================================
 void RigidBody::setAsleep() {
 	if (type == BodyType::Static || type == BodyType::Kinematic) {
 		return;
@@ -167,9 +167,9 @@ void RigidBody::setAwake() {
 	sleepCounter = 0.0f;
 }
 
-//---------------------------------
+//===============================================
 //     State setters
-//---------------------------------
+//===============================================
 void RigidBody::setStatic() {
 	type = BodyType::Static;
 	mass = 0.0f;
@@ -182,9 +182,9 @@ void RigidBody::setExternalControl(bool controlled) {
 	anchorTimer = 0.0f;
 }
 
-//---------------------------------
+//===============================================
 //     Inertia calculations
-//---------------------------------
+//===============================================
 void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const Collider& collider, Transform& t) {
 	if (type == BodyType::Static) {
 		invInertiaLocal = glm::mat3(0.0f);
