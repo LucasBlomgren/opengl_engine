@@ -4,25 +4,27 @@
 
 #include "physics/public/physics_handles.h"
 
+namespace physics::internal {
+
 class Tri;
 
 struct TerrainPair {
-    RigidBodyHandle body;
+    BodyHandle body;
     std::vector<Tri*> tris;
 };
 struct DynamicPair {
-    RigidBodyHandle bodyA;
-    RigidBodyHandle bodyB;
+    BodyHandle bodyA;
+    BodyHandle bodyB;
 };
 
 struct SpeculativeDynamicPair {
-    RigidBodyHandle bodyA;
-    RigidBodyHandle bodyB;
-    RigidBodyHandle sweepOwner;
+    BodyHandle bodyA;
+    BodyHandle bodyB;
+    BodyHandle sweepOwner;
 };
 
 struct SpeculativeTerrainPair {
-    RigidBodyHandle body;
+    BodyHandle body;
     std::vector<Tri*> tris;
 };
 
@@ -49,3 +51,5 @@ struct PairBatch {
         return terrainPairs.size() + speculativeTerrainPairs.size();
     }
 };
+
+}

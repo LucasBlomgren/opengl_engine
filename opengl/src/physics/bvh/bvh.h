@@ -1,9 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "physics/world/runtime_caches.h"
 #include "physics/world/physics_world.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/aabb.h"
+
+namespace physics::internal {
 
 // #TODO: optimize nodes for cache size:
 // Het array — bara det traverseringen rör. Indexeras parallellt med cold[].
@@ -12,7 +14,7 @@
 //    float fatMax[3];   // 12
 //    int   childA;      // 4   (-1 => leaf)
 //    int   childB;      // 4
-//    RigidBodyHandle element; // 8  (giltig bara för löv)
+//    BodyHandle element; // 8  (giltig bara för löv)
 //};                      // 40 B → ryms i en cache-line, ~1,5 nod/line
 //
 //// Kall array — allt övrigt, rörs bara i build/update/refit, aldrig i query.
@@ -23,19 +25,19 @@
 //    // local-koordinater etc.
 //};
 
-enum class BVHType {
-    Awake,
-    Asleep,
-    Static
-};
-
 class BVHTree {
 public:
     BVHTree() = default;
 
-    // #rigidbody vector: bvh should use body handles instead of collider to work with compound colliders
-    using Element = RigidBodyHandle;
-    void init(PhysicsWorld* world, RuntimeCaches* caches, size_t allocSize, bool writeBodyLeafIndices);
+    // #rigidbody vector: bvh should use body handles instead 
+    // of collider to work with compound colliders
+    using Element = BodyHandle;
+    void init(
+        PhysicsWorld* world, 
+        RuntimeCaches* caches, 
+        size_t allocSize, 
+        bool writeBodyLeafIndices
+    );
     void clear();
 
     bool dirty = false;
@@ -66,25 +68,28 @@ public:
     static constexpr int MaxStackSize = 512;
     static constexpr int MaxCollisionBuf = 25000;
 
-    void build(const std::vector<RigidBodyHandle>& objects);
+    void build(const std::vector<BodyHandle>& objects);
 
     // for speculative pairs, using speculative AABBs
     void build(
-        const std::vector<RigidBodyHandle>& handles,
+        const std::vector<BodyHandle>& handles,
         const std::vector<AABB>& boxes
     );
 
-    void createPrimitivesFromBodyAABBs(const std::vector<RigidBodyHandle>& handles);
-    void createPrimitivesFromExternalAABBs(const std::vector<RigidBodyHandle>& handles, const std::vector<AABB>& boxes);
+    void createPrimitivesFromBodyAABBs(const std::vector<BodyHandle>& handles);
+    void createPrimitivesFromExternalAABBs(
+        const std::vector<BodyHandle>& handles, 
+        const std::vector<AABB>& boxes
+    );
     void buildFromPrimitives();
 
-    void update(std::vector<RigidBodyHandle>& objects);
-    void singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const;
-    bool queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const;
+    void update(std::vector<BodyHandle>& objects);
+    void singleQuery(const AABB& qBox, std::vector<BodyHandle>& out) const;
+    bool queryAny(const AABB& qBox, BodyHandle ignoreBody) const;
 
-    int insertLeaf(RigidBodyHandle handle);
+    int insertLeaf(BodyHandle handle);
     int findBestSibling(AABB& box);
-    int createLeaf(RigidBodyHandle handle, RigidBody* body);
+    int createLeaf(BodyHandle handle, RigidBody* body);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
@@ -107,8 +112,11 @@ private:
 
     // settings
     const int   leafThreshold = 1;
-    const int   minRebuildThreshold = 5;      // min refits before rebuild, to avoid rebuilding too early when n is small
-    const float rebuildRatio = 0.40f;         // % of leaf corrections before rebuild
+
+    // min refits before rebuild, to avoid rebuilding too early when n is small
+    const int   minRebuildThreshold = 5;
+
+    const float rebuildRatio = 0.40f; // % of leaf corrections before rebuild
     const glm::vec3 fatBoxMargin{ 0.2f };
 
     struct BVHPrimitive {
@@ -120,10 +128,13 @@ private:
     std::vector<BVHPrimitive> prims;
 
     void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
-    void createPrimitives(std::vector<RigidBodyHandle>& objectHandles);
+    void createPrimitives(std::vector<BodyHandle>& objectHandles);
     void makeLeaf(int leafIdx);
     void split(int parentIdx, int depth);
     void updateLeaves();
     void refitNode(int nodeIdx);
     void updateRenderData(Node& n);
 };
+
+
+}

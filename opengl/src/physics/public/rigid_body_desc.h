@@ -5,13 +5,19 @@
 #include "physics/public/collider_desc.h"
 #include "physics/public/physics_types.h"
 
-struct RigidBodyDesc {
-    PhysicsPose pose;
+namespace physics {
+
+//==========================================================
+// For use with Engine::createBody() to
+// describe the properties of a rigid body to be created.
+//==========================================================
+struct BodyDesc {
+    Pose pose;
     glm::vec3 scale{ 1.0f };
 
     BodyType type = BodyType::Dynamic;
     MotionControl motionControl = MotionControl::Physics;
-    ContactResponseMode responseMode = ContactResponseMode::Normal;
+    ResponseMode responseMode = ResponseMode::Normal;
 
     float mass = 1.0f;
 
@@ -20,9 +26,12 @@ struct RigidBodyDesc {
 
     bool allowGravity = true;
     bool allowSleep = true;
+    bool canMoveLinearly = true;
     bool startAsleep = false;
 
     float sleepCounterThreshold = 1.5f;
 
     std::vector<ColliderDesc> colliders;
 };
+
+}

@@ -89,7 +89,6 @@
     <ClCompile Include="src\physics\engine\physics_step.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_query_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_debug_api.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_legacy_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_body_api.cpp" />
     <ClCompile Include="src\physics\engine\api\physics_collider_api.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
@@ -100,7 +99,6 @@
     <ClCompile Include="src\physics\engine\physics_collider_submission.cpp" />
     <ClCompile Include="src\physics\engine\physics_queries.cpp" />
     <ClCompile Include="src\physics\engine\physics_debug.cpp" />
-    <ClCompile Include="src\physics\engine\physics_legacy.cpp" />
     <ClCompile Include="src\physics\engine\physics_scene.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -138,7 +136,7 @@
     <ClInclude Include="src\engine\opengl_init.h" />
     <ClInclude Include="src\engine\input.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
-    <ClInclude Include="src\physics\physics_engine.h" />
+    <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\sat.h" />
     <ClInclude Include="src\graphics\lighting\light.h" />
     <ClInclude Include="src\graphics\lighting\light_manager.h" />
@@ -212,6 +210,9 @@
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClInclude Include="src\physics\public\physics_debug_types.h" />
     <ClInclude Include="src\physics\public\physics_engine.h" />
+    <ClInclude Include="src\physics\public\physics_contact_types.h" />
+    <ClInclude Include="src\physics\public\physics_query_types.h" />
+    <ClInclude Include="src\physics\public\physics_scene_types.h" />
     <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
     <ClInclude Include="src\physics\public\physics_handles.h" />
     <ClInclude Include="src\core\handle.h" />

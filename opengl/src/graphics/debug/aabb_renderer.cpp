@@ -49,7 +49,9 @@ void AABBRenderer::render(const glm::vec3& color, Shader& shader) const {
     glDrawArrays(GL_LINES, 0, 24);
 }
 
-void AABBRenderer::updateModel(const AABB& box, const bool asleep) {
+void AABBRenderer::updateModel(
+    const physics::AABB& box,
+    const bool asleep) {
     if (asleep) return;
 
     model =

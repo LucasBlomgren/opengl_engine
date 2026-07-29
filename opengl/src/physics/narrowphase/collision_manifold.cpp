@@ -1,5 +1,45 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "collision_manifold.h"
+
+namespace physics::internal {
+
+namespace {
+    glm::vec3 worldToBodyLocalPoint(
+        const RigidBody& body,
+        const glm::vec3& worldPoint)
+    {
+        glm::vec3 local =
+            glm::conjugate(glm::normalize(body.pose.orientation)) *
+            (worldPoint - body.pose.position);
+
+        constexpr float epsilon = 1e-8f;
+
+        if (glm::abs(body.scale.x) > epsilon) local.x /= body.scale.x;
+        if (glm::abs(body.scale.y) > epsilon) local.y /= body.scale.y;
+        if (glm::abs(body.scale.z) > epsilon) local.z /= body.scale.z;
+
+        return local;
+    }
+
+    glm::vec3 bodyLocalToWorldPoint(
+        const RigidBody& body,
+        const glm::vec3& localPoint)
+    {
+        return body.pose.position +
+            glm::normalize(body.pose.orientation) *
+            (body.scale * localPoint);
+    }
+
+    RigidBody* getReferenceBody(Contact& contact) {
+        if (
+            contact.objBisReference &&
+            contact.partnerTypeB == ContactPartnerType::RigidBody) {
+            return contact.runtimeData.bodyB;
+        }
+
+        return contact.runtimeData.bodyA;
+    }
+}
 
 // #TODO: implementera recycled contacts för att genom heuristik kunna återanvända gamla contacts 
 // istället för att skapa nya varje frame, för att förbättra solver stabilitet och prestanda.
@@ -74,13 +114,7 @@ Contact* CollisionManifold::boxBox(
 
     clipPoints(contact.referenceFace, contact.incidentFace, 4, contact.referenceFaceNormal);
 
-    Transform* root = nullptr;
-    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
-        root = contact.runtimeData.bodyRootB;
-    }
-    else {
-        root = contact.runtimeData.bodyRootA;
-    }
+    RigidBody* referenceBody = getReferenceBody(contact);
 
     std::array<ContactPoint, MaxClippedPoints> candidates{};
     uint32_t candidateCount = 0;
@@ -91,7 +125,7 @@ Contact* CollisionManifold::boxBox(
         ContactPoint cp{};
         cp.worldPos = clippedPoints[i];
         cp.depth = -glm::dot(clippedPoints[i] - contact.referenceFace[0], contact.referenceFaceNormal);
-        cp.localPos = root->worldToLocalPoint(cp.worldPos);
+        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
         candidates[candidateCount++] = cp;
     }
@@ -126,18 +160,12 @@ Contact* CollisionManifold::boxSphere(
     contact.clearPoints();
     contact.normal = satResult.normal;
 
-    Transform* root = nullptr;
-    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
-        root = contact.runtimeData.bodyRootB;
-    }
-    else {
-        root = contact.runtimeData.bodyRootA;
-    }
+    RigidBody* referenceBody = getReferenceBody(contact);
 
     ContactPoint cp{};
     cp.worldPos = satResult.point;
     cp.depth = satResult.depth;
-    cp.localPos = root->worldToLocalPoint(cp.worldPos);
+    cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
     contact.addPoint(cp);
 
@@ -217,13 +245,13 @@ Contact* CollisionManifold::boxMesh(
 
     pickFourFurthestPoints();
 
-    Transform* root = contact.runtimeData.bodyRootA; // terrain => bodyA
+    RigidBody* referenceBody = contact.runtimeData.bodyA;
 
     for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
         ContactPoint cp{};
         cp.worldPos = furthestCandidates[i].worldPos;
         cp.depth = furthestCandidates[i].depth;
-        cp.localPos = root->worldToLocalPoint(cp.worldPos);
+        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
         contact.addPoint(cp);
     }
@@ -248,18 +276,12 @@ Contact* CollisionManifold::sphereSphere(
     contact.clearPoints();
     contact.normal = satResult.normal;
 
-    Transform* root = nullptr;
-    if (contact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
-        root = contact.runtimeData.bodyRootB;
-    }
-    else {
-        root = contact.runtimeData.bodyRootA;
-    }
+    RigidBody* referenceBody = getReferenceBody(contact);
 
     ContactPoint cp{};
     cp.worldPos = satResult.point;
     cp.depth = satResult.depth;
-    cp.localPos = root->worldToLocalPoint(cp.worldPos);
+    cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
     cp.speculative = (satResult.hitType == SAT::HitType::Speculative);
     cp.separation = satResult.separation;
@@ -312,13 +334,13 @@ Contact* CollisionManifold::sphereMesh(
 
     pickFourFurthestPoints();
 
-    Transform* root = contact.runtimeData.bodyRootA;
+    RigidBody* referenceBody = contact.runtimeData.bodyA;
 
     for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
         ContactPoint cp{};
         cp.worldPos = furthestCandidates[i].worldPos;
         cp.depth = furthestCandidates[i].depth;
-        cp.localPos = root->worldToLocalPoint(cp.worldPos);
+        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
         contact.addPoint(cp);
     }
@@ -406,7 +428,7 @@ void CollisionManifold::addFurthestPoint() {
 //============================================================================
 //  Select OOBB Reference face & normal for clipping based on contact normal
 //============================================================================
-void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal) {
+void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal) {
     transformCache.ensureInvModelMatrix(pose);
     transformCache.ensureModelMatrix(pose);
 
@@ -449,7 +471,7 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(const Collider* coll
 //=================================================================
 // Select OOBB Incident face for clipping based on contact normal
 //=================================================================
-void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
+void CollisionManifold::selectOOBBCollisionIncidentFace(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace) {
     transformCache.ensureInvRotationMatrix(pose);
     transformCache.ensureModelMatrix(pose);
 
@@ -788,8 +810,6 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     ContactRuntime& rt = contact.runtimeData;
     RigidBody* bodyA = rt.bodyA;
     RigidBody* bodyB = rt.bodyB;
-    Transform* tA = rt.bodyRootA;
-    Transform* tB = rt.bodyRootB;
 
     glm::vec3 rA;
     glm::vec3 rB;
@@ -813,7 +833,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
     }
     // bodyA motion behavior
     if (contact.contributesMotionA) {
-        rA = cp.worldPos - tA->position; // #TODO: ska vara rA = contactPoint - body.comWorld;
+        rA = cp.worldPos - bodyA->pose.position; // #TODO: use center of mass.
         linearVelocityA = bodyA->linearVelocity;
         angularVelocityA = bodyA->angularVelocity;
     }
@@ -839,7 +859,7 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
         angularVelocityB = glm::vec3(0.0f);
     }
     else {
-        rB = cp.worldPos - tB->position; // #TODO: ska vara rB = contactPoint - body.comWorld;
+        rB = cp.worldPos - bodyB->pose.position; // #TODO: use center of mass.
         linearVelocityB = bodyB->linearVelocity;
         angularVelocityB = bodyB->angularVelocity;
     }
@@ -981,25 +1001,19 @@ Contact* CollisionManifold::integrateContact(
     std::array<bool, MaxContactPoints> matchedCachedPoints{ false };
 
     ContactRuntime& rt = contact.runtimeData;
-    Transform* tA = rt.bodyRootA;
-    Transform* tB = rt.bodyRootB;
-
-    glm::mat3 M3;
-    glm::vec3 T3;
-
-    if (cachedContact.objBisReference && contact.partnerTypeB == ContactPartnerType::RigidBody) {
-        M3 = glm::mat3(tB->modelMatrix);
-        T3 = glm::vec3(tB->modelMatrix[3]);
-    }
-    else {
-        M3 = glm::mat3(tA->modelMatrix);
-        T3 = glm::vec3(tA->modelMatrix[3]);
-    }
+    RigidBody* referenceBody =
+        cachedContact.objBisReference &&
+        contact.partnerTypeB == ContactPartnerType::RigidBody
+        ? rt.bodyB
+        : rt.bodyA;
 
     std::array<glm::vec3, MaxContactPoints> cachedWorld{};
 
     for (uint32_t j = 0; j < cachedContact.numPoints; ++j) {
-        cachedWorld[j] = M3 * cachedContact.points[j].localPos + T3;
+        cachedWorld[j] = bodyLocalToWorldPoint(
+            *referenceBody,
+            cachedContact.points[j].localPos
+        );
     }
 
     struct MatchPair {
@@ -1169,3 +1183,6 @@ size_t CollisionManifold::generateKey(int idA, int idB) {
 //
 //    return contactPoints;
 //}
+
+
+}

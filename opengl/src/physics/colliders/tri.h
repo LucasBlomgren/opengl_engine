@@ -2,6 +2,8 @@
 #include "physics/broadphase/rigidbody_broadphase_types.h"
 #include "physics/colliders/aabb.h"
 
+namespace physics::internal {
+
 class Tri {
 public:
     int id = -1;
@@ -46,5 +48,7 @@ public:
         aabb.init(vertices);
     }
 
-    AABB& getAABB();
+    AABB getAABB();
 };
+
+}

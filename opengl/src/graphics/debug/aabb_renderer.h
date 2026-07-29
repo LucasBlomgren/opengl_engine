@@ -1,14 +1,14 @@
-﻿#pragma once
+#pragma once
 
 #include "graphics/shaders/shader.h"
-#include "physics/colliders/aabb.h"
+#include "physics/physics.h"
 
 class AABBRenderer {
 public:
     static void init();
     static void destroy();
 
-    void updateModel(const AABB& box, const bool asleep);
+    void updateModel(const physics::AABB& box, const bool asleep);
     void render(const glm::vec3& color, Shader& shader) const;
 
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };

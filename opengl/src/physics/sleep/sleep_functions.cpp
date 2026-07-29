@@ -2,11 +2,13 @@
 #include "wake_sleep_utils.h"
 #include "physics/engine/physics_engine_impl.h"
 
-//====================================
-//   Process wake list
-//====================================
-void PhysicsEngine::Impl::processWakeList() {
-    for (RigidBodyHandle rb : toWake) {
+namespace physics::internal {
+
+//===================================================================
+// Process wake list
+//===================================================================
+void EngineImpl::processWakeList() {
+    for (BodyHandle rb : toWake) {
         broadphaseManager.moveToAwake(rb);
 
         RigidBody* body = caches.bodies.get(rb, FUNC_NAME);
@@ -18,15 +20,16 @@ void PhysicsEngine::Impl::processWakeList() {
     toWake.clear();
 }
 
-//====================================
-//    Process sleep list
-//====================================
-void PhysicsEngine::Impl::processSleepList(float outerDt) {
+//===================================================================
+// Process sleep list: Check which bodies should go to
+// sleep and move them to the asleep list.
+//===================================================================
+void EngineImpl::processSleepList(float outerDt) {
     toSleep.clear();
 
-    const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
 
-    for (const RigidBodyHandle& handle : awakeHandles) {
+    for (const BodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
         if (!body) continue;
 
@@ -36,30 +39,28 @@ void PhysicsEngine::Impl::processSleepList(float outerDt) {
         if (!body->allowSleep) continue;
         if (body->inSleepTransition) continue;
 
-        Transform* transform = caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
-        if (!transform) continue;
-
         bool goingToSleep =
-            WakeSleep::updateSleepStateAndCheckIfShouldSleep(*body, *transform, outerDt);
+            WakeSleep::updateSleepStateAndCheckIfShouldSleep(*body, outerDt);
 
         if (goingToSleep) {
             toSleep.push_back(handle);
         }
     }
 
-    for (RigidBodyHandle rb : toSleep) {
+    for (BodyHandle rb : toSleep) {
         broadphaseManager.moveToAsleep(rb);
     }
 
     toSleep.clear();
 }
 
-//====================================
-//       Sleep Thresholds
-//====================================
-void PhysicsEngine::Impl::updateSleepThresholds() {
-    const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
-    for (const RigidBodyHandle& handle : awakeHandles) {
+//====================================================================
+// Sleep Thresholds: Update the sleep thresholds for awake dynamic
+// bodies based on their recent collision history.
+//====================================================================
+void EngineImpl::updateSleepThresholds() {
+    const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    for (const BodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
 
         if (body->asleep || !body->allowSleep ||
@@ -92,12 +93,13 @@ void PhysicsEngine::Impl::updateSleepThresholds() {
 }
 
 
-//====================================
-//      Sleep damping
-//====================================
-void PhysicsEngine::Impl::addSleepDamping() {
-    const std::vector<RigidBodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
-    for (const RigidBodyHandle& handle : awakeHandles) {
+//============================================================
+// Sleep damping: Apply additional damping to bodies
+// that are close to going to sleep,
+//============================================================
+void EngineImpl::addSleepDamping() {
+    const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+    for (const BodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
         if (body->type != BodyType::Dynamic) continue;
         if (body->motionControl == MotionControl::External) continue;
@@ -119,4 +121,6 @@ void PhysicsEngine::Impl::addSleepDamping() {
         body->linearVelocity *= linearFactor;
         body->angularVelocity *= angularFactor;
     }
+}
+
 }

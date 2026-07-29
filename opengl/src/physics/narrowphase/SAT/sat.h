@@ -7,6 +7,8 @@
 #include "physics/colliders/collider.h"
 #include "physics/bodies/rigidbody.h"
 
+namespace physics::internal {
+
 namespace SAT {
     //======================================================
     //      Utility functions for SAT results
@@ -83,4 +85,6 @@ namespace SAT {
         std::span<const glm::vec3> normalsA,
         std::span<const glm::vec3> normalsB,
         Result& satResult);
+}
+
 }

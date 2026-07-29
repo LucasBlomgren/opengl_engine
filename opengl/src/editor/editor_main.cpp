@@ -1,29 +1,27 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "editor_main.h"
 
 #include "game/world.h"
 #include "imgui.h"
 #include "engine/input_manager.h"
 #include "game/scene_builder.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "graphics/renderer/renderer.h"
 #include "game/game_object.h"
-#include "physics/colliders/aabb.h"
 #include "graphics/shaders/shader.h"
-#include "physics/raycast/raycast.h"
 
 #include <glm/gtc/random.hpp>
 
-// -----------------------------------
+// ====================================================
 //      Main functions
-// -----------------------------------
+// ====================================================
 void Editor::EditorMain::init(
     float SCR_WIDTH,
     float SCR_HEIGHT,
     EngineState* engineState,
     World* world,
     SceneBuilder* sceneBuilder,
-    PhysicsEngine* physicsEngine,
+    physics::Engine* physicsEngine,
     InputManager* inputManager,
     Camera* camera,
     GLFWwindow* window,
@@ -85,30 +83,52 @@ void Editor::EditorMain::deactivate() {
     hoveredObjectHandle = GameObjectHandle{};
 }
 
-// -----------------------------------
+// ====================================================
 //        Input handling
-// -----------------------------------
-void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants) {
+// ====================================================
+void Editor::EditorMain::handleInput(
+    const InputFrame& in, 
+    const InputContext& ctx, 
+    Consumed& consumed, 
+    FrameWants& wants) 
+{
     if (ctx.isPlayerMode) return;
 
     if (in.keyPressed[GLFW_KEY_F1]) {
         flag_drawUI = !flag_drawUI;
     }
 
-    // LMB/RMB drag capture only if started in viewport
-    if (!viewportCapturedLMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_1])
+    // handle viewport LMB drag capture only if started in viewport
+    if (!viewportCapturedLMB &&
+        ctx.viewportHovered &&
+        in.mousePressed[GLFW_MOUSE_BUTTON_1]) 
+    {
         viewportCapturedLMB = true;
-    if (viewportCapturedLMB and !in.mouseDown[GLFW_MOUSE_BUTTON_1])
+    }
+    // release capture when LMB is released
+    if (viewportCapturedLMB && !in.mouseDown[GLFW_MOUSE_BUTTON_1])
         viewportCapturedLMB = false;
 
-    if (!viewportCapturedRMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_2])
+    // handle viewport RMB drag capture only if started in viewport
+    if (!viewportCapturedRMB &&
+        ctx.viewportHovered &&
+        in.mousePressed[GLFW_MOUSE_BUTTON_2]) 
+    {
         viewportCapturedRMB = true;
-    if (viewportCapturedRMB and !in.mouseDown[GLFW_MOUSE_BUTTON_2])
+    }
+    // release capture when RMB is released
+    if (viewportCapturedRMB && !in.mouseDown[GLFW_MOUSE_BUTTON_2])
         viewportCapturedRMB = false;
 
-    if (!viewportCapturedMMB and ctx.viewportHovered and in.mousePressed[GLFW_MOUSE_BUTTON_3])
+    // handle viewport MMB drag capture only if started in viewport
+    if (!viewportCapturedMMB &&
+        ctx.viewportHovered &&
+        in.mousePressed[GLFW_MOUSE_BUTTON_3])
+    {
         viewportCapturedMMB = true;
-    if (viewportCapturedMMB and !in.mouseDown[GLFW_MOUSE_BUTTON_3])
+    }
+    // release capture when MMB is released
+    if (viewportCapturedMMB && !in.mouseDown[GLFW_MOUSE_BUTTON_3])
         viewportCapturedMMB = false;
 
     // handle non-viewport input capture
@@ -119,7 +139,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         wants.captureMouse = false;
         consumed.mouse = true;
     }
-    if (io->WantCaptureKeyboard and !ctx.viewportFocused) {
+
+    // handle non-viewport keyboard capture
+    if (io->WantCaptureKeyboard && !ctx.viewportFocused) {
         consumed.keyboard = true;
     }
 
@@ -136,33 +158,36 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
 
         if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
             if (!selectedObjectHandle.isValid()) {
-                Raycast::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
+                physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
                 selectObject(ctx);
             }
             else {
-                Raycast::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
+                physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
 
                 if (!hitData.hit) {
                     dropObject();
                 }
                 else {
-                    RigidBody* hitBody = world->getRigidBody(hitData.bodyHandle);
-                    GameObjectHandle hitObjHandle = hitBody->gameObjectHandle;
+                    GameObjectHandle hitObjHandle =
+                        world->getGameObjectHandle(hitData.bodyHandle);
                     if (hitObjHandle.slot != selectedObjectHandle.slot) {
                         dropObject();
                         rayCastMousePos(SELECT_RANGE);
                         selectObject(ctx);
                     }
                     else {
-                        syncSelectionOffset(); // klick på samma objekt: resync offset så det inte hoppar
+                        // klick på samma objekt: resync offset så det inte hoppar
+                        syncSelectionOffset();
                     }
                 }
             }
             consumed.mouse = true;
         }
 
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) {
-            updateSelectedObject(1.0f / 60.0f); // hardcoded timestep for smoother movement
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) 
+        {
+            // hardcoded timestep for smoother movement
+            updateSelectedObject(1.0f / 60.0f); 
             consumed.mouse = true;
         }
 
@@ -173,7 +198,10 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         }
 
         selectedObjectIsBeingMoved = false;
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && in.mouseDown[GLFW_MOUSE_BUTTON_2] && selectedObjectHandle.isValid()) {
+        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && 
+            in.mouseDown[GLFW_MOUSE_BUTTON_2] && 
+            selectedObjectHandle.isValid()) 
+        {
             selectedObjectIsBeingMoved = true;
         }
 
@@ -184,18 +212,24 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             glm::vec3 position = { camera->position + camera->front * 5.0f };
             glm::vec3 size = glm::vec3{ shootSize };
             newObj.mass = shootMass;
-            newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
+
+            newObj.rootTransformHandle = 
+                world->createTransform(
+                    position, 
+                    glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, 
+                    size
+                );
 
             SubPartDesc part;
             part.localTransformHandle = world->createTransform();
-            part.colliderType = ColliderType::SPHERE;
+            part.colliderType = physics::ColliderType::SPHERE;
             part.textureName = "checker_magenta";
             part.meshName = "sphere";
             newObj.parts.push_back(part);
 
             // create new object & apply shoot velocity
             GameObjectHandle newObject = world->createGameObject(newObj);
-            RigidBody* rb = world->getRigidBody(newObject);
+            GameObject* object = world->getGameObject(newObject);
 
             // apply shoot velocity
             glm::vec3 dir{ 0.0f };
@@ -207,7 +241,12 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             else {
                 dir = getRayVectorToMouseLocation();
             }
-            rb->linearVelocity = dir * shootVelocity;
+            if (object) {
+                physicsEngine->setLinearVelocity(
+                    object->rigidBodyHandle,
+                    dir * shootVelocity
+                );
+            }
         }
 
         // continuous shooting while RMB held down
@@ -219,7 +258,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
             bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
 
             if (down && !wasDown) {
-                // Första pressen: starta “nu” utan att försöka hinna ikapp något gammalt
+                // Första pressen: starta “nu” utan att försöka hinna 
+                // ikapp något gammalt
                 shootTimer = shootCooldown;
             }
 
@@ -229,7 +269,8 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                 int spawnedThisFrame = 0;
                 const int maxPerFrame = 500; // säkerhetscap
 
-                while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) {
+                while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) 
+                {
                     shootTimer += shootCooldown; // håll konstant takt
                     spawnedThisFrame++;
 
@@ -238,30 +279,43 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     int i = shot++ % 10;
                     int x = i % 5, y = i / 5;
 
-                    glm::vec3 right = glm::normalize(glm::cross(camera->front, camera->up));
+                    glm::vec3 right = 
+                        glm::normalize(glm::cross(camera->front, camera->up));
+
                     float spread = 2.0f;
                     float jitter = 1.4f;
-                    glm::vec3 offset = right * ((x - 2) * spread) + camera->up * ((y - 0.5f) * spread)
+                    glm::vec3 offset = 
+                        right * ((x - 2) * spread) 
+                        + camera->up * ((y - 0.5f) * spread)
                         + right * (glm::linearRand(-jitter, jitter))
                         + camera->up * (glm::linearRand(-jitter, jitter));
 
                     // create new object description
                     GameObjectDesc newObj;
-                    glm::vec3 position = { camera->position + camera->front * 5.0f + offset };
+
+                    glm::vec3 position = 
+                    { camera->position + camera->front * 5.0f + offset };
+
                     glm::vec3 size = glm::vec3{ shootSize };
                     newObj.mass = shootMass;
-                    newObj.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
+
+                    newObj.rootTransformHandle = 
+                        world->createTransform(
+                            position, 
+                            glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, 
+                            size
+                        );
 
                     SubPartDesc part;
                     part.localTransformHandle = world->createTransform();
-                    part.colliderType = ColliderType::SPHERE;
+                    part.colliderType = physics::ColliderType::SPHERE;
                     part.textureName = "checker_gray";
                     part.meshName = "sphere";
                     newObj.parts.push_back(part);
 
                     // create new object & apply shoot velocity
                     GameObjectHandle newObject = world->createGameObject(newObj);
-                    RigidBody* rb = world->getRigidBody(newObject);
+                    GameObject* object = world->getGameObject(newObject);
 
                     // apply shoot velocity
                     glm::vec3 dir{ 0.0f };
@@ -273,7 +327,12 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
                     else {
                         dir = getRayVectorToMouseLocation();
                     }
-                    rb->linearVelocity = dir * shootVelocity;
+                    if (object) {
+                        physicsEngine->setLinearVelocity(
+                            object->rigidBodyHandle,
+                            dir * shootVelocity
+                        );
+                    }
                 }
             }
             else {
@@ -313,18 +372,23 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
         if (in.keyDown[GLFW_KEY_C]) {
             static size_t nextIndex = 0;
 
-            SlotMap<GameObject, GameObjectHandle>& map = world->getGameObjectsMap();
+            SlotMap<GameObject, GameObjectHandle>& map = 
+                world->getGameObjectsMap();
+
             auto& objects = map.dense();
 
             int removed = 0;
             size_t checked = 0;
 
-            while (!objects.empty() && checked < objects.size() && removed < 10) {
+            while (!objects.empty() && checked < objects.size() && removed < 10) 
+            {
                 if (nextIndex >= objects.size()) {
                     nextIndex = 0;
                 }
 
-                GameObjectHandle handle = map.handle_from_dense_index((int)nextIndex);
+                GameObjectHandle handle = 
+                    map.handle_from_dense_index((int)nextIndex);
+
                 GameObject* obj = world->getGameObject(handle);
 
                 world->deleteGameObject(handle);
@@ -337,9 +401,9 @@ void Editor::EditorMain::handleInput(const InputFrame& in, const InputContext& c
     }
 }
 
-// -----------------------------------
+// ====================================================
 //        UI rendering
-// -----------------------------------
+// ====================================================
 void Editor::EditorMain::drawUI(bool paused, InputContext& ctx, float deltaTime)
 {
     if (!flag_drawUI) return;
@@ -391,12 +455,17 @@ void Editor::EditorMain::drawUI(bool paused, InputContext& ctx, float deltaTime)
     int h = std::max(1, (int)std::round(avail.y));
     viewportFBO.resizeIfNeeded(w, h);
 
-    ImGui::Image((ImTextureID)(intptr_t)viewportFBO.colorTex, ImVec2((float)w, (float)h), ImVec2(0, 1), ImVec2(1, 0));
+    ImGui::Image(
+        (ImTextureID)(intptr_t)viewportFBO.colorTex, 
+        ImVec2((float)w, (float)h), ImVec2(0, 1), 
+        ImVec2(1, 0)
+    );
 
     // 1) Hämta position och storlek på bilden i fönstret
     ImVec2 image_pos = ImGui::GetItemRectMin(); // top-left på imagen
     ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right
-    ImVec2 image_size = ImVec2(image_max.x - image_pos.x, image_max.y - image_pos.y);
+    ImVec2 image_size = 
+        ImVec2(image_max.x - image_pos.x, image_max.y - image_pos.y);
 
     // 2) Hämta muspositionen i skärmens koordinater
     ImVec2 mouse = ImGui::GetMousePos();
@@ -421,9 +490,9 @@ void Editor::EditorMain::drawUI(bool paused, InputContext& ctx, float deltaTime)
     ImGui::End();
 }
 
-// -----------------------------------
+// ====================================================
 //        Update 
-// -----------------------------------
+// ====================================================
 void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
     //updateSelectedObject(fixedTimeStep);
 }
@@ -431,21 +500,21 @@ void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
 void Editor::EditorMain::update(Shader& shader) {
 
     // raycast for hover
-    Raycast::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+    physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // set new hover state
     if (raycast.hit && !selectedObjectIsBeingMoved) {
-        RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
-        hoveredObjectHandle = rb->gameObjectHandle;
+        hoveredObjectHandle =
+            world->getGameObjectHandle(raycast.bodyHandle);
     }
     else {
         hoveredObjectHandle = {};
     }
 }
 
-//------------------------------------------------------
+//====================================================
 // OBJECT SELECTION AND MANIPULATION
-//------------------------------------------------------
+//====================================================
 void Editor::EditorMain::syncSelectionOffset() {
     if (!selectedObjectHandle.isValid()) return;
 
@@ -463,15 +532,18 @@ void Editor::EditorMain::syncSelectionOffset() {
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
     if (selectedObjectHandle.isValid()) return;
 
-    Raycast::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+    physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
     // no hit return
     if (!raycast.hit) {
         return;
     }
 
-    RigidBody* selectedBody = world->getRigidBody(raycast.bodyHandle);
-    GameObjectHandle selectedHandle = selectedBody->gameObjectHandle;
+    GameObjectHandle selectedHandle =
+        world->getGameObjectHandle(raycast.bodyHandle);
+    if (!selectedHandle.isValid()) {
+        return;
+    }
     selectedObjectHandle = selectedHandle;
 
     // set selected and hovered states, and calculate selection offset
@@ -485,12 +557,6 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
     selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
     selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    // set body parameters for editing
-    RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-    //rb->setExternalControl(true);
-    //rb->linearVelocity = glm::vec3(0.0f);
-    //rb->angularVelocity = glm::vec3(0.0f);
-
     panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
     panelManager->ctx.objectIsSelected = true;
 }
@@ -501,20 +567,30 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
         return;
 
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    RigidBody* rb = world->getRigidBody(selectedObjectHandle);
+    if (!selectedObject) {
+        return;
+    }
 
     if (selectedObjectIsBeingMoved) {
-        //rb->setExternalControl(true);
-        rb->linearVelocity = glm::vec3(0.0f);
-        rb->angularVelocity = glm::vec3(0.0f);
-    } else {
-        //rb->setExternalControl(false);
+        physicsEngine->setLinearVelocity(
+            selectedObject->rigidBodyHandle,
+            glm::vec3(0.0f)
+        );
+        physicsEngine->setAngularVelocity(
+            selectedObject->rigidBodyHandle,
+            glm::vec3(0.0f)
+        );
     }
 
     // position
-    Transform* rootTransform = world->getTransform(selectedObject->rootTransformHandle);
+    Transform* rootTransform = 
+        world->getTransform(selectedObject->rootTransformHandle);
 
-    glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
+    glm::vec3 worldOffset = 
+        camera->right * selectionOffsetLocal.x + 
+        camera->up * selectionOffsetLocal.y + 
+        camera->front * selectionOffsetLocal.z;
+
     glm::vec3 newPos = camera->position + worldOffset;
 
     rootTransform->position = newPos;
@@ -522,9 +598,12 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     rootTransform->updateCache();
 
     // velocity
-    //selectedObject->linearVelocity = (newPos - selectedObject->lastPosition) / fixedTimeStep;
+    //selectedObject->linearVelocity = 
+    // (newPos - selectedObject->lastPosition) / fixedTimeStep;
 
-    physicsEngine->syncBodyFromTransform(selectedObject->rigidBodyHandle);
+    world->syncGameObjectTransformToPhysics(
+        selectedObjectHandle
+    );
 }
 
 // drop selected object
@@ -538,13 +617,13 @@ void Editor::EditorMain::dropObject() {
 }
 
 // Raycast from camera through mouse cursor into world
-Raycast::RaycastHit Editor::EditorMain::rayCastMousePos(float length)
+physics::RaycastHit Editor::EditorMain::rayCastMousePos(float length)
 {
     glm::vec3 dir = getRayVectorToMouseLocation();
 
     float rLength = length;
-    Raycast::Ray r(camera->position, dir, SELECT_RANGE);
-    Raycast::RaycastHit hitData = physicsEngine->raycast(r);
+    physics::Ray r(camera->position, dir, SELECT_RANGE);
+    physics::RaycastHit hitData = physicsEngine->raycast(r);
 
     return hitData;
 }
@@ -555,7 +634,8 @@ glm::vec3 Editor::EditorMain::getRayVectorToMouseLocation() {
     float v = viewportMouseY / viewportDisplayH;
 
     if (!flag_drawUI) {
-        // om UI inte ritas, använd global musposition och skärmstorlek (screen space)
+        // om UI inte ritas, använd global musposition och 
+        // skärmstorlek (screen space)
         u = mouseXLastFrame / SCR_WIDTH;
         v = mouseYLastFrame / SCR_HEIGHT;
     }
@@ -571,7 +651,10 @@ glm::vec3 Editor::EditorMain::getRayVectorToMouseLocation() {
 
     // 2) Clip → Eye(inverse projection)
     float aspect = (float)viewportFBO.width / (float)viewportFBO.height;
-    glm::mat4 projection = glm::perspective(glm::radians(camera->zoom), aspect, 0.1f, 10000.0f);
+
+    glm::mat4 projection = 
+        glm::perspective(glm::radians(camera->zoom), aspect, 0.1f, 10000.0f);
+
     glm::mat4 view = camera->GetViewMatrix();
     glm::vec4 rayEye = glm::inverse(projection) * rayClip;
     // Vi vill ha en riktning, inte en punkt:

@@ -3,15 +3,17 @@
 #include "physics/public/physics_engine.h"
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics {
+
 //=========================================
 // State queries
 //=========================================
-std::optional<RigidBodyState> PhysicsEngine::getRigidBodyState(
-    RigidBodyHandle body) const {
+std::optional<BodyState> Engine::getRigidBodyState(
+    BodyHandle body) const {
     return impl->getRigidBodyState(body);
 }
 
-std::optional<ColliderState> PhysicsEngine::getColliderState(
+std::optional<ColliderState> Engine::getColliderState(
     ColliderHandle collider) const {
     return impl->getColliderState(collider);
 }
@@ -19,15 +21,24 @@ std::optional<ColliderState> PhysicsEngine::getColliderState(
 //=========================================
 // Spatial queries
 //=========================================
-Raycast::RaycastHit PhysicsEngine::raycast(
-    Raycast::Ray& ray) {
-    return impl->raycast(ray);
+RaycastHit Engine::raycast(
+    const Ray& ray,
+    BodyHandle ignoredBody) {
+    return impl->raycast(ray, ignoredBody);
+}
+
+std::vector<BodyHandle> Engine::queryBodies(
+    const physics::AABB& bounds,
+    BodySet bodySet) const {
+    return impl->queryBodies(bounds, bodySet);
 }
 
 //=========================================
 // Simulation output
 //=========================================
 std::vector<ExternalMotionContact>&
-PhysicsEngine::getExternalMotionContacts() {
+Engine::getExternalMotionContacts() {
     return impl->getExternalMotionContacts();
+}
+
 }

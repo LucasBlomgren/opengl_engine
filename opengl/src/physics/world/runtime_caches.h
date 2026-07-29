@@ -5,14 +5,16 @@
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 
+namespace physics::internal {
+
 struct RuntimeCaches {
-    PointerCache<Transform, TransformHandle> transforms;
     PointerCache<Collider, ColliderHandle> colliders;
-    PointerCache<RigidBody, RigidBodyHandle> bodies;
+    PointerCache<RigidBody, BodyHandle> bodies;
 
     void clear() {
-        transforms.clear();
         colliders.clear();
         bodies.clear();
     }
 };
+
+}

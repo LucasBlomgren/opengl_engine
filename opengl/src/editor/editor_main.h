@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/input.h"
-#include "physics/raycast/raycast.h"
+#include "physics/physics.h"
 #include "viewport_fbo.h"
 #include "panel_manager.h"
 
@@ -9,7 +9,7 @@ struct GLFWwindow;
 class InputManager;
 class EngineState;
 class SceneBuilder;
-class PhysicsEngine;
+namespace physics { class Engine; }
 class Camera;
 class SkyboxManager;
 class Shader;
@@ -33,7 +33,7 @@ public:
         EngineState* engineState,
         World* world,
         SceneBuilder* sceneBuilder,
-        PhysicsEngine* physicsEngine,
+        physics::Engine* physicsEngine,
         InputManager* inputManager,
         Camera* camera,
         GLFWwindow* window,
@@ -72,7 +72,7 @@ public:
 
     // raycast for selection
     glm::vec3 getRayVectorToMouseLocation();
-    Raycast::RaycastHit rayCastMousePos(float length);
+    physics::RaycastHit rayCastMousePos(float length);
 
     glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
     bool objectRainBlocks = false;
@@ -91,7 +91,7 @@ private:
     EngineState* engineState = nullptr;
     World* world = nullptr;
     SceneBuilder* sceneBuilder = nullptr;
-    PhysicsEngine* physicsEngine = nullptr;
+    physics::Engine* physicsEngine = nullptr;
     InputManager* inputManager = nullptr;
     Camera* camera = nullptr;
     GLFWwindow* window = nullptr;

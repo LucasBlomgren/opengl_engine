@@ -2,9 +2,8 @@
 
 #include "game/world.h"
 #include "editor/editor_main.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "game/game_object.h"
-#include "physics/colliders/tri.h"
 
 class Player;
 class Editor::EditorMain;
@@ -18,7 +17,7 @@ class Renderer;
 class SceneBuilder {
 public:
     SceneBuilder(
-        Player& p, Editor::EditorMain& e, World& w, PhysicsEngine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
+        Player& p, Editor::EditorMain& e, World& w, physics::Engine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng):
         player(p), editor(e), world(w), physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
     {}
 
@@ -94,7 +93,7 @@ public:
     struct TerrainData {
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
-        std::vector<Tri> triangles; 
+        std::vector<physics::Triangle> triangles;
     };
 
     TerrainData terrainData; 
@@ -112,7 +111,7 @@ private:
     Player& player;
     Editor::EditorMain& editor;
     World& world;
-    PhysicsEngine& physicsEngine;
+    physics::Engine& physicsEngine;
     Renderer& renderer;
     TextureManager& textureManager;
     MeshManager& meshManager;

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "engine/engine_state.h"
-#include "physics/physics_engine.h"
+#include "game/game_object.h"
+#include "physics/physics.h"
 #include "graphics/mesh/mesh_manager.h"
 #include "graphics/shaders/shader_manager.h"
 
@@ -12,21 +13,22 @@
 #include "graphics/debug/oobb_renderer.h"
 
 class Renderer;
+class World;
 
 class DebugRenderer {
 public:
     void init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager);
 
     void prepareFrame(
-        PhysicsEngine& physics, 
-        const std::vector<GameObject>& objects, 
-        World& world, 
-        GameObjectHandle& selectedObjectHandle, 
+        physics::Engine& physics,
+        const std::vector<GameObject>& objects,
+        World& world,
+        GameObjectHandle& selectedObjectHandle,
         int selectedSubPartIndex
     );
 
     void renderShadowPass() const;
-    void renderOverlayPass(const PhysicsEngine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects, World& world);
+    void renderOverlayPass(const physics::Engine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects, World& world);
 
     OOBBRenderer oobbRenderer;
     SphereOutlineRenderer sphereOutlineRenderer;
@@ -50,23 +52,37 @@ private:
         bool castsShadow;
     };
     std::vector<SceneDebugMesh> sceneDebugMeshes;
-    void prepareCollisionNormals(PhysicsEngine& physics, World& world);
-    void prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex);
+    void prepareCollisionNormals(physics::Engine& physics, World& world);
+    void prepareObjectLocalNormals(
+        physics::Engine& physics,
+        const std::vector<GameObject>& objects,
+        World& world,
+        GameObjectHandle& selectedObjectHandle,
+        int selectedSubPartIndex);
     void prepareXYZAxes();
 
     // unlit debug shapes
-    void renderAABBs(const std::vector<GameObject>& objects, World& world);
-    void renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world);
+    void renderAABBs(
+        const physics::Engine& physics,
+        const std::vector<GameObject>& objects);
+    void renderColliders(
+        const physics::Engine& physics,
+        const std::vector<GameObject>& objects,
+        const Camera& camera);
     void renderContactPoints(
-        const std::unordered_map<size_t, Contact>& cache,
-        const std::vector<DebugSpeculativeContact>& speculativeContacts
+        const std::vector<physics::debug::Contact>& contacts,
+        const std::vector<physics::debug::SpeculativeContact>& speculativeContacts
     ) const;
     void renderFrustum(const glm::mat4& viewProj) const;
-    void renderBVHs(const PhysicsEngine& physics);
-    void renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor);
-    void renderTerrainBVHLeafGroups(const TerrainBVH& tree, const glm::vec3& leafColor);
+    void renderBVHs(const physics::Engine& physics);
+    void renderBVH(
+        const physics::debug::Bvh& bvh,
+        const glm::vec3& nodeColor,
+        const glm::vec3& leafColor);
 
-    void renderSweptAABBs(const std::vector<AABB>& sweeps, const glm::vec3& color);
+    void renderSweptAABBs(
+        const std::vector<physics::AABB>& sweeps,
+        const glm::vec3& color);
 
     struct BVHColors {
         glm::vec3 awakeNode{ 0.80f, 0.40f, 0.00f }; // orange
@@ -75,7 +91,7 @@ private:
         glm::vec3 asleepLeaf{ 0.45f, 0.70f, 1.00f };
         glm::vec3 staticNode{ 0.10f, 0.60f, 0.27f }; // green
         glm::vec3 staticLeaf{ 0.30f, 0.95f, 0.50f };
-        glm::vec3 terrainNode{ 0.40f, 0.31f, 0.13f }; // brown 
+        glm::vec3 terrainNode{ 0.40f, 0.31f, 0.13f }; // brown
         glm::vec3 terrainLeaf{ 0.70f, 0.50f, 0.25f };
     };
     const BVHColors BVH_COLORS;

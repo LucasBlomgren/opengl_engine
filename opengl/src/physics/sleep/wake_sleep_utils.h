@@ -3,6 +3,8 @@
 #include <vector>
 #include "physics/bodies/rigidbody.h"
 
+namespace physics::internal {
+
 namespace WakeSleep
 {
     struct WakeUpInfo {
@@ -20,16 +22,17 @@ namespace WakeSleep
     void enqueueWakeRequests(
         const WakeUpInfo& info,
         RigidBody& A, RigidBody& B,
-        const RigidBodyHandle& handleA,
-        const RigidBodyHandle& handleB,
-        std::vector<RigidBodyHandle>& toWake
+        const BodyHandle& handleA,
+        const BodyHandle& handleB,
+        std::vector<BodyHandle>& toWake
     );
 
     bool updateSleepStateAndCheckIfShouldSleep(
         RigidBody& body,
-        const Transform& transform,
         float dt,
         float jitterThreshold = 1.0f,
         float anchorTimerThreshold = 6.0f
     );
+}
+
 }

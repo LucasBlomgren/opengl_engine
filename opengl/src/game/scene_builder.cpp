@@ -1,10 +1,10 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "scene_builder.h"
 
 #include "geometry/vertex.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/lighting/light_manager.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
@@ -102,7 +102,7 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
     default: break;
     }
 
-    physicsEngine.setupScene(&terrainData.triangles);
+    physicsEngine.setupScene(terrainData.triangles);
 
     glcount::print();
 }
@@ -158,7 +158,7 @@ void SceneBuilder::generateFlatTerrain(
 
     smoothHeightMap(heightMap, 0.5f, 150);
 
-    std::vector<Tri>& triangles = terrainData.triangles;
+    std::vector<physics::Triangle>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices;
     std::vector<uint32_t>& indices = terrainData.indices;
 
@@ -316,7 +316,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             //glm::vec3 scale{ 2.0f };
             //chair.rootTransformHandle = world.createTransform(spawnPos, orientation, scale);
-            //chair.bodyType = BodyType::Dynamic;
+            //chair.bodyType = physics::BodyType::Dynamic;
             //chair.mass = 2.0f;
 
             //glm::vec3 color = glm::vec3(
@@ -336,7 +336,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //seat.textureName = "checker_magenta";
             //seat.shaderName = "default";
             //seat.color = color;
-            //seat.colliderType = ColliderType::CUBOID;
+            //seat.colliderType = physics::ColliderType::CUBOID;
             //chair.parts.push_back(seat);
 
             //// backrest
@@ -350,7 +350,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //backrest.textureName = "checker_magenta";
             //backrest.shaderName = "default";
             //backrest.color = color;
-            //backrest.colliderType = ColliderType::CUBOID;
+            //backrest.colliderType = physics::ColliderType::CUBOID;
             //chair.parts.push_back(backrest);
 
             //// legs
@@ -371,7 +371,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //    leg.textureName = "checker_magenta";
             //    leg.shaderName = "default";
             //    leg.color = color;
-            //    leg.colliderType = ColliderType::CUBOID;
+            //    leg.colliderType = physics::ColliderType::CUBOID;
             //    chair.parts.push_back(leg);
             //}
 
@@ -389,7 +389,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
 
             SubPartDesc part;
             part.localTransformHandle = world.createTransform();
-            part.colliderType = ColliderType::SPHERE;
+            part.colliderType = physics::ColliderType::SPHERE;
             part.meshName = "sphere";
             part.textureName = "checker_gray";
             part.color = color / 255.0f;
@@ -432,7 +432,7 @@ void SceneBuilder::createBlockPyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
+                //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
                 GameObjectDesc cube;
                 cube.name = "cube";
                 cube.rootTransformHandle = world.createTransform(glm::vec3(xPos, yPos, zPos), glm::quat(1, 0, 0, 0), glm::vec3(sWidth, sHeight, sLength));
@@ -487,7 +487,7 @@ void SceneBuilder::createSpherePyramid(
                     color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
                 }
 
-                //world.createGameObject("plain", "sphere", ColliderType::SPHERE, BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
+                //world.createGameObject("plain", "sphere", physics::ColliderType::SPHERE, physics::BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
             }
         }
         pWidthCounter -= 1;
@@ -543,7 +543,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
             GameObjectDesc cube;
             cube.name = "cube";
             cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
@@ -576,7 +576,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         GameObjectDesc cube;
         cube.name = "cube";
         cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
@@ -608,7 +608,7 @@ void SceneBuilder::createBrickWall(
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
             GameObjectDesc cube;
             cube.name = "cube";
             cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
@@ -638,7 +638,7 @@ void SceneBuilder::createBrickWall(
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        //world.createGameObject("plain", "cube", ColliderType::CUBOID, BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
         GameObjectDesc cube2;
         cube2.name = "cube";
         cube2.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);

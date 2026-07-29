@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace physics::internal {
+
 // Broadphase bucket types
 enum class BroadphaseBucket : uint8_t { None, Awake, Asleep, Static };
 
@@ -11,3 +13,5 @@ struct BroadphaseHandle {
     int listIdx = -1;
     int leafIdx = -1;
 };
+
+}

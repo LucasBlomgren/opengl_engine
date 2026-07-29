@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Box-Sphere
 //=======================================================
@@ -8,7 +10,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& tran
     OOBB* box = std::get_if<OOBB>(&A.shape);
     Sphere* sph = std::get_if<Sphere>(&B.shape);
 
-    // Matriser från GameObject (samma som du använder för rendering och OOBB/AABB)
+    // Collider-local matrices used by rendering and collision bounds.
     const glm::mat4& M = transformCache.modelMatrix;
     const glm::mat4& iM = transformCache.invModelMatrix;
 
@@ -43,4 +45,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& tran
     out.point = closestWorld;
 
     return true;
+}
+
+
 }

@@ -5,11 +5,13 @@
 
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics::internal {
+
 //=========================================
 // Collider creation and destruction
 //=========================================
-ColliderHandle PhysicsEngine::Impl::submitCreateCollider(
-    RigidBodyHandle bodyHandle,
+ColliderHandle EngineImpl::submitCreateCollider(
+    BodyHandle bodyHandle,
     const ColliderDesc& desc)
 {
     RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
@@ -65,7 +67,7 @@ ColliderHandle PhysicsEngine::Impl::submitCreateCollider(
     return colliderHandle;
 }
 
-bool PhysicsEngine::Impl::submitDestroyCollider(
+bool EngineImpl::submitDestroyCollider(
     ColliderHandle colliderHandle) {
     const Collider* collider = physicsWorld.getCollider(colliderHandle);
 
@@ -79,9 +81,9 @@ bool PhysicsEngine::Impl::submitDestroyCollider(
 //=========================================
 // Collider commands
 //=========================================
-bool PhysicsEngine::Impl::submitSetColliderLocalPose(
+bool EngineImpl::submitSetColliderLocalPose(
     ColliderHandle handle,
-    const PhysicsPose& localPose)
+    const Pose& localPose)
 {
     const Collider* collider = physicsWorld.getCollider(handle);
 
@@ -95,7 +97,44 @@ bool PhysicsEngine::Impl::submitSetColliderLocalPose(
     return true;
 }
 
-bool PhysicsEngine::Impl::submitSetColliderEnabled(
+bool EngineImpl::submitSetColliderLocalTransform(
+    ColliderHandle handle,
+    const Pose& localPose,
+    const glm::vec3& localScale)
+{
+    const Collider* collider = physicsWorld.getCollider(handle);
+
+    if (!collider ||
+        commandBuffer.isColliderPendingDestroy(handle) ||
+        commandBuffer.isBodyPendingDestroy(collider->rigidBodyHandle)) {
+        return false;
+    }
+
+    commandBuffer.recordSetColliderLocalTransform(
+        handle,
+        localPose,
+        localScale
+    );
+    return true;
+}
+
+bool EngineImpl::submitSetColliderShape(
+    ColliderHandle handle,
+    const ColliderShapeDesc& shape)
+{
+    const Collider* collider = physicsWorld.getCollider(handle);
+
+    if (!collider ||
+        commandBuffer.isColliderPendingDestroy(handle) ||
+        commandBuffer.isBodyPendingDestroy(collider->rigidBodyHandle)) {
+        return false;
+    }
+
+    commandBuffer.recordSetColliderShape(handle, shape);
+    return true;
+}
+
+bool EngineImpl::submitSetColliderEnabled(
     ColliderHandle handle,
     bool enabled)
 {
@@ -111,7 +150,7 @@ bool PhysicsEngine::Impl::submitSetColliderEnabled(
     return true;
 }
 
-bool PhysicsEngine::Impl::submitSetColliderTrigger(
+bool EngineImpl::submitSetColliderTrigger(
     ColliderHandle handle,
     bool isTrigger)
 {
@@ -125,4 +164,6 @@ bool PhysicsEngine::Impl::submitSetColliderTrigger(
 
     commandBuffer.recordSetColliderTrigger(handle, isTrigger);
     return true;
+}
+
 }

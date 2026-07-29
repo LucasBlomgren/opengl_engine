@@ -3,60 +3,104 @@
 #include "physics/public/physics_engine.h"
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics {
+
 //=========================================
 // Rigid body lifecycle
 //=========================================
-RigidBodyHandle PhysicsEngine::createRigidBody(
-    const RigidBodyDesc& desc) {
+BodyHandle Engine::createRigidBody(
+    const BodyDesc& desc) {
     return impl->submitCreateRigidBody(desc);
 }
 
-bool PhysicsEngine::destroyRigidBody(
-    RigidBodyHandle body) {
+bool Engine::destroyRigidBody(
+    BodyHandle body) {
     return impl->submitDestroyRigidBody(body);
 }
 
 //=========================================
 // Rigid body commands
 //=========================================
-bool PhysicsEngine::applyLinearImpulse(
-    RigidBodyHandle body,
+bool Engine::applyLinearImpulse(
+    BodyHandle body,
     const glm::vec3& impulse) {
     return impl->submitApplyLinearImpulse(body, impulse);
 }
 
-bool PhysicsEngine::setLinearVelocity(
-    RigidBodyHandle body,
+bool Engine::setLinearVelocity(
+    BodyHandle body,
     const glm::vec3& velocity) {
     return impl->submitSetLinearVelocity(body, velocity);
 }
 
-bool PhysicsEngine::setAngularVelocity(
-    RigidBodyHandle body,
+bool Engine::setAngularVelocity(
+    BodyHandle body,
     const glm::vec3& velocity) {
     return impl->submitSetAngularVelocity(body, velocity);
 }
 
-bool PhysicsEngine::setKinematicTarget(
-    RigidBodyHandle body,
-    const PhysicsPose& target) {
+bool Engine::setKinematicTarget(
+    BodyHandle body,
+    const Pose& target) {
     return impl->submitSetKinematicTarget(body, target);
 }
 
-bool PhysicsEngine::setRigidBodySleepState(
-    RigidBodyHandle body,
+bool Engine::setRigidBodyTransform(
+    BodyHandle body,
+    const Pose& pose,
+    const glm::vec3& scale) {
+    return impl->submitSetRigidBodyTransform(body, pose, scale);
+}
+
+bool Engine::setRigidBodySleepState(
+    BodyHandle body,
     bool asleep) {
     return impl->submitSetRigidBodySleepState(body, asleep);
 }
 
-bool PhysicsEngine::setRigidBodyType(
-    RigidBodyHandle body,
+bool Engine::setRigidBodyType(
+    BodyHandle body,
     BodyType type) {
     return impl->submitSetRigidBodyType(body, type);
 }
 
-bool PhysicsEngine::setRigidBodyMotionControl(
-    RigidBodyHandle body,
+bool Engine::setRigidBodyMotionControl(
+    BodyHandle body,
     MotionControl motionControl) {
     return impl->submitSetRigidBodyMotionControl(body, motionControl);
+}
+
+bool Engine::setRigidBodyResponseMode(
+    BodyHandle body,
+    ResponseMode responseMode) {
+    return impl->submitSetRigidBodyResponseMode(body, responseMode);
+}
+
+bool Engine::setRigidBodyMass(
+    BodyHandle body,
+    float mass) {
+    return impl->submitSetRigidBodyMass(body, mass);
+}
+
+bool Engine::setRigidBodyAllowGravity(
+    BodyHandle body,
+    bool allowGravity) {
+    return impl->submitSetRigidBodyAllowGravity(body, allowGravity);
+}
+
+bool Engine::setRigidBodyAllowSleep(
+    BodyHandle body,
+    bool allowSleep) {
+    return impl->submitSetRigidBodyAllowSleep(body, allowSleep);
+}
+
+bool Engine::setRigidBodyCanMoveLinearly(
+    BodyHandle body,
+    bool canMoveLinearly) {
+    return impl->submitSetRigidBodyCanMoveLinearly(
+        body,
+        canMoveLinearly
+    );
+}
+
 }

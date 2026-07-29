@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "rigidbody.h"
 
+namespace physics::internal {
+
 //===============================================
 //   Velocity integration
 //===============================================
@@ -63,14 +65,14 @@ void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
 	float aAng;
 	bool avgCollisions = collisionHistory.average() > 0;
 
-	aLin = 0.1f; // konstant linjär retardation (m/s^2)
-	aAng = 1.0f; // konstant angulär retardation (rad/s^2)
+	aLin = 0.1f; // konstant linjÃ¤r retardation (m/s^2)
+	aAng = 1.0f; // konstant angulÃ¤r retardation (rad/s^2)
 
 	float vMag = glm::length(linearVelocity);
 	if (vMag > 0.0f and avgCollisions) {
 		float newMag = vMag - aLin * dt;
 		if (newMag < 0.0f) newMag = 0.0f;
-		linearVelocity *= (newMag / vMag); // behåll riktningen
+		linearVelocity *= (newMag / vMag); // behÃ¥ll riktningen
 	}
 
 	float wMag = glm::length(angularVelocity);
@@ -185,7 +187,10 @@ void RigidBody::setExternalControl(bool controlled) {
 //===============================================
 //     Inertia calculations
 //===============================================
-void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const Collider& collider, Transform& t) {
+void RigidBody::calculateInverseInertia(
+    const ColliderType& colliderType,
+    const Collider& collider,
+    const glm::vec3& inertiaScale) {
 	if (type == BodyType::Static) {
 		invInertiaLocal = glm::mat3(0.0f);
 		return;
@@ -193,7 +198,7 @@ void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const 
 
 	if (colliderType == ColliderType::CUBOID) {
 		const OOBB& box = std::get<OOBB>(collider.shape);
-		const glm::vec3 size = box.localHalfExtents * 2.0f * t.scale;
+		const glm::vec3 size = box.localHalfExtents * 2.0f * inertiaScale;
 		bool isUniform = approxEqual(size.x, size.y) and approxEqual(size.y, size.z);
 
 		if (isUniform) {
@@ -204,7 +209,7 @@ void RigidBody::calculateInverseInertia(const ColliderType& colliderType, const 
 		}
 	}
 	else if (colliderType == ColliderType::SPHERE) {
-		inertiaSphere(t.scale);
+		inertiaSphere(inertiaScale);
 	}
 
 	invInertiaWorld = invInertiaLocal;
@@ -241,4 +246,7 @@ void RigidBody::inertiaSphere(const glm::vec3& s) {
 		glm::vec3(invI, 0.0f, 0.0f),
 		glm::vec3(0.0f, invI, 0.0f),
 		glm::vec3(0.0f, 0.0f, invI));
+}
+
+
 }

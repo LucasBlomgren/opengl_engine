@@ -1,5 +1,7 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "bvh.h"
+
+namespace physics::internal {
 
 //=======================================================
 //    Init & Clear
@@ -30,7 +32,7 @@ void BVHTree::clear() {
 //=======================================================
 //        Single Query
 //=======================================================
-void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) const {
+void BVHTree::singleQuery(const AABB& qBox, std::vector<BodyHandle>& out) const {
     out.clear();
 
     if (rootIdx == -1 || nodes.empty()) {
@@ -62,7 +64,7 @@ void BVHTree::singleQuery(const AABB& qBox, std::vector<RigidBodyHandle>& out) c
 //=======================================================
 //        Query Any
 //=======================================================
-bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
+bool BVHTree::queryAny(const AABB& qBox, BodyHandle ignoreBody) const {
     if (rootIdx == -1 || nodes.empty()) {
         return false;
     }
@@ -97,7 +99,7 @@ bool BVHTree::queryAny(const AABB& qBox, RigidBodyHandle ignoreBody) const {
 //========================================================
 //      Insert Leaf
 //========================================================
-int BVHTree::insertLeaf(RigidBodyHandle handle) {
+int BVHTree::insertLeaf(BodyHandle handle) {
     RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
 
     if (body->broadphaseHandle.leafIdx != -1) {
@@ -155,7 +157,7 @@ int BVHTree::insertLeaf(RigidBodyHandle handle) {
     return leaf.selfIdx;
 }
 
-int BVHTree::createLeaf(RigidBodyHandle handle, RigidBody* body) {
+int BVHTree::createLeaf(BodyHandle handle, RigidBody* body) {
     AABB aabb = world->computeBodyAABB(*body);
 
     Node& leaf = nodes.emplace_back();
@@ -269,7 +271,7 @@ void BVHTree::removeLeaf(int leafIdx)
     RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
 
     body->broadphaseHandle.leafIdx = -1;
-    leaf.element = RigidBodyHandle{};
+    leaf.element = BodyHandle{};
 
     parent.alive = false;
     parent.parentIdx = -1;
@@ -280,7 +282,7 @@ void BVHTree::removeLeaf(int leafIdx)
 //========================================================
 //      Update
 //========================================================
-void BVHTree::update(std::vector<RigidBodyHandle>& handles) {
+void BVHTree::update(std::vector<BodyHandle>& handles) {
     this->dirty = false;
 
     rebuildCooldownCounter++;
@@ -362,14 +364,14 @@ void BVHTree::refitNode(int nodeIdx) {
 //========================================================
 //      Build
 //========================================================
-void BVHTree::build(const std::vector<RigidBodyHandle>& handles)
+void BVHTree::build(const std::vector<BodyHandle>& handles)
 {
     createPrimitivesFromBodyAABBs(handles);
     buildFromPrimitives();
 }
 
 void BVHTree::build(
-    const std::vector<RigidBodyHandle>& handles,
+    const std::vector<BodyHandle>& handles,
     const std::vector<AABB>& boxes)
 {
     createPrimitivesFromExternalAABBs(handles, boxes);
@@ -377,12 +379,12 @@ void BVHTree::build(
 }
 
 void BVHTree::createPrimitivesFromBodyAABBs(
-    const std::vector<RigidBodyHandle>& handles)
+    const std::vector<BodyHandle>& handles)
 {
     prims.clear();
     prims.reserve(handles.size());
 
-    for (const RigidBodyHandle& bodyH : handles) {
+    for (const BodyHandle& bodyH : handles) {
         RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
 
         if (writeBodyLeafIndices) {
@@ -401,7 +403,7 @@ void BVHTree::createPrimitivesFromBodyAABBs(
 }
 
 void BVHTree::createPrimitivesFromExternalAABBs(
-    const std::vector<RigidBodyHandle>& handles,
+    const std::vector<BodyHandle>& handles,
     const std::vector<AABB>& boxes)
 {
     prims.clear();
@@ -413,7 +415,7 @@ void BVHTree::createPrimitivesFromExternalAABBs(
     prims.reserve(handles.size());
 
     for (size_t i = 0; i < handles.size(); ++i) {
-        const RigidBodyHandle& bodyH = handles[i];
+        const BodyHandle& bodyH = handles[i];
         const AABB& box = boxes[i];
 
         if (writeBodyLeafIndices) {
@@ -486,7 +488,7 @@ void BVHTree::buildFromPrimitives()
     }
 }
 
-//void BVHTree::build(std::vector<RigidBodyHandle>& handles) {
+//void BVHTree::build(std::vector<BodyHandle>& handles) {
 //    nodes.clear();
 //    // Fill prims vector with primitives from handles
 //    createPrimitives(handles);
@@ -535,11 +537,11 @@ void BVHTree::buildFromPrimitives()
 //    if (rootIdx != -1) refitNode(rootIdx);
 //}
 
-void BVHTree::createPrimitives(std::vector<RigidBodyHandle>& handles) {
+void BVHTree::createPrimitives(std::vector<BodyHandle>& handles) {
     prims.clear();
     prims.reserve(handles.size());
 
-    for (RigidBodyHandle& bodyH : handles) {
+    for (BodyHandle& bodyH : handles) {
         RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
         body->broadphaseHandle.leafIdx = -1;
         
@@ -652,4 +654,6 @@ void BVHTree::makeLeaf(int nodeIdx)
 void BVHTree::updateRenderData(Node& n) {
     n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
     n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;
+}
+
 }

@@ -2,8 +2,12 @@
 
 #include "core/handle.h"
 
-struct RigidBodyTag;
+namespace physics {
+
+struct BodyTag;
 struct ColliderTag;
 
-using RigidBodyHandle = HandleT<RigidBodyTag>;
+using BodyHandle = HandleT<BodyTag>;
 using ColliderHandle = HandleT<ColliderTag>;
+
+}

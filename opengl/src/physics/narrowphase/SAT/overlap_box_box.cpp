@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Box-Box
 //=======================================================
@@ -167,4 +169,6 @@ bool SAT::boxBox(Collider& colA, Collider& colB, Result& out)
     }
 
     return true;
+}
+
 }

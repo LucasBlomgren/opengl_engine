@@ -1,6 +1,8 @@
 #include "narrowphase_manager.h"
 #include "physics/sleep/wake_sleep_utils.h"
 
+namespace physics::internal {
+
 //=======================================================
 //   Flush pending speculative contacts, 
 //   filtering by earliest TOI per sweep owner
@@ -27,8 +29,8 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
     std::unordered_set<PairKey, PairKeyHash> emittedSpeculativePairs;
     emittedSpeculativePairs.reserve(pendingSpeculativeContacts.size());
 
-    // #TODO: Fundera på vad TOI slop ska vara:
-    // kanske beroende på dt, kropparnas hastighet, kropparnas storlek.
+    // #TODO: Ska egentligen vara ett field framför 
+    // collidern som bestämmer vilka träffar som ska generera kontakt.
     const float toiSlop = 5.5f;
 
     for (PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
@@ -47,9 +49,9 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
         );
 
         // Avoid emitting duplicate speculative contacts for the same collider pair.
-        // Both (A,B) and (B,A) show up because in swept-vs-swept between two moving bodies,
-        // we don't want to lose the information that the collision can be relevant for both 
-        // bodies' own 'first hit' filter.
+        // Both (A,B) and (B,A) show up because in swept-vs-swept between two 
+        // moving bodies, we don't want to lose the information that the collision 
+        // can be relevant for both bodies' own 'first hit' filter.
         if (!emittedSpeculativePairs.insert(key).second) {
             continue;
         }
@@ -80,7 +82,8 @@ void NarrowphaseManager::emitSpeculativeContact(
         return;
     }
 
-    // Count speculative collisions too, if you want them included in collision debug/stats.
+    // Count speculative collisions too, if you want them included in 
+    // collision debug/stats.
     if (isRigidA) {
         in.bodyA->totalCollisionCount++;
     }
@@ -93,7 +96,8 @@ void NarrowphaseManager::emitSpeculativeContact(
     bool wakeB = false;
 
     // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
-    // Sphere-vs-terrain does not wake terrain and does not need WakeSleep::computeWakeUpInfo.
+    // Sphere-vs-terrain does not wake terrain and does not need 
+    // WakeSleep::computeWakeUpInfo.
     if (isRigidA && isRigidB) {
         WakeSleep::WakeUpInfo wakeInfo =
             WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);
@@ -173,4 +177,6 @@ void NarrowphaseManager::emitSpeculativeContact(
 
         debugSpeculativeContacts->push_back(debugContact);
     }
+}
+
 }

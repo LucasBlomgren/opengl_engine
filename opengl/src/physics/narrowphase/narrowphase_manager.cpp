@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "narrowphase_manager.h"
 
+namespace physics::internal {
+
 
 //=======================================================
 //              Initialization
@@ -10,7 +12,7 @@ void NarrowphaseManager::init(
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
     std::unordered_map<size_t, Contact>* contactCache,
     RuntimeCaches* caches,
-    std::vector<RigidBodyHandle>* toWake)
+    std::vector<BodyHandle>* toWake)
 {
     this->collisionManifold = std::move(collisionManifold);
     this->debugSpeculativeContacts = debugSpeculativeContacts;
@@ -213,7 +215,7 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
 void NarrowphaseManager::processColliderPairSpeculative(
     ContactBuildInput in,
     float dt,
-    RigidBodyHandle sweepOwner)
+    BodyHandle sweepOwner)
 {
     PairKey key = makeColliderPairKey(
         in.colliderHandleA,
@@ -377,7 +379,7 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
 uint64_t NarrowphaseManager::packColliderHandle(ColliderHandle h) {
     return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
 }
-uint64_t NarrowphaseManager::packBodyHandle(RigidBodyHandle h) {
+uint64_t NarrowphaseManager::packBodyHandle(BodyHandle h) {
     return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
 }
 PairKey NarrowphaseManager::makeColliderPairKey(ColliderHandle a, ColliderHandle b) {
@@ -396,28 +398,23 @@ PairKey NarrowphaseManager::makeColliderPairKey(ColliderHandle a, ColliderHandle
 //=======================================================
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA, RigidBody* bodyB,
-    Collider* colliderA, Collider* colliderB,
-    Transform* bodyRootA, Transform* bodyRootB) const
+    Collider* colliderA, Collider* colliderB) const
 {
     ContactRuntime rt;
     rt.bodyA = bodyA;
     rt.bodyB = bodyB;
     rt.colliderA = colliderA;
     rt.colliderB = colliderB;
-    rt.bodyRootA = bodyRootA;
-    rt.bodyRootB = bodyRootB;
     return rt;
 }
 
 ContactRuntime NarrowphaseManager::makeRuntimeData(
     RigidBody* bodyA,
-    Collider* colliderA,
-    Transform* bodyRootA) const
+    Collider* colliderA) const
 {
     ContactRuntime rt;
     rt.bodyA = bodyA;
     rt.colliderA = colliderA;
-    rt.bodyRootA = bodyRootA;
     return rt;
 }
 
@@ -437,4 +434,7 @@ void NarrowphaseManager::collectTerrainTriCandidates(
             outCandidates.push_back(tri);
         }
     }
+}
+
+
 }

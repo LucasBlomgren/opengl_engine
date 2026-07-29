@@ -2,21 +2,21 @@
 #include "player.h"
 #include "world.h"
 
-void Player::setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* renderer, Camera* camera) {
+void Player::setPointers(World* world, physics::Engine* physicsEngine, Renderer* renderer, Camera* camera) {
     this->world = world;
     this->physicsEngine = physicsEngine;
     this->renderer = renderer;
     this->camera = camera;
 }
 
-RigidBodyHandle Player::getPlayerRigidBodyHandle() {
+physics::BodyHandle Player::getPlayerRigidBodyHandle() {
     GameObject* player = world->getGameObject(playerHandle);
     if (player) {
         return player->rigidBodyHandle;
     }
-    return RigidBodyHandle{};
+    return physics::BodyHandle{};
 }
- 
+
 //------------------------------------------------------
 // INPUT HANDLING
 //-------------------------------------------------------
@@ -43,15 +43,21 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
             SubPartDesc part;
             part.localTransformHandle = world->createTransform();
-            part.colliderType = ColliderType::SPHERE;
+            part.colliderType = physics::ColliderType::SPHERE;
             part.textureName = "checker_gray";
             part.meshName = "sphere";
             newObj.parts.push_back(part);
 
             // create new object & apply shoot velocity
             GameObjectHandle newObject = world->createGameObject(newObj);
-            RigidBody* rb = world->getRigidBody(newObject);
-            rb->linearVelocity = camera->front * SHOOT_VELOCITY;
+            GameObject* object = world->getGameObject(newObject);
+
+            if (object) {
+                physicsEngine->setLinearVelocity(
+                    object->rigidBodyHandle,
+                    camera->front * SHOOT_VELOCITY
+                );
+            }
         }
     }
 
@@ -87,7 +93,7 @@ void Player::resetState() {
 
     selectedObjectHandle = {};
     hoveredObjectHandle = {};
-}   
+}
 void Player::activate() {
     resetState();
     createPlayerObject();
@@ -105,28 +111,21 @@ void Player::createPlayerObject() {
     glm::vec3 position = camera->position - glm::vec3(0, 0.76f, 0);
     playerDesc.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
     playerDesc.allowSleep = false;
+    playerDesc.motionControl = physics::MotionControl::External;
+    playerDesc.responseMode = physics::ResponseMode::Character;
     SubPartDesc part;
     part.seeThrough = true;
     part.localTransformHandle = world->createTransform();
-    part.colliderType = ColliderType::CUBOID;
+    part.colliderType = physics::ColliderType::CUBOID;
     playerDesc.parts.push_back(part);
     playerHandle = world->createGameObject(playerDesc);
 
-    GameObject* player = world->getGameObject(playerHandle);    
+    GameObject* player = world->getGameObject(playerHandle);
     player->player = true;
-
-    RigidBody* rb = world->getRigidBody(playerHandle);
-    rb->motionControl = MotionControl::External;
-    rb->responseMode = ContactResponseMode::Character;
-    rb->setExternalControl(true);
 
     if (part.seeThrough) {
         renderer->addObjectToBatch(playerHandle);
     }
-
-    Transform* rootTransform = world->getTransform(player->rootTransformHandle);
-    rb->pose.position = rootTransform->position;
-    rb->pose.orientation = rootTransform->orientation;
 }
 
 void Player::destroyPlayerObject() {
@@ -171,8 +170,11 @@ void Player::headBob(float dt) {
         bobX = 0.0f;
     }
 
-    RigidBody* rb = world->getRigidBody(playerHandle);
-    Transform* t = world->getTransform(rb->rootTransformHandle);
+    GameObject* player = world->getGameObject(playerHandle);
+    if (!player) return;
+
+    Transform* t = world->getTransform(player->rootTransformHandle);
+    if (!t) return;
 
     camera->position = t->position
         + glm::vec3(0.0f, eyeHeight, 0.0f)
@@ -191,13 +193,12 @@ void Player::updateObjectSelection(Shader& shader) {
     }
 
     // raycast for hover
-    Raycast::RaycastHit raycast = Player::raycast(SELECT_RANGE);
+    physics::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
     // set new hover state
     if (raycast.hit && !selectedObjectHandle.isValid()) {
-        RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
-        GameObject* hoveredObj = world->getGameObject(rb->gameObjectHandle);
-        hoveredObjectHandle = rb->gameObjectHandle;
+        hoveredObjectHandle =
+            world->getGameObjectHandle(raycast.bodyHandle);
     }
     else {
         hoveredObjectHandle = {};
@@ -209,10 +210,16 @@ void Player::updateObjectSelection(Shader& shader) {
 //-------------------------------------------------------
 void Player::updateBody(float dt) {
     GameObject* player = world->getGameObject(playerHandle);
-    RigidBody* rb = world->getRigidBody(playerHandle);
-    Transform* t = world->getTransform(player->rootTransformHandle);
+    if (!player) return;
 
-    glm::vec3 v = rb->linearVelocity;
+    const std::optional<physics::BodyState> bodyState =
+        physicsEngine->getRigidBodyState(player->rigidBodyHandle);
+    if (!bodyState) return;
+
+    Transform* t = world->getTransform(player->rootTransformHandle);
+    if (!t) return;
+
+    glm::vec3 v = bodyState->linearVelocity;
 
     // air friction
     if (!onGround) {
@@ -251,20 +258,20 @@ void Player::updateBody(float dt) {
     //}
 
 
-    // stop horizontal movement when on ground and no input to prevent sliding on slopes and when landing from a jump
+    // stop horizontal movement when on ground and no input to prevent
+    // sliding on slopes and when landing from a jump
     if (onGround and glm::length2(moveImpulse) < 0.01f) {
         v.x = 0.0f;
         v.z = 0.0f;
     }
 
-    // #TODO: should be using rigidbody functions instead
-    rb->linearVelocity = v;
+    physicsEngine->setLinearVelocity(
+        player->rigidBodyHandle,
+        v
+    );
     t->lastPosition = t->position;
-    t->position += rb->linearVelocity * dt;
-
-    Transform* rootTransform = world->getTransform(player->rootTransformHandle);
-    rb->pose.position = rootTransform->position;
-    rb->pose.orientation = rootTransform->orientation;
+    t->position += v * dt;
+    t->updateCache();
 }
 
 void Player::resolveExternalContact() {
@@ -274,7 +281,7 @@ void Player::resolveExternalContact() {
     GameObject* playerObj = world->getGameObject(playerHandle);
     Transform* transform = world->getTransform(playerObj->rootTransformHandle);
 
-    for (const ExternalMotionContact& c : contacts) {
+    for (const physics::ExternalMotionContact& c : contacts) {
         bool playerIsA = false;
         bool playerInContact = false;
 
@@ -295,10 +302,11 @@ void Player::resolveExternalContact() {
         }
 
         if (c.terrainContact) {
-            if (normal.x <= 1e-1f) {
+            if (std::abs(normal.x) <= 1e-1f) {
                 normal.x = 0.0f;
             }
-            if (normal.z <= 1e-1f) {
+
+            if (std::abs(normal.z) <= 1e-1f) {
                 normal.z = 0.0f;
             }
         }
@@ -330,8 +338,6 @@ void Player::moveSelectedObject(float dt) {
     GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
     Transform* selectedTransform = world->getTransform(selectedObject->rootTransformHandle);
 
-    RigidBody* selectedRb = world->getRigidBody(selectedObject->rigidBodyHandle);
-
     glm::vec3 worldOffset = camera->right * selectionOffsetLocal.x + camera->up * selectionOffsetLocal.y + camera->front * selectionOffsetLocal.z;
 
     // position
@@ -339,45 +345,64 @@ void Player::moveSelectedObject(float dt) {
     selectedTransform->position = newPos;
 
     // velocity
-    selectedRb->linearVelocity = (newPos - selectedTransform->lastPosition) / dt; // #TODO: lastpos should be in player class instead of transform
-    selectedRb->angularVelocity = glm::vec3(0.0f);
+    physicsEngine->setLinearVelocity(
+        selectedObject->rigidBodyHandle,
+        (newPos - selectedTransform->lastPosition) / dt
+    );
+    physicsEngine->setAngularVelocity(
+        selectedObject->rigidBodyHandle,
+        glm::vec3(0.0f)
+    );
     selectedTransform->lastPosition = newPos;
 
     selectedTransform->updateCache();
 
-    physicsEngine->syncBodyFromTransform(selectedObject->rigidBodyHandle);
+    world->syncGameObjectTransformToPhysics(selectedObjectHandle);
 }
 
 //------------------------------------------------------
 // OBJECT SELECTION AND PLACEMENT
 //------------------------------------------------------
- 
+
 // Select object under crosshair
 void Player::selectObject() {
     if (selectedObjectHandle.isValid()) return;
 
-    Raycast::RaycastHit raycast = Player::raycast(SELECT_RANGE);
+    physics::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
     // no hit return
     if (!raycast.hit) return;
 
-    RigidBody* rb = world->getRigidBody(raycast.bodyHandle);
+    const std::optional<physics::BodyState> bodyState =
+        physicsEngine->getRigidBodyState(raycast.bodyHandle);
 
-    if (rb->type == BodyType::Static) return;
+    if (!bodyState || bodyState->type == physics::BodyType::Static) return;
 
-    GameObjectHandle handle = rb->gameObjectHandle;
+    GameObjectHandle handle =
+        world->getGameObjectHandle(raycast.bodyHandle);
+    if (!handle.isValid()) return;
+
     selectedObjectHandle = handle;
 
     GameObject* obj = world->getGameObject(handle);
     Transform* transform = world->getTransform(obj->rootTransformHandle);
-    rb->setExternalControl(true);
+    physicsEngine->setRigidBodyMotionControl(
+        raycast.bodyHandle,
+        physics::MotionControl::External
+    );
 
     physicsEngine->setRigidBodySleepState(raycast.bodyHandle, false);
 
     transform->lastPosition = transform->position;
 
-    rb->linearVelocity = glm::vec3(0.0f);
-    rb->angularVelocity = glm::vec3(0.0f);
+    physicsEngine->setLinearVelocity(
+        raycast.bodyHandle,
+        glm::vec3(0.0f)
+    );
+    physicsEngine->setAngularVelocity(
+        raycast.bodyHandle,
+        glm::vec3(0.0f)
+    );
 
     // Project worldofset onto cameras local axes
     glm::vec3 worldOffset = transform->position - camera->position;
@@ -389,8 +414,13 @@ void Player::selectObject() {
 void Player::dropObject() {
     if (selectedObjectHandle.isValid()) {
         GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-        RigidBody* rb = world->getRigidBody(selectedObjectHandle);
-        rb->setExternalControl(false);
+
+        if (selectedObject) {
+            physicsEngine->setRigidBodyMotionControl(
+                selectedObject->rigidBodyHandle,
+                physics::MotionControl::Physics
+            );
+        }
     }
 
     selectedObjectHandle = {};
@@ -412,24 +442,23 @@ void Player::placeObject() {
 
     SubPartDesc part;
     part.localTransformHandle = world->createTransform();
-    part.colliderType = ColliderType::CUBOID;
+    part.colliderType = physics::ColliderType::CUBOID;
     part.textureName = "checker_gray";
     part.meshName = "cube";
     newObj.parts.push_back(part);
 
     // create new object & apply shoot velocity
-    GameObjectHandle newObject = world->createGameObject(newObj);
-    RigidBody* rb = world->getRigidBody(newObject);
+    world->createGameObject(newObj);
 }
 
 void Player::createPlaceObjectAABB(Shader& shader) {
     glm::vec3 size{ OBJ_PLACE_SIZE };
 
-    AABB aabb;
+    physics::AABB aabb;
     aabb.worldCenter = camera->position + camera->front * OBJ_PLACE_DISTANCE;
     aabb.worldHalfExtents = glm::vec3(size / 2.0f);
 
-    Raycast::RaycastHit hitData = raycast(OBJ_PLACE_DISTANCE);
+    physics::RaycastHit hitData = raycast(OBJ_PLACE_DISTANCE);
     glm::vec3 normal = hitData.normal;
     if (hitData.hit) {
         if (glm::dot(hitData.normal, camera->front) > 0.0f)
@@ -444,13 +473,15 @@ void Player::createPlaceObjectAABB(Shader& shader) {
 
     aabb.worldMin = aabb.worldCenter - aabb.worldHalfExtents;
     aabb.worldMax = aabb.worldCenter + aabb.worldHalfExtents;
-    const BVHTree& dynamicAwakeBvh = physicsEngine->getDynamicAsleepBvh();
     int maxIter = 8;
     int iter = 0;
     for (int i = 0; i < maxIter; i++) {
-        std::vector<RigidBodyHandle> collisions;
+        std::vector<physics::BodyHandle> collisions;
         collisions.reserve(100);
-        dynamicAwakeBvh.singleQuery(aabb, collisions);
+        collisions = physicsEngine->queryBodies(
+            aabb,
+            physics::BodySet::Asleep
+        );
 
         if (collisions.size() == 0) {
             break;
@@ -458,20 +489,40 @@ void Player::createPlaceObjectAABB(Shader& shader) {
 
         // min depth collision
         float min = std::numeric_limits<float>::max();
-        Collider* minDepthCollider = nullptr;
-        for (RigidBodyHandle& handle : collisions) {
-            RigidBody* rb = world->getRigidBody(handle);
-            Collider* collider = world->getCollider(rb->colliderHandles[0]);
+        std::optional<physics::AABB> minDepthBounds;
+        for (physics::BodyHandle& handle : collisions) {
+            const std::optional<physics::BodyState> bodyState =
+                physicsEngine->getRigidBodyState(handle);
 
-            float depth = aabb.getMinOverlapDepth(collider->aabb);
+            if (!bodyState || bodyState->colliders.empty()) {
+                continue;
+            }
+
+            const std::optional<physics::ColliderState> colliderState =
+                physicsEngine->getColliderState(
+                    bodyState->colliders[0]
+                );
+
+            if (!colliderState) {
+                continue;
+            }
+
+            float depth =
+                aabb.getMinOverlapDepth(colliderState->bounds);
             if (depth < min) {
                 min = depth;
-                minDepthCollider = collider;
+                minDepthBounds = colliderState->bounds;
             }
         }
 
+        if (!minDepthBounds) {
+            break;
+        }
+
         // move AABB away from collision
-        glm::vec3 normal = aabb.getCollisionNormal(minDepthCollider->aabb);
+        glm::vec3 normal =
+            aabb.getCollisionNormal(*minDepthBounds);
+
         aabb.worldCenter += normal * min * 1.2f;
         aabb.worldMin = aabb.worldCenter - aabb.worldHalfExtents;
         aabb.worldMax = aabb.worldCenter + aabb.worldHalfExtents;
@@ -491,9 +542,12 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     }
 }
 
-Raycast::RaycastHit Player::raycast(float length) {
+physics::RaycastHit Player::raycast(float length) {
     float rLength = length;
-    Raycast::Ray r(camera->position, camera->front, rLength);
-    Raycast::RaycastHit hitData = physicsEngine->raycast(r);
+    physics::Ray r(camera->position, camera->front, rLength);
+    physics::RaycastHit hitData = physicsEngine->raycast(
+        r,
+        getPlayerRigidBodyHandle()
+    );
     return hitData;
 }

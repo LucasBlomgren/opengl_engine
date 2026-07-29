@@ -1,15 +1,26 @@
 #include "pch.h"
 
 #include "physics/engine/physics_engine_impl.h"
-#include "game/world.h"
+
+namespace physics::internal {
 
 //====================================
 // Internal scene setup
 //====================================
-void PhysicsEngine::Impl::setupScene(std::vector<Tri>* terrainTris) {
-    terrainTriangles = terrainTris;
+void EngineImpl::setupScene(
+    const std::vector<Triangle>& terrainInput) {
+    terrainTriangles.clear();
+    terrainTriangles.reserve(terrainInput.size());
 
-    caches.transforms.init(world->getTransformsMap(), "Transform");
+    for (const Triangle& triangle : terrainInput) {
+        terrainTriangles.emplace_back(
+            triangle.id,
+            triangle.vertices[0],
+            triangle.vertices[1],
+            triangle.vertices[2]
+        );
+    }
+
     caches.colliders.init(physicsWorld.getCollidersMap(), "Collider");
     caches.bodies.init(physicsWorld.getRigidBodiesMap(), "RigidBody");
 
@@ -19,7 +30,11 @@ void PhysicsEngine::Impl::setupScene(std::vector<Tri>* terrainTris) {
     toWake.reserve(colliderSlotCapacity);
     toSleep.reserve(colliderSlotCapacity);
 
-    broadphaseManager.init(&physicsWorld, &caches, terrainTris);
+    broadphaseManager.init(
+        &physicsWorld,
+        &caches,
+        &terrainTriangles
+    );
 
     narrowphaseManager.init(
         std::make_unique<CollisionManifold>(), 
@@ -33,7 +48,7 @@ void PhysicsEngine::Impl::setupScene(std::vector<Tri>* terrainTris) {
 //====================================
 // Scene cleanup
 //====================================
-void PhysicsEngine::Impl::clear() {
+void EngineImpl::clear() {
     commandBuffer.clear();
 
     toWake.clear();
@@ -49,31 +64,26 @@ void PhysicsEngine::Impl::clear() {
 
     physicsWorld.clear();
     caches.clear();
+    terrainTriangles.clear();
 }
 
 //====================================
 // Scene-wide command submission
 //====================================
-void PhysicsEngine::Impl::submitSleepAllObjects() {
+void EngineImpl::submitSleepAllObjects() {
     commandBuffer.recordSleepAllObjects();
 }
 
-void PhysicsEngine::Impl::submitAwakenAllObjects() {
+void EngineImpl::submitAwakenAllObjects() {
     commandBuffer.recordAwakenAllObjects();
-}
-
-//====================================
-// Temporary legacy submission
-//====================================
-void PhysicsEngine::Impl::submitSyncBodyFromTransform(
-    RigidBodyHandle body) {
-    commandBuffer.recordSyncBodyFromTransform(body);
 }
 
 //====================================
 // BVH management
 //====================================
-void PhysicsEngine::Impl::setBVHDirty(
-    RigidBodyHandle handle) {
+void EngineImpl::setBVHDirty(
+    BodyHandle handle) {
     broadphaseManager.setBVHDirty(handle);
+}
+
 }

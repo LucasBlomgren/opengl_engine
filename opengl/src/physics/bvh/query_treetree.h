@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 
+namespace physics::internal {
+
 template<class BVHA, class BVHB>
 void treeVsTreeQuery(
     const BVHA& a,
@@ -89,4 +91,6 @@ void treeVsTreeQuery(
             }
         }
     }
+}
+
 }

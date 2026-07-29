@@ -1,5 +1,7 @@
 #include "narrowphase_manager.h"
 
+namespace physics::internal {
+
 //=======================================================
 //     Compute contributes motion
 //=======================================================
@@ -25,4 +27,6 @@ bool NarrowphaseManager::computeNoSolverResponse(
         body.type == BodyType::Static ||
         body.type == BodyType::Kinematic ||
         (body.type == BodyType::Dynamic && body.asleep && !willWake);
+}
+
 }

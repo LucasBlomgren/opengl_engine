@@ -26,10 +26,16 @@ void DebugRenderer::init(const EngineState& engineState, const MeshManager& mesh
 //---------------------------------------------
 //  Prepare Scene debug meshes
 //---------------------------------------------
-void DebugRenderer::prepareFrame(PhysicsEngine& physics, const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex) {
+void DebugRenderer::prepareFrame(physics::Engine& physics, const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex) {
     sceneDebugMeshes.clear();
 
-    prepareObjectLocalNormals(objects, world, selectedObjectHandle, selectedSubPartIndex);
+    prepareObjectLocalNormals(
+        physics,
+        objects,
+        world,
+        selectedObjectHandle,
+        selectedSubPartIndex
+    );
     prepareCollisionNormals(physics, world);
     prepareXYZAxes();
 }
@@ -53,14 +59,17 @@ void DebugRenderer::renderShadowPass() const {
 // ---------------------------------------------------------------------
 //    Render Overlay Pass: (debug shapes + debug meshes with lighting)
 // ---------------------------------------------------------------------
-void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera& camera, const std::vector<GameObject>& objects, World& world) {
+void DebugRenderer::renderOverlayPass(const physics::Engine& physics, const Camera& camera, const std::vector<GameObject>& objects, World& world) {
     // render debug shapes (AABBs, contact points etc) without lighting
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
     debugShapeShader->setInt("debug.objectType", 0);
-    renderAABBs(objects, world);
-    renderColliders(objects, camera, world);
-    renderContactPoints(physics.getContactCache(), physics.getDebugSpeculativeContacts());
+    renderAABBs(physics, objects);
+    renderColliders(physics, objects, camera);
+    renderContactPoints(
+        physics.getDebugContacts(),
+        physics.getDebugSpeculativeContacts()
+    );
     renderBVHs(physics);
     //renderSweptAABBs(physics.debugSweeps, glm::vec3(1.0f, 1.0f, 0.0f));
 
@@ -80,80 +89,64 @@ void DebugRenderer::renderOverlayPass(const PhysicsEngine& physics, const Camera
 //-----------------------------------------------------------------
 // Prepare collisions normals, object local normals and XYZ axes
 //-----------------------------------------------------------------
-void DebugRenderer::prepareCollisionNormals(PhysicsEngine& physics, World& world) {
+void DebugRenderer::prepareCollisionNormals(physics::Engine& physics, World& world) {
     if (!engineState->getShowCollisionNormals()) return;
 
-    for (const auto& pair : physics.getContactCache()) {
-        const Contact* c = &pair.second;
-        if (!c->wasUsedThisFrame) continue;
-
-        glm::vec3 pos(0.0f);
-
-        if (!c->points.empty()) {
-            for (size_t i = 0; i < c->numPoints; ++i) {
-                pos += c->points[i].worldPos;
-            }
-            pos /= static_cast<float>(c->points.size());
-        }
-        else {
-            // fallback om inga kontaktpunkter finns
-            if (c->partnerTypeA == ContactPartnerType::RigidBody &&
-                c->runtimeData.colliderA != nullptr) {
-                if (c->runtimeData.colliderA->type == ColliderType::CUBOID) {
-                    pos = std::get<OOBB>(c->runtimeData.colliderA->shape).worldCenter;
-                }
-                else {
-                    pos = std::get<Sphere>(c->runtimeData.colliderA->shape).centerWorld;
-                }
-            }
-            else if (c->partnerTypeB == ContactPartnerType::RigidBody &&
-                c->runtimeData.colliderB != nullptr) {
-                if (c->runtimeData.colliderB->type == ColliderType::CUBOID) {
-                    pos = std::get<OOBB>(c->runtimeData.colliderB->shape).worldCenter;
-                }
-                else {
-                    pos = std::get<Sphere>(c->runtimeData.colliderB->shape).centerWorld;
-                }
-            }
-            else {
-                continue;
-            }
-        }
-
-        pos += c->normal * 0.01f;
+    for (const physics::debug::Contact& contact :
+        physics.getDebugContacts()) {
+        const glm::vec3 position =
+            contact.representativePoint +
+            contact.normal * 0.01f;
 
         sceneDebugMeshes.push_back({
             arrowRenderer.mesh,
-            arrowRenderer.getModelMatrix(pos, c->normal, glm::vec3(0.2f)),
+            arrowRenderer.getModelMatrix(
+                position,
+                contact.normal,
+                glm::vec3(0.2f)
+            ),
             glm::vec3(1, 0, 1),
             false
             });
     }
 }
-void DebugRenderer::prepareObjectLocalNormals(const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex) {
+void DebugRenderer::prepareObjectLocalNormals(
+    physics::Engine& physics,
+    const std::vector<GameObject>& objects,
+    World& world,
+    GameObjectHandle& selectedObjectHandle,
+    int selectedSubPartIndex) {
     GameObject* selectedObject = world.getGameObject(selectedObjectHandle);
     if (!selectedObject) return;
 
-    RigidBody* rb = world.getRigidBody(selectedObject->rigidBodyHandle);
-    Transform* rootTransform = world.getTransform(rb->rootTransformHandle);
+    Transform* rootTransform =
+        world.getTransform(selectedObject->rootTransformHandle);
+    if (!rootTransform) return;
+
     Mesh* m = arrowRenderer.mesh;
 
     // by default, use root transform of object, to visualize world space normals
-    glm::quat* orientationToUse = &rootTransform->orientation;
-    glm::vec3* positionToUse = &rootTransform->position;
+    glm::quat orientationToUse = rootTransform->orientation;
+    glm::vec3 positionToUse = rootTransform->position;
 
     // subpart selected: use local transform + collider pose of subpart instead of root transform, to visualize local normals in the correct orientation/position
     if (selectedSubPartIndex >= 0 && selectedSubPartIndex < selectedObject->parts.size()) {
-        Collider* col = world.getCollider(selectedObject->parts[selectedSubPartIndex].colliderHandle);
-        if (col) {
-            orientationToUse = &col->worldPose.orientation;
-            positionToUse = &col->worldPose.position;
+        const std::optional<physics::ColliderState> collider =
+            physics.getColliderState(
+                selectedObject
+                    ->parts[selectedSubPartIndex]
+                    .colliderHandle
+            );
+
+        if (collider) {
+            orientationToUse = collider->worldPose.orientation;
+            positionToUse = collider->worldPose.position;
         }
     }
 
     // build baseTR from obj.modelMatrix: same position + rotation, but no scale
-    glm::vec3 pos = *positionToUse;
-    glm::mat3 R = glm::mat3_cast(*orientationToUse);
+    glm::vec3 pos = positionToUse;
+    glm::mat3 R = glm::mat3_cast(orientationToUse);
     R[0] = glm::normalize(R[0]);
     R[1] = glm::normalize(R[1]);
     R[2] = glm::normalize(R[2]);
@@ -192,7 +185,9 @@ void DebugRenderer::prepareXYZAxes() {
 // ----------------------------------------------
 //  Render AABBs, Colliders & Contact Points
 // ----------------------------------------------
-void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& world) {
+void DebugRenderer::renderAABBs(
+    const physics::Engine& physics,
+    const std::vector<GameObject>& objects) {
     if (!engineState->getShowAABB()) return;
 
     glLineWidth(AABB_LINE_WIDTH);
@@ -200,48 +195,72 @@ void DebugRenderer::renderAABBs(const std::vector<GameObject>& objects, World& w
     glm::vec3 color{ 0.9f, 0.7f, 0.2f };
 
     for (const GameObject& obj : objects) {
-        RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
-        aabbRenderer.updateModel(rb->aabb, false);
+        const std::optional<physics::BodyState> body =
+            physics.getRigidBodyState(obj.rigidBodyHandle);
+        if (!body) continue;
+
+        aabbRenderer.updateModel(body->bounds, false);
         aabbRenderer.render(color, *debugShapeShader);
     }
 }
-void DebugRenderer::renderColliders(const std::vector<GameObject>& objects, const Camera& camera, World& world) {
+void DebugRenderer::renderColliders(
+    const physics::Engine& physics,
+    const std::vector<GameObject>& objects,
+    const Camera& camera) {
     if (!engineState->getShowColliders()) return;
 
     debugShapeShader->setBool("debug.useUniformColor", true);
 
-    for (const GameObject& obj : objects) {
-        RigidBody* rb = world.getRigidBody(obj.rigidBodyHandle);
-        bool isStatic = (rb->type == BodyType::Static);
+    for (const GameObject& obj : objects) 
+    {
+        const std::optional<physics::BodyState> body =
+            physics.getRigidBodyState(obj.rigidBodyHandle);
+        if (!body) continue;
 
-        for (size_t i = 0; i < rb->colliderHandles.size(); ++i) {
-            Collider* col = world.getCollider(rb->colliderHandles[i]);
+        for (physics::ColliderHandle colliderHandle : body->colliders) 
+        {
+            const std::optional<physics::ColliderState> collider =
+                physics.getColliderState(colliderHandle);
+            if (!collider) continue;
 
             glm::vec3 color;
-            if (rb->type == BodyType::Static) {
+            if (body->type == physics::BodyType::Static) {
                 color = STATIC_COLOR;
-            } else if (rb->asleep) {
+            } else if (body->asleep) {
                 color = ASLEEP_COLOR;
             } else {
                 color = AWAKE_COLOR;
             }
 
-            if (col->type == ColliderType::CUBOID) {
+            if (collider->type == physics::ColliderType::CUBOID) {
                 glLineWidth(OOBB_LINE_WIDTH);
-                const OOBB& box = std::get<OOBB>(col->shape);
-                oobbRenderer.renderBox(*debugShapeShader, box, color);
+                oobbRenderer.renderBox(
+                    *debugShapeShader,
+                    collider->worldPose,
+                    std::get<physics::BoxGeometry>(collider->shape),
+                    color
+                );
             }
-            else if (col->type == ColliderType::SPHERE) {
+            else if (collider->type == physics::ColliderType::SPHERE) {
                 glLineWidth(SPHERE_LINE_WIDTH);
-                const Sphere& sphere = std::get<Sphere>(col->shape);
-                sphereOutlineRenderer.render(*debugShapeShader, camera.position, sphere.centerWorld, sphere.radiusWorld, color);
+                const physics::SphereGeometry& sphere =
+                    std::get<physics::SphereGeometry>(
+                        collider->shape
+                    );
+                sphereOutlineRenderer.render(
+                    *debugShapeShader,
+                    camera.position,
+                    sphere.worldCenter,
+                    sphere.radius,
+                    color
+                );
             }
         }
     }
 }
 void DebugRenderer::renderContactPoints(
-    const std::unordered_map<size_t, Contact>& cache,
-    const std::vector<DebugSpeculativeContact>& speculativeContacts) const 
+    const std::vector<physics::debug::Contact>& contacts,
+    const std::vector<physics::debug::SpeculativeContact>& speculativeContacts) const
 {
     if (!engineState->getShowContactPoints()) return;
 
@@ -251,27 +270,32 @@ void DebugRenderer::renderContactPoints(
 
     // skip depth test
     glDisable(GL_DEPTH_TEST);
-    for (const auto& pair : cache) {
-        const Contact& contact = pair.second;
-
-        for (int i = 0; i < contact.numPoints; i++) {
-            if (!contact.points[i].wasUsedThisFrame) {
-                continue;
-            }
-
-            if (contact.points[i].wasWarmStarted) {
+    for (const physics::debug::Contact& contact : contacts) {
+        for (size_t index = 0;
+            index < contact.pointCount;
+            ++index) {
+            if (contact.points[index].warmStarted) {
                 debugShapeShader->setVec3("debug.uColor", glm::vec3(250, 0, 0)); // röd för warm-startade punkter
             } else {
                 debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
             }
 
-            renderContactPoint(*debugShapeShader, VAO_contactPoint, contact.points[i].worldPos);
+            renderContactPoint(
+                *debugShapeShader,
+                VAO_contactPoint,
+                contact.points[index].worldPosition
+            );
         }
     }
     
-    for (const DebugSpeculativeContact& specContact : speculativeContacts) {
+    for (const physics::debug::SpeculativeContact& specContact :
+        speculativeContacts) {
         debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 255, 0)); // grön för spekulativa kontaktpunkter
-        renderContactPoint(*debugShapeShader, VAO_contactPoint, specContact.worldPos);
+        renderContactPoint(
+            *debugShapeShader,
+            VAO_contactPoint,
+            specContact.worldPosition
+        );
     }
     glEnable(GL_DEPTH_TEST);
 }
@@ -280,15 +304,15 @@ void DebugRenderer::renderContactPoints(
 //    Render Substep Islands
 //----------------------------------------
 void DebugRenderer::renderSweptAABBs(
-    const std::vector<AABB>& sweeps,
+    const std::vector<physics::AABB>& sweeps,
     const glm::vec3& color)
 {
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
     glBindVertexArray(aabbRenderer.sVAO);
 
-    for (const AABB& sweptSrc : sweeps) {
-        AABB swept = sweptSrc; // local mutable copy for rendering only
+    for (const physics::AABB& sweptSrc : sweeps) {
+        physics::AABB swept = sweptSrc;
 
         swept.worldCenter =
             (swept.worldMin + swept.worldMax) * 0.5f;
@@ -307,69 +331,60 @@ void DebugRenderer::renderSweptAABBs(
 //----------------------------------------
 //    Render BVHs
 //----------------------------------------
-void DebugRenderer::renderBVHs(const PhysicsEngine& physics) {
+void DebugRenderer::renderBVHs(const physics::Engine& physics) {
     if (engineState->getShowBVH_awake()) {
-        renderBVH(physics.getDynamicAwakeBvh(), BVH_COLORS.awakeNode, BVH_COLORS.awakeLeaf);
+        renderBVH(
+            physics.getDebugBvh(physics::debug::BvhType::Awake),
+            BVH_COLORS.awakeNode,
+            BVH_COLORS.awakeLeaf
+        );
     }
     if (engineState->getShowBVH_asleep()) {
-        renderBVH(physics.getDynamicAsleepBvh(), BVH_COLORS.asleepNode, BVH_COLORS.asleepLeaf);
+        renderBVH(
+            physics.getDebugBvh(physics::debug::BvhType::Asleep),
+            BVH_COLORS.asleepNode,
+            BVH_COLORS.asleepLeaf
+        );
     }
     if (engineState->getShowBVH_static()) {
-        renderBVH(physics.getStaticBvh(), BVH_COLORS.staticNode, BVH_COLORS.staticLeaf);
+        renderBVH(
+            physics.getDebugBvh(physics::debug::BvhType::Static),
+            BVH_COLORS.staticNode,
+            BVH_COLORS.staticLeaf
+        );
     }
     if (engineState->getShowBVH_terrain()) {
-        renderTerrainBVHLeafGroups(physics.getTerrainBvh(), BVH_COLORS.terrainLeaf);
+        renderBVH(
+            physics.getTerrainDebugBvh(),
+            BVH_COLORS.terrainLeaf,
+            BVH_COLORS.terrainLeaf
+        );
     }
 }
 
-void DebugRenderer::renderBVH(const BVHTree& bvh, const glm::vec3& nodeColor, const glm::vec3& leafColor) {
+void DebugRenderer::renderBVH(
+    const physics::debug::Bvh& bvh,
+    const glm::vec3& nodeColor,
+    const glm::vec3& leafColor) {
     debugShapeShader->use();
     debugShapeShader->setBool("debug.useUniformColor", true);
 
     glBindVertexArray(aabbRenderer.sVAO);
 
     glm::vec3 color;
-    AABB toDraw;
 
-    for (const auto& node : bvh.nodes) {
-        if (!node.alive) continue;
-
+    for (const physics::debug::BvhNode& node : bvh.nodes) {
         if (node.isLeaf) {
             glLineWidth(BVH_LEAF_LINE_WIDTH);
-            toDraw = node.tightBox;
-            toDraw.worldCenter = (toDraw.worldMin + toDraw.worldMax) * 0.5f;
-            toDraw.worldHalfExtents = (toDraw.worldMax - toDraw.worldMin) * 0.5f;
             color = leafColor;
         }
         else {
             glLineWidth(BVH_NODE_LINE_WIDTH);
-            toDraw = node.fatBox;
             color = nodeColor;
         }
 
-        aabbRenderer.updateModel(toDraw, /*asleep=*/false);
+        aabbRenderer.updateModel(node.bounds, false);
         aabbRenderer.render(color, *debugShapeShader);
-    }
-}
-
-void DebugRenderer::renderTerrainBVHLeafGroups(const TerrainBVH& tree,const glm::vec3& leafColor) {
-    debugShapeShader->use();
-    debugShapeShader->setBool("debug.useUniformColor", true);
-
-    glBindVertexArray(aabbRenderer.sVAO);
-
-    for (const TerrainBVH::Node& node : tree.nodes) {
-        if (!node.alive) continue;
-
-        // Render only leaf nodes as groups, to avoid visual clutter from internal nodes
-        if (!node.isLeaf) {
-            continue;
-        }
-
-        glLineWidth(BVH_LEAF_LINE_WIDTH);
-
-        aabbRenderer.updateModel(node.fatBox, /*asleep=*/false);
-        aabbRenderer.render(leafColor, *debugShapeShader);
     }
 }
 

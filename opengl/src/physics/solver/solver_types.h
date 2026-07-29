@@ -1,5 +1,7 @@
 #pragma once
 
+namespace physics::internal {
+
 static constexpr uint32_t InvalidSolverBody = std::numeric_limits<uint32_t>::max();
 
 struct SolverBody {
@@ -59,3 +61,5 @@ struct SpeculativeConstraint {
 
     uint8_t flags = 0;
 }; // 44 bytes = 1 cache line
+
+}

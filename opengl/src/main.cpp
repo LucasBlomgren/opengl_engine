@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include "engine/opengl_init.h"
 #include "engine/engine_state.h"
@@ -10,7 +10,7 @@
 
 #include "imgui.h"
 
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "game/scene_builder.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/textures/texture_manager.h"
@@ -67,7 +67,7 @@ int main() {
 	// systems
 	EngineState engineState;
 	FrameTimers frameTimers;
-	PhysicsEngine physicsEngine;
+	physics::Engine physicsEngine;
 	Renderer renderer;
 
 	// managers
@@ -99,7 +99,7 @@ int main() {
 	SceneBuilder sceneBuilder(player, editor, world, physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
 
 	// physics init
-	physicsEngine.init(&world, &frameTimers);
+	physicsEngine.init(&frameTimers);
 
 	// setup input
 	inputManager.init(window);
@@ -312,9 +312,10 @@ int main() {
 				// physics step & player update if in player mode
 				if (engineState.isPlayerMode()) {
 					player.updateBody(fixedTimeStep);
-					physicsEngine.syncBodyFromTransform(player.getPlayerRigidBodyHandle());
 				}
+				world.syncTransformsToPhysics();
 				physicsEngine.step(fixedTimeStep, engineState);
+				world.syncPhysicsToTransforms();
 				if (engineState.isPlayerMode()) {
 					player.resolveExternalContact();
 				}
@@ -337,11 +338,19 @@ int main() {
 
         // Delete out of bounds objects
         std::vector<GameObjectHandle> outOfBoundsObjects;
-        for (const RigidBodyHandle& handle : physicsEngine.getAwakeList()) {
-            RigidBody* rb = world.getRigidBody(handle);
-            Transform* t = world.getTransform(rb->rootTransformHandle);
-			if (t->position.y < -1000.0f || t->position.y > 5000.0f) {
-                outOfBoundsObjects.push_back(rb->gameObjectHandle);
+        for (const physics::BodyHandle& handle : physicsEngine.getAwakeList()) {
+            const std::optional<physics::BodyState> state =
+                physicsEngine.getRigidBodyState(handle);
+
+			if (state &&
+                (state->pose.position.y < -1000.0f ||
+                 state->pose.position.y > 5000.0f)) {
+                GameObjectHandle objectHandle =
+                    world.getGameObjectHandle(handle);
+
+                if (objectHandle.isValid()) {
+                    outOfBoundsObjects.push_back(objectHandle);
+                }
 			}
         }
         for (GameObjectHandle handle : outOfBoundsObjects) {

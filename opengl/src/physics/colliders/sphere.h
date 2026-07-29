@@ -7,6 +7,8 @@
 
 #include "physics/public/physics_types.h"
 
+namespace physics::internal {
+
 class Sphere {
 public:
     glm::vec3 centerLocal{ 0.0f };
@@ -23,7 +25,7 @@ public:
         centerLocal(centerLocal)
     {}
 
-    void update(const PhysicsPose& worldPose, const glm::vec3& worldScale) {
+    void update(const Pose& worldPose, const glm::vec3& worldScale) {
         glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
         centerWorld = worldPose.position + rotation * (worldScale * centerLocal);
 
@@ -31,3 +33,5 @@ public:
         radiusWorld = radiusLocal * (std::max)({ absScale.x, absScale.y, absScale.z });
     }
 };
+
+}

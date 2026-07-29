@@ -7,6 +7,8 @@
 
 #include "physics/public/physics_types.h"
 
+namespace physics::internal {
+
 enum class FaceId {
     MinX,
     MaxX,
@@ -39,7 +41,7 @@ public:
 
     void init(const std::vector<glm::vec3>& vertices);
     void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
-    void update(const PhysicsPose& worldPose, const glm::vec3& worldScale);
+    void update(const Pose& worldPose, const glm::vec3& worldScale);
 
     std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 
@@ -53,7 +55,7 @@ public:
     glm::vec3 worldCenter{ 0.0f };
     glm::vec3 localHalfExtents{ 0.5f };
 
-    // Temporary while scale still comes from ECS/game transforms.
+    // Physics-owned scale used to build the world-space box.
     glm::vec3 scale{ 1.0f };
 
 private:
@@ -62,3 +64,6 @@ private:
     glm::vec3 localCenter{ 0.0f };
     std::array<glm::vec3, 8> localVertices{};
 };
+
+
+}

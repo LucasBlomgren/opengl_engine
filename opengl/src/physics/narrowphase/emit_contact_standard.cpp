@@ -1,6 +1,8 @@
 #include "narrowphase_manager.h"
 #include "physics/sleep/wake_sleep_utils.h"
 
+namespace physics::internal {
+
 //=======================================================
 //     Emit rigid contact and wake up bodies if needed
 //=======================================================
@@ -39,9 +41,7 @@ void NarrowphaseManager::emitRigidContact(
         in.bodyA,
         in.bodyB,
         in.colliderA,
-        in.colliderB,
-        caches->transforms.get(in.bodyA->rootTransformHandle, FUNC_NAME),
-        caches->transforms.get(in.bodyB->rootTransformHandle, FUNC_NAME)
+        in.colliderB
     );
 
     Contact contact(
@@ -106,10 +106,10 @@ bool NarrowphaseManager::tryExportExternalContact(
     }
 
     bool aCharacter = in.bodyA->motionControl == MotionControl::External && 
-        in.bodyA->responseMode == ContactResponseMode::Character;
+        in.bodyA->responseMode == ResponseMode::Character;
 
     bool bCharacter = in.bodyB->motionControl == MotionControl::External &&
-        in.bodyB->responseMode == ContactResponseMode::Character;
+        in.bodyB->responseMode == ResponseMode::Character;
 
     if (!aCharacter && !bCharacter) {
         return false;
@@ -123,4 +123,7 @@ bool NarrowphaseManager::tryExportExternalContact(
     );
 
     return true;
+}
+
+
 }

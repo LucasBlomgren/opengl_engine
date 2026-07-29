@@ -5,11 +5,13 @@
 #include "rigidbody_broadphase_types.h"
 #include "broadphase_types.h"
 
-#include "core/slot_map.h"
-
 #include "physics/world/runtime_caches.h"
 #include "physics/bvh/bvh.h"
 #include "physics/bvh/bvh_terrain.h"
+
+#include "physics/public/physics_debug_types.h"
+
+namespace physics::internal {
 
 class RigidBody;
 class Tri;
@@ -25,36 +27,36 @@ public:
     //   Build pairs for narrowphase
     void buildPairs(PairBatch& batch);
     void buildPairsBruteForce(
-        const std::vector<RigidBodyHandle>& bodies,
+        const std::vector<BodyHandle>& bodies,
         std::vector<DynamicPair>& outPairs
     );
 
     void buildSpeculativePairs(
-        float dt, 
+        float dt,
         PairBatch& batch,
         std::vector<AABB>& debugSweeps
     );
     void determineSpeculativeBodies(
-        float dt, 
-        std::vector<RigidBodyHandle>& outBodies, 
+        float dt,
+        std::vector<BodyHandle>& outBodies,
         std::vector<AABB>& outAABBs
     );
 
     // add/remove from current list
-    void add(const RigidBodyHandle& handle, BroadphaseBucket dst);
-    void remove(const RigidBodyHandle& handle);
+    void add(const BodyHandle& handle, BroadphaseBucket dst);
+    void remove(const BodyHandle& handle);
 
     // move between lists
-    void moveToAwake(const RigidBodyHandle& handle);
-    void moveToAsleep(const RigidBodyHandle& handle);
-    void moveToStatic(const RigidBodyHandle& handle);
+    void moveToAwake(const BodyHandle& handle);
+    void moveToAsleep(const BodyHandle& handle);
+    void moveToStatic(const BodyHandle& handle);
 
-    void setBVHDirty(const RigidBodyHandle& handle);
+    void setBVHDirty(const BodyHandle& handle);
 
     // get lists of indices
-    const std::vector<RigidBodyHandle>& getAwakeList()  const { return awakeHandles; }
-    const std::vector<RigidBodyHandle>& getAsleepList() const { return asleepHandles; }
-    const std::vector<RigidBodyHandle>& getStaticList() const { return staticHandles; }
+    const std::vector<BodyHandle>& getAwakeList()  const { return awakeHandles; }
+    const std::vector<BodyHandle>& getAsleepList() const { return asleepHandles; }
+    const std::vector<BodyHandle>& getStaticList() const { return staticHandles; }
 
     // get bvhs
     const BVHTree& getAwakeBVH()  const { return awakeBvh; }
@@ -62,7 +64,7 @@ public:
     const BVHTree& getStaticBVH() const { return staticBvh; }
     const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
 
-    void updateBVHRenderData(const BVHType& type, bool update);
+    void updateBVHRenderData(const physics::debug::BvhType& type, bool update);
 
 private:
     // references to pointer caches and terrain triangles
@@ -70,11 +72,11 @@ private:
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects
-    std::vector<RigidBodyHandle> awakeHandles;
-    std::vector<RigidBodyHandle> asleepHandles;
-    std::vector<RigidBodyHandle> staticHandles;
+    std::vector<BodyHandle> awakeHandles;
+    std::vector<BodyHandle> asleepHandles;
+    std::vector<BodyHandle> staticHandles;
 
-    // trees 
+    // trees
     BVHTree awakeBvh;
     BVHTree asleepBvh;
     BVHTree staticBvh;
@@ -82,11 +84,13 @@ private:
     TerrainBVH terrainBvh;
 
     // pairs buffers
-    std::vector<std::pair<RigidBodyHandle, Tri*>> pairsBufTerrain;
-    std::vector<std::pair<RigidBodyHandle, RigidBodyHandle>> pairsBufDynamic;
+    std::vector<std::pair<BodyHandle, Tri*>> pairsBufTerrain;
+    std::vector<std::pair<BodyHandle, BodyHandle>> pairsBufDynamic;
 
     // helpers
-    void swapAndPop(const RigidBodyHandle& handle, std::vector<RigidBodyHandle>& list);
+    void swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list);
     BVHTree& bvhFor(BroadphaseBucket b);
-    std::vector<RigidBodyHandle>& listFor(BroadphaseBucket b);
+    std::vector<BodyHandle>& listFor(BroadphaseBucket b);
 };
+
+}

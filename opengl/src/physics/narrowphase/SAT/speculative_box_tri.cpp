@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 bool SAT::speculativeBoxTriangle(
     const Collider& boxCollider,
     const RigidBody& boxBody,
@@ -326,4 +328,6 @@ bool SAT::speculativeBoxTriangle(
     out.tri_ptr = const_cast<Tri*>(&tri);
 
     return true;
+}
+
 }

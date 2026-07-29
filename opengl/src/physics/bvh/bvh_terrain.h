@@ -1,6 +1,8 @@
 #pragma once
 #include "physics/colliders/aabb.h"
 
+namespace physics::internal {
+
 class Tri;
 
 class TerrainBVH {
@@ -8,7 +10,7 @@ public:
     using Element = Tri*;
     int rootIdx = -1;
 
-    // public för att rendera AABBs
+    // public fï¿½r att rendera AABBs
     struct Node {
         bool alive = true;
         bool isLeaf = false;
@@ -64,3 +66,5 @@ private:
     void refitNode(int nodeIdx);
     void updateRenderData(Node& n);
 };
+
+}

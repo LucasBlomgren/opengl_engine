@@ -8,15 +8,15 @@
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 
-class PhysicsEngine;
+namespace physics::internal {
 
 class PhysicsWorld {
 public:
     void clear();
 
     // getters
-    RigidBody* getRigidBody(RigidBodyHandle handle);
-    const RigidBody* getRigidBody(RigidBodyHandle handle) const;
+    RigidBody* getRigidBody(BodyHandle handle);
+    const RigidBody* getRigidBody(BodyHandle handle) const;
 
     Collider* getCollider(ColliderHandle handle);
     const Collider* getCollider(ColliderHandle handle) const;
@@ -24,34 +24,36 @@ public:
     AABB computeBodyAABB(const RigidBody& body);
 
     SlotMap<Collider, ColliderHandle>& getCollidersMap();
-    SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap();
+    SlotMap<RigidBody, BodyHandle>& getRigidBodiesMap();
 
     const SlotMap<Collider, ColliderHandle>& getCollidersMap() const;
-    const SlotMap<RigidBody, RigidBodyHandle>& getRigidBodiesMap() const;
+    const SlotMap<RigidBody, BodyHandle>& getRigidBodiesMap() const;
 
     // creation and deletion
-    RigidBodyHandle createPendingRigidBody();
+    BodyHandle createPendingRigidBody();
     ColliderHandle createPendingCollider();
 
-    bool activateRigidBody(RigidBodyHandle handle);
+    bool activateRigidBody(BodyHandle handle);
     bool activateCollider(ColliderHandle handle);
 
-    void discardPendingRigidBody(RigidBodyHandle handle);
+    void discardPendingRigidBody(BodyHandle handle);
     void discardPendingCollider(ColliderHandle handle);
 
-    void deleteRigidBody(RigidBodyHandle handle);
+    void deleteRigidBody(BodyHandle handle);
     void deleteCollider(ColliderHandle handle);
 
-    bool isRigidBodyActive(RigidBodyHandle handle) const;
+    bool isRigidBodyActive(BodyHandle handle) const;
     bool isColliderActive(ColliderHandle handle) const;
-    bool isRigidBodyPending(RigidBodyHandle handle) const;
+    bool isRigidBodyPending(BodyHandle handle) const;
     bool isColliderPending(ColliderHandle handle) const;
 
 private:
     int colliderId = 0;
     int rigidBodyId = 0;
     SlotMap<Collider, ColliderHandle> colliders;
-    SlotMap<RigidBody, RigidBodyHandle> rigidBodies;
+    SlotMap<RigidBody, BodyHandle> rigidBodies;
     std::unordered_map<ColliderHandle, Collider> pendingColliders;
-    std::unordered_map<RigidBodyHandle, RigidBody> pendingRigidBodies;
+    std::unordered_map<BodyHandle, RigidBody> pendingRigidBodies;
 };
+
+}

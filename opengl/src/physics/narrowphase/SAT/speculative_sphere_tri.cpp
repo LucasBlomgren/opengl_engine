@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //     Speculative Sphere-Triangle
 //=======================================================
@@ -367,4 +369,6 @@ bool SAT::speculativeSphereTriangle(
     testVertex(triC);
 
     return hit;
+}
+
 }

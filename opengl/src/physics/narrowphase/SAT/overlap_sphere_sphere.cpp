@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Sphere-Sphere
 //=======================================================
@@ -21,4 +23,6 @@ bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
     out.point = sphereB.centerWorld - out.normal * sphereB.radiusWorld; // Contact point on sphereB
 
     return true;
+}
+
 }

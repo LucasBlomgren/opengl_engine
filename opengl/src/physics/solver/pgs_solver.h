@@ -5,6 +5,8 @@
 #include "physics/narrowphase/narrowphase_types.h"
 #include "physics/narrowphase/collision_manifold.h"
 
+namespace physics::internal {
+
 class PGSSolver {
 public:
     void init();
@@ -38,7 +40,7 @@ private:
         RuntimeCaches& caches,
         float dt
     );
-    uint32_t getOrCreateSolverBody(RigidBodyHandle bodyHandle, RigidBody* body);
+    uint32_t getOrCreateSolverBody(BodyHandle bodyHandle, RigidBody* body);
     void makeSolverBody(RigidBody* body);
     static void packInvInertia(const glm::mat3& m, float out[6]);
 
@@ -90,3 +92,5 @@ private:
     );
 
 };
+
+}

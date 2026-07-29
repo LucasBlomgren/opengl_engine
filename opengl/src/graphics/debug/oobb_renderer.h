@@ -1,14 +1,15 @@
 #pragma once
 
 #include "graphics/shaders/shader.h"
-#include "physics/colliders/oobb.h"
+#include "physics/physics.h"
 
 class OOBBRenderer { 
 public:
     void setupWireframeBox();
     void renderBox(
         Shader& shader,
-        const OOBB& box,
+        const physics::Pose& pose,
+        const physics::BoxGeometry& box,
         const glm::vec3& color
     );
 
@@ -21,7 +22,11 @@ public:
     static unsigned int sVAO_normals, sVBO_normals;
 
 private:
-    void makeOOBBModelMatrix(glm::mat4& M, const OOBB& box);
+    void makeOOBBModelMatrix(
+        glm::mat4& model,
+        const physics::BoxGeometry& box,
+        const physics::Pose& worldPose
+    );
 
     static bool sInitialized_box;
     static bool sInitialized_normals;

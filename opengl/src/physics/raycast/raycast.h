@@ -1,41 +1,20 @@
 #pragma once
-  
-#include "game/game_object.h"
+
 #include "core/slot_map.h"
 
-#include "physics/bvh/bvh.h"
-#include "physics/colliders/collider.h"
 #include "physics/bodies/rigidbody.h"
+#include "physics/bvh/bvh.h"
+#include "physics/public/physics_query_types.h"
 
-namespace Raycast {
-    struct Ray {
-        float length;
-        glm::vec3 direction;
-        glm::vec3 start;
-        glm::vec3 end;
+namespace physics::internal {
 
-        Ray(const glm::vec3 start, const glm::vec3 direction, float length)
-            : start(start),
-            direction(direction),
-            length(length)
-        {
-            end = start + direction * length;
-        }
-    };
-
-    struct RaycastHit {
-        bool hit = false;
-        RigidBodyHandle bodyHandle;
-        glm::vec3 point;
-        glm::vec3 normal;
-        float t;
-    };
-
-    RaycastHit raycast(
-        Ray& ray,
+namespace raycast {
+    RaycastHit raycastTree(
+        const Ray& ray,
         const BVHTree& tree,
-        SlotMap<RigidBody, RigidBodyHandle>* bodyMap,
-        SlotMap<Collider, ColliderHandle>* colliderMap,
-        SlotMap<GameObject, GameObjectHandle>* goMap
+        const SlotMap<RigidBody, BodyHandle>& bodyMap,
+        BodyHandle ignoredBody
     );
+}
+
 }

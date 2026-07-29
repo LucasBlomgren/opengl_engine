@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Sphere-Triangle
 //=======================================================
@@ -56,4 +58,6 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
     }
 
     return false;
+}
+
 }

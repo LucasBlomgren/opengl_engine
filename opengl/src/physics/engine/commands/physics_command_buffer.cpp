@@ -6,22 +6,24 @@
 #include <iterator>
 #include <utility>
 
+namespace physics::internal {
+
 namespace {
     template<class T>
     bool contains(
-        const std::vector<T>& values, 
+        const std::vector<T>& values,
         const T& value) {
         return std::find(
-            values.begin(), 
-            values.end(), 
-            value) 
+            values.begin(),
+            values.end(),
+            value)
             != values.end();
     }
 
     template<class T>
     bool addUnique(
-        std::vector<T>& values, 
-        const T& value) 
+        std::vector<T>& values,
+        const T& value)
     {
         if (contains(values, value)) {
             return false;
@@ -33,8 +35,8 @@ namespace {
 
     template<class T>
     void moveAndClear(
-        std::vector<T>& source, 
-        std::vector<T>& destination) 
+        std::vector<T>& source,
+        std::vector<T>& destination)
     {
         destination.reserve(source.size());
 
@@ -52,9 +54,9 @@ namespace {
 // Storage management
 //=========================================
 void PhysicsCommandBuffer::reserve(
-    size_t bodyCount, 
-    size_t colliderCount, 
-    size_t mutationCount) 
+    size_t bodyCount,
+    size_t colliderCount,
+    size_t mutationCount)
 {
     bodyCreates.reserve(bodyCount);
     bodyDestroys.reserve(bodyCount);
@@ -97,7 +99,7 @@ PhysicsCommandBuffer::Batch PhysicsCommandBuffer::take() {
 // Lifecycle recording
 //=========================================
 void PhysicsCommandBuffer::recordBodyCreate(
-    RigidBodyHandle body) {
+    BodyHandle body) {
     bodyCreates.push_back(body);
 }
 
@@ -107,7 +109,7 @@ void PhysicsCommandBuffer::recordColliderCreate(
 }
 
 bool PhysicsCommandBuffer::recordBodyDestroy(
-    RigidBodyHandle body) {
+    BodyHandle body) {
     return addUnique(bodyDestroys, body);
 }
 
@@ -117,7 +119,7 @@ bool PhysicsCommandBuffer::recordColliderDestroy(
 }
 
 bool PhysicsCommandBuffer::isBodyPendingDestroy(
-    RigidBodyHandle body) const {
+    BodyHandle body) const {
     return contains(bodyDestroys, body);
 }
 
@@ -130,64 +132,121 @@ bool PhysicsCommandBuffer::isColliderPendingDestroy(
 // Rigid body command recording
 //=========================================
 void PhysicsCommandBuffer::recordApplyLinearImpulse(
-    RigidBodyHandle body, 
+    BodyHandle body,
     const glm::vec3& impulse) {
     mutations.emplace_back(ApplyLinearImpulse{ body, impulse });
 }
 
 void PhysicsCommandBuffer::recordSetLinearVelocity(
-    RigidBodyHandle body, 
+    BodyHandle body,
     const glm::vec3& velocity) {
     mutations.emplace_back(SetLinearVelocity{ body, velocity });
 }
 
 void PhysicsCommandBuffer::recordSetAngularVelocity(
-    RigidBodyHandle body, 
+    BodyHandle body,
     const glm::vec3& velocity) {
     mutations.emplace_back(SetAngularVelocity{ body, velocity });
 }
 
 void PhysicsCommandBuffer::recordSetKinematicTarget(
-    RigidBodyHandle body, 
-    const PhysicsPose& target) {
+    BodyHandle body,
+    const Pose& target) {
     mutations.emplace_back(SetKinematicTarget{ body, target });
 }
 
+void PhysicsCommandBuffer::recordSetRigidBodyTransform(
+    BodyHandle body,
+    const Pose& pose,
+    const glm::vec3& scale) {
+    mutations.emplace_back(SetRigidBodyTransform{ body, pose, scale });
+}
+
 void PhysicsCommandBuffer::recordSetRigidBodySleepState(
-    RigidBodyHandle body,
+    BodyHandle body,
     bool asleep) {
     mutations.emplace_back(SetRigidBodySleepState{ body, asleep });
 }
 
 void PhysicsCommandBuffer::recordSetRigidBodyType(
-    RigidBodyHandle body, 
+    BodyHandle body,
     BodyType type) {
     mutations.emplace_back(SetRigidBodyType{ body, type });
 }
 
 void PhysicsCommandBuffer::recordSetRigidBodyMotionControl(
-    RigidBodyHandle body, 
+    BodyHandle body,
     MotionControl motionControl) {
     mutations.emplace_back(SetRigidBodyMotionControl{ body, motionControl });
+}
+
+void PhysicsCommandBuffer::recordSetRigidBodyResponseMode(
+    BodyHandle body,
+    ResponseMode responseMode) {
+    mutations.emplace_back(SetRigidBodyResponseMode{ body, responseMode });
+}
+
+void PhysicsCommandBuffer::recordSetRigidBodyMass(
+    BodyHandle body,
+    float mass) {
+    mutations.emplace_back(SetRigidBodyMass{ body, mass });
+}
+
+void PhysicsCommandBuffer::recordSetRigidBodyAllowGravity(
+    BodyHandle body,
+    bool allowGravity) {
+    mutations.emplace_back(SetRigidBodyAllowGravity{ body, allowGravity });
+}
+
+void PhysicsCommandBuffer::recordSetRigidBodyAllowSleep(
+    BodyHandle body,
+    bool allowSleep) {
+    mutations.emplace_back(SetRigidBodyAllowSleep{ body, allowSleep });
+}
+
+void PhysicsCommandBuffer::recordSetRigidBodyCanMoveLinearly(
+    BodyHandle body,
+    bool canMoveLinearly) {
+    mutations.emplace_back(SetRigidBodyCanMoveLinearly{
+        body,
+        canMoveLinearly
+    });
 }
 
 //=========================================
 // Collider command recording
 //=========================================
 void PhysicsCommandBuffer::recordSetColliderLocalPose(
-    ColliderHandle collider, 
-    const PhysicsPose& localPose) {
+    ColliderHandle collider,
+    const Pose& localPose) {
     mutations.emplace_back(SetColliderLocalPose{ collider, localPose });
 }
 
+void PhysicsCommandBuffer::recordSetColliderLocalTransform(
+    ColliderHandle collider,
+    const Pose& localPose,
+    const glm::vec3& localScale) {
+    mutations.emplace_back(SetColliderLocalTransform{
+        collider,
+        localPose,
+        localScale
+    });
+}
+
+void PhysicsCommandBuffer::recordSetColliderShape(
+    ColliderHandle collider,
+    const ColliderShapeDesc& shape) {
+    mutations.emplace_back(SetColliderShape{ collider, shape });
+}
+
 void PhysicsCommandBuffer::recordSetColliderEnabled(
-    ColliderHandle collider, 
+    ColliderHandle collider,
     bool enabled) {
     mutations.emplace_back(SetColliderEnabled{ collider, enabled });
 }
 
 void PhysicsCommandBuffer::recordSetColliderTrigger(
-    ColliderHandle collider, 
+    ColliderHandle collider,
     bool isTrigger) {
     mutations.emplace_back(SetColliderTrigger{ collider, isTrigger });
 }
@@ -203,7 +262,4 @@ void PhysicsCommandBuffer::recordAwakenAllObjects() {
     mutations.emplace_back(AwakenAllObjects{});
 }
 
-void PhysicsCommandBuffer::recordSyncBodyFromTransform(
-    RigidBodyHandle body) {
-    mutations.emplace_back(SyncBodyFromTransform{ body });
 }

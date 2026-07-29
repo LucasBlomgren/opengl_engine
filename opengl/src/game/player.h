@@ -1,19 +1,18 @@
 #pragma once
 
 #include "scene_builder.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "engine/camera.h"
 #include "graphics/renderer/renderer.h"
-#include "physics/raycast/raycast.h"
 
 class Player : public IInputReceiver {
 public:
     GameObjectHandle playerHandle;
 
-    RigidBodyHandle getPlayerRigidBodyHandle();
+    physics::BodyHandle getPlayerRigidBodyHandle();
 
     void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
-    void setPointers(World* world, PhysicsEngine* physicsEngine, Renderer* renderer, Camera* camera);
+    void setPointers(World* world, physics::Engine* physicsEngine, Renderer* renderer, Camera* camera);
 
     // activate/deactivate player mode
     void activate();
@@ -40,15 +39,15 @@ public:
     void moveSelectedObject(float dt);
 
     // raycast for placement/selection/etc
-    Raycast::RaycastHit raycast(float length);
-    AABB aabbToPlace;
+    physics::RaycastHit raycast(float length);
+    physics::AABB aabbToPlace;
     bool placementObstructed = true;
     void placeObject();
     void createPlaceObjectAABB(Shader& shader);
 
 private:
     World* world = nullptr;
-    PhysicsEngine* physicsEngine = nullptr;
+    physics::Engine* physicsEngine = nullptr;
     Camera* camera = nullptr;
     Renderer* renderer = nullptr;
 

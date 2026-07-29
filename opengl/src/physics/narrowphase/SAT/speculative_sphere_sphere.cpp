@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Speculative Sphere-Sphere
 //=======================================================
@@ -95,4 +97,6 @@ bool SAT::speculativeSphereSphere(
     out.point = 0.5f * (pointA + pointB);
 
     return true;
+}
+
 }

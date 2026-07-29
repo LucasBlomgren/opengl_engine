@@ -1,11 +1,13 @@
 #include "pch.h"
 #include "collider.h"
 
+namespace physics::internal {
+
 AABB& Collider::getAABB() {
     return aabb;
 }
 
-void Collider::updateWorldPose(const PhysicsPose& bodyPose, const glm::vec3& bodyScale) {
+void Collider::updateWorldPose(const Pose& bodyPose, const glm::vec3& bodyScale) {
     glm::mat3 bodyRotation = glm::mat3_cast(bodyPose.orientation);
 
     worldPose.position = bodyPose.position + bodyRotation * (bodyScale * localPose.position);
@@ -61,4 +63,6 @@ void Collider::rebuildAABB() {
         aabb.worldCenter = sphere.centerWorld;
         aabb.worldHalfExtents = glm::vec3(sphere.radiusWorld);
     }
+}
+
 }

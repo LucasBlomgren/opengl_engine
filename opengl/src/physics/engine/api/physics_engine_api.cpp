@@ -3,55 +3,60 @@
 #include "physics/public/physics_engine.h"
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics {
+
 //=====================================
 // Construction and ownership
 //=====================================
-PhysicsEngine::PhysicsEngine() : impl(std::make_unique<Impl>()) {}
-PhysicsEngine::~PhysicsEngine() = default;
-PhysicsEngine::PhysicsEngine(PhysicsEngine&&) noexcept = default;
-PhysicsEngine& PhysicsEngine::operator=(PhysicsEngine&&) noexcept = default;
+Engine::Engine() : impl(std::make_unique<internal::EngineImpl>()) {}
+Engine::~Engine() = default;
+Engine::Engine(Engine&&) noexcept = default;
+Engine& Engine::operator=(Engine&&) noexcept = default;
 
 //=====================================
 // Facade: Initialization and scene lifetime
 //=====================================
-void PhysicsEngine::init(World* world, FrameTimers* frameTimers) {
-    impl->init(world, frameTimers);
+void Engine::init(FrameTimers* frameTimers) {
+    impl->init(frameTimers);
 }
-void PhysicsEngine::setupScene(std::vector<Tri>* terrainTriangles) {
+void Engine::setupScene(
+    const std::vector<Triangle>& terrainTriangles) {
     impl->setupScene(terrainTriangles);
 }
-void PhysicsEngine::clear() {
+void Engine::clear() {
     impl->clear();
 }
 
 //=====================================
 // Facade: Simulation
 //=====================================
-void PhysicsEngine::prepareStepLoop() {
+void Engine::prepareStepLoop() {
     impl->prepareStepLoop();
 }
-void PhysicsEngine::step(float deltaTime, EngineState& engine) {
+void Engine::step(float deltaTime, EngineState& engine) {
     impl->step(deltaTime, engine);
 }
 
 //=====================================
 // Facade: Scene-wide commands
 //=====================================
-void PhysicsEngine::sleepAllObjects() {
+void Engine::sleepAllObjects() {
     impl->submitSleepAllObjects();
 }
 
-void PhysicsEngine::awakenAllObjects() {
+void Engine::awakenAllObjects() {
     impl->submitAwakenAllObjects();
 }
 
 //=====================================
 // Facade: Solver configuration
 //=====================================
-int PhysicsEngine::getPgsIterations() const {
+int Engine::getPgsIterations() const {
     return impl->getPgsIterations();
 }
 
-void PhysicsEngine::setPgsIterations(int iterations) {
+void Engine::setPgsIterations(int iterations) {
     impl->setPgsIterations(iterations);
+}
+
 }

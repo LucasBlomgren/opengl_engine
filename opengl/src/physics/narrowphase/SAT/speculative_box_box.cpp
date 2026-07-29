@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 bool SAT::speculativeBoxBox(
     const Collider& colliderA,
     const Collider& colliderB,
@@ -242,4 +244,6 @@ bool SAT::speculativeBoxBox(
     }
 
     return true;
+}
+
 }

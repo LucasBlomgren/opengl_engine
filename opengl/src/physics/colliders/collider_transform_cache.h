@@ -5,6 +5,8 @@
 
 #include "physics/public/physics_types.h"
 
+namespace physics::internal {
+
 struct ColliderTransformCache {
     glm::vec3 scale{ 1.0f };
 
@@ -27,7 +29,7 @@ struct ColliderTransformCache {
         invRotationDirty = true;
     }
 
-    void ensureModelMatrix(const PhysicsPose& pose) {
+    void ensureModelMatrix(const Pose& pose) {
         if (!modelDirty) {
             return;
         }
@@ -40,7 +42,7 @@ struct ColliderTransformCache {
         modelDirty = false;
     }
 
-    void ensureInvModelMatrix(const PhysicsPose& pose) {
+    void ensureInvModelMatrix(const Pose& pose) {
         if (!invModelDirty) {
             return;
         }
@@ -50,7 +52,7 @@ struct ColliderTransformCache {
         invModelDirty = false;
     }
 
-    void ensureRotationMatrix(const PhysicsPose& pose) {
+    void ensureRotationMatrix(const Pose& pose) {
         if (!rotationDirty) {
             return;
         }
@@ -59,7 +61,7 @@ struct ColliderTransformCache {
         rotationDirty = false;
     }
 
-    void ensureInvRotationMatrix(const PhysicsPose& pose) {
+    void ensureInvRotationMatrix(const Pose& pose) {
         if (!invRotationDirty) {
             return;
         }
@@ -69,3 +71,5 @@ struct ColliderTransformCache {
         invRotationDirty = false;
     }
 };
+
+}

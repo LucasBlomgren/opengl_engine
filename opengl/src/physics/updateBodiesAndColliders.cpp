@@ -1,92 +1,78 @@
 #include "pch.h"
+
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics::internal {
+
 //==============================================================
-//   Integrate Forces / Velocities
+// Integrate Forces / Velocities
 //==============================================================
-void PhysicsEngine::Impl::integrateForcesAndVelocities(
-    const std::vector<RigidBodyHandle>& bodies,
+void EngineImpl::integrateForcesAndVelocities(
+    const std::vector<BodyHandle>& bodies,
     float dt)
 {
-    for (const RigidBodyHandle& bodyH : bodies) {
-        RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+    for (const BodyHandle& bodyHandle : bodies) {
+        RigidBody* body = caches.bodies.get(bodyHandle, FUNC_NAME);
+
         if (!body || body->colliderHandles.empty()) {
             continue;
         }
 
         Collider* mainCollider =
             caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+
         if (!mainCollider) {
             continue;
         }
 
-        // For solo spheres.
         if (body->colliderHandles.size() == 1) {
             body->applyRollingFriction(mainCollider->type, dt);
         }
 
         body->applyVelocityDamping(dt);
         body->applyGravity(dt);
-        // body->applyAntistuckFriction(dt);
     }
 }
 
 //==============================================================
-//   Integrate Positions and Update Colliders
+// Integrate Positions and Update Colliders
 //==============================================================
-void PhysicsEngine::Impl::integratePositionsAndColliders(
-    const std::vector<RigidBodyHandle>& bodies,
+void EngineImpl::integratePositionsAndColliders(
+    const std::vector<BodyHandle>& bodies,
     float dt)
 {
-    for (const RigidBodyHandle& bodyH : bodies) {
-        RigidBody* body = caches.bodies.get(bodyH, FUNC_NAME);
+    for (const BodyHandle& bodyHandle : bodies) {
+        RigidBody* body = caches.bodies.get(bodyHandle, FUNC_NAME);
+
         if (!body) {
             continue;
         }
 
-        Transform* rootTransform =
-            caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
-
-        // This assumes integrateVelocities() means:
-        // position/orientation += velocity/angularVelocity * dt
         body->integratePose(dt);
-
-        if (rootTransform) {
-            rootTransform->lastPosition = rootTransform->position;
-            rootTransform->position = body->pose.position;
-            rootTransform->orientation = body->pose.orientation;
-            rootTransform->updateCache();
-        }
-
         body->updateInertiaWorld();
-
-        updateCollidersAndBodyAABB(body, rootTransform);
+        updateCollidersAndBodyAABB(body);
     }
 }
 
 //==============================================================
-//   Update Collider Poses and Body AABB
+// Update Collider Poses and Body AABB
 //==============================================================
-void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
-    RigidBody* body,
-    Transform* rootTransform)
+void EngineImpl::updateCollidersAndBodyAABB(
+    RigidBody* body)
 {
+    if (!body) {
+        return;
+    }
+
     bool hasAABB = false;
     AABB combinedAABB;
 
-    for (const ColliderHandle& colH : body->colliderHandles) {
-        Collider* collider = caches.colliders.get(colH, FUNC_NAME);
+    for (ColliderHandle colliderHandle : body->colliderHandles) {
+        Collider* collider =
+            caches.colliders.get(colliderHandle, FUNC_NAME);
+
         if (!collider || !collider->enabled) {
             continue;
-        }
-
-        Transform* localTransform =
-            caches.transforms.get(collider->localTransformHandle, FUNC_NAME);
-
-        if (localTransform) {
-            collider->localPose.position = localTransform->position;
-            collider->localPose.orientation = localTransform->orientation;
-            collider->localScale = localTransform->scale;
         }
 
         collider->updateWorldPose(body->pose, body->scale);
@@ -106,6 +92,8 @@ void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
     }
 
     if (!hasAABB) {
+        body->aabb = AABB{};
+        body->invRadius = 0.0f;
         return;
     }
 
@@ -116,4 +104,14 @@ void PhysicsEngine::Impl::updateCollidersAndBodyAABB(
         (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
 
     body->aabb = combinedAABB;
+
+    const float boundingRadius =
+        glm::length(combinedAABB.worldHalfExtents);
+
+    body->invRadius =
+        boundingRadius > 0.0f
+        ? 1.0f / boundingRadius
+        : 0.0f;
+}
+
 }

@@ -1,5 +1,7 @@
 #include "narrowphase_manager.h"
 
+namespace physics::internal {
+
 bool NarrowphaseManager::trySpeculativeBoxBox(
     ContactBuildInput& in,
     DynamicContactCandidate& out,
@@ -117,4 +119,6 @@ bool NarrowphaseManager::trySpeculativeSphereTriangle(
     out.partnerTypeA = ContactPartnerType::RigidBody;
     out.partnerTypeB = ContactPartnerType::Terrain;
     return true;
+}
+
 }

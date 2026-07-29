@@ -1,6 +1,8 @@
 #include <glm/vec3.hpp>
 #include <limits>
 
+namespace physics::internal {
+
 class Tri;
 
 namespace SAT {
@@ -57,4 +59,6 @@ namespace SAT {
         float separationA = -std::numeric_limits<float>::infinity();
         float separationB = -std::numeric_limits<float>::infinity(); 
     };
+}
+
 }

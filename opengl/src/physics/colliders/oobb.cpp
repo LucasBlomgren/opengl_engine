@@ -4,6 +4,8 @@
 #include <glm/common.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+namespace physics::internal {
+
 OOBB::OOBB(const std::vector<glm::vec3>& vertices) {
     init(vertices);
 }
@@ -52,7 +54,7 @@ void OOBB::rebuildLocalVertices() {
     localVertices[7] = center + glm::vec3(-half.x, half.y, half.z);
 }
 
-void OOBB::update(const PhysicsPose& worldPose, const glm::vec3& worldScale) {
+void OOBB::update(const Pose& worldPose, const glm::vec3& worldScale) {
     scale = worldScale;
 
     glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
@@ -78,4 +80,6 @@ std::array<glm::vec3, 4> OOBB::getLocalFace(FaceId face) const {
         localVertices[indices[2]],
         localVertices[indices[3]]
     };
+}
+
 }

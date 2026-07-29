@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "aabb.h"
 
+namespace physics::internal {
+
 //=================================================
 // Initialization
 //=================================================
@@ -143,77 +145,4 @@ float AABB::getMergedSurfaceArea(const AABB& A, const AABB& B) {
         );
 }
 
-//=================================================
-// Editor functions
-//=================================================
-glm::vec3 AABB::getCollisionNormal(const AABB& other) const {
-    // Skillnad i centrum
-    float dx = other.worldCenter.x - worldCenter.x;
-    float dy = other.worldCenter.y - worldCenter.y;
-    float dz = other.worldCenter.z - worldCenter.z;
-
-    // Totala halv-extent per axel
-    float combinedHalfX = worldHalfExtents.x + other.worldHalfExtents.x;
-    float combinedHalfY = worldHalfExtents.y + other.worldHalfExtents.y;
-    float combinedHalfZ = worldHalfExtents.z + other.worldHalfExtents.z;
-
-    // Överlapp längs vardera axel
-    float overlapX = combinedHalfX - std::fabs(dx);
-    float overlapY = combinedHalfY - std::fabs(dy);
-    float overlapZ = combinedHalfZ - std::fabs(dz);
-
-    // Ingen kollision
-    if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f) {
-        return glm::vec3(0.0f, 0.0f, 0.0f);
-    }
-
-    if (overlapX < overlapY && overlapX < overlapZ) {
-        // om other ligger åt +X så vill vi separera längs -X
-        float signX = (dx >= 0.0f) ? -1.0f : 1.0f;
-        return glm::vec3(signX, 0.0f, 0.0f);
-    }
-    // motsvarande för Y och Z:
-    else if (overlapY < overlapZ) {
-        float signY = (dy >= 0.0f) ? -1.0f : 1.0f;
-        return glm::vec3(0.0f, signY, 0.0f);
-    }
-    else {
-        float signZ = (dz >= 0.0f) ? -1.0f : 1.0f;
-        return glm::vec3(0.0f, 0.0f, signZ);
-    }
-}
-glm::vec3 AABB::getOverlapDepth(const AABB& other) const {
-    // Skillnad i centrum
-    float dx = other.worldCenter.x - worldCenter.x;
-    float dy = other.worldCenter.y - worldCenter.y;
-    float dz = other.worldCenter.z - worldCenter.z;
-
-    // Totala halv-extent per axel
-    float combinedHalfX = worldHalfExtents.x + other.worldHalfExtents.x;
-    float combinedHalfY = worldHalfExtents.y + other.worldHalfExtents.y;
-    float combinedHalfZ = worldHalfExtents.z + other.worldHalfExtents.z;
-
-    // Beräkna överlapp (kan vara negativt om ingen kollision)
-    float overlapX = combinedHalfX - std::fabs(dx);
-    float overlapY = combinedHalfY - std::fabs(dy);
-    float overlapZ = combinedHalfZ - std::fabs(dz);
-
-    // Kläm överlapp till noll
-    float depthX = (overlapX > 0.0f) ? overlapX : 0.0f;
-    float depthY = (overlapY > 0.0f) ? overlapY : 0.0f;
-    float depthZ = (overlapZ > 0.0f) ? overlapZ : 0.0f;
-
-    return glm::vec3(depthX, depthY, depthZ);
-}
-float AABB::getMinOverlapDepth(const AABB& other) const {
-    glm::vec3 depth = getOverlapDepth(other);
-    // Hitta minsta positiva djup
-    float minDepth = depth.x;
-    if (depth.y > 0.0f && (minDepth <= 0.0f || depth.y < minDepth)) {
-        minDepth = depth.y;
-    }
-    if (depth.z > 0.0f && (minDepth <= 0.0f || depth.z < minDepth)) {
-        minDepth = depth.z;
-    }
-    return (minDepth > 0.0f) ? minDepth : 0.0f;
 }

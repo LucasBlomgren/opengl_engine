@@ -1,6 +1,8 @@
 #pragma once
 #include "narrowphase_manager.h"
 
+namespace physics::internal {
+
 //=======================================================
 //     Box-Box
 //=======================================================
@@ -58,4 +60,6 @@ bool NarrowphaseManager::trySphereSphere(
 
     out.manifoldType = ManifoldType::SphereSphere;
     return true;
+}
+
 }

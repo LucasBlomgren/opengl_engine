@@ -1,10 +1,12 @@
 #pragma once
 #include "narrowphase_manager.h"
 
+namespace physics::internal {
+
 //===============================================
 //     Tris vs Box
 //===============================================
-void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates) 
+void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, BodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates)
 {
     SAT_resultsList.clear();
 
@@ -113,7 +115,7 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
 
         externalContacts.emplace_back(
             collider->rigidBodyHandle,
-            RigidBodyHandle{},
+            BodyHandle{},
             -avgPushOutNormal,
             maxDepth,
             true // terrainContact
@@ -130,8 +132,7 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
         avgNormal = SAT_resultsList[0].normal; // temporary fallback for degenerate cases where all SAT normals cancel each other out, resulting in zero avg normal.
     }
 
-    Transform* bodyRootTransform = caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
-    ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform);
+    ContactRuntime runtimeData = makeRuntimeData(body, collider);
     Contact contact(bodyH, runtimeData, avgNormal);
     Contact* contactPtr = collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
     batch.contacts.push_back(contactPtr);
@@ -142,7 +143,7 @@ void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, RigidBodyHand
 //===============================================
 void NarrowphaseManager::processTerrainTriSphere(
     ContactBatch& batch,
-    RigidBodyHandle bodyH,
+    BodyHandle bodyH,
     Collider* collider,
     RigidBody* body,
     const std::vector<Tri*>& candidates)
@@ -188,7 +189,7 @@ void NarrowphaseManager::processTerrainTriSphere(
     glm::vec3 avgSolverNormal = getAvgNormal(SAT_resultsList);
 
     // Export to character controller
-    if (body->motionControl == MotionControl::External) 
+    if (body->motionControl == MotionControl::External)
     {
         glm::vec3 avgPushOutNormal;
         if (glm::length2(pushOutSum) > 1e-10f) {
@@ -200,7 +201,7 @@ void NarrowphaseManager::processTerrainTriSphere(
 
         externalContacts.emplace_back(
             collider->rigidBodyHandle,
-            RigidBodyHandle{},
+            BodyHandle{},
             -avgPushOutNormal,
             maxDepth,
             true // terrainContact
@@ -211,10 +212,7 @@ void NarrowphaseManager::processTerrainTriSphere(
 
     SAT::findBestTriangles(SAT_resultsList);
 
-    Transform* bodyRootTransform =
-        caches->transforms.get(body->rootTransformHandle, FUNC_NAME);
-
-    ContactRuntime runtimeData = makeRuntimeData(body, collider, bodyRootTransform);
+    ContactRuntime runtimeData = makeRuntimeData(body, collider);
 
     Contact contact(bodyH, runtimeData, avgSolverNormal);
     Contact* contactPtr =
@@ -239,4 +237,7 @@ glm::vec3 NarrowphaseManager::getAvgNormal(const std::vector<SAT::Result>& resul
     }
 
     return glm::normalize(avgNormal);
+}
+
+
 }

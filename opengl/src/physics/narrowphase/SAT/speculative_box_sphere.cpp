@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 bool SAT::speculativeBoxSphere(
     const Collider& boxCollider,
     const Collider& sphereCollider,
@@ -375,4 +377,6 @@ bool SAT::speculativeBoxSphere(
     out.feature.vertexIndex = bestVertex;
 
     return true;
+}
+
 }

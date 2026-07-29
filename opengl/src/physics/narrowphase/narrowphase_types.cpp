@@ -2,6 +2,8 @@
 #include "narrowphase_types.h"
 #include "collision_manifold.h"
 
+namespace physics::internal {
+
 void ContactBatch::sortByMinY() {
     std::sort(contacts.begin(), contacts.end(),
         [](const Contact* a, const Contact* b) {
@@ -9,4 +11,6 @@ void ContactBatch::sortByMinY() {
             if (b->minY < a->minY) return false;
             return a->hashKey < b->hashKey;
         });
+}
+
 }

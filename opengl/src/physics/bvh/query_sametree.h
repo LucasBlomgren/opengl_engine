@@ -9,7 +9,9 @@
 #include "core/slot_map.h"
 #include "physics/colliders/aabb.h"
 
-inline uint32_t elementKey(RigidBodyHandle h) {
+namespace physics::internal {
+
+inline uint32_t elementKey(BodyHandle h) {
     return h.slot;
 }
 
@@ -143,4 +145,6 @@ void treeVsSameTreeQuery(
             }
         }
     }
+}
+
 }

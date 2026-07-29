@@ -1,68 +1,97 @@
 #include "pch.h"
 
 #include "physics/engine/physics_engine_impl.h"
-#include "game/world.h"
+#include "physics/raycast/raycast.h"
+
+namespace physics::internal {
+
+namespace {
+    physics::AABB toPublicBounds(const AABB& bounds) {
+        physics::AABB result;
+        result.worldMin = bounds.worldMin;
+        result.worldMax = bounds.worldMax;
+        result.worldCenter = bounds.worldCenter;
+        result.worldHalfExtents = bounds.worldHalfExtents;
+        return result;
+    }
+
+    AABB toInternalBounds(const physics::AABB& bounds) {
+        AABB result;
+        result.worldMin = bounds.worldMin;
+        result.worldMax = bounds.worldMax;
+        result.worldCenter = bounds.worldCenter;
+        result.worldHalfExtents = bounds.worldHalfExtents;
+        return result;
+    }
+}
 
 //=========================================
 // Spatial queries
 //=========================================
-Raycast::RaycastHit PhysicsEngine::Impl::raycast(
-    Raycast::Ray& ray) {
-    SlotMap<RigidBody, RigidBodyHandle>* bodyMap =
-        &physicsWorld.getRigidBodiesMap();
+RaycastHit EngineImpl::raycast(
+    const Ray& ray,
+    BodyHandle ignoredBody)
+{
+    const SlotMap<RigidBody, BodyHandle>& bodyMap =
+        physicsWorld.getRigidBodiesMap();
 
-    SlotMap<Collider, ColliderHandle>* colliderMap =
-        &physicsWorld.getCollidersMap();
+    RaycastHit bestHit;
 
-    SlotMap<GameObject, GameObjectHandle>* gameObjectMap =
-        &world->getGameObjectsMap();
+    const BVHTree* trees[] = {
+        &broadphaseManager.getAwakeBVH(),
+        &broadphaseManager.getAsleepBVH(),
+        &broadphaseManager.getStaticBVH()
+    };
 
-    Raycast::RaycastHit awakeHit =
-        Raycast::raycast(
+    for (const BVHTree* tree : trees) {
+        RaycastHit hit = raycast::raycastTree(
             ray,
-            broadphaseManager.getAwakeBVH(),
+            *tree,
             bodyMap,
-            colliderMap,
-            gameObjectMap
+            ignoredBody
         );
 
-    Raycast::RaycastHit asleepHit =
-        Raycast::raycast(
-            ray,
-            broadphaseManager.getAsleepBVH(),
-            bodyMap,
-            colliderMap,
-            gameObjectMap
-        );
-
-    Raycast::RaycastHit staticHit =
-        Raycast::raycast(
-            ray,
-            broadphaseManager.getStaticBVH(),
-            bodyMap,
-            colliderMap,
-            gameObjectMap
-        );
-
-    Raycast::RaycastHit bestHit = awakeHit;
-
-    if (asleepHit.hit && (!bestHit.hit || asleepHit.t < bestHit.t)) {
-        bestHit = asleepHit;
-    }
-
-    if (staticHit.hit && (!bestHit.hit || staticHit.t < bestHit.t)) {
-        bestHit = staticHit;
+        if (hit.hit && (!bestHit.hit || hit.t < bestHit.t)) {
+            bestHit = hit;
+        }
     }
 
     return bestHit;
 }
 
+std::vector<BodyHandle> EngineImpl::queryBodies(
+    const physics::AABB& bounds,
+    BodySet bodySet) const
+{
+    const BVHTree* tree = nullptr;
+
+    switch (bodySet) {
+    case BodySet::Awake:
+        tree = &broadphaseManager.getAwakeBVH();
+        break;
+    case BodySet::Asleep:
+        tree = &broadphaseManager.getAsleepBVH();
+        break;
+    case BodySet::Static:
+        tree = &broadphaseManager.getStaticBVH();
+        break;
+    }
+
+    std::vector<BodyHandle> result;
+
+    if (tree) {
+        tree->singleQuery(toInternalBounds(bounds), result);
+    }
+
+    return result;
+}
+
 //=========================================
 // State queries
 //=========================================
-std::optional<RigidBodyState>
-PhysicsEngine::Impl::getRigidBodyState(
-    RigidBodyHandle handle) const
+std::optional<BodyState>
+EngineImpl::getRigidBodyState(
+    BodyHandle handle) const
 {
     const RigidBody* body = physicsWorld.getRigidBody(handle);
 
@@ -70,18 +99,26 @@ PhysicsEngine::Impl::getRigidBodyState(
         return std::nullopt;
     }
 
-    RigidBodyState state;
+    BodyState state;
     state.pose = body->pose;
+    state.scale = body->scale;
     state.linearVelocity = body->linearVelocity;
     state.angularVelocity = body->angularVelocity;
     state.type = body->type;
+    state.motionControl = body->motionControl;
+    state.responseMode = body->responseMode;
+    state.mass = body->mass;
     state.asleep = body->asleep;
-
+    state.allowSleep = body->allowSleep;
+    state.allowGravity = body->allowGravity;
+    state.canMoveLinearly = body->canMoveLinearly;
+    state.bounds = toPublicBounds(body->aabb);
+    state.colliders = body->colliderHandles;
     return state;
 }
 
 std::optional<ColliderState>
-PhysicsEngine::Impl::getColliderState(
+EngineImpl::getColliderState(
     ColliderHandle handle) const
 {
     const Collider* collider = physicsWorld.getCollider(handle);
@@ -96,12 +133,29 @@ PhysicsEngine::Impl::getColliderState(
     state.body = collider->rigidBodyHandle;
     state.localPose = collider->localPose;
     state.localScale = collider->localScale;
-    state.worldPose.position = collider->worldPose.position;
-    state.worldPose.orientation = collider->worldPose.orientation;
+    state.worldPose = collider->worldPose;
     state.worldScale = collider->worldScale;
+    state.type = collider->type;
+    state.bounds = toPublicBounds(collider->aabb);
     state.enabled = collider->enabled;
     state.isTrigger = collider->isTrigger;
     state.userTag = collider->userTag;
+
+    if (collider->type == ColliderType::CUBOID) {
+        const OOBB& box = std::get<OOBB>(collider->shape);
+        BoxGeometry geometry;
+        geometry.worldCenter = box.worldCenter;
+        geometry.localHalfExtents = box.localHalfExtents;
+        geometry.scale = box.scale;
+        state.shape = geometry;
+    }
+    else {
+        const Sphere& sphere = std::get<Sphere>(collider->shape);
+        state.shape = SphereGeometry{
+            sphere.centerWorld,
+            sphere.radiusWorld
+        };
+    }
 
     return state;
 }
@@ -110,6 +164,8 @@ PhysicsEngine::Impl::getColliderState(
 // Simulation output
 //=========================================
 std::vector<ExternalMotionContact>&
-PhysicsEngine::Impl::getExternalMotionContacts() {
+EngineImpl::getExternalMotionContacts() {
     return narrowphaseManager.getExternalContacts();
+}
+
 }

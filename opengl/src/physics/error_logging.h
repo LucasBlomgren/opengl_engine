@@ -3,6 +3,8 @@
 #include <initializer_list>
 #include <iostream>
 
+namespace physics::internal {
+
 namespace PhysicsDebug {
     struct Check {
         bool passed;
@@ -33,4 +35,6 @@ namespace PhysicsDebug {
         (void)checks;
 #endif
     }
+}
+
 }

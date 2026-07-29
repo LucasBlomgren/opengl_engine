@@ -1,5 +1,7 @@
 #include "sat.h"
 
+namespace physics::internal {
+
 //=======================================================
 //  Box-Triangle
 //=======================================================
@@ -167,4 +169,6 @@ bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
         Au[2] * localPoint.z;
 
     return true;
+}
+
 }

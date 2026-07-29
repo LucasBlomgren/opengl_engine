@@ -12,7 +12,43 @@
 #include "game/world.h"
 #include "game/game_handles.h"
 
-#include "physics/public/physics_handles.h"
+#include "physics/physics.h"
+
+namespace {
+    physics::ColliderShapeDesc buildColliderShape(
+        physics::ColliderType type,
+        const Mesh& mesh)
+    {
+        if (type == physics::ColliderType::SPHERE) {
+            return physics::SphereShapeDesc{
+                glm::vec3(0.0f),
+                1.0f
+            };
+        }
+
+        glm::vec3 localCenter(0.0f);
+        glm::vec3 localHalfExtents(0.5f);
+
+        if (!mesh.vertices.empty()) {
+            glm::vec3 minimum =
+                mesh.vertices.front().position;
+            glm::vec3 maximum = minimum;
+
+            for (const Vertex& vertex : mesh.vertices) {
+                minimum = glm::min(minimum, vertex.position);
+                maximum = glm::max(maximum, vertex.position);
+            }
+
+            localCenter = (minimum + maximum) * 0.5f;
+            localHalfExtents = (maximum - minimum) * 0.5f;
+        }
+
+        return physics::BoxShapeDesc{
+            localCenter,
+            localHalfExtents
+        };
+    }
+}
 
 bool DrawSection(const char* title, ImVec2 innerSize = ImVec2(0, 0))
 {
@@ -80,10 +116,16 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
     }
 
     GameObject* obj = ctx.world->getGameObject(ctx.selectedObjectHandle);
-    RigidBody* rb = ctx.world->getRigidBody(ctx.selectedObjectHandle);
-    Transform* rootTransform = ctx.world->getTransform(obj->rootTransformHandle);
+    const std::optional<physics::BodyState> rigidBodyState =
+        obj
+        ? ctx.physicsEngine->getRigidBodyState(obj->rigidBodyHandle)
+        : std::nullopt;
+    Transform* rootTransform =
+        obj
+        ? ctx.world->getTransform(obj->rootTransformHandle)
+        : nullptr;
 
-    if (!obj || !rb || !rootTransform)
+    if (!obj || !rigidBodyState || !rootTransform)
     {
         ImGui::TextDisabled("Selected object is invalid");
         ImGui::End();
@@ -239,17 +281,21 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
     auto SyncAllCollidersFromRoot = [&]()
         {
-            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+            ctx.world->syncGameObjectTransformToPhysics(
+                ctx.selectedObjectHandle
+            );
         };
 
     auto SyncSingleSubPartCollider = [&](int subPartIndex)
         {
             if (subPartIndex < 0)
                 return;
-            if (subPartIndex >= (int)rb->colliderHandles.size())
+            if (subPartIndex >= (int)obj->parts.size())
                 return;
 
-            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+            ctx.world->syncGameObjectTransformToPhysics(
+                ctx.selectedObjectHandle
+            );
         };
 
     auto RebuildObjectRenderBatches = [&]()
@@ -274,7 +320,6 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
-                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
             }
 
@@ -287,18 +332,6 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 {
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
-                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
-
-                    if (!rb->colliderHandles.empty())
-                    {
-                        Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);
-                        if (collider)
-                        {
-                            rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld();
-                            rb->invRadius = 1.0f / (0.5f * glm::length(rootTransform->scale));
-                        }
-                    }
                 }
             }
 
@@ -321,7 +354,6 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     rootTransform->orientation = glm::normalize(rootTransform->orientation * dq);
                     rootTransform->updateCache();
                     SyncAllCollidersFromRoot();
-                    ctx.physicsEngine->setBVHDirty(obj->rigidBodyHandle);
                 }
             }
 
@@ -335,9 +367,9 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
     // 2. Physics
     //----------------------------------------
     float physicsHeight = 150.0f;
-    if (rb->type == BodyType::Dynamic)
+    if (rigidBodyState->type == physics::BodyType::Dynamic)
         physicsHeight = 240.0f;
-    else if (rb->type == BodyType::Kinematic)
+    else if (rigidBodyState->type == physics::BodyType::Kinematic)
         physicsHeight = 145.0f;
 
     if (DrawSection("Physics"))
@@ -349,30 +381,30 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 const char* bodyTypeItems[] = { "Dynamic", "Kinematic", "Static" };
 
                 int currentType = 0;
-                switch (rb->type)
+                switch (rigidBodyState->type)
                 {
-                case BodyType::Dynamic:   currentType = 0; break;
-                case BodyType::Kinematic: currentType = 1; break;
-                case BodyType::Static:    currentType = 2; break;
+                case physics::BodyType::Dynamic:   currentType = 0; break;
+                case physics::BodyType::Kinematic: currentType = 1; break;
+                case physics::BodyType::Static:    currentType = 2; break;
                 }
 
                 RowLabelOnly("Body Type");
                 ImGui::SetNextItemWidth(-FLT_MIN);
 
                 if (ImGui::Combo("##body_type", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems))) {
-                    BodyType selectedType = BodyType::Dynamic;
+                    physics::BodyType selectedType = physics::BodyType::Dynamic;
 
                     switch (currentType) {
                     case 0:
-                        selectedType = BodyType::Dynamic;
+                        selectedType = physics::BodyType::Dynamic;
                         break;
 
                     case 1:
-                        selectedType = BodyType::Kinematic;
+                        selectedType = physics::BodyType::Kinematic;
                         break;
 
                     case 2:
-                        selectedType = BodyType::Static;
+                        selectedType = physics::BodyType::Static;
                         break;
                     }
 
@@ -380,61 +412,62 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 }
             }
 
-            if (rb->type != BodyType::Static)
+            if (rigidBodyState->type != physics::BodyType::Static)
             {
-                glm::vec3 linVel = rb->linearVelocity;
+                glm::vec3 linVel = rigidBodyState->linearVelocity;
                 //if (RowDragFloat3Colored("Linear vel", "##lin_vel", linVel, 0.1f, -1000.f, 1000.f, 1))
                 if (RowDragFloat3Colored("Linear vel",
                     "##lin_velx", "##lin_vely", "##lin_velz",
                     linVel, 0.1f, -1000.f, 1000.f, "%.2f"))
                 {
-                    rb->linearVelocity = linVel;
+                    ctx.physicsEngine->setLinearVelocity(
+                        obj->rigidBodyHandle,
+                        linVel
+                    );
                 }
 
                 glm::mat3 rotationMatrix = glm::mat3_cast(rootTransform->orientation);
                 glm::mat3 invRotationMatrix = glm::transpose(rotationMatrix);
-                glm::vec3 localAngVel = invRotationMatrix * rb->angularVelocity;
+                glm::vec3 localAngVel =
+                    invRotationMatrix *
+                    rigidBodyState->angularVelocity;
                 if (RowDragFloat3Colored("Angular vel",
                     "##ang_velx", "##ang_vely", "##ang_velz",
                     localAngVel, 0.1f, -1000.f, 1000.f, "%.2f"))
                 {
                     // spara tillbaka i world space
-                    rb->angularVelocity = rotationMatrix * localAngVel;
+                    ctx.physicsEngine->setAngularVelocity(
+                        obj->rigidBodyHandle,
+                        rotationMatrix * localAngVel
+                    );
                 }
             }
 
-            if (rb->type == BodyType::Dynamic)
+            if (rigidBodyState->type == physics::BodyType::Dynamic)
             {
-                float mass = rb->mass;
+                float mass = rigidBodyState->mass;
                 if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.0f))
                 {
-                    rb->mass = mass;
-                    rb->invMass = 1.0f / mass;
-                }
-                if (ImGui::IsItemDeactivatedAfterEdit())
-                {
-                    if (!rb->colliderHandles.empty())
-                    {
-                        Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);
-                        if (collider)
-                        {
-                            rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld();
-                        }
-                    }
+                    ctx.physicsEngine->setRigidBodyMass(
+                        obj->rigidBodyHandle,
+                        mass
+                    );
                 }
 
-                bool allowSleep = rb->allowSleep;
+                bool allowSleep = rigidBodyState->allowSleep;
                 if (RowCheckbox("Allow sleep", "##allow_sleep", allowSleep))
                 {
-                    rb->allowSleep = allowSleep;
+                    ctx.physicsEngine->setRigidBodyAllowSleep(
+                        obj->rigidBodyHandle,
+                        allowSleep
+                    );
                     if (!allowSleep) {
                         ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, false);
                     }
                 }
 
-                bool asleep = rb->asleep;
-                ImGui::BeginDisabled(!rb->allowSleep);
+                bool asleep = rigidBodyState->asleep;
+                ImGui::BeginDisabled(!rigidBodyState->allowSleep);
                 if (RowCheckbox("Asleep", "##asleep", asleep))
                 {
                     bool shouldSleep = false;
@@ -447,23 +480,13 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 }
                 ImGui::EndDisabled();
 
-                bool allowGravity = rb->allowGravity;
+                bool allowGravity = rigidBodyState->allowGravity;
                 if (RowCheckbox("Gravity", "##allow_gravity", allowGravity))
                 {
-                    rb->allowGravity = allowGravity;
-                }
-
-                if (ImGui::IsItemDeactivatedAfterEdit())
-                {
-                    if (!rb->colliderHandles.empty())
-                    {
-                        Collider* collider = ctx.world->getCollider(rb->colliderHandles[0]);
-                        if (collider)
-                        {
-                            rb->calculateInverseInertia(collider->type, *collider, *rootTransform);
-                            rb->updateInertiaWorld();
-                        }
-                    }
+                    ctx.physicsEngine->setRigidBodyAllowGravity(
+                        obj->rigidBodyHandle,
+                        allowGravity
+                    );
                 }
             }
 
@@ -554,21 +577,20 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     localHalfExtents = (maximum - minimum) * 0.5f;
                 }
 
-                ColliderDesc colliderDesc;
+                physics::ColliderDesc colliderDesc;
                 colliderDesc.localPose.position = partTransform->position;
                 colliderDesc.localPose.orientation = partTransform->orientation;
                 colliderDesc.localScale = partTransform->scale;
-                colliderDesc.shape = BoxShapeDesc{ localCenter, localHalfExtents };
+                colliderDesc.shape = physics::BoxShapeDesc{ localCenter, localHalfExtents };
 
-                ColliderHandle colliderHandle =
+                physics::ColliderHandle colliderHandle =
                     ctx.physicsEngine->createCollider(obj->rigidBodyHandle, colliderDesc);
                 if (colliderHandle.isValid()) {
                     part.colliderHandle = colliderHandle;
-                    if (Collider* collider = ctx.world->getCollider(colliderHandle)) {
-                        collider->localTransformHandle = partTransformHandle;
-                    }
                     obj->parts.push_back(part);
-                    ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+                    ctx.world->syncGameObjectTransformToPhysics(
+                        ctx.selectedObjectHandle
+                    );
                     RebuildObjectRenderBatches();
                 }
             }
@@ -585,7 +607,18 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
         {
             SubPart& selectedPart = obj->parts[subPartIndex];
             Transform* localTransform = ctx.world->getTransform(selectedPart.localTransformHandle);
-            Collider* collider = ctx.world->getCollider(selectedPart.colliderHandle);
+            const std::optional<physics::ColliderState> colliderState =
+                ctx.physicsEngine->getColliderState(
+                    selectedPart.colliderHandle
+                );
+
+            if (!localTransform || !colliderState) {
+                ImGui::TextDisabled("Selected part is invalid");
+                EndSection();
+                ImGui::End();
+                ImGui::PopStyleVar(2);
+                return;
+            }
 
             //----------------------------------------
             // 3.1 SubPart Transform (Local)
@@ -644,8 +677,12 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     int colliderChoice = 0;
                     const char* colliderItems[] = { "Cuboid", "Sphere" };
 
-                    if (collider->type == ColliderType::CUBOID)        colliderChoice = 0;
-                    else if (collider->type == ColliderType::SPHERE)   colliderChoice = 1;
+                    if (colliderState->type == physics::ColliderType::CUBOID) {
+                        colliderChoice = 0;
+                    }
+                    else if (colliderState->type == physics::ColliderType::SPHERE) {
+                        colliderChoice = 1;
+                    }
 
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
@@ -663,25 +700,18 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                     {
                         if (selectedPart.mesh)
                         {
-                            std::vector<glm::vec3> verticesPositions;
-                            for (const Vertex& vertex : selectedPart.mesh->vertices) {
-                                verticesPositions.push_back(vertex.position);
-                            }
+                            const physics::ColliderType selectedType =
+                                colliderChoice == 0
+                                ? physics::ColliderType::CUBOID
+                                : physics::ColliderType::SPHERE;
 
-                            if (colliderChoice == 0) {
-                                OOBB box(verticesPositions);
-                                collider->type = ColliderType::CUBOID;
-                                collider->shape = box;
-                            }
-                            else if (colliderChoice == 1) {
-                                Sphere sphere(1.0f, glm::vec3(0.0f));
-                                collider->type = ColliderType::SPHERE;
-                                collider->shape = sphere;
-                            }
-
-                            collider->updateShape();
-                            collider->updateAABB();
-                            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+                            ctx.physicsEngine->setColliderShape(
+                                selectedPart.colliderHandle,
+                                buildColliderShape(
+                                    selectedType,
+                                    *selectedPart.mesh
+                                )
+                            );
                         }
                     }
                 }
@@ -733,27 +763,13 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                             selectedPart.mesh = mesh;
                             RebuildObjectRenderBatches();
 
-                            std::vector<glm::vec3> verticesPositions;
-                            for (const Vertex& vertex : mesh->vertices) {
-                                verticesPositions.push_back(vertex.position);
-                            }
-                            
-                            // rebuild collider shape based on new mesh vertices if collider exists
-                            if (collider)
-                            {
-                                if (collider->type == ColliderType::CUBOID) {
-                                    OOBB box(verticesPositions);
-                                    collider->shape = box;
-                                }
-                                else if (collider->type == ColliderType::SPHERE) {
-                                    Sphere sphere(1.0f, glm::vec3(0.0f));
-                                    collider->shape = sphere;
-                                }
-                            }
-
-                            collider->updateShape();
-                            collider->updateAABB();
-                            ctx.physicsEngine->syncBodyFromTransform(obj->rigidBodyHandle);
+                            ctx.physicsEngine->setColliderShape(
+                                selectedPart.colliderHandle,
+                                buildColliderShape(
+                                    colliderState->type,
+                                    *mesh
+                                )
+                            );
                         }
                     }
                 }

@@ -1,13 +1,12 @@
 #pragma once
 
 #include "core/ring_buffer.h"
-#include "game/transform.h"
-#include "game/game_handles.h"
-
 #include "physics/public/physics_handles.h"
 #include "physics/public/physics_types.h"
 #include "physics/broadphase/rigidbody_broadphase_types.h"
 #include "physics/colliders/collider.h"
+
+namespace physics::internal {
 
 // #TODO: decide what is private/public in RigidBody
 class RigidBody {
@@ -15,18 +14,16 @@ public:
     int id = -1;
     BodyType type = BodyType::Dynamic;
     MotionControl motionControl = MotionControl::Physics;
-    ContactResponseMode responseMode = ContactResponseMode::Normal;
+    ResponseMode responseMode = ResponseMode::Normal;
 
-    // #TODO: l‰gga till COM
-    // annars fungerar fysiken bara om collidernas lokala transform ‰r centrerade runt COM
+    // #TODO: l√§gga till COM
+    // annars fungerar fysiken bara om collidernas lokala transform √§r centrerade runt COM
 
-    PhysicsPose pose;
+    Pose pose;
     glm::vec3 scale{ 1.0f };
 
-    // handles
-    GameObjectHandle gameObjectHandle;
+    // physics-internal handles
     BroadphaseHandle broadphaseHandle;
-    TransformHandle rootTransformHandle;
     std::vector<ColliderHandle> colliderHandles;
 
     AABB aabb; // if compound, this is the AABB of the whole body, otherwise AABB of the single collider.
@@ -88,7 +85,10 @@ public:
     void applyRollingFriction(ColliderType colliderType, float dt);
     void applyAntistuckFriction(float dt);
 
-    void calculateInverseInertia(const ColliderType& type, const Collider& collider, Transform& t);
+    void calculateInverseInertia(
+        const ColliderType& type,
+        const Collider& collider,
+        const glm::vec3& inertiaScale);
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);
@@ -97,3 +97,5 @@ public:
         return fabs(a - b) < epsilon;
     }
 };
+
+}

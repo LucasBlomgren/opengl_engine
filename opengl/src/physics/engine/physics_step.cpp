@@ -5,13 +5,13 @@
 #include "physics/engine/physics_engine_impl.h"
 
 #include "engine/engine_state.h"
-#include "game/world.h"
+
+namespace physics::internal {
 
 //==============================
 // Initialization
 //==============================
-void PhysicsEngine::Impl::init(World* world, FrameTimers* frameTimers) {
-    this->world = world;
+void EngineImpl::init(FrameTimers* frameTimers) {
     this->frameTimers = frameTimers;
 
     collisionManifold = std::make_unique<CollisionManifold>();
@@ -23,7 +23,7 @@ void PhysicsEngine::Impl::init(World* world, FrameTimers* frameTimers) {
 //==============================
 // Step-loop preparation
 //==============================
-void PhysicsEngine::Impl::prepareStepLoop() {
+void EngineImpl::prepareStepLoop() {
     caches.clear();
 
     frameTimers->reset("Physics");
@@ -40,11 +40,11 @@ void PhysicsEngine::Impl::prepareStepLoop() {
 //==============================
 // Solver configuration
 //==============================
-int PhysicsEngine::Impl::getPgsIterations() const {
+int EngineImpl::getPgsIterations() const {
     return pgsIterations;
 }
 
-void PhysicsEngine::Impl::setPgsIterations(
+void EngineImpl::setPgsIterations(
     int iterations) {
     pgsIterations = (std::max)(1, iterations);
 }
@@ -52,19 +52,19 @@ void PhysicsEngine::Impl::setPgsIterations(
 //==============================
 // Simulation
 //==============================
-void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
+void EngineImpl::step(float dt, EngineState& engine) {
     if (engine.isPaused() && !engine.getAdvanceStep()) {
         return;
     }
 
     double physicsStart = glfwGetTime() * 1000.0;
-    const std::vector<RigidBodyHandle>& awake = broadphaseManager.getAwakeList();
+    const std::vector<BodyHandle>& awake = broadphaseManager.getAwakeList();
 
     // Resume a step paused after collision resolution
-    if (debugPhase == PhysicsStepDebugPhase::PausedBeforePositionIntegration) {
+    if (debugPhase == physics::debug::StepPhase::PausedBeforePositionIntegration) {
         integratePositionsAndColliders(awake, dt);
         endPhysicsStep(dt);
-        debugPhase = PhysicsStepDebugPhase::Ready;
+        debugPhase = physics::debug::StepPhase::Ready;
         frameTimers->submit(
             "Physics", 
             frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart + savedPhysicsSurpassedTime
@@ -145,7 +145,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
     if (engine.isPaused()) {
         broadphaseManager.updateBVHs();
 
-        debugPhase = PhysicsStepDebugPhase::PausedBeforePositionIntegration;
+        debugPhase = physics::debug::StepPhase::PausedBeforePositionIntegration;
         savedPhysicsSurpassedTime = glfwGetTime() * 1000.0 - physicsStart;
 
         return;
@@ -174,7 +174,7 @@ void PhysicsEngine::Impl::step(float dt, EngineState& engine) {
 //==============================
 // Step initialization
 //==============================
-void PhysicsEngine::Impl::beginPhysicsStep(float outerDt) {
+void EngineImpl::beginPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
     processPendingCommands();
@@ -212,7 +212,7 @@ void PhysicsEngine::Impl::beginPhysicsStep(float outerDt) {
 //==============================
 // Step finalization
 //==============================
-void PhysicsEngine::Impl::endPhysicsStep(float outerDt) {
+void EngineImpl::endPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
     processWakeList();
@@ -225,4 +225,6 @@ void PhysicsEngine::Impl::endPhysicsStep(float outerDt) {
         "Post step",
         frameTimers->get("Post step") + glfwGetTime() * 1000.0 - start
     );
+}
+
 }

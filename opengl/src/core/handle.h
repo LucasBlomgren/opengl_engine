@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
-#include <functional>
 
 template<class Tag>
 struct HandleT {

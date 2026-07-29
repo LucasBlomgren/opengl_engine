@@ -7,7 +7,7 @@
 #include "graphics/shaders/shader_manager.h"
 
 #include "game/game_object.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "graphics/lighting/light_manager.h"
 #include "graphics/lighting/shadow_manager.h"
 #include "graphics/skybox/skybox_manager.h"
@@ -38,7 +38,7 @@ public:
     void render(
         Camera& camera,
         SceneBuilder& builder,
-        PhysicsEngine& physics,
+        physics::Engine& physics,
         GLuint qShadow[],
         GLuint qMain[],
         GLuint qDebug[],
@@ -88,6 +88,7 @@ private:
     float screenHeight = 600.0f;
 
     World* world = nullptr;
+    physics::Engine* physicsEngine = nullptr;
     Editor::EditorMain* editor = nullptr;
     Player* player = nullptr;
     EngineState* engineState = nullptr;

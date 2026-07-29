@@ -6,12 +6,14 @@
 #include "physics/colliders/aabb.h"
 #include "physics/broadphase/broadphase_types.h"
 
+namespace physics::internal {
+
 struct RuntimeCaches;
 
 namespace sap {
 
     struct SapItem {
-        RigidBodyHandle handle;
+        BodyHandle handle;
         AABB box;
     };
 
@@ -29,14 +31,14 @@ namespace sap {
         // Build one persistent SAP set.
         void build(
             RuntimeCaches* caches,
-            const std::vector<RigidBodyHandle>& handles
+            const std::vector<BodyHandle>& handles
         );
 
         // Build two persistent SAP sets.
         void build(
             RuntimeCaches* caches,
-            const std::vector<RigidBodyHandle>& aHandles,
-            const std::vector<RigidBodyHandle>& bHandles
+            const std::vector<BodyHandle>& aHandles,
+            const std::vector<BodyHandle>& bHandles
         );
 
         // Refresh AABBs, update edge positions, sort and emit pairs.
@@ -104,7 +106,7 @@ namespace sap {
 
         static void buildItems(
             RuntimeCaches* caches,
-            const std::vector<RigidBodyHandle>& handles,
+            const std::vector<BodyHandle>& handles,
             std::vector<SapItem>& out
         );
 
@@ -124,3 +126,5 @@ namespace sap {
     };
 
 } // namespace sap
+
+}

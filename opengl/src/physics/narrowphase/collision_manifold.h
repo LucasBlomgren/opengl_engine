@@ -9,6 +9,8 @@
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider_transform_cache.h"
 
+namespace physics::internal {
+
 // for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
 struct Plane {
     glm::vec3 normal{ 0.0f };
@@ -51,8 +53,6 @@ struct ContactRuntime {
     RigidBody* bodyB = nullptr;
     Collider* colliderA = nullptr;
     Collider* colliderB = nullptr;
-    Transform* bodyRootA = nullptr;
-    Transform* bodyRootB = nullptr;
 };
 
 static constexpr uint32_t MaxContactPoints = 4;
@@ -98,8 +98,8 @@ struct Contact {
     // to distinguish between body vs body and body vs terrain contacts, since they have different response and contact point generation logic
     ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
     ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
-    RigidBodyHandle bodyA;
-    RigidBodyHandle bodyB;
+    BodyHandle bodyA;
+    BodyHandle bodyB;
 
     // reference face and normal for box-box and box-mesh collisions, used for contact point generation and warm starting
     bool noSolverResponseA = false;     // default false for dynamic bodies, true for static/kinematic bodies vs terrain
@@ -118,7 +118,7 @@ struct Contact {
     glm::vec3 referenceFaceNormal{ 0.0f };
 
     // body vs body
-    Contact(RigidBodyHandle handleA, RigidBodyHandle handleB, ContactRuntime& data, glm::vec3& normal) :
+    Contact(BodyHandle handleA, BodyHandle handleB, ContactRuntime& data, glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::RigidBody),
         partnerTypeB(ContactPartnerType::RigidBody),
         bodyA(handleA),
@@ -128,7 +128,7 @@ struct Contact {
     {}
 
     // body vs terrain
-    Contact(RigidBodyHandle handleA, ContactRuntime& data, glm::vec3& normal) :
+    Contact(BodyHandle handleA, ContactRuntime& data, glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::RigidBody),
         partnerTypeB(ContactPartnerType::Terrain),
         bodyA(handleA),
@@ -158,8 +158,8 @@ private:
     RuntimeCaches* caches = nullptr;
 
     // reference face selection for box-box and box-mesh collisions
-    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
-    void selectOOBBCollisionIncidentFace(const Collider* collider, const PhysicsPose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
+    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
+    void selectOOBBCollisionIncidentFace(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
 
     // furthest point selection for terrain collisions
     void pickFourFurthestPoints();
@@ -213,3 +213,6 @@ private:
     std::array<int, MaxContactPoints> selectedCandidateIndices{};
     uint32_t selectedCandidateCount = 0;
 };
+
+
+}

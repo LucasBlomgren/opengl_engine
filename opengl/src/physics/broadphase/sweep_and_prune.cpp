@@ -6,6 +6,8 @@
 
 #include "physics/bodies/rigidbody.h"
 
+namespace physics::internal {
+
 namespace sap {
 
     //==================================================
@@ -80,7 +82,7 @@ namespace sap {
 
     void SweepAndPrune::build(
         RuntimeCaches* caches,
-        const std::vector<RigidBodyHandle>& handles)
+        const std::vector<BodyHandle>& handles)
     {
         clear();
 
@@ -97,8 +99,8 @@ namespace sap {
 
     void SweepAndPrune::build(
         RuntimeCaches* caches,
-        const std::vector<RigidBodyHandle>& aHandles,
-        const std::vector<RigidBodyHandle>& bHandles)
+        const std::vector<BodyHandle>& aHandles,
+        const std::vector<BodyHandle>& bHandles)
     {
         clear();
 
@@ -117,13 +119,13 @@ namespace sap {
 
     void SweepAndPrune::buildItems(
         RuntimeCaches* caches,
-        const std::vector<RigidBodyHandle>& handles,
+        const std::vector<BodyHandle>& handles,
         std::vector<SapItem>& out)
     {
         out.clear();
         out.reserve(handles.size());
 
-        for (RigidBodyHandle handle : handles) {
+        for (BodyHandle handle : handles) {
             RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
 
             out.emplace_back(SapItem{
@@ -524,3 +526,5 @@ namespace sap {
     }
 
 } // namespace sap
+
+}

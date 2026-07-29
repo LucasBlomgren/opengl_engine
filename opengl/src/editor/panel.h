@@ -3,7 +3,7 @@
 #include "game/game_handles.h"
 
 
-class PhysicsEngine;
+namespace physics { class Engine; }
 class GameObject;
 class EngineState;
 class Renderer;
@@ -36,7 +36,7 @@ struct PanelContext {
 	bool objectIsSelected = false;
 
 	EditorMain* editorMain = nullptr;
-	::PhysicsEngine* physicsEngine = nullptr;
+	physics::Engine* physicsEngine = nullptr;
 	::EngineState* engineState = nullptr;
 	::Renderer* renderer = nullptr;
 	::SceneBuilder* sceneBuilder = nullptr;

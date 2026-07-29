@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #include <algorithm>
-#include <type_traits>
-
 #include "physics/engine/physics_engine_impl.h"
+
+namespace physics::internal {
 
 //=========================================
 // Helper functions
@@ -73,52 +73,12 @@ namespace {
         return false;
     }
 
-    void refreshBodyInertia(
-        PhysicsWorld& physicsWorld, 
-        RigidBody& body) 
-    {
-        if (body.type != BodyType::Dynamic || body.colliderHandles.empty()) {
-            return;
-        }
-
-        Collider* collider = nullptr;
-
-        for (ColliderHandle colliderHandle : body.colliderHandles) {
-            if (!physicsWorld.isColliderActive(colliderHandle)) {
-                continue;
-            }
-
-            Collider* candidate = physicsWorld.getCollider(colliderHandle);
-
-            if (candidate && candidate->enabled) {
-                collider = candidate;
-                break;
-            }
-        }
-
-        if (!collider) {
-            return;
-        }
-
-        Transform inertiaTransform;
-
-        if (collider->type == ColliderType::SPHERE) {
-            const Sphere& sphere = std::get<Sphere>(collider->shape);
-            inertiaTransform.scale = glm::vec3(sphere.radiusWorld * 2.0f);
-        }
-        else {
-            inertiaTransform.scale = collider->worldScale;
-        }
-
-        body.calculateInverseInertia(collider->type, *collider, inertiaTransform);
-        body.updateInertiaWorld();
-    }
 }
 
 //=========================================
 // Lifecycle command processing
 //=========================================
-void PhysicsEngine::Impl::processLifecycleCommands(
+void EngineImpl::processLifecycleCommands(
     const PhysicsCommandBuffer::Batch& batch)
 {
     if (batch.bodyCreates.empty() &&
@@ -128,16 +88,16 @@ void PhysicsEngine::Impl::processLifecycleCommands(
         return;
     }
 
-    std::vector<RigidBodyHandle> affectedBodies;
+    std::vector<BodyHandle> affectedBodies;
 
     //----------------------------------
     // Collect affected bodies
     //----------------------------------
-    for (RigidBodyHandle bodyHandle : batch.bodyCreates) {
+    for (BodyHandle bodyHandle : batch.bodyCreates) {
         addUniqueHandle(affectedBodies, bodyHandle);
     }
 
-    for (RigidBodyHandle bodyHandle : batch.bodyDestroys) {
+    for (BodyHandle bodyHandle : batch.bodyDestroys) {
         addUniqueHandle(affectedBodies, bodyHandle);
     }
 
@@ -160,7 +120,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
     //----------------------------------
     // Remove affected active bodies from broadphase
     //----------------------------------
-    for (RigidBodyHandle bodyHandle : affectedBodies) {
+    for (BodyHandle bodyHandle : affectedBodies) {
         if (!physicsWorld.isRigidBodyActive(bodyHandle)) {
             continue;
         }
@@ -184,7 +144,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
             continue;
         }
 
-        RigidBodyHandle bodyHandle = collider->rigidBodyHandle;
+        BodyHandle bodyHandle = collider->rigidBodyHandle;
 
         // The body-destroy phase owns all colliders belonging to a destroyed body.
         if (containsHandle(batch.bodyDestroys, bodyHandle)) {
@@ -209,7 +169,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
     //----------------------------------
     // Destroy bodies and their colliders
     //----------------------------------
-    for (RigidBodyHandle bodyHandle : batch.bodyDestroys) {
+    for (BodyHandle bodyHandle : batch.bodyDestroys) {
         RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
 
         if (!body) {
@@ -257,7 +217,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
     //----------------------------------
     // Activate pending bodies
     //----------------------------------
-    for (RigidBodyHandle bodyHandle : batch.bodyCreates) {
+    for (BodyHandle bodyHandle : batch.bodyCreates) {
         if (containsHandle(batch.bodyDestroys, bodyHandle)) {
             continue;
         }
@@ -292,7 +252,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
             continue;
         }
 
-        RigidBodyHandle bodyHandle = collider->rigidBodyHandle;
+        BodyHandle bodyHandle = collider->rigidBodyHandle;
 
         if (containsHandle(batch.bodyDestroys, bodyHandle) ||
             !physicsWorld.isRigidBodyActive(bodyHandle)) {
@@ -336,7 +296,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
     //----------------------------------
     // Rebuild affected surviving bodies
     //----------------------------------
-    for (RigidBodyHandle bodyHandle : affectedBodies) {
+    for (BodyHandle bodyHandle : affectedBodies) {
         if (!physicsWorld.isRigidBodyActive(bodyHandle)) {
             continue;
         }
@@ -368,7 +328,7 @@ void PhysicsEngine::Impl::processLifecycleCommands(
         const float radius = 0.5f * glm::length(body->aabb.worldMax - body->aabb.worldMin);
         body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
 
-        refreshBodyInertia(physicsWorld, *body);
+        refreshBodyInertia(*body);
 
         broadphaseManager.add(bodyHandle, getBodyBucket(*body));
     }
@@ -376,4 +336,6 @@ void PhysicsEngine::Impl::processLifecycleCommands(
     // #TODO: Can't clear contact cache here because it may contain contacts for bodies that are still active. 
     // Need to implement a more selective contact cache clearing mechanism.
     //contactCache.clear();
+}
+
 }

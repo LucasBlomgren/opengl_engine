@@ -1,18 +1,36 @@
 #pragma once
 
+#include <vector>
+
+#include "physics/public/physics_handles.h"
 #include "physics/public/physics_types.h"
 
+namespace physics {
+
 //=====================================================
-// For use with PhysicsEngine::getRigidBodyState() to 
+// For use with Engine::getRigidBodyState() to
 // retrieve the current state of a rigid body.
 //=====================================================
-struct RigidBodyState {
-    PhysicsPose pose;
+struct BodyState {
+    Pose pose;
+    glm::vec3 scale{ 1.0f };
 
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
 
     BodyType type = BodyType::Dynamic;
+    MotionControl motionControl = MotionControl::Physics;
+    ResponseMode responseMode = ResponseMode::Normal;
+
+    float mass = 0.0f;
 
     bool asleep = false;
+    bool allowSleep = true;
+    bool allowGravity = true;
+    bool canMoveLinearly = true;
+
+    AABB bounds;
+    std::vector<ColliderHandle> colliders;
 };
+
+}

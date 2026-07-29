@@ -5,6 +5,8 @@
 #include "physics/narrowphase/collision_manifold.h"
 #include "physics/narrowphase/narrowphase_types.h"
 
+namespace physics::internal {
+
 void PGSSolver::init() {
     // #TODO: PGSSolver init - arbitrary limits, or dynamic resizing?
     solverBodies.reserve(1024);
@@ -611,14 +613,9 @@ void PGSSolver::postSolve(
             glm::dot(sb.biasAngVelocity, sb.biasAngVelocity) > 1e-12f;
 
         if (hasBias) {
-            Transform& t = *caches.transforms.get(
-                body->rootTransformHandle,
-                FUNC_NAME
-            );
-
             body->commitBiasImpulses(dt);
-            t.updateCache();
-            body->updateInertiaWorld();
         }
     }
+}
+
 }

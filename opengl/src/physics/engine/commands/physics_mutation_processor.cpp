@@ -1,54 +1,150 @@
 #include "pch.h"
 
+#include <type_traits>
+#include <variant>
+
 #include "physics/engine/physics_engine_impl.h"
 
+namespace physics::internal {
+
 namespace {
-    void refreshBodyInertia(
+    Collider* findFirstEnabledCollider(
         PhysicsWorld& physicsWorld,
-        RigidBody& body)
+        const RigidBody& body)
     {
-        if (body.type != BodyType::Dynamic || body.colliderHandles.empty()) {
-            return;
-        }
-
-        Collider* collider = nullptr;
-
         for (ColliderHandle colliderHandle : body.colliderHandles) {
             if (!physicsWorld.isColliderActive(colliderHandle)) {
                 continue;
             }
 
-            Collider* candidate = physicsWorld.getCollider(colliderHandle);
+            Collider* collider = physicsWorld.getCollider(colliderHandle);
 
-            if (candidate && candidate->enabled) {
-                collider = candidate;
-                break;
+            if (collider && collider->enabled) {
+                return collider;
             }
         }
 
-        if (!collider) {
-            return;
-        }
-
-        Transform inertiaTransform;
-
-        if (collider->type == ColliderType::SPHERE) {
-            const Sphere& sphere = std::get<Sphere>(collider->shape);
-            inertiaTransform.scale = glm::vec3(sphere.radiusWorld * 2.0f);
-        }
-        else {
-            inertiaTransform.scale = collider->worldScale;
-        }
-
-        body.calculateInverseInertia(collider->type, *collider, inertiaTransform);
-        body.updateInertiaWorld();
+        return nullptr;
     }
+
+    bool applyShape(
+        Collider& collider,
+        const ColliderShapeDesc& shape)
+    {
+        bool validShape = true;
+
+        std::visit([&](const auto& shapeDesc) {
+            using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
+
+            if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
+                collider.type = ColliderType::CUBOID;
+                collider.shape = OOBB(
+                    shapeDesc.halfExtents,
+                    shapeDesc.center
+                );
+            }
+            else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
+                collider.type = ColliderType::SPHERE;
+                collider.shape = Sphere(
+                    shapeDesc.radius,
+                    shapeDesc.center
+                );
+            }
+            else {
+                validShape = false;
+            }
+        }, shape);
+
+        return validShape;
+    }
+}
+
+void EngineImpl::refreshBodyInertia(
+    RigidBody& body)
+{
+    if (body.type != BodyType::Dynamic) {
+        body.invInertiaLocal = glm::mat3(0.0f);
+        body.invInertiaWorld = glm::mat3(0.0f);
+        return;
+    }
+
+    Collider* collider = findFirstEnabledCollider(
+        physicsWorld,
+        body
+    );
+
+    if (!collider) {
+        body.invInertiaLocal = glm::mat3(0.0f);
+        body.invInertiaWorld = glm::mat3(0.0f);
+        return;
+    }
+
+    glm::vec3 inertiaScale = collider->worldScale;
+
+    if (collider->type == ColliderType::SPHERE) {
+        const Sphere& sphere = std::get<Sphere>(collider->shape);
+        inertiaScale = glm::vec3(sphere.radiusWorld * 2.0f);
+    }
+
+    body.calculateInverseInertia(
+        collider->type,
+        *collider,
+        inertiaScale
+    );
+    body.updateInertiaWorld();
+}
+
+void EngineImpl::refreshBodySpatialState(
+    BodyHandle bodyHandle,
+    bool shouldRefreshInertia)
+{
+    RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
+
+    if (!body || !physicsWorld.isRigidBodyActive(bodyHandle)) {
+        return;
+    }
+
+    updateCollidersAndBodyAABB(body);
+
+    if (shouldRefreshInertia) {
+        refreshBodyInertia(*body);
+    }
+
+    const bool hasEnabledCollider =
+        findFirstEnabledCollider(physicsWorld, *body) != nullptr;
+
+    if (!hasEnabledCollider) {
+        if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
+            broadphaseManager.remove(bodyHandle);
+        }
+
+        return;
+    }
+
+    if (body->broadphaseHandle.bucket == BroadphaseBucket::None) {
+        BroadphaseBucket bucket = BroadphaseBucket::Awake;
+
+        if (body->type == BodyType::Static) {
+            bucket = BroadphaseBucket::Static;
+        }
+        else if (
+            body->type == BodyType::Dynamic &&
+            body->asleep &&
+            body->motionControl != MotionControl::External) {
+            bucket = BroadphaseBucket::Asleep;
+        }
+
+        broadphaseManager.add(bodyHandle, bucket);
+        return;
+    }
+
+    setBVHDirty(bodyHandle);
 }
 
 //=========================================
 // Mutation command processing
 //=========================================
-void PhysicsEngine::Impl::applyMutationCommands(
+void EngineImpl::applyMutationCommands(
     const std::vector<PhysicsCommandBuffer::Mutation>& mutations)
 {
     for (const PhysicsCommandBuffer::Mutation& mutation : mutations) {
@@ -58,31 +154,84 @@ void PhysicsEngine::Impl::applyMutationCommands(
     }
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::ApplyLinearImpulse& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body ||
+        !physicsWorld.isRigidBodyActive(command.body) ||
+        body->type != BodyType::Dynamic) {
+        return;
+    }
+
+    if (body->asleep) {
+        broadphaseManager.moveToAwake(command.body);
+    }
+
+    body->applyImpulseLinear(command.impulse);
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetLinearVelocity& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body ||
+        !physicsWorld.isRigidBodyActive(command.body) ||
+        body->type == BodyType::Static) {
+        return;
+    }
+
+    body->linearVelocity = command.velocity;
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetAngularVelocity& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body ||
+        !physicsWorld.isRigidBodyActive(command.body) ||
+        body->type == BodyType::Static) {
+        return;
+    }
+
+    body->angularVelocity = command.velocity;
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetKinematicTarget& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body ||
+        !physicsWorld.isRigidBodyActive(command.body) ||
+        body->type != BodyType::Kinematic) {
+        return;
+    }
+
+    body->pose = command.target;
+    body->updateInertiaWorld();
+    refreshBodySpatialState(command.body, false);
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyTransform& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+        return;
+    }
+
+    body->pose = command.pose;
+    body->scale = command.scale;
+
+    refreshBodySpatialState(command.body);
+}
+
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetRigidBodySleepState& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
@@ -101,7 +250,7 @@ void PhysicsEngine::Impl::applyCommand(
     }
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetRigidBodyType& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
@@ -124,7 +273,7 @@ void PhysicsEngine::Impl::applyCommand(
             body->sleepCounterThreshold = 1.5f;
         }
 
-        refreshBodyInertia(physicsWorld, *body);
+        refreshBodyInertia(*body);
 
         if (body->allowSleep && body->asleep) {
             body->setAsleep();
@@ -139,6 +288,8 @@ void PhysicsEngine::Impl::applyCommand(
 
     case BodyType::Kinematic:
         body->invMass = 0.0f;
+        body->invInertiaLocal = glm::mat3(0.0f);
+        body->invInertiaWorld = glm::mat3(0.0f);
         body->linearVelocity = glm::vec3(0.0f);
         body->angularVelocity = glm::vec3(0.0f);
         body->setAwake();
@@ -148,40 +299,153 @@ void PhysicsEngine::Impl::applyCommand(
     case BodyType::Static:
         body->mass = 0.0f;
         body->invMass = 0.0f;
+        body->invInertiaLocal = glm::mat3(0.0f);
+        body->invInertiaWorld = glm::mat3(0.0f);
         body->linearVelocity = glm::vec3(0.0f);
         body->angularVelocity = glm::vec3(0.0f);
         broadphaseManager.moveToStatic(command.body);
         break;
     }
-
-    // Contact invalidation remains unchanged until it can be selective.
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetRigidBodyMotionControl& command)
 {
-    (void)command;
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+        return;
+    }
+
+    body->setExternalControl(
+        command.motionControl == MotionControl::External
+    );
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyResponseMode& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+        return;
+    }
+
+    body->responseMode = command.responseMode;
+}
+
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyMass& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (!body ||
+        !physicsWorld.isRigidBodyActive(command.body) ||
+        body->type != BodyType::Dynamic ||
+        command.mass <= 0.0f) {
+        return;
+    }
+
+    body->mass = command.mass;
+    body->invMass = 1.0f / command.mass;
+    refreshBodyInertia(*body);
+}
+
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyAllowGravity& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (body && physicsWorld.isRigidBodyActive(command.body)) {
+        body->allowGravity = command.allowGravity;
+    }
+}
+
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyAllowSleep& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (body && physicsWorld.isRigidBodyActive(command.body)) {
+        body->allowSleep = command.allowSleep;
+    }
+}
+
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetRigidBodyCanMoveLinearly& command)
+{
+    RigidBody* body = physicsWorld.getRigidBody(command.body);
+
+    if (body && physicsWorld.isRigidBodyActive(command.body)) {
+        body->canMoveLinearly = command.canMoveLinearly;
+    }
+}
+
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetColliderLocalPose& command)
 {
-    (void)command;
+    Collider* collider = physicsWorld.getCollider(command.collider);
+
+    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+        return;
+    }
+
+    collider->localPose = command.localPose;
+    refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetColliderLocalTransform& command)
+{
+    Collider* collider = physicsWorld.getCollider(command.collider);
+
+    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+        return;
+    }
+
+    collider->localPose = command.localPose;
+    collider->localScale = command.localScale;
+    refreshBodySpatialState(collider->rigidBodyHandle);
+}
+
+void EngineImpl::applyCommand(
+    const PhysicsCommandBuffer::SetColliderShape& command)
+{
+    Collider* collider = physicsWorld.getCollider(command.collider);
+
+    if (!collider ||
+        !physicsWorld.isColliderActive(command.collider) ||
+        !applyShape(*collider, command.shape)) {
+        return;
+    }
+
+    refreshBodySpatialState(collider->rigidBodyHandle);
+}
+
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetColliderEnabled& command)
 {
-    (void)command;
+    Collider* collider = physicsWorld.getCollider(command.collider);
+
+    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+        return;
+    }
+
+    collider->enabled = command.enabled;
+    refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetColliderTrigger& command)
 {
-    (void)command;
+    Collider* collider = physicsWorld.getCollider(command.collider);
+
+    if (collider && physicsWorld.isColliderActive(command.collider)) {
+        collider->isTrigger = command.isTrigger;
+    }
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SleepAllObjects&)
 {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
@@ -195,12 +459,13 @@ void PhysicsEngine::Impl::applyCommand(
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
 
-        RigidBodyHandle handle = bodyMap.handle_from_dense_index(i);
-        broadphaseManager.moveToAsleep(handle);
+        broadphaseManager.moveToAsleep(
+            bodyMap.handle_from_dense_index(i)
+        );
     }
 }
 
-void PhysicsEngine::Impl::applyCommand(
+void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::AwakenAllObjects&)
 {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
@@ -214,61 +479,10 @@ void PhysicsEngine::Impl::applyCommand(
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
 
-        RigidBodyHandle handle = bodyMap.handle_from_dense_index(i);
-        broadphaseManager.moveToAwake(handle);
+        broadphaseManager.moveToAwake(
+            bodyMap.handle_from_dense_index(i)
+        );
     }
 }
 
-void PhysicsEngine::Impl::applyCommand(
-    const PhysicsCommandBuffer::SyncBodyFromTransform& command)
-{
-    RigidBody* body = caches.bodies.get(command.body, FUNC_NAME);
-
-    if (!body) {
-        return;
-    }
-
-    Transform* rootTransform =
-        caches.transforms.get(body->rootTransformHandle, FUNC_NAME);
-
-    if (!rootTransform) {
-        return;
-    }
-
-    rootTransform->updateCache();
-
-    body->pose.position = rootTransform->position;
-    body->pose.orientation = rootTransform->orientation;
-    body->scale = rootTransform->scale;
-
-    updateCollidersAndBodyAABB(body, rootTransform);
-
-    if (!body->colliderHandles.empty()) {
-        Collider* mainCollider =
-            caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
-
-        if (mainCollider) {
-            Transform inertiaTransform;
-
-            if (mainCollider->type == ColliderType::SPHERE) {
-                const Sphere& sphere = std::get<Sphere>(mainCollider->shape);
-                inertiaTransform.scale =
-                    glm::vec3(sphere.radiusWorld * 2.0f);
-            }
-            else {
-                inertiaTransform.scale = mainCollider->worldScale;
-            }
-
-            body->calculateInverseInertia(
-                mainCollider->type,
-                *mainCollider,
-                inertiaTransform);
-        }
-    }
-
-    body->updateInertiaWorld();
-
-    if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
-        setBVHDirty(command.body);
-    }
 }

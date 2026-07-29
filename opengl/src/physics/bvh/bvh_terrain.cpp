@@ -2,6 +2,8 @@
 #include "bvh_terrain.h"
 #include "physics/colliders/tri.h"
 
+namespace physics::internal {
+
 //------------------------------
 //        Single Query
 //------------------------------
@@ -264,4 +266,6 @@ void TerrainBVH::refitNode(int nodeIdx) {
 void TerrainBVH::updateRenderData(Node& n) {
     n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
     n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;
+}
+
 }

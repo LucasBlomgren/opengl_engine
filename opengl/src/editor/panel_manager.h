@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-class PhysicsEngine;
+namespace physics { class Engine; }
 class ImGuiManager;
 class EngineState;
 class World;
@@ -22,7 +22,7 @@ class PanelManager {
 public:
 	PanelManager(
 		::Editor::EditorMain* editorMain,
-		::PhysicsEngine* physicsEngine,
+		physics::Engine* physicsEngine,
 		::ImGuiManager* imguiManager,
 		::EngineState* engineState,
 		::Renderer* renderer,
@@ -73,7 +73,7 @@ private:
 
 	// dependencies
 	::Editor::EditorMain* editorMain;
-	::PhysicsEngine* physicsEngine;
+	physics::Engine* physicsEngine;
 	::ImGuiManager* imguiManager;
 	::EngineState* engineState;
 	::Renderer* renderer;

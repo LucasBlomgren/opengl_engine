@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "pgs_solver.h"
 
+namespace physics::internal {
+
 //=====================================================================
 //  Build solver data structures from contact batch and runtime caches
 //=====================================================================
@@ -36,7 +38,7 @@ void PGSSolver::buildSolverData(
     constraintSources.reserve(batch.contacts.size());
     pointSources.reserve(batch.contacts.size() * 4);
 
-    // #TODO: inte super effektivt att loopa igenom en linked list av contacts. 
+    // #TODO: inte super effektivt att loopa igenom en linked list av contacts.
     // Kan optimera senare om det behövs.
     for (Contact* contact : batch.contacts) {
         if (!contact) {
@@ -140,13 +142,13 @@ void PGSSolver::buildSolverData(
         glm::vec3 vB{ 0.0f };
         if (src.partnerTypeA == ContactPartnerType::RigidBody &&
             src.bodyA &&
-            src.contributesMotionA) 
+            src.contributesMotionA)
         {
             vA = src.bodyA->linearVelocity;
         }
         if (src.partnerTypeB == ContactPartnerType::RigidBody &&
             src.bodyB &&
-            src.contributesMotionB) 
+            src.contributesMotionB)
         {
             vB = src.bodyB->linearVelocity;
         }
@@ -189,12 +191,12 @@ void PGSSolver::buildSolverData(
 }
 
 //==========================================================
-//  Returns the index of the solver body in solverBodies, 
+//  Returns the index of the solver body in solverBodies,
 //  or InvalidSolverBody if the body is null.
 //==========================================================
 uint32_t PGSSolver::getOrCreateSolverBody(
-    RigidBodyHandle bodyHandle, 
-    RigidBody* body) 
+    BodyHandle bodyHandle,
+    RigidBody* body)
 {
     if (!body) {
         return InvalidSolverBody;
@@ -367,4 +369,6 @@ void PGSSolver::warmStartContactPoint(
             glm::cross(cp.rB, J)
         );
     }
+}
+
 }

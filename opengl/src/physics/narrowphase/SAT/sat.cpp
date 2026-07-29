@@ -1,5 +1,7 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "sat.h"
+
+namespace physics::internal {
 
 //=======================================================
 //      Utility functions for SAT results
@@ -229,3 +231,5 @@ bool SAT::intersectPolygons(
 //// edge endpoints (vary along i)
 //glm::vec3 e0 = base + U[i] * he[i];
 //glm::vec3 e1 = base - U[i] * he[i];
+
+}

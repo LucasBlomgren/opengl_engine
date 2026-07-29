@@ -5,7 +5,7 @@
 
 #include "imgui.h"
 #include "panel_manager.h"
-#include "physics/physics_engine.h"
+#include "physics/physics.h"
 #include "game/world.h"
 
 // Initialize panels
@@ -22,7 +22,7 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	ctx.fps = io.Framerate;
 	ctx.amountObjects = world->getGameObjectsMap().dense().size();
 
-	const DebugData data = physicsEngine->getDebugData();
+	const physics::debug::Data data = physicsEngine->getDebugData();
 	ctx.amountAwakeObjects = data.awake;
 	ctx.amountAsleepObjects = data.asleep;
 	ctx.amountStaticObjects = data.staticBodies;

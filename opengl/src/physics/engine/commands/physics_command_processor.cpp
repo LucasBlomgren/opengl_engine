@@ -1,11 +1,11 @@
-#include "pch.h"
-
 #include "physics/engine/physics_engine_impl.h"
+
+namespace physics::internal {
 
 //=========================================
 // Pending command processing
 //=========================================
-void PhysicsEngine::Impl::processPendingCommands() {
+void EngineImpl::processPendingCommands() {
     PhysicsCommandBuffer::Batch batch = commandBuffer.take();
 
     if (batch.empty()) {
@@ -14,4 +14,6 @@ void PhysicsEngine::Impl::processPendingCommands() {
 
     processLifecycleCommands(batch);
     applyMutationCommands(batch.mutations);
+}
+
 }

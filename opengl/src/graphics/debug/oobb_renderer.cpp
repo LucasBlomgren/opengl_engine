@@ -14,9 +14,13 @@ void OOBBRenderer::init() {
     setupNormals();
 }
 
-void OOBBRenderer::renderBox(Shader& shader, const OOBB& box, const glm::vec3& color) {
+void OOBBRenderer::renderBox(
+    Shader& shader,
+    const physics::Pose& pose,
+    const physics::BoxGeometry& box,
+    const glm::vec3& color) {
     glm::mat4 model(1.0f);
-    makeOOBBModelMatrix(model, box);
+    makeOOBBModelMatrix(model, box, pose);
 
     shader.setMat4("model", model);
     shader.setInt("debug.objectType", 0);
@@ -31,12 +35,23 @@ void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {
     glDrawArrays(GL_LINES, 0, 18);
 }
 
-void OOBBRenderer::makeOOBBModelMatrix(glm::mat4& M, const OOBB& box) {
-    M[0] = glm::vec4(box.worldAxes[0] * (box.localHalfExtents.x * 2.0f * box.scale.x), 0.0f);
-    M[1] = glm::vec4(box.worldAxes[1] * (box.localHalfExtents.y * 2.0f * box.scale.y), 0.0f);
-    M[2] = glm::vec4(box.worldAxes[2] * (box.localHalfExtents.z * 2.0f * box.scale.z), 0.0f);
+void OOBBRenderer::makeOOBBModelMatrix(
+    glm::mat4& model,
+    const physics::BoxGeometry& box,
+    const physics::Pose& worldPose)
+{
+    const glm::vec3 size =
+        2.0f * box.localHalfExtents * box.scale;
 
-    M[3] = glm::vec4(box.worldCenter, 1.0f);
+    const glm::mat3 rotation =
+        glm::mat3_cast(worldPose.orientation);
+
+    model = glm::mat4(1.0f);
+
+    model[0] = glm::vec4(rotation[0] * size.x, 0.0f);
+    model[1] = glm::vec4(rotation[1] * size.y, 0.0f);
+    model[2] = glm::vec4(rotation[2] * size.z, 0.0f);
+    model[3] = glm::vec4(box.worldCenter, 1.0f);
 }
 
 void OOBBRenderer::setupWireframeBox() {
@@ -50,7 +65,7 @@ void OOBBRenderer::setupWireframeBox() {
        -0.5f, -0.5f,  0.5f,   0.5f, -0.5f,  0.5f,
         0.5f, -0.5f,  0.5f,   0.5f, -0.5f, -0.5f,
         0.5f, -0.5f, -0.5f,  -0.5f, -0.5f, -0.5f,
-        // top 
+        // top
        -0.5f, 0.5f, -0.5f,   -0.5f, 0.5f,  0.5f,
        -0.5f, 0.5f,  0.5f,    0.5f, 0.5f,  0.5f,
         0.5f, 0.5f,  0.5f,    0.5f, 0.5f, -0.5f,
@@ -110,24 +125,24 @@ void OOBBRenderer::setupNormals() {
 
 void OOBBRenderer::destroy() {
     if (sVBO_box) {
-        glDeleteBuffers(1, &sVBO_box); 
-        sVBO_box = 0; 
+        glDeleteBuffers(1, &sVBO_box);
+        sVBO_box = 0;
         glcount::decVBO();
     }
-    if (sVAO_box) { 
-        glDeleteVertexArrays(1, &sVAO_box); 
-        sVAO_box = 0; 
-        glcount::decVAO(); 
+    if (sVAO_box) {
+        glDeleteVertexArrays(1, &sVAO_box);
+        sVAO_box = 0;
+        glcount::decVAO();
     }
 
-    if (sVBO_normals) { 
-        glDeleteBuffers(1, &sVBO_normals); 
-        sVBO_normals = 0; 
+    if (sVBO_normals) {
+        glDeleteBuffers(1, &sVBO_normals);
+        sVBO_normals = 0;
         glcount::decVBO();
     }
-    if (sVAO_normals) { 
-        glDeleteVertexArrays(1, &sVAO_normals); 
-        sVAO_normals = 0; 
+    if (sVAO_normals) {
+        glDeleteVertexArrays(1, &sVAO_normals);
+        sVAO_normals = 0;
         glcount::decVAO();
     }
 }

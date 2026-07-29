@@ -2,6 +2,8 @@
 
 #include "physics_world.h"
 
+namespace physics::internal {
+
 //===========================================
 // Clear all data
 //===========================================
@@ -17,7 +19,7 @@ void PhysicsWorld::clear() {
 //===========================================
 // Getters
 //===========================================
-RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle handle) {
+RigidBody* PhysicsWorld::getRigidBody(BodyHandle handle) {
     if (RigidBody* body = rigidBodies.try_get(handle)) {
         return body;
     }
@@ -26,7 +28,7 @@ RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle handle) {
     return pending != pendingRigidBodies.end() ? &pending->second : nullptr;
 }
 
-const RigidBody* PhysicsWorld::getRigidBody(RigidBodyHandle handle) const {
+const RigidBody* PhysicsWorld::getRigidBody(BodyHandle handle) const {
     if (const RigidBody* body = rigidBodies.try_get(handle)) {
         return body;
     }
@@ -53,26 +55,26 @@ const Collider* PhysicsWorld::getCollider(ColliderHandle handle) const {
     return pending != pendingColliders.end() ? &pending->second : nullptr;
 }
 
-SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() { 
-    return colliders; 
+SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() {
+    return colliders;
 }
-SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() { 
-    return rigidBodies; 
+SlotMap<RigidBody, BodyHandle>& PhysicsWorld::getRigidBodiesMap() {
+    return rigidBodies;
 }
 const SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() const {
     return colliders;
 }
 
-const SlotMap<RigidBody, RigidBodyHandle>& PhysicsWorld::getRigidBodiesMap() const {
+const SlotMap<RigidBody, BodyHandle>& PhysicsWorld::getRigidBodiesMap() const {
     return rigidBodies;
 }
 
 AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
     if (body.colliderHandles.empty()) {
-        std::cout 
-            << "[PhysicsWorld] Warning: RigidBody with id " 
-            << body.id 
-            << " has no colliders. Returning empty AABB." 
+        std::cout
+            << "[PhysicsWorld] Warning: RigidBody with id "
+            << body.id
+            << " has no colliders. Returning empty AABB."
             << std::endl;
         return AABB{};
     }
@@ -102,8 +104,8 @@ AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
 //===========================================
 // Creation
 //===========================================
-RigidBodyHandle PhysicsWorld::createPendingRigidBody() {
-    RigidBodyHandle handle = rigidBodies.reserve();
+BodyHandle PhysicsWorld::createPendingRigidBody() {
+    BodyHandle handle = rigidBodies.reserve();
     RigidBody& body = pendingRigidBodies[handle];
     body.id = rigidBodyId++;
     return handle;
@@ -116,7 +118,7 @@ ColliderHandle PhysicsWorld::createPendingCollider() {
     return handle;
 }
 
-bool PhysicsWorld::activateRigidBody(RigidBodyHandle handle) {
+bool PhysicsWorld::activateRigidBody(BodyHandle handle) {
     auto pending = pendingRigidBodies.find(handle);
     if (pending == pendingRigidBodies.end()) {
         return false;
@@ -138,7 +140,7 @@ bool PhysicsWorld::activateCollider(ColliderHandle handle) {
     return collider != nullptr;
 }
 
-void PhysicsWorld::discardPendingRigidBody(RigidBodyHandle handle) {
+void PhysicsWorld::discardPendingRigidBody(BodyHandle handle) {
     if (pendingRigidBodies.erase(handle) > 0) {
         rigidBodies.release_reserved(handle);
     }
@@ -153,7 +155,7 @@ void PhysicsWorld::discardPendingCollider(ColliderHandle handle) {
 //===========================================
 // Deletion
 //===========================================
-void PhysicsWorld::deleteRigidBody(RigidBodyHandle handle) {
+void PhysicsWorld::deleteRigidBody(BodyHandle handle) {
     rigidBodies.destroy(handle);
 }
 
@@ -161,7 +163,7 @@ void PhysicsWorld::deleteCollider(ColliderHandle handle) {
     colliders.destroy(handle);
 }
 
-bool PhysicsWorld::isRigidBodyActive(RigidBodyHandle handle) const {
+bool PhysicsWorld::isRigidBodyActive(BodyHandle handle) const {
     return rigidBodies.alive(handle);
 }
 
@@ -169,10 +171,12 @@ bool PhysicsWorld::isColliderActive(ColliderHandle handle) const {
     return colliders.alive(handle);
 }
 
-bool PhysicsWorld::isRigidBodyPending(RigidBodyHandle handle) const {
+bool PhysicsWorld::isRigidBodyPending(BodyHandle handle) const {
     return pendingRigidBodies.contains(handle);
 }
 
 bool PhysicsWorld::isColliderPending(ColliderHandle handle) const {
     return pendingColliders.contains(handle);
+}
+
 }

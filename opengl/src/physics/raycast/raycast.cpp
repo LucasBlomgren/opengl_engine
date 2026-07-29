@@ -1,103 +1,103 @@
-﻿#include "pch.h"
-#include "raycast.h"
+#include "pch.h"
+
+#include "physics/raycast/raycast.h"
 #include "physics/colliders/aabb.h"
 
-namespace Raycast {
-    RaycastHit raycast(
-        Ray& ray,
+namespace physics::internal {
+
+namespace raycast {
+    RaycastHit raycastTree(
+        const Ray& ray,
         const BVHTree& bvh,
-        SlotMap<RigidBody, RigidBodyHandle>* bodyMap,
-        SlotMap<Collider, ColliderHandle>* colliderMap,
-        SlotMap<GameObject, GameObjectHandle>* goMap
-    )
+        const SlotMap<RigidBody, BodyHandle>& bodyMap,
+        BodyHandle ignoredBody)
     {
         AABB rayAABB;
-        rayAABB.worldMin = { glm::min(ray.start.x, ray.end.x), glm::min(ray.start.y, ray.end.y), glm::min(ray.start.z, ray.end.z) };
-        rayAABB.worldMax = { glm::max(ray.start.x, ray.end.x), glm::max(ray.start.y, ray.end.y), glm::max(ray.start.z, ray.end.z) };
+        rayAABB.worldMin = glm::min(ray.start, ray.end);
+        rayAABB.worldMax = glm::max(ray.start, ray.end);
 
-        RigidBodyHandle bestBodyH;
+        BodyHandle bestBodyHandle;
         float bestT = std::numeric_limits<float>::max();
 
-        std::vector<RigidBodyHandle> collisions;
-        bvh.singleQuery(rayAABB, collisions);
+        std::vector<BodyHandle> candidates;
+        bvh.singleQuery(rayAABB, candidates);
 
-        bool noHit = true;
-        for (RigidBodyHandle& handle : collisions) {
-            RigidBody* body = bodyMap->try_get(handle);
+        for (BodyHandle handle : candidates) {
+            if (handle == ignoredBody) {
+                continue;
+            }
+
+            const RigidBody* body = bodyMap.try_get(handle);
+
             if (!body) {
-                std::cout << "[Raycast] Error: Invalid body handle. slot="
-                    << handle.slot << " gen=" << handle.gen << "\n";
                 continue;
             }
 
-            GameObject* obj = goMap->try_get(body->gameObjectHandle);
-            if (!obj) {
-                std::cout << "[Raycast] Error: RigidBody with handle "
-                    << handle.slot << " has no associated GameObject.\n";
-                continue;
-            }
+            const glm::vec3 tMin =
+                (body->aabb.worldMin - ray.start) / ray.direction;
+            const glm::vec3 tMax =
+                (body->aabb.worldMax - ray.start) / ray.direction;
 
-            if (obj->player) continue;
+            const glm::vec3 t1 = glm::min(tMin, tMax);
+            const glm::vec3 t2 = glm::max(tMin, tMax);
 
-            glm::vec3 min = body->aabb.worldMin;
-            glm::vec3 max = body->aabb.worldMax;
+            const float tNear = glm::compMax(t1);
+            const float tFar = glm::compMin(t2);
 
-            glm::vec3 tMin = (min - ray.start) / ray.direction;
-            glm::vec3 tMax = (max - ray.start) / ray.direction;
-
-            glm::vec3 t1 = glm::min(tMin, tMax);
-            glm::vec3 t2 = glm::max(tMin, tMax);
-
-            float tNear = glm::compMax(t1);
-            float tFar = glm::compMin(t2);
-
-            if (!(tNear > tFar || tFar < 0.0f)) {
-                if (tNear < bestT) {
-                    bestT = tNear;
-                    bestBodyH = handle;
-                    noHit = false;
-                }
+            if (tNear <= tFar &&
+                tFar >= 0.0f &&
+                tNear < bestT)
+            {
+                bestT = tNear;
+                bestBodyHandle = handle;
             }
         }
 
-        // no hit
-        if (noHit) {
-            RaycastHit emptyHit;
-            return emptyHit;
+        if (!bestBodyHandle.isValid()) {
+            return {};
         }
 
-        // Create hit data
-        RaycastHit hitData;
-        hitData.hit = true;
-        hitData.point = ray.start + ray.direction * bestT;
-        hitData.bodyHandle = bestBodyH;
-        hitData.t = bestT;
+        const RigidBody* bestBody = bodyMap.try_get(bestBodyHandle);
 
-        // Åter­beräkna t1 per axel
-        RigidBody* bestBody = bodyMap->try_get(bestBodyH);
-        glm::vec3 min = bestBody->aabb.worldMin;
-        glm::vec3 max = bestBody->aabb.worldMax;
-        glm::vec3 tMin = (min - ray.start) / ray.direction;
-        glm::vec3 tMax = (max - ray.start) / ray.direction;
-        glm::vec3 t1 = glm::min(tMin, tMax);  // entry‐tider
-        //float tNear  = glm::compMax(t1);      // redan beräknat som bestT
-
-        // Bestäm vilken axel som gav entry‐träffen
-        int   hitAxis;
-        if (t1.x > t1.y && t1.x > t1.z) hitAxis = 0;
-        else if (t1.y > t1.z)                hitAxis = 1;
-        else                                 hitAxis = 2;
-
-        // Bygg normalen som ± enhets­vektor längs den axeln
-        glm::vec3 n(0.0f);
-        switch (hitAxis) {
-        case 0: n.x = (ray.direction.x > 0.0f) ? -1.0f : 1.0f; break;
-        case 1: n.y = (ray.direction.y > 0.0f) ? -1.0f : 1.0f; break;
-        case 2: n.z = (ray.direction.z > 0.0f) ? -1.0f : 1.0f; break;
+        if (!bestBody) {
+            return {};
         }
 
-        hitData.normal = n;
+        const glm::vec3 tMin =
+            (bestBody->aabb.worldMin - ray.start) / ray.direction;
+        const glm::vec3 tMax =
+            (bestBody->aabb.worldMax - ray.start) / ray.direction;
+        const glm::vec3 entry = glm::min(tMin, tMax);
 
-        return hitData;
+        int hitAxis = 2;
+
+        if (entry.x > entry.y && entry.x > entry.z) {
+            hitAxis = 0;
+        }
+        else if (entry.y > entry.z) {
+            hitAxis = 1;
+        }
+
+        glm::vec3 normal(0.0f);
+
+        if (hitAxis == 0) {
+            normal.x = ray.direction.x > 0.0f ? -1.0f : 1.0f;
+        }
+        else if (hitAxis == 1) {
+            normal.y = ray.direction.y > 0.0f ? -1.0f : 1.0f;
+        }
+        else {
+            normal.z = ray.direction.z > 0.0f ? -1.0f : 1.0f;
+        }
+
+        RaycastHit hit;
+        hit.hit = true;
+        hit.bodyHandle = bestBodyHandle;
+        hit.point = ray.start + ray.direction * bestT;
+        hit.normal = normal;
+        hit.t = bestT;
+        return hit;
     }
+}
+
 }

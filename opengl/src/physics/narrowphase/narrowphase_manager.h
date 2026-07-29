@@ -10,6 +10,8 @@
 #include "physics/world/runtime_caches.h"
 #include "physics/broadphase/broadphase_types.h"
 
+namespace physics::internal {
+
 class NarrowphaseManager {
 public:
     void init(
@@ -17,7 +19,7 @@ public:
         std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
         std::unordered_map<size_t, Contact>* contactCache,
         RuntimeCaches* caches,
-        std::vector<RigidBodyHandle>* toWake
+        std::vector<BodyHandle>* toWake
     );
     void clear();
 
@@ -46,22 +48,22 @@ private:
     //     Dispatching to specific pair processing functions
     //=======================================================
     void processTerrainPairs(
-        const TerrainPair& terrainPair, 
+        const TerrainPair& terrainPair,
         ContactBatch& batch,
         float dt
     );
     void processDynamicPairs(
-        const DynamicPair& pair, 
-        ContactBatch& batch, 
+        const DynamicPair& pair,
+        ContactBatch& batch,
         float dt);
 
     void processSpeculativeDynamicPairs(
 
-        const SpeculativeDynamicPair& pair, 
+        const SpeculativeDynamicPair& pair,
         float dt
     );
     void processSpeculativeTerrainPairs(
-        const SpeculativeTerrainPair& pair, 
+        const SpeculativeTerrainPair& pair,
         float dt
     );
 
@@ -73,7 +75,7 @@ private:
     void processColliderPairSpeculative(
         ContactBuildInput in,
         float dt,
-        RigidBodyHandle sweepOwner
+        BodyHandle sweepOwner
     );
 
     //=======================================================
@@ -136,23 +138,23 @@ private:
         ColliderHandle b
     );
     uint64_t packColliderHandle(ColliderHandle handle);
-    uint64_t packBodyHandle(RigidBodyHandle h);
+    uint64_t packBodyHandle(BodyHandle h);
 
     //=======================================================
     //     Terrain contact processing
     //=======================================================
     void processTerrainTriBox(
         ContactBatch& batch,
-        RigidBodyHandle bodyH, 
-        Collider* collider, 
+        BodyHandle bodyH,
+        Collider* collider,
         RigidBody* body,
         const std::vector<Tri*>& candidates
     );
 
     void processTerrainTriSphere(
         ContactBatch& batch,
-        RigidBodyHandle bodyH, 
-        Collider* collider, 
+        BodyHandle bodyH,
+        Collider* collider,
         RigidBody* body,
         const std::vector<Tri*>& candidates
     );
@@ -160,18 +162,16 @@ private:
     // dynamic vs dynamic contact runtime data
     ContactRuntime makeRuntimeData(
         RigidBody* bodyA, RigidBody* bodyB,
-        Collider* colliderA, Collider* colliderB,
-        Transform* bodyRootA, Transform* bodyRootB
+        Collider* colliderA, Collider* colliderB
     ) const;
 
     // dynamic vs terrain contact runtime data
     ContactRuntime makeRuntimeData(
         RigidBody* bodyA,
-        Collider* colliderA,
-        Transform* bodyRootA
+        Collider* colliderA
     ) const;
 
-    std::vector<RigidBodyHandle>* toWake = nullptr; // for wake-up requests for bodies that should be woken up after processing dynamic pairs
+    std::vector<BodyHandle>* toWake = nullptr; // for wake-up requests for bodies that should be woken up after processing dynamic pairs
 
     std::vector<SAT::Result> SAT_resultsList; // for storing multiple SAT results for a single collider vs terrain pair
     std::vector<ExternalMotionContact> externalContacts; // contacts to be sent to character controller for external motion handling
@@ -186,3 +186,5 @@ private:
     );
     std::vector<Tri*> terrainTriCandidates;
 };
+
+}

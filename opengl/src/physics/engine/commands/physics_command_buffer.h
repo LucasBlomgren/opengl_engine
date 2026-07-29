@@ -1,13 +1,14 @@
 #pragma once
 
-#include <cstddef>
 #include <variant>
 #include <vector>
-
 #include <glm/vec3.hpp>
 
+#include "physics/public/collider_desc.h"
 #include "physics/public/physics_handles.h"
 #include "physics/public/physics_types.h"
+
+namespace physics::internal {
 
 class PhysicsCommandBuffer {
 public:
@@ -15,38 +16,69 @@ public:
     // Rigid body mutation commands
     //=========================================
     struct ApplyLinearImpulse {
-        RigidBodyHandle body;
+        BodyHandle body;
         glm::vec3 impulse;
     };
 
     struct SetLinearVelocity {
-        RigidBodyHandle body;
+        BodyHandle body;
         glm::vec3 velocity;
     };
 
     struct SetAngularVelocity {
-        RigidBodyHandle body;
+        BodyHandle body;
         glm::vec3 velocity;
     };
 
     struct SetKinematicTarget {
-        RigidBodyHandle body;
-        PhysicsPose target;
+        BodyHandle body;
+        Pose target;
+    };
+
+    struct SetRigidBodyTransform {
+        BodyHandle body;
+        Pose pose;
+        glm::vec3 scale;
     };
 
     struct SetRigidBodySleepState {
-        RigidBodyHandle body;
+        BodyHandle body;
         bool asleep;
     };
 
     struct SetRigidBodyType {
-        RigidBodyHandle body;
+        BodyHandle body;
         BodyType type;
     };
 
     struct SetRigidBodyMotionControl {
-        RigidBodyHandle body;
+        BodyHandle body;
         MotionControl motionControl;
+    };
+
+    struct SetRigidBodyResponseMode {
+        BodyHandle body;
+        ResponseMode responseMode;
+    };
+
+    struct SetRigidBodyMass {
+        BodyHandle body;
+        float mass;
+    };
+
+    struct SetRigidBodyAllowGravity {
+        BodyHandle body;
+        bool allowGravity;
+    };
+
+    struct SetRigidBodyAllowSleep {
+        BodyHandle body;
+        bool allowSleep;
+    };
+
+    struct SetRigidBodyCanMoveLinearly {
+        BodyHandle body;
+        bool canMoveLinearly;
     };
 
     //=========================================
@@ -54,7 +86,18 @@ public:
     //=========================================
     struct SetColliderLocalPose {
         ColliderHandle collider;
-        PhysicsPose localPose;
+        Pose localPose;
+    };
+
+    struct SetColliderLocalTransform {
+        ColliderHandle collider;
+        Pose localPose;
+        glm::vec3 localScale;
+    };
+
+    struct SetColliderShape {
+        ColliderHandle collider;
+        ColliderShapeDesc shape;
     };
 
     struct SetColliderEnabled {
@@ -74,33 +117,36 @@ public:
 
     struct AwakenAllObjects {};
 
-    struct SyncBodyFromTransform {
-        RigidBodyHandle body;
-    };
-
     using Mutation = std::variant<
         ApplyLinearImpulse,
         SetLinearVelocity,
         SetAngularVelocity,
         SetKinematicTarget,
+        SetRigidBodyTransform,
         SetRigidBodySleepState,
         SetRigidBodyType,
         SetRigidBodyMotionControl,
+        SetRigidBodyResponseMode,
+        SetRigidBodyMass,
+        SetRigidBodyAllowGravity,
+        SetRigidBodyAllowSleep,
+        SetRigidBodyCanMoveLinearly,
         SetColliderLocalPose,
+        SetColliderLocalTransform,
+        SetColliderShape,
         SetColliderEnabled,
         SetColliderTrigger,
         SleepAllObjects,
-        AwakenAllObjects,
-        SyncBodyFromTransform
+        AwakenAllObjects
     >;
 
     //=========================================
     // Complete command batch
     //=========================================
     struct Batch {
-        std::vector<RigidBodyHandle> bodyCreates;
+        std::vector<BodyHandle> bodyCreates;
         std::vector<ColliderHandle> colliderCreates;
-        std::vector<RigidBodyHandle> bodyDestroys;
+        std::vector<BodyHandle> bodyDestroys;
         std::vector<ColliderHandle> colliderDestroys;
         std::vector<Mutation> mutations;
 
@@ -125,30 +171,50 @@ public:
     //=========================================
     // Lifecycle recording
     //=========================================
-    void recordBodyCreate(RigidBodyHandle body);
+    void recordBodyCreate(BodyHandle body);
     void recordColliderCreate(ColliderHandle collider);
 
-    bool recordBodyDestroy(RigidBodyHandle body);
+    bool recordBodyDestroy(BodyHandle body);
     bool recordColliderDestroy(ColliderHandle collider);
 
-    [[nodiscard]] bool isBodyPendingDestroy(RigidBodyHandle body) const;
+    [[nodiscard]] bool isBodyPendingDestroy(BodyHandle body) const;
     [[nodiscard]] bool isColliderPendingDestroy(ColliderHandle collider) const;
 
     //=========================================
     // Rigid body command recording
     //=========================================
-    void recordApplyLinearImpulse(RigidBodyHandle body, const glm::vec3& impulse);
-    void recordSetLinearVelocity(RigidBodyHandle body, const glm::vec3& velocity);
-    void recordSetAngularVelocity(RigidBodyHandle body, const glm::vec3& velocity);
-    void recordSetKinematicTarget(RigidBodyHandle body, const PhysicsPose& target);
-    void recordSetRigidBodySleepState(RigidBodyHandle body, bool asleep);
-    void recordSetRigidBodyType(RigidBodyHandle body, BodyType type);
-    void recordSetRigidBodyMotionControl(RigidBodyHandle body, MotionControl motionControl);
+    void recordApplyLinearImpulse(BodyHandle body, const glm::vec3& impulse);
+    void recordSetLinearVelocity(BodyHandle body, const glm::vec3& velocity);
+    void recordSetAngularVelocity(BodyHandle body, const glm::vec3& velocity);
+    void recordSetKinematicTarget(BodyHandle body, const Pose& target);
+    void recordSetRigidBodyTransform(
+        BodyHandle body,
+        const Pose& pose,
+        const glm::vec3& scale);
+    void recordSetRigidBodySleepState(BodyHandle body, bool asleep);
+    void recordSetRigidBodyType(BodyHandle body, BodyType type);
+    void recordSetRigidBodyMotionControl(BodyHandle body, MotionControl motionControl);
+    void recordSetRigidBodyResponseMode(
+        BodyHandle body,
+        ResponseMode responseMode);
+    void recordSetRigidBodyMass(BodyHandle body, float mass);
+    void recordSetRigidBodyAllowGravity(BodyHandle body, bool allowGravity);
+    void recordSetRigidBodyAllowSleep(BodyHandle body, bool allowSleep);
+    void recordSetRigidBodyCanMoveLinearly(
+        BodyHandle body,
+        bool canMoveLinearly);
 
     //=========================================
     // Collider command recording
     //=========================================
-    void recordSetColliderLocalPose(ColliderHandle collider, const PhysicsPose& localPose);
+    void recordSetColliderLocalPose(ColliderHandle collider, const Pose& localPose);
+    void recordSetColliderLocalTransform(
+        ColliderHandle collider,
+        const Pose& localPose,
+        const glm::vec3& localScale);
+    void recordSetColliderShape(
+        ColliderHandle collider,
+        const ColliderShapeDesc& shape);
     void recordSetColliderEnabled(ColliderHandle collider, bool enabled);
     void recordSetColliderTrigger(ColliderHandle collider, bool isTrigger);
 
@@ -157,12 +223,13 @@ public:
     //=========================================
     void recordSleepAllObjects();
     void recordAwakenAllObjects();
-    void recordSyncBodyFromTransform(RigidBodyHandle body);
 
 private:
-    std::vector<RigidBodyHandle> bodyCreates;
+    std::vector<BodyHandle> bodyCreates;
     std::vector<ColliderHandle> colliderCreates;
-    std::vector<RigidBodyHandle> bodyDestroys;
+    std::vector<BodyHandle> bodyDestroys;
     std::vector<ColliderHandle> colliderDestroys;
     std::vector<Mutation> mutations;
 };
+
+}

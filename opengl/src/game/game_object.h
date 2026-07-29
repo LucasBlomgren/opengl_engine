@@ -1,8 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "pch.h"
 
-#include "physics/public/physics_handles.h"
+#include "physics/physics.h"
 #include "game/game_handles.h"
 
 #include "graphics/shaders/shader.h"
@@ -11,7 +11,7 @@
 struct SubPart {
     std::string name = "SubPart";
     TransformHandle localTransformHandle;
-    ColliderHandle colliderHandle;
+    physics::ColliderHandle colliderHandle;
 
     // render
     Shader* shader = nullptr;
@@ -28,7 +28,7 @@ public:
     int id;
     std::string name = "GameObject";
     TransformHandle rootTransformHandle;
-    RigidBodyHandle rigidBodyHandle;
+    physics::BodyHandle rigidBodyHandle;
 
     std::vector<SubPart> parts;
 

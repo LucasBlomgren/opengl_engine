@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "renderer.h"
 #include "graphics/mesh/mesh_manager.h"
 
@@ -236,13 +236,15 @@ void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int ta
 void Renderer::render(
     Camera& camera,
     SceneBuilder& builder,
-    PhysicsEngine& physics,
+    physics::Engine& physics,
     GLuint qShadow[],
     GLuint qMain[],
     GLuint qDebug[],
     int writeIdx,
     const Editor::ViewportFBO* viewportFBO
 ) {
+    physicsEngine = &physics;
+
     // update scene bounds if dirty
     if (builder.sceneDirty) {
         computeSceneBounds(builder);
@@ -612,7 +614,7 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
 
     // beräkna min/max för terrängen
     if (tData.triangles.size() > 0) {
-        for (const Tri& tri : tData.triangles) {
+        for (const physics::Triangle& tri : tData.triangles) {
             for (const glm::vec3& v : tri.vertices) {
                 minY = std::min(minY, v.y); 
                 maxY = std::max(maxY, v.y); 
@@ -631,8 +633,16 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
                     continue; // skip collider-only parts
                 }
 
-                Collider* col = world->getCollider(part.colliderHandle);
-                const AABB& aabb = col->aabb;
+                const std::optional<physics::ColliderState> collider =
+                    physicsEngine->getColliderState(
+                        part.colliderHandle
+                    );
+
+                if (!collider) {
+                    continue;
+                }
+
+                const physics::AABB& aabb = collider->bounds;
                 minY = std::min(minY, aabb.worldMin.y);
                 maxY = std::max(maxY, aabb.worldMax.y);
                 minX = std::min(minX, aabb.worldMin.x);
@@ -737,8 +747,11 @@ void Renderer::renderLights() const {
 //----------------------------------------
 void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
     GameObject* obj = world->getGameObject(handle);
-    if (!obj) return;
-    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
+    if (!obj || !physicsEngine) return;
+
+    const std::optional<physics::BodyState> body =
+        physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+    if (!body) return;
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
@@ -746,17 +759,32 @@ void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& came
     glLineWidth(OOBB_LINE_WIDTH);
     glm::vec3 color = HOVERED_COLOR;
 
-    for (int i = 0; i < rb->colliderHandles.size(); ++i) {
-        Collider* col = world->getCollider(rb->colliderHandles[i]);
+    for (physics::ColliderHandle colliderHandle : body->colliders) {
+        const std::optional<physics::ColliderState> collider =
+            physicsEngine->getColliderState(colliderHandle);
+        if (!collider) continue;
 
         // render based on collider type
-        if (col->type == ColliderType::CUBOID) {
-            const OOBB& box = std::get<OOBB>(col->shape);
-            debugRenderer.oobbRenderer.renderBox(*debugShader, box, color);
+        if (collider->type == physics::ColliderType::CUBOID) {
+            debugRenderer.oobbRenderer.renderBox(
+                *debugShader,
+                collider->worldPose,
+                std::get<physics::BoxGeometry>(collider->shape),
+                color
+            );
         }
-        else if (col->type == ColliderType::SPHERE) {
-            Sphere& sphere = std::get<Sphere>(col->shape);
-            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, color);
+        else if (collider->type == physics::ColliderType::SPHERE) {
+            const physics::SphereGeometry& sphere =
+                std::get<physics::SphereGeometry>(
+                    collider->shape
+                );
+            debugRenderer.sphereOutlineRenderer.render(
+                *debugShader,
+                camera.position,
+                sphere.worldCenter,
+                sphere.radius,
+                color
+            );
         }
     }
 }
@@ -766,8 +794,11 @@ void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& came
 //----------------------------------------
 void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
     GameObject* obj = world->getGameObject(handle);
-    if (!obj) return;
-    RigidBody* rb = world->getRigidBody(obj->rigidBodyHandle);
+    if (!obj || !physicsEngine) return;
+
+    const std::optional<physics::BodyState> body =
+        physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+    if (!body) return;
 
     debugShader->use();
     debugShader->setBool("debug.useUniformColor", true);
@@ -775,8 +806,10 @@ void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& cam
     glLineWidth(OOBB_LINE_WIDTH);
     glm::vec3 color = SELECTED_COLOR;
 
-    for (int i = 0; i < rb->colliderHandles.size(); ++i) {
-        Collider* col = world->getCollider(rb->colliderHandles[i]);
+    for (size_t i = 0; i < body->colliders.size(); ++i) {
+        const std::optional<physics::ColliderState> collider =
+            physicsEngine->getColliderState(body->colliders[i]);
+        if (!collider) continue;
 
         // editor mode: if this collider is part of the selected subpart, use subpart color and line width instead
         if (!engineState->isPlayerMode()) {
@@ -791,13 +824,26 @@ void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& cam
         }
 
         // render based on collider type
-        if (col->type == ColliderType::CUBOID) {
-            const OOBB& box = std::get<OOBB>(col->shape);
-            debugRenderer.oobbRenderer.renderBox(*debugShader, box, color);
+        if (collider->type == physics::ColliderType::CUBOID) {
+            debugRenderer.oobbRenderer.renderBox(
+                *debugShader,
+                collider->worldPose,
+                std::get<physics::BoxGeometry>(collider->shape),
+                color
+            );
         }
-        else if (col->type == ColliderType::SPHERE) {
-            Sphere& sphere = std::get<Sphere>(col->shape);
-            debugRenderer.sphereOutlineRenderer.render(*debugShader, camera.position, sphere.centerWorld, sphere.radiusWorld, color);
+        else if (collider->type == physics::ColliderType::SPHERE) {
+            const physics::SphereGeometry& sphere =
+                std::get<physics::SphereGeometry>(
+                    collider->shape
+                );
+            debugRenderer.sphereOutlineRenderer.render(
+                *debugShader,
+                camera.position,
+                sphere.worldCenter,
+                sphere.radius,
+                color
+            );
         }
     }
 }
