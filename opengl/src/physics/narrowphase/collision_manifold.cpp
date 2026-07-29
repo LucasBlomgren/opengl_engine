@@ -31,9 +31,9 @@ namespace {
     }
 
     RigidBody* getReferenceBody(Contact& contact) {
-        if (
-            contact.objBisReference &&
-            contact.partnerTypeB == ContactPartnerType::RigidBody) {
+        if (contact.objBisReference &&
+            contact.partnerTypeB == ContactPartnerType::RigidBody) 
+        {
             return contact.runtimeData.bodyB;
         }
 
@@ -112,7 +112,11 @@ Contact* CollisionManifold::boxBox(
         );
     }
 
-    clipPoints(contact.referenceFace, contact.incidentFace, 4, contact.referenceFaceNormal);
+    clipPoints(
+        contact.referenceFace, 
+        contact.incidentFace, 4, 
+        contact.referenceFaceNormal
+    );
 
     RigidBody* referenceBody = getReferenceBody(contact);
 
@@ -139,8 +143,8 @@ Contact* CollisionManifold::boxBox(
     }
     else {
         // #TODO: different points are chosen different frames, causing solver instability, maybe add some temporal coherence to point selection?
-// like remembering which points were chosen last frame and prefer those if they are still valid (within some tolerance), 
-// or add some bias towards points with deeper penetration depth
+        // like remembering which points were chosen last frame and prefer those if they are still valid (within some tolerance), 
+        // or add some bias towards points with deeper penetration depth
         contactPointReduction(contact, candidates, candidateCount);
     }
 

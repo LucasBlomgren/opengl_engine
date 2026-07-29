@@ -124,9 +124,17 @@ bool PhysicsWorld::activateRigidBody(BodyHandle handle) {
         return false;
     }
 
-    RigidBody* body = rigidBodies.create_reserved(handle, std::move(pending->second));
+    RigidBody* body =
+        rigidBodies.create_reserved(handle, std::move(pending->second));
+
     pendingRigidBodies.erase(pending);
-    return body != nullptr;
+
+    if (!body) {
+        rigidBodies.release_reserved(handle);
+        return false;
+    }
+
+    return true;
 }
 
 bool PhysicsWorld::activateCollider(ColliderHandle handle) {
@@ -135,9 +143,17 @@ bool PhysicsWorld::activateCollider(ColliderHandle handle) {
         return false;
     }
 
-    Collider* collider = colliders.create_reserved(handle, std::move(pending->second));
+    Collider* collider =
+        colliders.create_reserved(handle, std::move(pending->second));
+
     pendingColliders.erase(pending);
-    return collider != nullptr;
+
+    if (!collider) {
+        colliders.release_reserved(handle);
+        return false;
+    }
+
+    return true;
 }
 
 void PhysicsWorld::discardPendingRigidBody(BodyHandle handle) {

@@ -10,42 +10,42 @@ public:
     static constexpr uint32_t INVALID = 0xFFFFFFFFu;
 
     SlotMap() {
-        m_slotGen.reserve(100000);
-        m_slotToDense.reserve(100000);
-        m_denseToSlot.reserve(100000);
-        m_freeSlots.reserve(100000);
-        m_dense.reserve(100000);
+        slotGen.reserve(100000);
+        slotToDense.reserve(100000);
+        denseToSlot.reserve(100000);
+        freeSlots.reserve(100000);
+        denseStorage.reserve(100000);
     }
 
     bool alive(Id handle) const {
-        return handle.slot < m_slotGen.size() && m_slotGen[handle.slot] == handle.gen && m_slotToDense[handle.slot] != INVALID;
+        return handle.slot < slotGen.size() && slotGen[handle.slot] == handle.gen && slotToDense[handle.slot] != INVALID;
     }
 
     T* get(Id handle) {
-        return &m_dense[m_slotToDense[handle.slot]];
+        return &denseStorage[slotToDense[handle.slot]];
     }
 
     const T* get(Id handle) const {
-        return &m_dense[m_slotToDense[handle.slot]];
+        return &denseStorage[slotToDense[handle.slot]];
     }
 
     T* try_get(Id handle) {
         if (!alive(handle)) return nullptr;
-        return &m_dense[m_slotToDense[handle.slot]];
+        return &denseStorage[slotToDense[handle.slot]];
     }
 
     const T* try_get(Id handle) const {
         if (!alive(handle)) return nullptr;
-        return &m_dense[m_slotToDense[handle.slot]];
+        return &denseStorage[slotToDense[handle.slot]];
     }
 
     Id handle_from_dense_index(uint32_t denseIndex) const {
-        uint32_t slot = m_denseToSlot[denseIndex];
-        return Id{ slot, m_slotGen[slot] };
+        uint32_t slot = denseToSlot[denseIndex];
+        return Id{ slot, slotGen[slot] };
     }
 
     uint32_t slot_capacity() const {
-        return static_cast<uint32_t>(m_slotGen.size());
+        return static_cast<uint32_t>(slotGen.size());
     }
 
     template<class... Args>
@@ -57,94 +57,94 @@ public:
 
     Id reserve() {
         uint32_t slot = allocSlot();
-        return Id{ slot, m_slotGen[slot] };
+        return Id{ slot, slotGen[slot] };
     }
 
     template<class... Args>
     T* create_reserved(Id handle, Args&&... args) {
-        if (handle.slot >= m_slotGen.size() ||
-            m_slotGen[handle.slot] != handle.gen ||
-            m_slotToDense[handle.slot] != INVALID) {
+        if (handle.slot >= slotGen.size() ||
+            slotGen[handle.slot] != handle.gen ||
+            slotToDense[handle.slot] != INVALID) {
             return nullptr;
         }
 
-        uint32_t denseIndex = static_cast<uint32_t>(m_dense.size());
-        m_dense.emplace_back(std::forward<Args>(args)...);
+        uint32_t denseIndex = static_cast<uint32_t>(denseStorage.size());
+        denseStorage.emplace_back(std::forward<Args>(args)...);
 
-        m_denseToSlot.push_back(handle.slot);
-        m_slotToDense[handle.slot] = denseIndex;
+        denseToSlot.push_back(handle.slot);
+        slotToDense[handle.slot] = denseIndex;
 
-        return &m_dense.back();
+        return &denseStorage.back();
     }
 
     void release_reserved(Id handle) {
-        if (handle.slot >= m_slotGen.size() ||
-            m_slotGen[handle.slot] != handle.gen ||
-            m_slotToDense[handle.slot] != INVALID) {
+        if (handle.slot >= slotGen.size() ||
+            slotGen[handle.slot] != handle.gen ||
+            slotToDense[handle.slot] != INVALID) {
             return;
         }
 
-        ++m_slotGen[handle.slot];
-        m_freeSlots.push_back(handle.slot);
+        ++slotGen[handle.slot];
+        freeSlots.push_back(handle.slot);
     }
 
     void destroy(Id handle) {
         if (!alive(handle)) return;
 
-        uint32_t denseIndex = m_slotToDense[handle.slot];
-        uint32_t lastDenseIndex = static_cast<uint32_t>(m_dense.size()) - 1;
+        uint32_t denseIndex = slotToDense[handle.slot];
+        uint32_t lastDenseIndex = static_cast<uint32_t>(denseStorage.size()) - 1;
 
         if (denseIndex != lastDenseIndex) {
-            m_dense[denseIndex] = std::move(m_dense[lastDenseIndex]);
+            denseStorage[denseIndex] = std::move(denseStorage[lastDenseIndex]);
 
-            uint32_t movedSlot = m_denseToSlot[lastDenseIndex];
-            m_denseToSlot[denseIndex] = movedSlot;
-            m_slotToDense[movedSlot] = denseIndex;
+            uint32_t movedSlot = denseToSlot[lastDenseIndex];
+            denseToSlot[denseIndex] = movedSlot;
+            slotToDense[movedSlot] = denseIndex;
         }
 
-        m_dense.pop_back();
-        m_denseToSlot.pop_back();
+        denseStorage.pop_back();
+        denseToSlot.pop_back();
 
-        m_slotToDense[handle.slot] = INVALID;
-        ++m_slotGen[handle.slot];
-        m_freeSlots.push_back(handle.slot);
+        slotToDense[handle.slot] = INVALID;
+        ++slotGen[handle.slot];
+        freeSlots.push_back(handle.slot);
     }
 
     std::vector<T>& dense() {
-        return m_dense;
+        return denseStorage;
     }
 
     const std::vector<T>& dense() const {
-        return m_dense;
+        return denseStorage;
     }
 
     void clear() {
-        m_slotGen.clear();
-        m_slotToDense.clear();
-        m_denseToSlot.clear();
-        m_freeSlots.clear();
-        m_dense.clear();
+        slotGen.clear();
+        slotToDense.clear();
+        denseToSlot.clear();
+        freeSlots.clear();
+        denseStorage.clear();
     }
 
 private:
     uint32_t allocSlot() {
-        if (!m_freeSlots.empty()) {
-            uint32_t slot = m_freeSlots.back();
-            m_freeSlots.pop_back();
+        if (!freeSlots.empty()) {
+            uint32_t slot = freeSlots.back();
+            freeSlots.pop_back();
             return slot;
         }
 
-        uint32_t slot = static_cast<uint32_t>(m_slotGen.size());
+        uint32_t slot = static_cast<uint32_t>(slotGen.size());
 
-        m_slotGen.push_back(0);
-        m_slotToDense.push_back(INVALID);
+        slotGen.push_back(0);
+        slotToDense.push_back(INVALID);
 
         return slot;
     }
 
-    std::vector<uint32_t> m_slotGen;
-    std::vector<uint32_t> m_slotToDense;
-    std::vector<uint32_t> m_denseToSlot;
-    std::vector<uint32_t> m_freeSlots;
-    std::vector<T> m_dense;
+    std::vector<uint32_t> slotGen;
+    std::vector<uint32_t> slotToDense;
+    std::vector<uint32_t> denseToSlot;
+    std::vector<uint32_t> freeSlots;
+    std::vector<T> denseStorage;
 };

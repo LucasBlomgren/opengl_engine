@@ -143,11 +143,11 @@ EngineImpl::getColliderState(
 
     if (collider->type == ColliderType::CUBOID) {
         const OOBB& box = std::get<OOBB>(collider->shape);
-        BoxGeometry geometry;
-        geometry.worldCenter = box.worldCenter;
-        geometry.localHalfExtents = box.localHalfExtents;
-        geometry.scale = box.scale;
-        state.shape = geometry;
+        state.shape = BoxGeometry{
+            box.worldCenter,
+            box.localHalfExtents,
+            box.scale
+        };
     }
     else {
         const Sphere& sphere = std::get<Sphere>(collider->shape);

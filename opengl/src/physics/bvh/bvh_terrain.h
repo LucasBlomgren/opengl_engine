@@ -10,7 +10,7 @@ public:
     using Element = Tri*;
     int rootIdx = -1;
 
-    // public f�r att rendera AABBs
+    // public for debug rendering
     struct Node {
         bool alive = true;
         bool isLeaf = false;

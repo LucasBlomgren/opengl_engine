@@ -190,7 +190,8 @@ void RigidBody::setExternalControl(bool controlled) {
 void RigidBody::calculateInverseInertia(
     const ColliderType& colliderType,
     const Collider& collider,
-    const glm::vec3& inertiaScale) {
+    const glm::vec3& inertiaScale) 
+{
 	if (type == BodyType::Static) {
 		invInertiaLocal = glm::mat3(0.0f);
 		return;

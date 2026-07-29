@@ -59,12 +59,14 @@ public:
         BodyHandle body,
         const Pose& pose,
         const glm::vec3& scale);
+
     bool submitSetRigidBodySleepState(BodyHandle body, bool asleep);
     bool submitSetRigidBodyType(BodyHandle body, BodyType type);
     bool submitSetRigidBodyMotionControl(BodyHandle body, MotionControl motionControl);
     bool submitSetRigidBodyResponseMode(
         BodyHandle body,
         ResponseMode responseMode);
+
     bool submitSetRigidBodyMass(BodyHandle body, float mass);
     bool submitSetRigidBodyAllowGravity(BodyHandle body, bool allowGravity);
     bool submitSetRigidBodyAllowSleep(BodyHandle body, bool allowSleep);

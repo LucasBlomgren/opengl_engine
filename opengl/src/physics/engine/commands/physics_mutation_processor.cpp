@@ -7,6 +7,10 @@
 
 namespace physics::internal {
 
+
+//================================================
+// Helper functions
+//================================================
 namespace {
     Collider* findFirstEnabledCollider(
         PhysicsWorld& physicsWorld,
@@ -141,9 +145,9 @@ void EngineImpl::refreshBodySpatialState(
     setBVHDirty(bodyHandle);
 }
 
-//=========================================
-// Mutation command processing
-//=========================================
+//================================================
+// Command processing
+//================================================
 void EngineImpl::applyMutationCommands(
     const std::vector<PhysicsCommandBuffer::Mutation>& mutations)
 {
@@ -154,6 +158,9 @@ void EngineImpl::applyMutationCommands(
     }
 }
 
+//================================================
+// Rigid body command processing
+//================================================
 void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::ApplyLinearImpulse& command)
 {
@@ -381,6 +388,9 @@ void EngineImpl::applyCommand(
     }
 }
 
+//================================================
+// Collider command processing
+//================================================
 void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SetColliderLocalPose& command)
 {
@@ -445,6 +455,9 @@ void EngineImpl::applyCommand(
     }
 }
 
+//================================================
+// Scene-wide command processing
+//================================================
 void EngineImpl::applyCommand(
     const PhysicsCommandBuffer::SleepAllObjects&)
 {

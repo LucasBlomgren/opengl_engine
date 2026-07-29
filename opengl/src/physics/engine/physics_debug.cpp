@@ -97,7 +97,8 @@ EngineImpl::getDebugSpeculativeContacts() const {
 }
 
 std::vector<physics::debug::Contact>
-EngineImpl::getDebugContacts() const {
+EngineImpl::getDebugContacts() const 
+{
     std::vector<physics::debug::Contact> result;
     result.reserve(contactCache.size());
 
@@ -110,33 +111,34 @@ EngineImpl::getDebugContacts() const {
 
         physics::debug::Contact debugContact;
         debugContact.normal = contact.normal;
-        const size_t sourcePointCount =
-            (std::min)(
-                static_cast<size_t>(contact.numPoints),
-                debugContact.points.size()
-            );
 
-        for (size_t index = 0;
-            index < sourcePointCount;
-            ++index) {
+        // Compute the representative point and contact points
+        for (size_t index = 0; index < contact.numPoints; ++index) {
             const ContactPoint& point = contact.points[index];
 
             if (!point.wasUsedThisFrame) {
                 continue;
             }
 
+            // Add the contact point to the debug contact
             debugContact.points[debugContact.pointCount] = {
                 point.worldPos,
                 point.wasWarmStarted
             };
+
+            // Update the representative point by averaging the contact points
             debugContact.representativePoint += point.worldPos;
             ++debugContact.pointCount;
         }
 
+        // If there are no contact points, use the average of the 
+        // contact points as the representative point
         if (debugContact.pointCount > 0) {
             debugContact.representativePoint /=
                 static_cast<float>(debugContact.pointCount);
         }
+        // If there are contact points, use the center of one 
+        // of the colliders as the representative point
         else if (contact.runtimeData.colliderA) {
             debugContact.representativePoint =
                 getColliderCenter(contact.runtimeData.colliderA);
@@ -173,7 +175,8 @@ physics::debug::Bvh EngineImpl::getDebugBvh(
 }
 
 physics::debug::Bvh
-EngineImpl::getTerrainDebugBvh() const {
+EngineImpl::getTerrainDebugBvh() const 
+{
     physics::debug::Bvh result;
     const TerrainBVH& tree = broadphaseManager.getTerrainBVH();
     result.nodes.reserve(tree.nodes.size());

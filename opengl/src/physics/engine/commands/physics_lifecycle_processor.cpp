@@ -178,31 +178,24 @@ void EngineImpl::processLifecycleCommands(
 
         const std::vector<ColliderHandle> activeColliders = body->colliderHandles;
 
+        // Destroy all colliders belonging to the body being destroyed.
         for (ColliderHandle colliderHandle : activeColliders) {
-            if (physicsWorld.isColliderActive(colliderHandle)) {
-                physicsWorld.deleteCollider(colliderHandle);
-                activeStorageChanged = true;
-            }
-            else if (physicsWorld.isColliderPending(colliderHandle)) {
-                physicsWorld.discardPendingCollider(colliderHandle);
-            }
+            physicsWorld.deleteCollider(colliderHandle);
+            activeStorageChanged = true;
         }
 
         // Pending colliders are not necessarily present in body->colliderHandles yet.
         for (ColliderHandle colliderHandle : batch.colliderCreates) {
             Collider* collider = physicsWorld.getCollider(colliderHandle);
 
+            // Check if the collider belongs to the body being destroyed
             if (!collider || collider->rigidBodyHandle != bodyHandle) {
                 continue;
             }
 
-            if (physicsWorld.isColliderPending(colliderHandle)) {
-                physicsWorld.discardPendingCollider(colliderHandle);
-            }
-            else if (physicsWorld.isColliderActive(colliderHandle)) {
-                physicsWorld.deleteCollider(colliderHandle);
-                activeStorageChanged = true;
-            }
+            // If we are here it means the collider is pending,
+            // so discard it from the pending colliders list.
+            physicsWorld.discardPendingCollider(colliderHandle);
         }
 
         if (physicsWorld.isRigidBodyActive(bodyHandle)) {
@@ -222,16 +215,9 @@ void EngineImpl::processLifecycleCommands(
             continue;
         }
 
-        if (!physicsWorld.isRigidBodyPending(bodyHandle)) {
-            continue;
+        if (physicsWorld.activateRigidBody(bodyHandle)) {
+            activeStorageChanged = true;
         }
-
-        if (!physicsWorld.activateRigidBody(bodyHandle)) {
-            physicsWorld.discardPendingRigidBody(bodyHandle);
-            continue;
-        }
-
-        activeStorageChanged = true;
     }
 
     //----------------------------------
@@ -239,10 +225,6 @@ void EngineImpl::processLifecycleCommands(
     //----------------------------------
     for (ColliderHandle colliderHandle : batch.colliderCreates) {
         if (containsHandle(batch.colliderDestroys, colliderHandle)) {
-            if (physicsWorld.isColliderPending(colliderHandle)) {
-                physicsWorld.discardPendingCollider(colliderHandle);
-            }
-
             continue;
         }
 
