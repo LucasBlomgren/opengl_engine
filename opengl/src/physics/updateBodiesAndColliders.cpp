@@ -1,13 +1,15 @@
 #include "pch.h"
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //==============================================================
 // Integrate Forces / Velocities
 //==============================================================
-void EngineImpl::integrateForcesAndVelocities(
+void Engine::integrateForcesAndVelocities(
     const std::vector<BodyHandle>& bodies,
     float dt)
 {
@@ -37,7 +39,7 @@ void EngineImpl::integrateForcesAndVelocities(
 //==============================================================
 // Integrate Positions and Update Colliders
 //==============================================================
-void EngineImpl::integratePositionsAndColliders(
+void Engine::integratePositionsAndColliders(
     const std::vector<BodyHandle>& bodies,
     float dt)
 {
@@ -57,7 +59,7 @@ void EngineImpl::integratePositionsAndColliders(
 //==============================================================
 // Update Collider Poses and Body AABB
 //==============================================================
-void EngineImpl::updateCollidersAndBodyAABB(
+void Engine::updateCollidersAndBodyAABB(
     RigidBody* body)
 {
     if (!body) {
@@ -65,7 +67,7 @@ void EngineImpl::updateCollidersAndBodyAABB(
     }
 
     bool hasAABB = false;
-    AABB combinedAABB;
+    internal::AABB combinedAABB;
 
     for (ColliderHandle colliderHandle : body->colliderHandles) {
         Collider* collider =
@@ -79,7 +81,7 @@ void EngineImpl::updateCollidersAndBodyAABB(
         collider->updateShape();
         collider->updateAABB();
 
-        const AABB& colliderAABB = collider->getAABB();
+        const internal::AABB& colliderAABB = collider->getAABB();
 
         if (!hasAABB) {
             combinedAABB = colliderAABB;
@@ -92,7 +94,7 @@ void EngineImpl::updateCollidersAndBodyAABB(
     }
 
     if (!hasAABB) {
-        body->aabb = AABB{};
+        body->aabb = internal::AABB{};
         body->invRadius = 0.0f;
         return;
     }

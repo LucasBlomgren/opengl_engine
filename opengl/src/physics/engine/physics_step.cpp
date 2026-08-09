@@ -1,17 +1,17 @@
 #include "pch.h"
 
 #include <algorithm>
-
-#include "physics/engine/physics_engine_impl.h"
-
+#include "physics/physics_engine.h"
 #include "engine/engine_state.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //==============================
 // Initialization
 //==============================
-void EngineImpl::init(FrameTimers* frameTimers) {
+void Engine::init(FrameTimers* frameTimers) {
     this->frameTimers = frameTimers;
 
     collisionManifold = std::make_unique<CollisionManifold>();
@@ -23,7 +23,7 @@ void EngineImpl::init(FrameTimers* frameTimers) {
 //==============================
 // Step-loop preparation
 //==============================
-void EngineImpl::prepareStepLoop() {
+void Engine::prepareStepLoop() {
     caches.clear();
 
     frameTimers->reset("Physics");
@@ -40,11 +40,11 @@ void EngineImpl::prepareStepLoop() {
 //==============================
 // Solver configuration
 //==============================
-int EngineImpl::getPgsIterations() const {
+int Engine::getPgsIterations() const {
     return pgsIterations;
 }
 
-void EngineImpl::setPgsIterations(
+void Engine::setPgsIterations(
     int iterations) {
     pgsIterations = (std::max)(1, iterations);
 }
@@ -52,7 +52,7 @@ void EngineImpl::setPgsIterations(
 //==============================
 // Simulation
 //==============================
-void EngineImpl::step(float dt, EngineState& engine) {
+void Engine::step(float dt, EngineState& engine) {
     if (engine.isPaused() && !engine.getAdvanceStep()) {
         return;
     }
@@ -67,7 +67,9 @@ void EngineImpl::step(float dt, EngineState& engine) {
         debugPhase = physics::debug::StepPhase::Ready;
         frameTimers->submit(
             "Physics", 
-            frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart + savedPhysicsSurpassedTime
+            frameTimers->get("Physics") + 
+            glfwGetTime() * 1000.0 - physicsStart + 
+            savedPhysicsSurpassedTime
         );
     }
 
@@ -114,11 +116,11 @@ void EngineImpl::step(float dt, EngineState& engine) {
     );
     narrowphaseManager.narrowPhase(pairBatch, contactBatch, dt);
 
-    contactsGeneratedThisFrame +=
-        static_cast<uint32_t>(
-            contactBatch.contacts.size() + 
-            contactBatch.speculativeContacts.size()
-            );
+    contactsThisFrame +=
+        static_cast<uint32_t>(contactBatch.contacts.size());
+
+    speculativeContactsThisFrame += 
+        static_cast<uint32_t>(contactBatch.speculativeContacts.size());
 
     frameTimers->submit(
         "Narrowphase", 
@@ -174,7 +176,7 @@ void EngineImpl::step(float dt, EngineState& engine) {
 //==============================
 // Step initialization
 //==============================
-void EngineImpl::beginPhysicsStep(float outerDt) {
+void Engine::beginPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
     processPendingCommands();
@@ -191,7 +193,8 @@ void EngineImpl::beginPhysicsStep(float outerDt) {
     debugSweeps.clear();
     debugSpeculativeContacts.clear();
 
-    contactsGeneratedThisFrame = 0;
+    contactsThisFrame = 0;
+    speculativeContactsThisFrame = 0;
 
     for (auto& [key, contact] : contactCache) {
         contact.wasUsedThisFrame = false;
@@ -212,7 +215,7 @@ void EngineImpl::beginPhysicsStep(float outerDt) {
 //==============================
 // Step finalization
 //==============================
-void EngineImpl::endPhysicsStep(float outerDt) {
+void Engine::endPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
     processWakeList();

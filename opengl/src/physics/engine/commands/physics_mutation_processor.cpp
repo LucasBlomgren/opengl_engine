@@ -3,9 +3,11 @@
 #include <type_traits>
 #include <variant>
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 
 //================================================
@@ -61,9 +63,42 @@ namespace {
 
         return validShape;
     }
+
+    glm::vec3 calculateAngularVelocity(
+        const glm::quat& currentRotation,
+        const glm::quat& targetRotation,
+        float dt)
+    {
+        if (dt <= 0.0f) {
+            return glm::vec3(0.0f);
+        }
+
+        const glm::quat current = glm::normalize(currentRotation);
+        const glm::quat target = glm::normalize(targetRotation);
+
+        // Rotation som tar current till target.
+        glm::quat delta = target * glm::conjugate(current);
+
+        // Välj den kortaste rotationsvägen.
+        if (delta.w < 0.0f) {
+            delta = -delta;
+        }
+
+        const glm::vec3 imaginary(delta.x, delta.y, delta.z);
+        const float sinHalfAngle = glm::length(imaginary);
+
+        if (sinHalfAngle < 1e-6f) {
+            return glm::vec3(0.0f);
+        }
+
+        const glm::vec3 axis = imaginary / sinHalfAngle;
+        const float angle = 2.0f * std::atan2(sinHalfAngle, delta.w);
+
+        return axis * (angle / dt);
+    }
 }
 
-void EngineImpl::refreshBodyInertia(
+void Engine::refreshBodyInertia(
     RigidBody& body)
 {
     if (body.type != BodyType::Dynamic) {
@@ -98,7 +133,7 @@ void EngineImpl::refreshBodyInertia(
     body.updateInertiaWorld();
 }
 
-void EngineImpl::refreshBodySpatialState(
+void Engine::refreshBodySpatialState(
     BodyHandle bodyHandle,
     bool shouldRefreshInertia)
 {
@@ -148,10 +183,10 @@ void EngineImpl::refreshBodySpatialState(
 //================================================
 // Command processing
 //================================================
-void EngineImpl::applyMutationCommands(
-    const std::vector<PhysicsCommandBuffer::Mutation>& mutations)
+void Engine::applyMutationCommands(
+    const std::vector<CommandBuffer::Mutation>& mutations)
 {
-    for (const PhysicsCommandBuffer::Mutation& mutation : mutations) {
+    for (const CommandBuffer::Mutation& mutation : mutations) {
         std::visit([this](const auto& command) {
             applyCommand(command);
         }, mutation);
@@ -161,8 +196,8 @@ void EngineImpl::applyMutationCommands(
 //================================================
 // Rigid body command processing
 //================================================
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::ApplyLinearImpulse& command)
+void Engine::applyCommand(
+    const CommandBuffer::ApplyLinearImpulse& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -179,8 +214,8 @@ void EngineImpl::applyCommand(
     body->applyImpulseLinear(command.impulse);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetLinearVelocity& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetLinearVelocity& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -193,8 +228,8 @@ void EngineImpl::applyCommand(
     body->linearVelocity = command.velocity;
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetAngularVelocity& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetAngularVelocity& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -207,24 +242,29 @@ void EngineImpl::applyCommand(
     body->angularVelocity = command.velocity;
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetKinematicTarget& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetKinematicTarget& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
     if (!body ||
         !physicsWorld.isRigidBodyActive(command.body) ||
-        body->type != BodyType::Kinematic) {
+        body->type != BodyType::Kinematic) 
+    {
         return;
     }
 
-    body->pose = command.target;
-    body->updateInertiaWorld();
-    refreshBodySpatialState(command.body, false);
+    body->linearVelocity =
+        (command.target.position - body->pose.position) / dt;
+
+    body->angularVelocity = calculateAngularVelocity(
+        body->pose.orientation,
+        command.target.orientation,
+        dt);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyTransform& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyTransform& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -238,8 +278,8 @@ void EngineImpl::applyCommand(
     refreshBodySpatialState(command.body);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodySleepState& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodySleepState& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -257,8 +297,8 @@ void EngineImpl::applyCommand(
     }
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyType& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyType& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -315,8 +355,8 @@ void EngineImpl::applyCommand(
     }
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyMotionControl& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyMotionControl& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -324,13 +364,11 @@ void EngineImpl::applyCommand(
         return;
     }
 
-    body->setExternalControl(
-        command.motionControl == MotionControl::External
-    );
+    body->setMotionControl(command.motionControl);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyResponseMode& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyResponseMode& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -341,8 +379,8 @@ void EngineImpl::applyCommand(
     body->responseMode = command.responseMode;
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyMass& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyMass& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -358,8 +396,8 @@ void EngineImpl::applyCommand(
     refreshBodyInertia(*body);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyAllowGravity& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyAllowGravity& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -368,8 +406,8 @@ void EngineImpl::applyCommand(
     }
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyAllowSleep& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyAllowSleep& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -378,8 +416,8 @@ void EngineImpl::applyCommand(
     }
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetRigidBodyCanMoveLinearly& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetRigidBodyCanMoveLinearly& command)
 {
     RigidBody* body = physicsWorld.getRigidBody(command.body);
 
@@ -391,8 +429,8 @@ void EngineImpl::applyCommand(
 //================================================
 // Collider command processing
 //================================================
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetColliderLocalPose& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetColliderLocalPose& command)
 {
     Collider* collider = physicsWorld.getCollider(command.collider);
 
@@ -404,8 +442,8 @@ void EngineImpl::applyCommand(
     refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetColliderLocalTransform& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetColliderLocalTransform& command)
 {
     Collider* collider = physicsWorld.getCollider(command.collider);
 
@@ -418,8 +456,8 @@ void EngineImpl::applyCommand(
     refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetColliderShape& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetColliderShape& command)
 {
     Collider* collider = physicsWorld.getCollider(command.collider);
 
@@ -432,8 +470,8 @@ void EngineImpl::applyCommand(
     refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetColliderEnabled& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetColliderEnabled& command)
 {
     Collider* collider = physicsWorld.getCollider(command.collider);
 
@@ -445,8 +483,8 @@ void EngineImpl::applyCommand(
     refreshBodySpatialState(collider->rigidBodyHandle);
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SetColliderTrigger& command)
+void Engine::applyCommand(
+    const CommandBuffer::SetColliderTrigger& command)
 {
     Collider* collider = physicsWorld.getCollider(command.collider);
 
@@ -458,8 +496,8 @@ void EngineImpl::applyCommand(
 //================================================
 // Scene-wide command processing
 //================================================
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::SleepAllObjects&)
+void Engine::applyCommand(
+    const CommandBuffer::SleepAllObjects&)
 {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
     auto& dense = bodyMap.dense();
@@ -478,8 +516,8 @@ void EngineImpl::applyCommand(
     }
 }
 
-void EngineImpl::applyCommand(
-    const PhysicsCommandBuffer::AwakenAllObjects&)
+void Engine::applyCommand(
+    const CommandBuffer::AwakenAllObjects&)
 {
     auto& bodyMap = physicsWorld.getRigidBodiesMap();
     auto& dense = bodyMap.dense();

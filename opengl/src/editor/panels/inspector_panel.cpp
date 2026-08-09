@@ -12,7 +12,7 @@
 #include "game/world.h"
 #include "game/game_handles.h"
 
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 
 namespace {
     physics::ColliderShapeDesc buildColliderShape(

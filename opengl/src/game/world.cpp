@@ -6,7 +6,7 @@
 #include "graphics/renderer/renderer.h"
 #include "graphics/shaders/shader_manager.h"
 #include "graphics/textures/texture_manager.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 
 namespace {
     constexpr float kSyncEpsilon = 1e-6f;

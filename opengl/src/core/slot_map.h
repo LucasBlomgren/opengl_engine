@@ -18,7 +18,9 @@ public:
     }
 
     bool alive(Id handle) const {
-        return handle.slot < slotGen.size() && slotGen[handle.slot] == handle.gen && slotToDense[handle.slot] != INVALID;
+        return handle.slot < slotGen.size() && 
+            slotGen[handle.slot] == handle.gen && 
+            slotToDense[handle.slot] != INVALID;
     }
 
     T* get(Id handle) {
@@ -84,6 +86,7 @@ public:
             return;
         }
 
+        slotToDense[handle.slot] = INVALID;
         ++slotGen[handle.slot];
         freeSlots.push_back(handle.slot);
     }

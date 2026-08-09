@@ -1,9 +1,11 @@
 #include "pch.h"
 
 #include <algorithm>
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //=========================================
 // Helper functions
@@ -78,8 +80,8 @@ namespace {
 //=========================================
 // Lifecycle command processing
 //=========================================
-void EngineImpl::processLifecycleCommands(
-    const PhysicsCommandBuffer::Batch& batch)
+void Engine::processLifecycleCommands(
+    const CommandBuffer::Batch& batch)
 {
     if (batch.bodyCreates.empty() &&
         batch.colliderCreates.empty() &&
@@ -301,7 +303,7 @@ void EngineImpl::processLifecycleCommands(
             colliderHandles.end());
 
         if (!hasEnabledCollider(physicsWorld, *body)) {
-            body->aabb = AABB{};
+            body->aabb = internal::AABB{};
             continue;
         }
 

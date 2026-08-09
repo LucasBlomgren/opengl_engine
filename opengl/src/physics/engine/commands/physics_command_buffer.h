@@ -10,7 +10,7 @@
 
 namespace physics::internal {
 
-class PhysicsCommandBuffer {
+class CommandBuffer {
 public:
     //=========================================
     // Rigid body mutation commands
@@ -114,7 +114,6 @@ public:
     // Scene-wide mutation commands
     //=========================================
     struct SleepAllObjects {};
-
     struct AwakenAllObjects {};
 
     using Mutation = std::variant<
@@ -187,19 +186,24 @@ public:
     void recordSetLinearVelocity(BodyHandle body, const glm::vec3& velocity);
     void recordSetAngularVelocity(BodyHandle body, const glm::vec3& velocity);
     void recordSetKinematicTarget(BodyHandle body, const Pose& target);
+
     void recordSetRigidBodyTransform(
         BodyHandle body,
         const Pose& pose,
         const glm::vec3& scale);
+
     void recordSetRigidBodySleepState(BodyHandle body, bool asleep);
     void recordSetRigidBodyType(BodyHandle body, BodyType type);
     void recordSetRigidBodyMotionControl(BodyHandle body, MotionControl motionControl);
+
     void recordSetRigidBodyResponseMode(
         BodyHandle body,
         ResponseMode responseMode);
+
     void recordSetRigidBodyMass(BodyHandle body, float mass);
     void recordSetRigidBodyAllowGravity(BodyHandle body, bool allowGravity);
     void recordSetRigidBodyAllowSleep(BodyHandle body, bool allowSleep);
+
     void recordSetRigidBodyCanMoveLinearly(
         BodyHandle body,
         bool canMoveLinearly);
@@ -208,13 +212,16 @@ public:
     // Collider command recording
     //=========================================
     void recordSetColliderLocalPose(ColliderHandle collider, const Pose& localPose);
+
     void recordSetColliderLocalTransform(
         ColliderHandle collider,
         const Pose& localPose,
         const glm::vec3& localScale);
+
     void recordSetColliderShape(
         ColliderHandle collider,
         const ColliderShapeDesc& shape);
+
     void recordSetColliderEnabled(ColliderHandle collider, bool enabled);
     void recordSetColliderTrigger(ColliderHandle collider, bool isTrigger);
 

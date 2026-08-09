@@ -85,12 +85,7 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_engine_api.cpp" />
     <ClCompile Include="src\physics\engine\physics_step.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_query_api.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_debug_api.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_body_api.cpp" />
-    <ClCompile Include="src\physics\engine\api\physics_collider_api.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
     <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
@@ -136,7 +131,6 @@
     <ClInclude Include="src\engine\opengl_init.h" />
     <ClInclude Include="src\engine\input.h" />
     <ClInclude Include="src\physics\collision_manifold.h" />
-    <ClInclude Include="src\physics\physics.h" />
     <ClInclude Include="src\physics\sat.h" />
     <ClInclude Include="src\graphics\lighting\light.h" />
     <ClInclude Include="src\graphics\lighting\light_manager.h" />
@@ -213,7 +207,6 @@
     <ClInclude Include="src\physics\public\physics_contact_types.h" />
     <ClInclude Include="src\physics\public\physics_query_types.h" />
     <ClInclude Include="src\physics\public\physics_scene_types.h" />
-    <ClInclude Include="src\physics\engine\physics_engine_impl.h" />
     <ClInclude Include="src\physics\public\physics_handles.h" />
     <ClInclude Include="src\core\handle.h" />
     <ClInclude Include="src\game\game_handles.h" />
@@ -228,6 +221,7 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
     <ClInclude Include="src\physics\error_logging.h" />
+    <ClInclude Include="src\physics\physics_engine.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

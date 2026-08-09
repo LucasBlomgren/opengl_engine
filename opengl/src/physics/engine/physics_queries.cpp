@@ -1,12 +1,14 @@
 #include "pch.h"
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 #include "physics/raycast/raycast.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 namespace {
-    physics::AABB toPublicBounds(const AABB& bounds) {
+    physics::AABB toPublicBounds(const internal::AABB& bounds) {
         physics::AABB result;
         result.worldMin = bounds.worldMin;
         result.worldMax = bounds.worldMax;
@@ -15,8 +17,8 @@ namespace {
         return result;
     }
 
-    AABB toInternalBounds(const physics::AABB& bounds) {
-        AABB result;
+    internal::AABB toInternalBounds(const physics::AABB& bounds) {
+        internal::AABB result;
         result.worldMin = bounds.worldMin;
         result.worldMax = bounds.worldMax;
         result.worldCenter = bounds.worldCenter;
@@ -28,7 +30,7 @@ namespace {
 //=========================================
 // Spatial queries
 //=========================================
-RaycastHit EngineImpl::raycast(
+RaycastHit Engine::raycast(
     const Ray& ray,
     BodyHandle ignoredBody)
 {
@@ -59,7 +61,7 @@ RaycastHit EngineImpl::raycast(
     return bestHit;
 }
 
-std::vector<BodyHandle> EngineImpl::queryBodies(
+std::vector<BodyHandle> Engine::queryBodies(
     const physics::AABB& bounds,
     BodySet bodySet) const
 {
@@ -90,7 +92,7 @@ std::vector<BodyHandle> EngineImpl::queryBodies(
 // State queries
 //=========================================
 std::optional<BodyState>
-EngineImpl::getRigidBodyState(
+Engine::getRigidBodyState(
     BodyHandle handle) const
 {
     const RigidBody* body = physicsWorld.getRigidBody(handle);
@@ -118,7 +120,7 @@ EngineImpl::getRigidBodyState(
 }
 
 std::optional<ColliderState>
-EngineImpl::getColliderState(
+Engine::getColliderState(
     ColliderHandle handle) const
 {
     const Collider* collider = physicsWorld.getCollider(handle);
@@ -164,7 +166,7 @@ EngineImpl::getColliderState(
 // Simulation output
 //=========================================
 std::vector<ExternalMotionContact>&
-EngineImpl::getExternalMotionContacts() {
+Engine::getExternalMotionContacts() {
     return narrowphaseManager.getExternalContacts();
 }
 

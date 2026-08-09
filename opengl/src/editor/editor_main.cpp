@@ -5,12 +5,13 @@
 #include "imgui.h"
 #include "engine/input_manager.h"
 #include "game/scene_builder.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "graphics/renderer/renderer.h"
 #include "game/game_object.h"
 #include "graphics/shaders/shader.h"
 
 #include <glm/gtc/random.hpp>
+#include <random>
 
 // ====================================================
 //      Main functions
@@ -380,21 +381,37 @@ void Editor::EditorMain::handleInput(
             int removed = 0;
             size_t checked = 0;
 
-            while (!objects.empty() && checked < objects.size() && removed < 10) 
-            {
-                if (nextIndex >= objects.size()) {
-                    nextIndex = 0;
-                }
+            //while (!objects.empty() && checked < objects.size() && removed < 10) 
+            //{
+            //    if (nextIndex >= objects.size()) {
+            //        nextIndex = 0;
+            //    }
 
-                GameObjectHandle handle = 
-                    map.handle_from_dense_index((int)nextIndex);
+            //    GameObjectHandle handle = 
+            //        map.handle_from_dense_index((int)nextIndex);
+
+            //    GameObject* obj = world->getGameObject(handle);
+
+            //    world->deleteGameObject(handle);
+
+            //    nextIndex++;
+            //    checked++;
+            //    removed++;
+            //}
+            static std::mt19937 rng(std::random_device{}());
+            while (!objects.empty() && removed < 10)
+            {
+                int minIndex = 0;
+                int maxIndex = (int)objects.size() - 1;
+                int randomIndex = std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+
+                GameObjectHandle handle =
+                    map.handle_from_dense_index((int)randomIndex);
 
                 GameObject* obj = world->getGameObject(handle);
 
                 world->deleteGameObject(handle);
 
-                nextIndex++;
-                checked++;
                 removed++;
             }
         }

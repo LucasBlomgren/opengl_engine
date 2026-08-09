@@ -3,7 +3,7 @@
 #include "core/slot_map.h"
 #include "game/game_object.h"
 #include "game/transform.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 
 #include <unordered_map>
 

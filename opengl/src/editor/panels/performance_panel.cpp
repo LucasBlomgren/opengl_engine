@@ -208,11 +208,11 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
                 ImGui::TableNextColumn();
                 ImGui::Text("Contacts: %zu", ctx.amountContacts);
                 ImGui::TableNextColumn();
-                ImGui::Text("Static: %zu", ctx.amountStaticObjects);
+                ImGui::Text("Colliders: %zu", ctx.amountColliders);
 
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::Text("Colliders: %zu", ctx.amountColliders);
+                ImGui::Text("Speculative: %zu", ctx.amountSpeculativeContacts);
 
                 ImGui::EndTable();
             }

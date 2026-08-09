@@ -2,9 +2,9 @@
 #include "player.h"
 #include "world.h"
 
-void Player::setPointers(World* world, physics::Engine* physicsEngine, Renderer* renderer, Camera* camera) {
+void Player::setPointers(World* world, physics::Engine* physics, Renderer* renderer, Camera* camera) {
     this->world = world;
-    this->physicsEngine = physicsEngine;
+    this->physics = physics;
     this->renderer = renderer;
     this->camera = camera;
 }
@@ -53,7 +53,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
             GameObject* object = world->getGameObject(newObject);
 
             if (object) {
-                physicsEngine->setLinearVelocity(
+                physics->setLinearVelocity(
                     object->rigidBodyHandle,
                     camera->front * SHOOT_VELOCITY
                 );
@@ -122,10 +122,6 @@ void Player::createPlayerObject() {
 
     GameObject* player = world->getGameObject(playerHandle);
     player->player = true;
-
-    if (part.seeThrough) {
-        renderer->addObjectToBatch(playerHandle);
-    }
 }
 
 void Player::destroyPlayerObject() {
@@ -213,7 +209,7 @@ void Player::updateBody(float dt) {
     if (!player) return;
 
     const std::optional<physics::BodyState> bodyState =
-        physicsEngine->getRigidBodyState(player->rigidBodyHandle);
+        physics->getRigidBodyState(player->rigidBodyHandle);
     if (!bodyState) return;
 
     Transform* t = world->getTransform(player->rootTransformHandle);
@@ -265,7 +261,7 @@ void Player::updateBody(float dt) {
         v.z = 0.0f;
     }
 
-    physicsEngine->setLinearVelocity(
+    physics->setLinearVelocity(
         player->rigidBodyHandle,
         v
     );
@@ -277,7 +273,7 @@ void Player::updateBody(float dt) {
 void Player::resolveExternalContact() {
     onGround = false;
 
-    const auto& contacts = physicsEngine->getExternalMotionContacts();
+    const auto& contacts = physics->getExternalMotionContacts();
     GameObject* playerObj = world->getGameObject(playerHandle);
     Transform* transform = world->getTransform(playerObj->rootTransformHandle);
 
@@ -345,11 +341,11 @@ void Player::moveSelectedObject(float dt) {
     selectedTransform->position = newPos;
 
     // velocity
-    physicsEngine->setLinearVelocity(
+    physics->setLinearVelocity(
         selectedObject->rigidBodyHandle,
         (newPos - selectedTransform->lastPosition) / dt
     );
-    physicsEngine->setAngularVelocity(
+    physics->setAngularVelocity(
         selectedObject->rigidBodyHandle,
         glm::vec3(0.0f)
     );
@@ -374,7 +370,7 @@ void Player::selectObject() {
     if (!raycast.hit) return;
 
     const std::optional<physics::BodyState> bodyState =
-        physicsEngine->getRigidBodyState(raycast.bodyHandle);
+        physics->getRigidBodyState(raycast.bodyHandle);
 
     if (!bodyState || bodyState->type == physics::BodyType::Static) return;
 
@@ -386,20 +382,20 @@ void Player::selectObject() {
 
     GameObject* obj = world->getGameObject(handle);
     Transform* transform = world->getTransform(obj->rootTransformHandle);
-    physicsEngine->setRigidBodyMotionControl(
+    physics->setRigidBodyMotionControl(
         raycast.bodyHandle,
         physics::MotionControl::External
     );
 
-    physicsEngine->setRigidBodySleepState(raycast.bodyHandle, false);
+    physics->setRigidBodySleepState(raycast.bodyHandle, false);
 
     transform->lastPosition = transform->position;
 
-    physicsEngine->setLinearVelocity(
+    physics->setLinearVelocity(
         raycast.bodyHandle,
         glm::vec3(0.0f)
     );
-    physicsEngine->setAngularVelocity(
+    physics->setAngularVelocity(
         raycast.bodyHandle,
         glm::vec3(0.0f)
     );
@@ -416,7 +412,7 @@ void Player::dropObject() {
         GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
 
         if (selectedObject) {
-            physicsEngine->setRigidBodyMotionControl(
+            physics->setRigidBodyMotionControl(
                 selectedObject->rigidBodyHandle,
                 physics::MotionControl::Physics
             );
@@ -478,7 +474,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
     for (int i = 0; i < maxIter; i++) {
         std::vector<physics::BodyHandle> collisions;
         collisions.reserve(100);
-        collisions = physicsEngine->queryBodies(
+        collisions = physics->queryBodies(
             aabb,
             physics::BodySet::Asleep
         );
@@ -492,14 +488,14 @@ void Player::createPlaceObjectAABB(Shader& shader) {
         std::optional<physics::AABB> minDepthBounds;
         for (physics::BodyHandle& handle : collisions) {
             const std::optional<physics::BodyState> bodyState =
-                physicsEngine->getRigidBodyState(handle);
+                physics->getRigidBodyState(handle);
 
             if (!bodyState || bodyState->colliders.empty()) {
                 continue;
             }
 
             const std::optional<physics::ColliderState> colliderState =
-                physicsEngine->getColliderState(
+                physics->getColliderState(
                     bodyState->colliders[0]
                 );
 
@@ -545,7 +541,7 @@ void Player::createPlaceObjectAABB(Shader& shader) {
 physics::RaycastHit Player::raycast(float length) {
     float rLength = length;
     physics::Ray r(camera->position, camera->front, rLength);
-    physics::RaycastHit hitData = physicsEngine->raycast(
+    physics::RaycastHit hitData = physics->raycast(
         r,
         getPlayerRigidBodyHandle()
     );

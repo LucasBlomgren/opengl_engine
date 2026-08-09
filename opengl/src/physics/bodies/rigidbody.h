@@ -74,10 +74,16 @@ public:
     void setAsleep();
     void setAwake();
     void setStatic();
-    void setExternalControl(bool controlled);
+    void setMotionControl(MotionControl mode);
 
     void integratePose(float dt);
-    void updateOrientation(glm::quat& orientation, const glm::vec3& angularVelocity, float dt);
+
+    void updateOrientation(
+        glm::quat& orientation, 
+        const glm::vec3& angularVelocity, 
+        float dt
+    );
+
     void updateInertiaWorld();
 
     void applyGravity(float dt);
@@ -89,6 +95,7 @@ public:
         const ColliderType& type,
         const Collider& collider,
         const glm::vec3& inertiaScale);
+
     void inertiaCube(const float sideX);
     void inertiaCuboid(const glm::vec3& scale);
     void inertiaSphere(const glm::vec3& scale);

@@ -2,7 +2,7 @@
 
 #include "engine/engine_state.h"
 #include "game/game_object.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "graphics/mesh/mesh_manager.h"
 #include "graphics/shaders/shader_manager.h"
 

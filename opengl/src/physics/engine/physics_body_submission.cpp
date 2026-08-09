@@ -1,12 +1,14 @@
 #include "pch.h"
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //=========================================
 // Rigid body creation and destruction
 //=========================================
-BodyHandle EngineImpl::submitCreateRigidBody(
+BodyHandle Engine::createRigidBody(
     const BodyDesc& desc)
 {
     if (desc.type == BodyType::Dynamic &&
@@ -54,10 +56,10 @@ BodyHandle EngineImpl::submitCreateRigidBody(
 
     for (const ColliderDesc& colliderDesc : desc.colliders) {
         ColliderHandle colliderHandle =
-            submitCreateCollider(bodyHandle, colliderDesc);
+            createCollider(bodyHandle, colliderDesc);
 
         if (!colliderHandle.isValid()) {
-            submitDestroyRigidBody(bodyHandle);
+            destroyRigidBody(bodyHandle);
             return {};
         }
     }
@@ -65,7 +67,7 @@ BodyHandle EngineImpl::submitCreateRigidBody(
     return bodyHandle;
 }
 
-bool EngineImpl::submitDestroyRigidBody(
+bool Engine::destroyRigidBody(
     BodyHandle bodyHandle)
 {
     RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
@@ -82,7 +84,7 @@ bool EngineImpl::submitDestroyRigidBody(
 //=========================================
 // Rigid body commands
 //=========================================
-bool EngineImpl::submitApplyLinearImpulse(
+bool Engine::applyLinearImpulse(
     BodyHandle handle,
     const glm::vec3& impulse)
 {
@@ -98,7 +100,7 @@ bool EngineImpl::submitApplyLinearImpulse(
     return true;
 }
 
-bool EngineImpl::submitSetLinearVelocity(
+bool Engine::setLinearVelocity(
     BodyHandle handle,
     const glm::vec3& velocity)
 {
@@ -114,7 +116,7 @@ bool EngineImpl::submitSetLinearVelocity(
     return true;
 }
 
-bool EngineImpl::submitSetAngularVelocity(
+bool Engine::setAngularVelocity(
     BodyHandle handle,
     const glm::vec3& velocity)
 {
@@ -130,7 +132,7 @@ bool EngineImpl::submitSetAngularVelocity(
     return true;
 }
 
-bool EngineImpl::submitSetKinematicTarget(
+bool Engine::setKinematicTarget(
     BodyHandle handle,
     const Pose& target)
 {
@@ -146,7 +148,7 @@ bool EngineImpl::submitSetKinematicTarget(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyTransform(
+bool Engine::setRigidBodyTransform(
     BodyHandle handle,
     const Pose& pose,
     const glm::vec3& scale)
@@ -161,7 +163,7 @@ bool EngineImpl::submitSetRigidBodyTransform(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodySleepState(
+bool Engine::setRigidBodySleepState(
     BodyHandle handle,
     bool asleep)
 {
@@ -182,7 +184,7 @@ bool EngineImpl::submitSetRigidBodySleepState(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyType(
+bool Engine::setRigidBodyType(
     BodyHandle handle,
     BodyType type)
 {
@@ -197,7 +199,7 @@ bool EngineImpl::submitSetRigidBodyType(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyMotionControl(
+bool Engine::setRigidBodyMotionControl(
     BodyHandle handle,
     MotionControl motionControl)
 {
@@ -217,7 +219,7 @@ bool EngineImpl::submitSetRigidBodyMotionControl(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyResponseMode(
+bool Engine::setRigidBodyResponseMode(
     BodyHandle handle,
     ResponseMode responseMode)
 {
@@ -231,7 +233,7 @@ bool EngineImpl::submitSetRigidBodyResponseMode(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyMass(
+bool Engine::setRigidBodyMass(
     BodyHandle handle,
     float mass)
 {
@@ -248,7 +250,7 @@ bool EngineImpl::submitSetRigidBodyMass(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyAllowGravity(
+bool Engine::setRigidBodyAllowGravity(
     BodyHandle handle,
     bool allowGravity)
 {
@@ -262,7 +264,7 @@ bool EngineImpl::submitSetRigidBodyAllowGravity(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyAllowSleep(
+bool Engine::setRigidBodyAllowSleep(
     BodyHandle handle,
     bool allowSleep)
 {
@@ -278,7 +280,7 @@ bool EngineImpl::submitSetRigidBodyAllowSleep(
     return true;
 }
 
-bool EngineImpl::submitSetRigidBodyCanMoveLinearly(
+bool Engine::setRigidBodyCanMoveLinearly(
     BodyHandle handle,
     bool canMoveLinearly)
 {

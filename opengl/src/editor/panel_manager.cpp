@@ -5,7 +5,7 @@
 
 #include "imgui.h"
 #include "panel_manager.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "game/world.h"
 
 // Initialize panels
@@ -28,6 +28,7 @@ void Editor::PanelManager::renderPanels(float deltaTime) {
 	ctx.amountStaticObjects = data.staticBodies;
 	ctx.amountTerrainTris = data.terrainTris;
 	ctx.amountContacts = data.contacts;
+    ctx.amountSpeculativeContacts = data.speculativeContacts;
 	ctx.amountColliders = data.colliders;
     ctx.substepAmount = data.currentSubstepAmount;
 

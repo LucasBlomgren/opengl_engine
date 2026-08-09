@@ -1,11 +1,13 @@
 #include "pch.h"
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 namespace {
-    physics::AABB toPublicBounds(const AABB& bounds) {
+    physics::AABB toPublicBounds(const internal::AABB& bounds) {
         physics::AABB result;
         result.worldMin = bounds.worldMin;
         result.worldMax = bounds.worldMax;
@@ -45,34 +47,35 @@ namespace {
     }
 }
 
-physics::debug::Data EngineImpl::getDebugData() const {
+physics::debug::Data Engine::getDebugData() const {
     physics::debug::Data debugData;
     debugData.awake = broadphaseManager.getAwakeList().size();
     debugData.asleep = broadphaseManager.getAsleepList().size();
     debugData.staticBodies = broadphaseManager.getStaticList().size();
     debugData.colliders = physicsWorld.getCollidersMap().dense().size();
     debugData.terrainTris = terrainTriangles.size();
-    debugData.contacts = contactsGeneratedThisFrame;
+    debugData.contacts = contactsThisFrame;
+    debugData.speculativeContacts = speculativeContactsThisFrame;
     return debugData;
 }
 
 physics::debug::StepPhase
-EngineImpl::getDebugPhase() const {
+Engine::getDebugPhase() const {
     return debugPhase;
 }
 
-void EngineImpl::updateBVHRenderData(
+void Engine::updateBVHRenderData(
     const physics::debug::BvhType& type,
     bool update) {
     broadphaseManager.updateBVHRenderData(type, update);
 }
 
 std::vector<physics::AABB>
-EngineImpl::getDebugSweeps() const {
+Engine::getDebugSweeps() const {
     std::vector<physics::AABB> result;
     result.reserve(debugSweeps.size());
 
-    for (const AABB& bounds : debugSweeps) {
+    for (const internal::AABB& bounds : debugSweeps) {
         result.push_back(toPublicBounds(bounds));
     }
 
@@ -80,7 +83,7 @@ EngineImpl::getDebugSweeps() const {
 }
 
 std::vector<physics::debug::SpeculativeContact>
-EngineImpl::getDebugSpeculativeContacts() const {
+Engine::getDebugSpeculativeContacts() const {
     std::vector<physics::debug::SpeculativeContact> result;
     result.reserve(debugSpeculativeContacts.size());
 
@@ -97,7 +100,7 @@ EngineImpl::getDebugSpeculativeContacts() const {
 }
 
 std::vector<physics::debug::Contact>
-EngineImpl::getDebugContacts() const 
+Engine::getDebugContacts() const
 {
     std::vector<physics::debug::Contact> result;
     result.reserve(contactCache.size());
@@ -155,11 +158,11 @@ EngineImpl::getDebugContacts() const
 }
 
 const std::vector<BodyHandle>&
-EngineImpl::getAwakeList() const {
+Engine::getAwakeList() const {
     return broadphaseManager.getAwakeList();
 }
 
-physics::debug::Bvh EngineImpl::getDebugBvh(
+physics::debug::Bvh Engine::getDebugBvh(
     physics::debug::BvhType type) const
 {
     switch (type) {
@@ -175,7 +178,7 @@ physics::debug::Bvh EngineImpl::getDebugBvh(
 }
 
 physics::debug::Bvh
-EngineImpl::getTerrainDebugBvh() const 
+Engine::getTerrainDebugBvh() const
 {
     physics::debug::Bvh result;
     const TerrainBVH& tree = broadphaseManager.getTerrainBVH();

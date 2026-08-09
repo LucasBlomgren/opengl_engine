@@ -1,13 +1,15 @@
 #include "pch.h"
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //====================================
 // Internal scene setup
 //====================================
-void EngineImpl::setupScene(
+void Engine::setupScene(
     const std::vector<Triangle>& terrainInput) {
     terrainTriangles.clear();
     terrainTriangles.reserve(terrainInput.size());
@@ -48,7 +50,7 @@ void EngineImpl::setupScene(
 //====================================
 // Scene cleanup
 //====================================
-void EngineImpl::clear() {
+void Engine::clear() {
     commandBuffer.clear();
 
     toWake.clear();
@@ -70,18 +72,18 @@ void EngineImpl::clear() {
 //====================================
 // Scene-wide command submission
 //====================================
-void EngineImpl::submitSleepAllObjects() {
+void Engine::sleepAllObjects() {
     commandBuffer.recordSleepAllObjects();
 }
 
-void EngineImpl::submitAwakenAllObjects() {
+void Engine::awakenAllObjects() {
     commandBuffer.recordAwakenAllObjects();
 }
 
 //====================================
 // BVH management
 //====================================
-void EngineImpl::setBVHDirty(
+void Engine::setBVHDirty(
     BodyHandle handle) {
     broadphaseManager.setBVHDirty(handle);
 }

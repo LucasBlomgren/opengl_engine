@@ -2,7 +2,7 @@
 
 #include "game/world.h"
 #include "editor/editor_main.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "game/game_object.h"
 
 class Player;

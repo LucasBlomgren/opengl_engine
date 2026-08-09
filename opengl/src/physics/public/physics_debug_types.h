@@ -16,6 +16,7 @@ struct Data {
     size_t colliders = 0;
     size_t terrainTris = 0;
     size_t contacts = 0;
+    size_t speculativeContacts = 0;
     size_t currentSubstepAmount = 0;
 };
 

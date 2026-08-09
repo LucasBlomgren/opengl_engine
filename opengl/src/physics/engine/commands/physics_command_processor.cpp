@@ -1,12 +1,14 @@
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //=========================================
 // Pending command processing
 //=========================================
-void EngineImpl::processPendingCommands() {
-    PhysicsCommandBuffer::Batch batch = commandBuffer.take();
+void Engine::processPendingCommands() {
+    CommandBuffer::Batch batch = commandBuffer.take();
 
     if (batch.empty()) {
         return;

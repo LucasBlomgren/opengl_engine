@@ -187,12 +187,13 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
 
             if (!colliderA || !colliderB) continue;
 
-            // If either body is compound, check if the colliders' AABBs intersect
-            if (bodyA->isCompound() || bodyB->isCompound()) {
-                if (!colliderA->aabb.intersects(colliderB->aabb)) {
-                    continue;
-                }
-            }
+            // #TODO: Need to use the swept AABBs for speculative collision detection, not the current AABBs.
+            //// If either body is compound, check if the colliders' AABBs intersect
+            //if (bodyA->isCompound() || bodyB->isCompound()) {
+            //    if (!colliderA->aabb.intersects(colliderB->aabb)) {
+            //        continue;
+            //    }
+            //}
 
             processColliderPairSpeculative(
                 ContactBuildInput{

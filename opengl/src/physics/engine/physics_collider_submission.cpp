@@ -3,14 +3,16 @@
 #include <type_traits>
 #include <variant>
 
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //=========================================
 // Collider creation and destruction
 //=========================================
-ColliderHandle EngineImpl::submitCreateCollider(
+ColliderHandle Engine::createCollider(
     BodyHandle bodyHandle,
     const ColliderDesc& desc)
 {
@@ -67,7 +69,7 @@ ColliderHandle EngineImpl::submitCreateCollider(
     return colliderHandle;
 }
 
-bool EngineImpl::submitDestroyCollider(
+bool Engine::destroyCollider(
     ColliderHandle colliderHandle) {
     const Collider* collider = physicsWorld.getCollider(colliderHandle);
 
@@ -81,7 +83,7 @@ bool EngineImpl::submitDestroyCollider(
 //=========================================
 // Collider commands
 //=========================================
-bool EngineImpl::submitSetColliderLocalPose(
+bool Engine::setColliderLocalPose(
     ColliderHandle handle,
     const Pose& localPose)
 {
@@ -97,7 +99,7 @@ bool EngineImpl::submitSetColliderLocalPose(
     return true;
 }
 
-bool EngineImpl::submitSetColliderLocalTransform(
+bool Engine::setColliderLocalTransform(
     ColliderHandle handle,
     const Pose& localPose,
     const glm::vec3& localScale)
@@ -118,7 +120,7 @@ bool EngineImpl::submitSetColliderLocalTransform(
     return true;
 }
 
-bool EngineImpl::submitSetColliderShape(
+bool Engine::setColliderShape(
     ColliderHandle handle,
     const ColliderShapeDesc& shape)
 {
@@ -134,7 +136,7 @@ bool EngineImpl::submitSetColliderShape(
     return true;
 }
 
-bool EngineImpl::submitSetColliderEnabled(
+bool Engine::setColliderEnabled(
     ColliderHandle handle,
     bool enabled)
 {
@@ -150,7 +152,7 @@ bool EngineImpl::submitSetColliderEnabled(
     return true;
 }
 
-bool EngineImpl::submitSetColliderTrigger(
+bool Engine::setColliderTrigger(
     ColliderHandle handle,
     bool isTrigger)
 {

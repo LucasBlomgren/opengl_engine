@@ -1,7 +1,7 @@
 #pragma once
 
 #include "scene_builder.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 #include "engine/camera.h"
 #include "graphics/renderer/renderer.h"
 
@@ -47,7 +47,7 @@ public:
 
 private:
     World* world = nullptr;
-    physics::Engine* physicsEngine = nullptr;
+    physics::Engine* physics = nullptr;
     Camera* camera = nullptr;
     Renderer* renderer = nullptr;
 

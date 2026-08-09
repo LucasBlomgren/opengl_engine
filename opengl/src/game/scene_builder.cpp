@@ -4,7 +4,7 @@
 #include "geometry/vertex.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/lighting/light_manager.h"
-#include "physics/physics.h"
+#include "physics/physics_engine.h"
 
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
@@ -46,21 +46,43 @@ void SceneBuilder::setLights() {
     if (lightsState == 0) {
         // sun light
         if (dayNightCycle == 0) {
-            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.7f), glm::vec3(0.5f)); 
+            lightManager.setDirectionalLight(
+                glm::vec3(0.45f, -0.8f, 0.9f), 
+                glm::vec3(0.3f), 
+                glm::vec3(0.7f), 
+                glm::vec3(0.5f)
+            ); 
         }
         else {
-            lightManager.setDirectionalLight(glm::vec3(0.45f, -0.8f, 0.9f), glm::vec3(0.3f), glm::vec3(0.0f), glm::vec3(0.0f));
+            lightManager.setDirectionalLight(
+                glm::vec3(0.45f, -0.8f, 0.9f), 
+                glm::vec3(0.3f), 
+                glm::vec3(0.0f), 
+                glm::vec3(0.0f)
+            );
         }
     }
     else if (lightsState == 1) {
         // red light
-        Light light(glm::vec3(125, 35, 250), glm::vec3(0.5f, 0.2f, 0.5f), glm::vec3(1.0, 0.0, 0.0), 25.0f);
+        Light light(
+            glm::vec3(125, 35, 250), 
+            glm::vec3(0.5f, 0.2f, 0.5f), 
+            glm::vec3(1.0, 0.0, 0.0), 
+            25.0f);
         lightManager.addLight(light);
         // green
-        Light light2(glm::vec3(125, 35, 120), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 1.0, 0.0), 25.0f);
+        Light light2(
+            glm::vec3(125, 35, 120), 
+            glm::vec3(2, 0.2f, 2), 
+            glm::vec3(0.0, 1.0, 0.0), 
+            25.0f);
         lightManager.addLight(light2);
         // blue light
-        Light light3(glm::vec3(125, 35, 0), glm::vec3(2, 0.2f, 2), glm::vec3(0.0, 0.0, 1.0), 25.0f);
+        Light light3(
+            glm::vec3(125, 35, 0), 
+            glm::vec3(2, 0.2f, 2), 
+            glm::vec3(0.0, 0.0, 1.0), 
+            25.0f);
         lightManager.addLight(light3);
     }
     else if (lightsState == 2) {
@@ -112,16 +134,22 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
 //----------------------------------
 void SceneBuilder::generateFlatTerrain(
     glm::vec3 offset,
-    int   gridSizeX,
-    int   gridSizeZ,
+    int gridSizeX,
+    int gridSizeZ,
     float cellSize,
     float maxHeight)
 {
-    float startHeight = maxHeight * 0.5f;  // t.ex. halvvägs upp
-    float maxStep = maxHeight * 0.1f;      // hur stort steg vi tillåter 
+    const float startHeight = maxHeight * 0.5f;
+    const float maxStep = maxHeight * 0.1f;
 
-    // Fyll en (gridSizeX+1)x(gridSizeZ+1)-array med höjder
-    std::vector<std::vector<float>> heightMap(gridSizeX + 1, std::vector<float>(gridSizeZ + 1));
+    // -------------------------------------------------
+    // Height map
+    // -------------------------------------------------
+    std::vector<std::vector<float>> heightMap(
+        gridSizeX + 1,
+        std::vector<float>(gridSizeZ + 1)
+    );
+
     for (int x = 0; x <= gridSizeX; ++x) {
         for (int z = 0; z <= gridSizeZ; ++z) {
             if (x == 0 && z == 0) {
@@ -132,138 +160,188 @@ void SceneBuilder::generateFlatTerrain(
             float sum = 0.0f;
             int count = 0;
 
-            // granne bakåt (i X-led)
             if (x > 0) {
                 sum += heightMap[x - 1][z];
                 ++count;
             }
-            // granne bakåt (i Z-led)
+
             if (z > 0) {
                 sum += heightMap[x][z - 1];
                 ++count;
             }
 
-            // basera på medelvärdet av befintliga grannar
-            float base = sum / count;
+            const float base = sum / count;
+            const float delta = randomRange(-maxStep, maxStep);
 
-            // nytt slumpsteg
-            float delta = randomRange(-maxStep, +maxStep);
             float h = base + delta;
-
-            // kläm mellan 0 och maxHeight
             h = std::max(0.0f, std::min(h, maxHeight));
+
             heightMap[x][z] = h;
         }
     }
 
     smoothHeightMap(heightMap, 0.5f, 150);
 
+
+    // -------------------------------------------------
+    // Terrain data
+    // -------------------------------------------------
     std::vector<physics::Triangle>& triangles = terrainData.triangles;
     std::vector<Vertex>& vertices = terrainData.vertices;
     std::vector<uint32_t>& indices = terrainData.indices;
 
-    // points
-    std::vector<glm::vec3> points;
-    points.reserve((gridSizeX + 1) * (gridSizeZ + 1));
-    for (int z = 0; z <= gridSizeZ; ++z) {
-        for (int x = 0; x <= gridSizeX; ++x) {
-            points.emplace_back(offset + glm::vec3{ x * cellSize, heightMap[x][z],     z * cellSize });
-        }
-    }
+    const int cutOff = 4;
 
-    int cutOff = 4;
+    const size_t vertexCount =
+        static_cast<size_t>(gridSizeX + 1) *
+        static_cast<size_t>(gridSizeZ + 1);
 
-    // indices
-    terrainData.indices.reserve(gridSizeX * gridSizeZ * 6);
-    for (int z = cutOff; z < gridSizeZ - cutOff; ++z) {
-        for (int x = cutOff; x < gridSizeX - cutOff; ++x) {
-            // triangel 1:
-            indices.emplace_back(x + z * (gridSizeX + 1));
-            indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
-            indices.emplace_back((x + 1) + z * (gridSizeX + 1));
+    const int cellsX = std::max(0, gridSizeX - 2 * cutOff);
+    const int cellsZ = std::max(0, gridSizeZ - 2 * cutOff);
 
-            // triangel 2:
-            indices.emplace_back((x + 1) + z * (gridSizeX + 1));
-            indices.emplace_back(x + (z + 1) * (gridSizeX + 1));
-            indices.emplace_back((x + 1) + (z + 1) * (gridSizeX + 1));
-        }
-    }
+    const size_t triangleCount =
+        static_cast<size_t>(cellsX) *
+        static_cast<size_t>(cellsZ) * 2;
 
-    // face normals
-    std::vector<glm::vec3> faceNormals;
-    faceNormals.reserve(indices.size() / 3);
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        glm::vec3 v0 = points[indices[i]];
-        glm::vec3 v1 = points[indices[i + 1]];
-        glm::vec3 v2 = points[indices[i + 2]];
-        glm::vec3 edgeA = v1 - v0;
-        glm::vec3 edgeB = v2 - v1;
-        faceNormals.emplace_back(glm::normalize(glm::cross(edgeA, edgeB)));
-
-        glm::vec3 n = faceNormals.back();
-        if (n.y < 0) {
-            std::cout << "Inverted normal detected at triangle " << (i / 3) << ": " << n.x << ", " << n.y << ", " << n.z << std::endl;
-        }
-    }
-
-    // vertex normals
-    std::vector<glm::vec3> vertexNormals;
-    vertexNormals.resize(points.size(), glm::vec3(0.0f));
-    for (size_t f = 0; f < faceNormals.size(); ++f) {
-        uint32_t i0 = indices[3 * f + 0];
-        uint32_t i1 = indices[3 * f + 1];
-        uint32_t i2 = indices[3 * f + 2];
-        vertexNormals[i0] += faceNormals[f];
-        vertexNormals[i1] += faceNormals[f];
-        vertexNormals[i2] += faceNormals[f];
-    }
-
-    for (auto& n : vertexNormals) {
-        n = glm::normalize(n);
-    }
-
-    // Tri colliders
-    for (size_t i = 0; i < indices.size(); i += 3) {
-        uint32_t i0 = indices[i + 0];
-        uint32_t i1 = indices[i + 1];
-        uint32_t i2 = indices[i + 2];
-
-        glm::vec3 v0 = points[i0];
-        glm::vec3 v1 = points[i1];
-        glm::vec3 v2 = points[i2];
-
-        triangles.emplace_back(objectId++, v0, v1, v2);
-    }
+    vertices.reserve(vertexCount);
+    indices.reserve(triangleCount * 3);
+    triangles.reserve(triangleCount);
 
     // Vertices
-    for (int i = 0; i < points.size(); ++i) {
-        glm::vec3 pos = points[i];
-        glm::vec3 normal = vertexNormals[i];
+    for (int z = 0; z <= gridSizeZ; ++z) {
+        for (int x = 0; x <= gridSizeX; ++x) {
+            glm::vec3 position =
+                offset +
+                glm::vec3(
+                    x * cellSize,
+                    heightMap[x][z],
+                    z * cellSize
+                );
 
-        int x = i % (gridSizeX + 1);
-        int z = i / (gridSizeX + 1);
-        glm::vec2 uv{ float(x) / gridSizeX, 1.0f - float(z) / gridSizeZ };
+            vertices.emplace_back(
+                position,
+                glm::vec3(0.0f), // normals calculated later
+                glm::vec2(0.0f)
+            );
+        }
+    }
 
-        vertices.emplace_back(pos, normal, uv);
+    // Indices
+    for (int z = cutOff; z < gridSizeZ - cutOff; ++z) {
+        for (int x = cutOff; x < gridSizeX - cutOff; ++x) {
+            const uint32_t i00 =
+                x + z * (gridSizeX + 1);
+
+            const uint32_t i01 =
+                x + (z + 1) * (gridSizeX + 1);
+
+            const uint32_t i10 =
+                (x + 1) + z * (gridSizeX + 1);
+
+            const uint32_t i11 =
+                (x + 1) + (z + 1) * (gridSizeX + 1);
+
+            // Triangle 1
+            indices.emplace_back(i00);
+            indices.emplace_back(i01);
+            indices.emplace_back(i10);
+
+            // Triangle 2
+            indices.emplace_back(i10);
+            indices.emplace_back(i01);
+            indices.emplace_back(i11);
+        }
+    }
+
+    // Face normals + vertex normals + physics triangles
+    for (size_t i = 0; i < indices.size(); i += 3) {
+        const uint32_t i0 = indices[i + 0];
+        const uint32_t i1 = indices[i + 1];
+        const uint32_t i2 = indices[i + 2];
+
+        const glm::vec3& v0 = vertices[i0].position;
+        const glm::vec3& v1 = vertices[i1].position;
+        const glm::vec3& v2 = vertices[i2].position;
+
+        const glm::vec3 edgeA = v1 - v0;
+        const glm::vec3 edgeB = v2 - v0;
+
+        const glm::vec3 faceNormal =
+            glm::normalize(glm::cross(edgeA, edgeB));
+
+        if (faceNormal.y < 0.0f) {
+            std::cout
+                << "Inverted normal detected at triangle "
+                << (i / 3)
+                << ": "
+                << faceNormal.x
+                << ", "
+                << faceNormal.y
+                << ", "
+                << faceNormal.z
+                << std::endl;
+        }
+
+        vertices[i0].normal += faceNormal;
+        vertices[i1].normal += faceNormal;
+        vertices[i2].normal += faceNormal;
+
+        triangles.emplace_back(
+            objectId++,
+            v0,
+            v1,
+            v2
+        );
+    }
+
+
+    // Normalize vertex normals
+    for (Vertex& vertex : vertices) {
+        const float lengthSquared =
+            glm::dot(vertex.normal, vertex.normal);
+
+        if (lengthSquared > 0.0f) {
+            vertex.normal = glm::normalize(vertex.normal);
+        }
     }
 }
 
-void SceneBuilder::smoothHeightMap(std::vector<std::vector<float>>& H, float smoothness, int passes) {
-    int W = static_cast<int>(H.size());
-    int D = static_cast<int>(H[0].size());
+void SceneBuilder::smoothHeightMap(
+    std::vector<std::vector<float>>& H,
+    float smoothness,
+    int passes)
+{
+    const int W = static_cast<int>(H.size());
+    const int D = static_cast<int>(H[0].size());
+
+    std::vector<std::vector<float>> src = H;
+    std::vector<std::vector<float>> dst = H;
+
     for (int pass = 0; pass < passes; ++pass) {
-        auto copy = H;
         for (int x = 1; x < W - 1; ++x) {
             for (int z = 1; z < D - 1; ++z) {
-                float sum = copy[x][z]
-                    + copy[x - 1][z] + copy[x + 1][z]
-                    + copy[x][z - 1] + copy[x][z + 1];
-                float avg = sum / 5.0f;
-                // weight = hur mycket vi drar mot grannarnas medel
-                H[x][z] = glm::mix(copy[x][z], avg, smoothness);
+                const float sum =
+                    src[x][z]
+                    + src[x - 1][z]
+                    + src[x + 1][z]
+                    + src[x][z - 1]
+                    + src[x][z + 1];
+
+                const float avg = sum / 5.0f;
+
+                dst[x][z] =
+                    glm::mix(
+                        src[x][z],
+                        avg,
+                        smoothness
+                    );
             }
         }
+
+        std::swap(src, dst);
     }
+
+    H = std::move(src);
 }
 
 //----------------------------------
@@ -284,13 +362,14 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
         float xVariance = randomRange(-varianceRange, varianceRange);
         float yVariance = randomRange(-25, 25);
         float zVariance = randomRange(-varianceRange, varianceRange);
-        glm::vec3 color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+        glm::vec3 color = glm::vec3(randomRange(0, 255));
         glm::vec3 spawnPos = spawnPoint + glm::vec3(xVariance, yVariance, zVariance);
 
         // orientation
         float randomAng = randomRange(0, 360);
-        glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1), randomRange(-1, 1), randomRange(-1, 1));
-        glm::quat orientation = glm::normalize(glm::angleAxis(glm::radians(randomAng), randomAxis));
+        glm::vec3 randomAxis = glm::vec3(randomRange(-1, 1));
+        glm::quat orientation = 
+            glm::normalize(glm::angleAxis(glm::radians(randomAng), randomAxis));
 
         // blocks
         if (mode == 0) {
@@ -300,9 +379,11 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             glm::vec3 size{ xVariance, yVariance, zVariance };
             float mass = xVariance * yVariance * zVariance;
 
+            // cube
             GameObjectDesc cube;
             cube.name = "cube";
-            cube.rootTransformHandle = world.createTransform(spawnPos, orientation, size);
+            cube.rootTransformHandle = 
+                world.createTransform(spawnPos, orientation, size);
             cube.mass = mass;
             SubPartDesc part;
             part.localTransformHandle = world.createTransform();
@@ -311,11 +392,15 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             part.color = color / 255.0f;
             cube.parts.push_back(part);
             world.createGameObject(cube);
+            
+            //// chair
             //GameObjectDesc chair;
             //chair.name = "Chair";
-            //glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::quat orientation = 
+            //    glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             //glm::vec3 scale{ 2.0f };
-            //chair.rootTransformHandle = world.createTransform(spawnPos, orientation, scale);
+            //chair.rootTransformHandle = 
+            //    world.createTransform(spawnPos, orientation, scale);
             //chair.bodyType = physics::BodyType::Dynamic;
             //chair.mass = 2.0f;
 
@@ -329,9 +414,11 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //SubPartDesc seat;
             //seat.name = "Seat";
             //glm::vec3 positionSeat = { 0,0,0 };
-            //glm::quat orientationSeat = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::quat orientationSeat = 
+            //    glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             //glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
-            //seat.localTransformHandle = world.createTransform(positionSeat, orientationSeat, scaleSeat);
+            //seat.localTransformHandle = 
+            //    world.createTransform(positionSeat, orientationSeat, scaleSeat);
             //seat.meshName = "cube";
             //seat.textureName = "checker_magenta";
             //seat.shaderName = "default";
@@ -343,9 +430,15 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //SubPartDesc backrest;
             //backrest.name = "Backrest";
             //glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
-            //glm::quat orientationBackrest = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //glm::quat orientationBackrest = 
+            //    glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             //glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
-            //backrest.localTransformHandle = world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+            //backrest.localTransformHandle = 
+            //    world.createTransform(
+            //        positionBackrest, 
+            //        orientationBackrest, 
+            //        scaleBackrest
+            //    );
             //backrest.meshName = "cube";
             //backrest.textureName = "checker_magenta";
             //backrest.shaderName = "default";
@@ -364,9 +457,11 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //    SubPartDesc leg;
             //    leg.name = "Leg" + std::to_string(i);
             //    glm::vec3 positionLeg = legPositions[i];
-            //    glm::quat orientationLeg = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            //    glm::quat orientationLeg = 
+            //        glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
             //    glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
-            //    leg.localTransformHandle = world.createTransform(positionLeg, orientationLeg, scaleLeg);
+            //    leg.localTransformHandle = 
+            //        world.createTransform(positionLeg, orientationLeg, scaleLeg);
             //    leg.meshName = "cube";
             //    leg.textureName = "checker_magenta";
             //    leg.shaderName = "default";
@@ -384,7 +479,8 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
 
             GameObjectDesc sphere;
             sphere.name = "sphere";
-            sphere.rootTransformHandle = world.createTransform(spawnPos, orientation, size);
+            sphere.rootTransformHandle = 
+                world.createTransform(spawnPos, orientation, size);
             sphere.mass = mass;
 
             SubPartDesc part;
@@ -424,18 +520,25 @@ void SceneBuilder::createBlockPyramid(
     for (int y = 0; y < pHeight; y++) {
         for (int x = 0; x < pWidthCounter; x++) {
             for (int z = 0; z < pWidthCounter; z++) {
-                float xPos = pos.x + x * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
-                float yPos = pos.y + sHeight / 2 + (y * sHeight);
-                float zPos = pos.z + z * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
+                float xPos = 
+                    pos.x + x * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
+                float yPos = 
+                    pos.y + sHeight / 2 + (y * sHeight);
+                float zPos =
+                    pos.z + z * (sWidth + sDistance) + y * (sWidth / 2 + sDistance);
 
                 if (randomColor) {
-                    color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                    color = glm::vec3(randomRange(0, 255));
                 }
 
-                //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sWidth, sHeight, sLength), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
                 GameObjectDesc cube;
                 cube.name = "cube";
-                cube.rootTransformHandle = world.createTransform(glm::vec3(xPos, yPos, zPos), glm::quat(1, 0, 0, 0), glm::vec3(sWidth, sHeight, sLength));
+                cube.rootTransformHandle = 
+                    world.createTransform(
+                        glm::vec3(xPos, yPos, zPos), 
+                        glm::quat(1, 0, 0, 0), 
+                        glm::vec3(sWidth, sHeight, sLength)
+                    );
                 cube.mass = sWeight;
                 cube.asleep = asleep;
 
@@ -479,15 +582,16 @@ void SceneBuilder::createSpherePyramid(
     for (int y = 0; y < pHeight; y++) {
         for (int x = 0; x < pWidthCounter; x++) {
             for (int z = 0; z < pWidthCounter; z++) {
-                float xPos = pos.x + x * (sDiameter + sDistance) + y * (sRadius + sDistance);
-                float yPos = pos.y + y * sqrt2 * sRadius;
-                float zPos = pos.z + z * (sDiameter + sDistance) + y * (sRadius + sDistance);
+                float xPos = 
+                    pos.x + x * (sDiameter + sDistance) + y * (sRadius + sDistance);
+                float yPos = 
+                    pos.y + y * sqrt2 * sRadius;
+                float zPos =
+                    pos.z + z * (sDiameter + sDistance) + y * (sRadius + sDistance);
 
                 if (randomColor) {
-                    color = glm::vec3(randomRange(0, 255), randomRange(0, 255), randomRange(0, 255));
+                    color = glm::vec3(randomRange(0, 255));
                 }
-
-                //world.createGameObject("plain", "sphere", physics::ColliderType::SPHERE, physics::BodyType::Dynamic, glm::vec3(xPos, yPos, zPos), glm::vec3(sRadius), sWeight, glm::quat(1, 0, 0, 0), 1.5f, asleep, color, false);
             }
         }
         pWidthCounter -= 1;
@@ -515,10 +619,18 @@ void SceneBuilder::createBrickWall(
 
     glm::vec3 edgeBrickSize = brickSize;
     if (wallDirection == 0) {
-        edgeBrickSize.x = ((wallWidth * brickSize.x + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.x + (wallWidth - 2) * brickDistance)) / 2;
+        edgeBrickSize.x = (
+                (wallWidth * brickSize.x + 
+                (wallWidth - 1) * brickDistance) - 
+                (wallWidth - 3 * brickSize.x + (wallWidth - 2) * brickDistance)
+            ) / 2;
     }
     else {
-        edgeBrickSize.z = ((wallWidth * brickSize.z + (wallWidth - 1) * brickDistance) - (wallWidth - 3 * brickSize.z + (wallWidth - 2) * brickDistance)) / 2;
+        edgeBrickSize.z = (
+                (wallWidth * brickSize.z + 
+                (wallWidth - 1) * brickDistance) - 
+                (wallWidth - 3 * brickSize.z + (wallWidth - 2) * brickDistance)
+            ) / 2;
     }
 
     // col
@@ -537,16 +649,21 @@ void SceneBuilder::createBrickWall(
             }
             glm::vec3 randomColor;
             if (fullColorRange) {
-                randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+                randomColor = glm::vec3(
+                    randomRange(colorRange.x, colorRange.y),
+                    randomRange(colorRange.x, colorRange.y),
+                    randomRange(colorRange.x, colorRange.y)
+                );
             }
             else {
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+
             GameObjectDesc cube;
             cube.name = "cube";
-            cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
+            cube.rootTransformHandle = 
+                world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
             cube.mass = brickWeight;
             cube.asleep = true;
             SubPartDesc part;
@@ -570,16 +687,17 @@ void SceneBuilder::createBrickWall(
         }
         glm::vec3 randomColor;
         if (fullColorRange) {
-            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y));
         }
         else {
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        
         GameObjectDesc cube;
         cube.name = "cube";
-        cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
+        cube.rootTransformHandle = 
+            world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
         cube.mass = brickWeight;
         cube.asleep = true;
         SubPartDesc part;
@@ -593,25 +711,37 @@ void SceneBuilder::createBrickWall(
             glm::vec3 pos = startPos;
             pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
             if (wallDirection == 0) {
-                pos.x = brickSize.x / 2 + startPos.x + row * brickSize.x + brickDistance * row;
+                pos.x = 
+                    brickSize.x / 2 + startPos.x + 
+                    row * brickSize.x + 
+                    brickDistance * row;
                 pos.z = startPos.z;
             }
             else {
                 pos.x = startPos.x;
-                pos.z = brickSize.z / 2 + startPos.z + row * brickSize.z + brickDistance * row;
+                pos.z = 
+                    brickSize.z / 2 + 
+                    startPos.z + 
+                    row * brickSize.z + 
+                    brickDistance * row;
             }
             glm::vec3 randomColor;
             if (fullColorRange) {
-                randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+                randomColor = glm::vec3(
+                    randomRange(colorRange.x, colorRange.y),
+                    randomRange(colorRange.x, colorRange.y),
+                    randomRange(colorRange.x, colorRange.y)
+                );
             }
             else {
                 float c = randomRange(colorRange.x, colorRange.y);
                 randomColor = glm::vec3(c, c, c);
             }
-            //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, brickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+            
             GameObjectDesc cube;
             cube.name = "cube";
-            cube.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
+            cube.rootTransformHandle = 
+                world.createTransform(pos, glm::quat(1, 0, 0, 0), brickSize);
             cube.mass = brickWeight;
             cube.asleep = true;
             SubPartDesc part;
@@ -624,24 +754,37 @@ void SceneBuilder::createBrickWall(
         pos = startPos;
         pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
         if (wallDirection == 0) {
-            pos.x = startPos.x + wallWidth - 1 * brickSize.x + brickDistance * wallWidth - (edgeBrickSize.x - brickSize.x) / 2;
+            pos.x = 
+                startPos.x + 
+                wallWidth - 1 * brickSize.x + 
+                brickDistance * wallWidth - 
+                (edgeBrickSize.x - brickSize.x) / 2;
             pos.z = startPos.z;
         }
         else {
             pos.x = startPos.x;
-            pos.z = startPos.z + wallWidth - 1 * brickSize.z + brickDistance * wallWidth - (edgeBrickSize.z - brickSize.z) / 2;
+            pos.z = 
+                startPos.z + 
+                wallWidth - 1 * brickSize.z + 
+                brickDistance * wallWidth - 
+                (edgeBrickSize.z - brickSize.z) / 2;
         }
         if (fullColorRange) {
-            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y), randomRange(colorRange.x, colorRange.y));
+            randomColor = glm::vec3(
+                randomRange(colorRange.x, colorRange.y),
+                randomRange(colorRange.x, colorRange.y),
+                randomRange(colorRange.x, colorRange.y)
+            );
         }
         else {
             float c = randomRange(colorRange.x, colorRange.y);
             randomColor = glm::vec3(c, c, c);
         }
-        //world.createGameObject("plain", "cube", physics::ColliderType::CUBOID, physics::BodyType::Dynamic, pos, edgeBrickSize, brickWeight, glm::quat(1, 0, 0, 0), 1.5f, true, randomColor, false);
+        
         GameObjectDesc cube2;
         cube2.name = "cube";
-        cube2.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
+        cube2.rootTransformHandle = 
+            world.createTransform(pos, glm::quat(1, 0, 0, 0), edgeBrickSize);
         cube2.mass = brickWeight;
         cube2.asleep = true;
         SubPartDesc part2;

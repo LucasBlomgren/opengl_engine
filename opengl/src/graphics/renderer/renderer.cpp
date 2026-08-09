@@ -83,7 +83,10 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
                 bucket.textureId == part.textureId)
             {
                 bucket.parts.push_back({ objectH, i });
-                bucket.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
+                bucket.instances.emplace_back(
+                    rootT->modelMatrix * localT->modelMatrix, 
+                    part.color
+                );
 
                 part.batchIdx = static_cast<int>(&bucket - &batches[0]);
                 part.batchInstanceIdx = static_cast<int>(bucket.parts.size()) - 1;
@@ -99,7 +102,10 @@ void Renderer::addObjectToBatch(GameObjectHandle objectH) {
             newBatch.shader = part.shader;
             newBatch.textureId = part.textureId;
             newBatch.parts.push_back({ objectH, i });
-            newBatch.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
+            newBatch.instances.emplace_back(
+                rootT->modelMatrix * localT->modelMatrix, 
+                part.color
+            );
 
             // new batch & instance
             part.batchIdx = static_cast<int>(batches.size());
@@ -153,8 +159,11 @@ void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
 //-----------------------------
 //       View Projection
 //-----------------------------
-void Renderer::setViewProjection(Camera& camera, float aspect) {
-    glm::mat4 projection = glm::perspective(glm::radians(80.0f), aspect, 0.1f, maxViewDistance);
+void Renderer::setViewProjection(Camera& camera, float aspect) 
+{
+    glm::mat4 projection = 
+        glm::perspective(glm::radians(80.0f), aspect, 0.1f, maxViewDistance);
+
     // camera/view transformation
     glm::mat4 view = camera.GetViewMatrix();
 
@@ -178,7 +187,9 @@ void Renderer::setViewProjection(Camera& camera, float aspect) {
 
     skyboxShader->use();
     skyboxShader->setMat4("projection", projection);
-    skyboxShader->setMat4("view", glm::mat4(glm::mat3(view))); // remove translation from the view matrix
+
+    // remove translation from the view matrix
+    skyboxShader->setMat4("view", glm::mat4(glm::mat3(view)));
 }
 
 //-----------------------------
@@ -211,7 +222,11 @@ void Renderer::cleanupShadowRender() {
 //-----------------------------
 //      Set Default Render
 //-----------------------------
-void Renderer::setDefaultRender(glm::mat4& lightSpaceMatrix, int targetW, int targetH) {
+void Renderer::setDefaultRender(
+    glm::mat4& lightSpaceMatrix, 
+    int targetW, 
+    int targetH) 
+{
     setViewPort(targetW, targetH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -251,10 +266,18 @@ void Renderer::render(
     }
 
     // #TODO: optimize by only updating batches that changed
-    // only awake dynamic objects should need batch updates, static and asleep objects won't move and thus their batch instance data won't need updating
+    // only awake dynamic objects should need batch updates, static and 
+    // asleep objects won't move and thus their batch instance data 
+    // won't need updating.
 
     fillBatchInstances();
-    debugRenderer.prepareFrame(physics, world->getGameObjectsMap().dense(), *world, editor->selectedObjectHandle, editor->selectedSubPartIndex);
+    debugRenderer.prepareFrame(
+        physics, 
+        world->getGameObjectsMap().dense(), 
+        *world, 
+        editor->selectedObjectHandle, 
+        editor->selectedSubPartIndex
+    );
 
     // shadow depth map render
     glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
@@ -297,10 +320,16 @@ void Renderer::render(
         }
     }
 
-    // draw sky quad
+    //// draw sky quad
     //DirectionalLight& light = lightManager->getDirectionalLight();
     //light.direction.y -= 0.0001f;
-    //quadRenderer.draw(shaderManager->getShader("SkyShader"), &camera, light.direction, targetW, targetH);
+    //quadRenderer.draw(
+    //    shaderManager->getShader("SkyShader"), 
+    //    &camera, 
+    //    light.direction, 
+    //    targetW, 
+    //    targetH
+    //);
 
     renderLights();
     renderScene(builder);
@@ -321,7 +350,14 @@ void Renderer::render(
 
     // debug
     glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
-    debugRenderer.renderOverlayPass(physics, camera, world->getGameObjectsMap().dense(), *world);
+
+    debugRenderer.renderOverlayPass(
+        physics, 
+        camera, 
+        world->getGameObjectsMap().dense(), 
+        *world
+    );
+
     glEndQuery(GL_TIME_ELAPSED);
 
     if (viewportFBO) {
@@ -342,7 +378,10 @@ void Renderer::fillBatchInstances() {
             Transform* rootT = world->getTransform(obj->rootTransformHandle);
             Transform* localT = world->getTransform(part.localTransformHandle);
 
-            bucket.instances.emplace_back(rootT->modelMatrix * localT->modelMatrix, part.color);
+            bucket.instances.emplace_back(
+                rootT->modelMatrix * localT->modelMatrix, 
+                part.color
+            );
         }
     }
 }
@@ -371,12 +410,28 @@ void Renderer::renderGameObjectsShadow() {
             shader = shadowShader->instancedVariant;
             shader->use();
 
-            // #TODO: instanceVBO should live in RenderBatch, otherwise all batches that share mesh.
-            // If BatchA uploads awake data and BatchB is non-dirty and doesn't upload asleep data, BatchB will still use the awake instance data uploaded by BatchA, 
-            // causing asleep objects to render in the wrong position until BatchB uploads its own asleep data and overwrites the awake data.
+            // #TODO: instanceVBO should live in RenderBatch, otherwise all batches 
+            // that share mesh.
+            // If BatchA uploads awake data and BatchB is non-dirty and doesn't 
+            // upload asleep data, BatchB will still use the awake instance data 
+            // uploaded by BatchA, 
+            // causing asleep objects to render in the wrong position until 
+            // BatchB uploads its own asleep data and overwrites the awake data.
             glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
-            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
-            glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());
+
+            glBufferData(
+                GL_ARRAY_BUFFER, 
+                instances.size() * sizeof(InstanceData), 
+                instances.data(), 
+                GL_DYNAMIC_DRAW
+            );
+            glDrawElementsInstanced(
+                GL_TRIANGLES, 
+                mesh->indexCount,
+                GL_UNSIGNED_INT, 
+                0, 
+                instances.size()
+            );
         }
     }
 }
@@ -415,13 +470,6 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
                     shader->setVec3("uColor", inst.color);
                 }
 
-                // random color shader hack
-                if (inst.color.x == -1 && inst.color.y == -1 && inst.color.z == -1) {
-                    shader->setBool("useRandomColor", true);
-                } else {
-                    shader->setBool("useRandomColor", false);
-                }
-
                 shader->setMat4("model", inst.model);
                 mesh->draw();
             }
@@ -439,10 +487,20 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
 
             // fill instace buffer
             glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
-            glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(InstanceData), instances.data(), GL_DYNAMIC_DRAW);
+
+            glBufferData(
+                GL_ARRAY_BUFFER, 
+                instances.size() * sizeof(InstanceData), 
+                instances.data(), 
+                GL_DYNAMIC_DRAW);
 
             // draw instanced
-            glDrawElementsInstanced(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, 0, instances.size());
+            glDrawElementsInstanced(
+                GL_TRIANGLES, 
+                mesh->indexCount, 
+                GL_UNSIGNED_INT, 
+                0, 
+                instances.size());
         }
     }
 }
@@ -450,7 +508,11 @@ void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
 //-----------------------------
 //       Render terrain
 //-----------------------------
-void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, bool shadowPass) {
+void Renderer::renderTerrain(
+    SceneBuilder::TerrainData& data, 
+    bool sceneDirty, 
+    bool shadowPass) 
+{
     if (data.triangles.size() == 0) {
         return;
     }
@@ -481,7 +543,9 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
         constexpr float textureTileSize = 5.0f;
 
         for (Vertex& vertex : vertices) {
-            vertex.texCoords = glm::vec2(vertex.position.x / textureTileSize, vertex.position.z / textureTileSize);
+            vertex.texCoords = glm::vec2(
+                    vertex.position.x / textureTileSize, 
+                    vertex.position.z / textureTileSize);
         }
 
         glGenVertexArrays(1, &VAO);
@@ -492,21 +556,41 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
 
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+        glBufferData(
+            GL_ARRAY_BUFFER, 
+            vertices.size() * sizeof(Vertex), 
+            vertices.data(), GL_STATIC_DRAW
+        );
 
         glGenBuffers(1, &EBO);
         glcount::incEBO();
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, 
+            indices.size() * sizeof(uint32_t), 
+            indices.data(), 
+            GL_STATIC_DRAW);
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+        glVertexAttribPointer(
+            0, 3,
+            GL_FLOAT, GL_FALSE, 
+            sizeof(Vertex), 
+            (void*)offsetof(Vertex, position));
         glEnableVertexAttribArray(0);
 
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+        glVertexAttribPointer(
+            1, 3, 
+            GL_FLOAT, GL_FALSE, 
+            sizeof(Vertex), 
+            (void*)offsetof(Vertex, normal));
         glEnableVertexAttribArray(1);
 
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoords));
+        glVertexAttribPointer(
+            2, 2, 
+            GL_FLOAT, GL_FALSE, 
+            sizeof(Vertex), 
+            (void*)offsetof(Vertex, texCoords));
         glEnableVertexAttribArray(2);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -529,7 +613,6 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
             defaultShader->use();
             defaultShader->setMat4("model", model);
             defaultShader->setBool("useTexture", true);
-            defaultShader->setBool("useRandomColor", false);
             defaultShader->setVec3("uColor", glm::vec3(0.0f, 1.0f, 0.0f));
 
             glActiveTexture(GL_TEXTURE0);
@@ -540,7 +623,11 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         }
 
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+        glDrawElements(
+            GL_TRIANGLES, 
+            static_cast<GLsizei>(indices.size()), 
+            GL_UNSIGNED_INT, 
+            nullptr);
     }
     if (renderWireframe) {
         if (!shadowPass) {
@@ -557,7 +644,12 @@ void Renderer::renderTerrain(SceneBuilder::TerrainData& data, bool sceneDirty, b
             glLineWidth(TERRAIN_WIREFRAME_LINE_WIDTH);
         }
 
-        glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, nullptr);
+        glDrawElements(
+            GL_TRIANGLES, 
+            (GLsizei)indices.size(), 
+            GL_UNSIGNED_INT, 
+            nullptr
+        );
 
         if (!shadowPass) {
             // restore
@@ -589,7 +681,9 @@ glm::mat4 Renderer::computeLightSpaceMatrix() {
     glm::mat4 lightProjection = glm::ortho(
          minLS.x,  maxLS.x,    // tight X‐intervall
          minLS.y,  maxLS.y,    // tight Y‐intervall
-        -maxLS.z, -minLS.z     // Z‐intervall: notera att near/far i ljus‐space ofta behöver inverteras
+
+        // Z‐intervall: notera att near/far i ljus‐space ofta behöver inverteras
+        -maxLS.z, -minLS.z
     );
 
     return lightProjection * lightView;
@@ -703,9 +797,18 @@ void Renderer::uploadLightsToShader() {
         defaultInstancedShader->setVec3(base + ".position", light.position);
         defaultInstancedShader->setVec3(base + ".color", light.color);
 
-        defaultInstancedShader->setVec3(base + ".ambient", light.ambient * light.intensity);
-        defaultInstancedShader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
-        defaultInstancedShader->setVec3(base + ".specular", light.specular * light.intensity);
+        defaultInstancedShader->setVec3(
+            base + ".ambient", 
+            light.ambient * light.intensity
+        );
+        defaultInstancedShader->setVec3(
+            base + ".diffuse", 
+            light.diffuse * light.intensity
+        );
+        defaultInstancedShader->setVec3(
+            base + ".specular", 
+            light.specular * light.intensity
+        );
 
         defaultInstancedShader->setFloat(base + ".constant", light.constant);
         defaultInstancedShader->setFloat(base + ".linear", light.linear);
@@ -745,7 +848,11 @@ void Renderer::renderLights() const {
 //----------------------------------------
 //     Hovered Object Outline
 //----------------------------------------
-void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
+void Renderer::renderHoveredObjectOutline(
+    GameObjectHandle& handle, 
+    Camera& camera, 
+    SceneBuilder& builder) 
+{
     GameObject* obj = world->getGameObject(handle);
     if (!obj || !physicsEngine) return;
 
@@ -792,7 +899,11 @@ void Renderer::renderHoveredObjectOutline(GameObjectHandle& handle, Camera& came
 //----------------------------------------
 //     Selected Object Outline
 //----------------------------------------
-void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& camera, SceneBuilder& builder) {
+void Renderer::renderSelectedObjectOutline(
+    GameObjectHandle& handle, 
+    Camera& camera, 
+    SceneBuilder& builder) 
+{
     GameObject* obj = world->getGameObject(handle);
     if (!obj || !physicsEngine) return;
 
@@ -811,7 +922,8 @@ void Renderer::renderSelectedObjectOutline(GameObjectHandle& handle, Camera& cam
             physicsEngine->getColliderState(body->colliders[i]);
         if (!collider) continue;
 
-        // editor mode: if this collider is part of the selected subpart, use subpart color and line width instead
+        // editor mode: if this collider is part of the selected subpart, 
+        // use subpart color and line width instead
         if (!engineState->isPlayerMode()) {
             if (i == editor->selectedSubPartIndex) {
                 glLineWidth(SUBPART_LINE_WIDTH);

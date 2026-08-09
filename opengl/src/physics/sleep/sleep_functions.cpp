@@ -1,13 +1,15 @@
 #include "pch.h"
 #include "wake_sleep_utils.h"
-#include "physics/engine/physics_engine_impl.h"
+#include "physics/physics_engine.h"
 
-namespace physics::internal {
+namespace physics {
+
+using namespace internal;
 
 //===================================================================
 // Process wake list
 //===================================================================
-void EngineImpl::processWakeList() {
+void Engine::processWakeList() {
     for (BodyHandle rb : toWake) {
         broadphaseManager.moveToAwake(rb);
 
@@ -24,7 +26,7 @@ void EngineImpl::processWakeList() {
 // Process sleep list: Check which bodies should go to
 // sleep and move them to the asleep list.
 //===================================================================
-void EngineImpl::processSleepList(float outerDt) {
+void Engine::processSleepList(float outerDt) {
     toSleep.clear();
 
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
@@ -58,7 +60,7 @@ void EngineImpl::processSleepList(float outerDt) {
 // Sleep Thresholds: Update the sleep thresholds for awake dynamic
 // bodies based on their recent collision history.
 //====================================================================
-void EngineImpl::updateSleepThresholds() {
+void Engine::updateSleepThresholds() {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const BodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
@@ -97,7 +99,7 @@ void EngineImpl::updateSleepThresholds() {
 // Sleep damping: Apply additional damping to bodies
 // that are close to going to sleep,
 //============================================================
-void EngineImpl::addSleepDamping() {
+void Engine::addSleepDamping() {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const BodyHandle& handle : awakeHandles) {
         RigidBody* body = caches.bodies.get(handle, FUNC_NAME);

@@ -178,8 +178,8 @@ void RigidBody::setStatic() {
 	invMass = 0.0f;
 }
 
-void RigidBody::setExternalControl(bool controlled) {
-	motionControl = controlled ? MotionControl::External : MotionControl::Physics;
+void RigidBody::setMotionControl(MotionControl mode) {
+	motionControl = mode;
 	sleepCounter = 0.0f;
 	anchorTimer = 0.0f;
 }
