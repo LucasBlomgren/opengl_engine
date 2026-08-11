@@ -176,9 +176,20 @@ void Engine::step(float dt, EngineState& engine) {
 //==============================
 // Step initialization
 //==============================
+void Engine::processPendingCommands() {
+    internal::cmd::Buffer::Batch batch = commandBuffer.take();
+
+    if (batch.empty()) {
+        return;
+    }
+
+    commandProcessor.process(batch, dt);
+}
+
 void Engine::beginPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
+    dt = outerDt;
     processPendingCommands();
 
     uint32_t bodySlotCapacity =

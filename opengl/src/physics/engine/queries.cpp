@@ -165,8 +165,8 @@ Engine::getColliderState(
 //=========================================
 // Simulation output
 //=========================================
-std::vector<ExternalMotionContact>&
-Engine::getExternalMotionContacts() {
+const std::vector<ExternalMotionContact>&
+Engine::getExternalMotionContacts() const {
     return narrowphaseManager.getExternalContacts();
 }
 

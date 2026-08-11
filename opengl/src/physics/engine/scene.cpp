@@ -10,7 +10,8 @@ using namespace internal;
 // Internal scene setup
 //====================================
 void Engine::setupScene(
-    const std::vector<Triangle>& terrainInput) {
+    const std::vector<Triangle>& terrainInput) 
+{
     terrainTriangles.clear();
     terrainTriangles.reserve(terrainInput.size());
 
@@ -78,14 +79,6 @@ void Engine::sleepAllObjects() {
 
 void Engine::awakenAllObjects() {
     commandBuffer.recordAwakenAllObjects();
-}
-
-//====================================
-// BVH management
-//====================================
-void Engine::setBVHDirty(
-    BodyHandle handle) {
-    broadphaseManager.setBVHDirty(handle);
 }
 
 }

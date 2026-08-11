@@ -302,10 +302,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='O2|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\engine\cmd_processor\cmd_buffer.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\cmd_processor.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\lifecycle_processor.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd\buffer.cpp" />
+    <ClCompile Include="src\physics\engine\cmd\processor.cpp" />
     <ClCompile Include="src\physics\engine\body_submission.cpp" />
     <ClCompile Include="src\physics\engine\collider_submission.cpp" />
     <ClCompile Include="src\physics\engine\queries.cpp" />
@@ -331,7 +329,9 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
-    <ClInclude Include="src\physics\engine\cmd_processor\cmd_buffer.h" />
+    <ClInclude Include="src\physics\engine\body_spatial_update.h" />
+    <ClInclude Include="src\physics\engine\cmd\buffer.h" />
+    <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\error_logging.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />

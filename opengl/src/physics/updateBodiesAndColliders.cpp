@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "physics/physics_engine.h"
+#include "physics/engine/body_spatial_update.h"
 
 namespace physics {
 
@@ -52,14 +53,15 @@ void Engine::integratePositionsAndColliders(
 
         body->integratePose(dt);
         body->updateInertiaWorld();
-        updateCollidersAndBodyAABB(body);
+        updateCollidersAndBodyAABB(caches, body);
     }
 }
 
 //==============================================================
 // Update Collider Poses and Body AABB
 //==============================================================
-void Engine::updateCollidersAndBodyAABB(
+void internal::updateCollidersAndBodyAABB(
+    RuntimeCaches& caches,
     RigidBody* body)
 {
     if (!body) {

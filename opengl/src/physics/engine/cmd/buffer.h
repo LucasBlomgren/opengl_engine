@@ -8,9 +8,9 @@
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
-namespace physics::internal {
+namespace physics::internal::cmd {
 
-class CommandBuffer {
+class Buffer {
 public:
     //=========================================
     // Rigid body mutation commands

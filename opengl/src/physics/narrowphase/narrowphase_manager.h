@@ -23,7 +23,7 @@ public:
     );
     void clear();
 
-    std::vector<ExternalMotionContact>& getExternalContacts() {
+    const std::vector<ExternalMotionContact>& getExternalContacts() const {
         return externalContacts;
     }
 

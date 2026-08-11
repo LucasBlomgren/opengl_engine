@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "physics/engine/cmd_processor/cmd_buffer.h"
+#include "physics/engine/cmd/buffer.h"
 
 #include <algorithm>
 #include <iterator>
 #include <utility>
 
-namespace physics::internal {
+namespace physics::internal::cmd {
 
 namespace {
     template<class T>
@@ -53,7 +53,7 @@ namespace {
 //=========================================
 // Storage management
 //=========================================
-void CommandBuffer::reserve(
+void Buffer::reserve(
     size_t bodyCount,
     size_t colliderCount,
     size_t mutationCount)
@@ -67,7 +67,7 @@ void CommandBuffer::reserve(
     mutations.reserve(mutationCount);
 }
 
-void CommandBuffer::clear() {
+void Buffer::clear() {
     bodyCreates.clear();
     colliderCreates.clear();
     bodyDestroys.clear();
@@ -75,7 +75,7 @@ void CommandBuffer::clear() {
     mutations.clear();
 }
 
-bool CommandBuffer::empty() const noexcept {
+bool Buffer::empty() const noexcept {
     return bodyCreates.empty() &&
         colliderCreates.empty() &&
         bodyDestroys.empty() &&
@@ -83,7 +83,7 @@ bool CommandBuffer::empty() const noexcept {
         mutations.empty();
 }
 
-CommandBuffer::Batch CommandBuffer::take() {
+Buffer::Batch Buffer::take() {
     Batch batch;
 
     moveAndClear(bodyCreates, batch.bodyCreates);
@@ -98,32 +98,32 @@ CommandBuffer::Batch CommandBuffer::take() {
 //=========================================
 // Lifecycle recording
 //=========================================
-void CommandBuffer::recordBodyCreate(
+void Buffer::recordBodyCreate(
     BodyHandle body) {
     bodyCreates.push_back(body);
 }
 
-void CommandBuffer::recordColliderCreate(
+void Buffer::recordColliderCreate(
     ColliderHandle collider) {
     colliderCreates.push_back(collider);
 }
 
-bool CommandBuffer::recordBodyDestroy(
+bool Buffer::recordBodyDestroy(
     BodyHandle body) {
     return addUnique(bodyDestroys, body);
 }
 
-bool CommandBuffer::recordColliderDestroy(
+bool Buffer::recordColliderDestroy(
     ColliderHandle collider) {
     return addUnique(colliderDestroys, collider);
 }
 
-bool CommandBuffer::isBodyPendingDestroy(
+bool Buffer::isBodyPendingDestroy(
     BodyHandle body) const {
     return contains(bodyDestroys, body);
 }
 
-bool CommandBuffer::isColliderPendingDestroy(
+bool Buffer::isColliderPendingDestroy(
     ColliderHandle collider) const {
     return contains(colliderDestroys, collider);
 }
@@ -131,80 +131,80 @@ bool CommandBuffer::isColliderPendingDestroy(
 //=========================================
 // Rigid body command recording
 //=========================================
-void CommandBuffer::recordApplyLinearImpulse(
+void Buffer::recordApplyLinearImpulse(
     BodyHandle body,
     const glm::vec3& impulse) {
     mutations.emplace_back(ApplyLinearImpulse{ body, impulse });
 }
 
-void CommandBuffer::recordSetLinearVelocity(
+void Buffer::recordSetLinearVelocity(
     BodyHandle body,
     const glm::vec3& velocity) {
     mutations.emplace_back(SetLinearVelocity{ body, velocity });
 }
 
-void CommandBuffer::recordSetAngularVelocity(
+void Buffer::recordSetAngularVelocity(
     BodyHandle body,
     const glm::vec3& velocity) {
     mutations.emplace_back(SetAngularVelocity{ body, velocity });
 }
 
-void CommandBuffer::recordSetKinematicTarget(
+void Buffer::recordSetKinematicTarget(
     BodyHandle body,
     const Pose& target) {
     mutations.emplace_back(SetKinematicTarget{ body, target });
 }
 
-void CommandBuffer::recordSetRigidBodyTransform(
+void Buffer::recordSetRigidBodyTransform(
     BodyHandle body,
     const Pose& pose,
     const glm::vec3& scale) {
     mutations.emplace_back(SetRigidBodyTransform{ body, pose, scale });
 }
 
-void CommandBuffer::recordSetRigidBodySleepState(
+void Buffer::recordSetRigidBodySleepState(
     BodyHandle body,
     bool asleep) {
     mutations.emplace_back(SetRigidBodySleepState{ body, asleep });
 }
 
-void CommandBuffer::recordSetRigidBodyType(
+void Buffer::recordSetRigidBodyType(
     BodyHandle body,
     BodyType type) {
     mutations.emplace_back(SetRigidBodyType{ body, type });
 }
 
-void CommandBuffer::recordSetRigidBodyMotionControl(
+void Buffer::recordSetRigidBodyMotionControl(
     BodyHandle body,
     MotionControl motionControl) {
     mutations.emplace_back(SetRigidBodyMotionControl{ body, motionControl });
 }
 
-void CommandBuffer::recordSetRigidBodyResponseMode(
+void Buffer::recordSetRigidBodyResponseMode(
     BodyHandle body,
     ResponseMode responseMode) {
     mutations.emplace_back(SetRigidBodyResponseMode{ body, responseMode });
 }
 
-void CommandBuffer::recordSetRigidBodyMass(
+void Buffer::recordSetRigidBodyMass(
     BodyHandle body,
     float mass) {
     mutations.emplace_back(SetRigidBodyMass{ body, mass });
 }
 
-void CommandBuffer::recordSetRigidBodyAllowGravity(
+void Buffer::recordSetRigidBodyAllowGravity(
     BodyHandle body,
     bool allowGravity) {
     mutations.emplace_back(SetRigidBodyAllowGravity{ body, allowGravity });
 }
 
-void CommandBuffer::recordSetRigidBodyAllowSleep(
+void Buffer::recordSetRigidBodyAllowSleep(
     BodyHandle body,
     bool allowSleep) {
     mutations.emplace_back(SetRigidBodyAllowSleep{ body, allowSleep });
 }
 
-void CommandBuffer::recordSetRigidBodyCanMoveLinearly(
+void Buffer::recordSetRigidBodyCanMoveLinearly(
     BodyHandle body,
     bool canMoveLinearly) {
     mutations.emplace_back(SetRigidBodyCanMoveLinearly{
@@ -216,13 +216,13 @@ void CommandBuffer::recordSetRigidBodyCanMoveLinearly(
 //=========================================
 // Collider command recording
 //=========================================
-void CommandBuffer::recordSetColliderLocalPose(
+void Buffer::recordSetColliderLocalPose(
     ColliderHandle collider,
     const Pose& localPose) {
     mutations.emplace_back(SetColliderLocalPose{ collider, localPose });
 }
 
-void CommandBuffer::recordSetColliderLocalTransform(
+void Buffer::recordSetColliderLocalTransform(
     ColliderHandle collider,
     const Pose& localPose,
     const glm::vec3& localScale) {
@@ -233,19 +233,19 @@ void CommandBuffer::recordSetColliderLocalTransform(
     });
 }
 
-void CommandBuffer::recordSetColliderShape(
+void Buffer::recordSetColliderShape(
     ColliderHandle collider,
     const ColliderShapeDesc& shape) {
     mutations.emplace_back(SetColliderShape{ collider, shape });
 }
 
-void CommandBuffer::recordSetColliderEnabled(
+void Buffer::recordSetColliderEnabled(
     ColliderHandle collider,
     bool enabled) {
     mutations.emplace_back(SetColliderEnabled{ collider, enabled });
 }
 
-void CommandBuffer::recordSetColliderTrigger(
+void Buffer::recordSetColliderTrigger(
     ColliderHandle collider,
     bool isTrigger) {
     mutations.emplace_back(SetColliderTrigger{ collider, isTrigger });
@@ -254,11 +254,11 @@ void CommandBuffer::recordSetColliderTrigger(
 //=========================================
 // Scene-wide command recording
 //=========================================
-void CommandBuffer::recordSleepAllObjects() {
+void Buffer::recordSleepAllObjects() {
     mutations.emplace_back(SleepAllObjects{});
 }
 
-void CommandBuffer::recordAwakenAllObjects() {
+void Buffer::recordAwakenAllObjects() {
     mutations.emplace_back(AwakenAllObjects{});
 }
 

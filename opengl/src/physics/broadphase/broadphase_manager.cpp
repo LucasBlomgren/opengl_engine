@@ -13,17 +13,23 @@ namespace physics::internal {
 //=======================================
 //    Init & Clear
 //=======================================
-void BroadphaseManager::init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris) {
+void BroadphaseManager::init(
+    PhysicsWorld* world, 
+    RuntimeCaches* caches, 
+    std::vector<Tri>* terrainTris) 
+{
     this->caches = caches;
     this->terrainTriangles = terrainTris;
 
-    SlotMap<RigidBody, BodyHandle>* bMap = caches->bodies.sm; // sm=slotmap
+    SlotMap<RigidBody, BodyHandle>* bMap = caches->bodies.sm;
     size_t slotCap = bMap->dense().capacity();
 
     awakeBvh.init(world, caches, slotCap, true);
     asleepBvh.init(world, caches, slotCap, true);
     staticBvh.init(world, caches, slotCap, true);
-    speculativeBvh.init(world, caches, slotCap, false); // speculative pairs don't need to write leaf indices
+
+    // false = speculative pairs don't need to write leaf indices
+    speculativeBvh.init(world, caches, slotCap, false);
 
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);

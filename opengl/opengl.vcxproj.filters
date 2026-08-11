@@ -86,10 +86,8 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
     <ClCompile Include="src\physics\engine\step.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\cmd_buffer.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\cmd_processor.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\lifecycle_processor.cpp" />
-    <ClCompile Include="src\physics\engine\cmd_processor\mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd\buffer.cpp" />
+    <ClCompile Include="src\physics\engine\cmd\processor.cpp" />
     <ClCompile Include="src\physics\engine\body_submission.cpp" />
     <ClCompile Include="src\physics\engine\collider_submission.cpp" />
     <ClCompile Include="src\physics\engine\queries.cpp" />
@@ -218,7 +216,9 @@
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\physics\engine\cmd_processor\cmd_buffer.h" />
+    <ClInclude Include="src\physics\engine\body_spatial_update.h" />
+    <ClInclude Include="src\physics\engine\cmd\buffer.h" />
+    <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\error_logging.h" />
     <ClInclude Include="src\physics\physics_engine.h" />
   </ItemGroup>
