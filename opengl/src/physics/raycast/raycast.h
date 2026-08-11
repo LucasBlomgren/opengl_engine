@@ -4,7 +4,7 @@
 
 #include "physics/bodies/rigidbody.h"
 #include "physics/bvh/bvh.h"
-#include "physics/public/physics_query_types.h"
+#include "physics/public/query_types.h"
 
 namespace physics::internal {
 

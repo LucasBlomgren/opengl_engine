@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "core/slot_map.h"
-#include "physics/public/physics_contact_types.h"
+#include "physics/public/contact_types.h"
 #include "SAT/sat.h"
 
 namespace physics::internal {

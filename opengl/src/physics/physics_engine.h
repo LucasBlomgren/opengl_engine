@@ -9,11 +9,10 @@
 
 #include "physics/public/collider_desc.h"
 #include "physics/public/collider_state.h"
-#include "physics/public/physics_contact_types.h"
-#include "physics/public/physics_debug_types.h"
-#include "physics/public/physics_handles.h"
-#include "physics/public/physics_query_types.h"
-#include "physics/public/physics_scene_types.h"
+#include "physics/public/contact_types.h"
+#include "physics/public/debug_types.h"
+#include "physics/public/handles.h"
+#include "physics/public/query_types.h"
 #include "physics/public/rigid_body_desc.h"
 #include "physics/public/rigid_body_state.h"
 
@@ -21,7 +20,7 @@
 
 #include "physics/broadphase/broadphase_manager.h"
 #include "physics/colliders/tri.h"
-#include "physics/engine/commands/physics_command_buffer.h"
+#include "physics/engine/cmd_processor/cmd_buffer.h"
 #include "physics/narrowphase/collision_manifold.h"
 #include "physics/narrowphase/narrowphase_manager.h"
 #include "physics/solver/pgs_solver.h"

@@ -2,14 +2,14 @@
 
 #include <vector>
 
-#include "rigidbody_broadphase_types.h"
-#include "broadphase_types.h"
+#include "rigidbody_types.h"
+#include "contact_types.h"
 
 #include "physics/world/runtime_caches.h"
 #include "physics/bvh/bvh.h"
 #include "physics/bvh/bvh_terrain.h"
 
-#include "physics/public/physics_debug_types.h"
+#include "physics/public/debug_types.h"
 
 namespace physics::internal {
 

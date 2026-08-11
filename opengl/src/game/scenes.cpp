@@ -376,7 +376,7 @@ void SceneBuilder::testFloorScene(int amount) {
 
     glm::vec3 center = glm::vec3(
         -35.0f + 25.0f,
-        100.5f,
+        250.5f,
         -35.0f + 25.0f
     );
 

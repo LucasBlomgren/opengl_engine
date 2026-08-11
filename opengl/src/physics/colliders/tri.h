@@ -1,5 +1,5 @@
 #pragma once
-#include "physics/broadphase/rigidbody_broadphase_types.h"
+#include "physics/broadphase/rigidbody_types.h"
 #include "physics/colliders/aabb.h"
 
 namespace physics::internal {

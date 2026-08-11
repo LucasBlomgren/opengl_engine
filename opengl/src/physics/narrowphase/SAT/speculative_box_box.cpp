@@ -22,7 +22,6 @@ bool SAT::speculativeBoxBox(
     glm::vec3 centerA = colliderA.worldPose.position;
     glm::vec3 centerB = colliderB.worldPose.position;
 
-    // Adjust these names to your actual OOBB fields.
     glm::vec3 halfExtentsA = boxA.localHalfExtents * boxA.scale;
     glm::vec3 halfExtentsB = boxB.localHalfExtents * boxB.scale;
 

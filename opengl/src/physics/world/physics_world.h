@@ -4,7 +4,7 @@
 
 #include "core/slot_map.h"
 
-#include "physics/public/physics_handles.h"
+#include "physics/public/handles.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 

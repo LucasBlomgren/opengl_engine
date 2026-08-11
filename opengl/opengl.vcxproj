@@ -302,16 +302,16 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='O2|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_mutation_processor.cpp" />
-    <ClCompile Include="src\physics\engine\physics_body_submission.cpp" />
-    <ClCompile Include="src\physics\engine\physics_collider_submission.cpp" />
-    <ClCompile Include="src\physics\engine\physics_queries.cpp" />
-    <ClCompile Include="src\physics\engine\physics_debug.cpp" />
-    <ClCompile Include="src\physics\engine\physics_scene.cpp" />
-    <ClCompile Include="src\physics\engine\physics_step.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\cmd_buffer.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\cmd_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\lifecycle_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\body_submission.cpp" />
+    <ClCompile Include="src\physics\engine\collider_submission.cpp" />
+    <ClCompile Include="src\physics\engine\queries.cpp" />
+    <ClCompile Include="src\physics\engine\debug.cpp" />
+    <ClCompile Include="src\physics\engine\scene.cpp" />
+    <ClCompile Include="src\physics\engine\step.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_contact_standard.cpp" />
@@ -331,7 +331,7 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
-    <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
+    <ClInclude Include="src\physics\engine\cmd_processor\cmd_buffer.h" />
     <ClInclude Include="src\physics\error_logging.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
@@ -419,8 +419,8 @@
     <ClInclude Include="src\graphics\textures\texture_manager.h" />
     <ClInclude Include="src\engine\imgui_manager.h" />
     <ClInclude Include="src\pch.h" />
-    <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
-    <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\contact_types.h" />
+    <ClInclude Include="src\physics\broadphase\rigidbody_types.h" />
     <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\bvh\bvh.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
@@ -442,12 +442,11 @@
     <ClInclude Include="src\physics\physics_engine.h" />
     <ClInclude Include="src\physics\public\collider_desc.h" />
     <ClInclude Include="src\physics\public\collider_state.h" />
-    <ClInclude Include="src\physics\public\physics_debug_types.h" />
+    <ClInclude Include="src\physics\public\debug_types.h" />
     <ClInclude Include="src\physics\public\physics_engine.h" />
-    <ClInclude Include="src\physics\public\physics_contact_types.h" />
-    <ClInclude Include="src\physics\public\physics_query_types.h" />
-    <ClInclude Include="src\physics\public\physics_scene_types.h" />
-    <ClInclude Include="src\physics\public\physics_handles.h" />
+    <ClInclude Include="src\physics\public\contact_types.h" />
+    <ClInclude Include="src\physics\public\query_types.h" />
+    <ClInclude Include="src\physics\public\handles.h" />
     <ClInclude Include="src\physics\public\physics_types.h" />
     <ClInclude Include="src\physics\public\rigid_body_desc.h" />
     <ClInclude Include="src\physics\public\rigid_body_state.h" />

@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "physics/public/physics_handles.h"
+#include "physics/public/handles.h"
 
 namespace physics::internal {
 

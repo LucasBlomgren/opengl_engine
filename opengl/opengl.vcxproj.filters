@@ -85,16 +85,16 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
-    <ClCompile Include="src\physics\engine\physics_step.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_command_buffer.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_command_processor.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_lifecycle_processor.cpp" />
-    <ClCompile Include="src\physics\engine\commands\physics_mutation_processor.cpp" />
-    <ClCompile Include="src\physics\engine\physics_body_submission.cpp" />
-    <ClCompile Include="src\physics\engine\physics_collider_submission.cpp" />
-    <ClCompile Include="src\physics\engine\physics_queries.cpp" />
-    <ClCompile Include="src\physics\engine\physics_debug.cpp" />
-    <ClCompile Include="src\physics\engine\physics_scene.cpp" />
+    <ClCompile Include="src\physics\engine\step.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\cmd_buffer.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\cmd_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\lifecycle_processor.cpp" />
+    <ClCompile Include="src\physics\engine\cmd_processor\mutation_processor.cpp" />
+    <ClCompile Include="src\physics\engine\body_submission.cpp" />
+    <ClCompile Include="src\physics\engine\collider_submission.cpp" />
+    <ClCompile Include="src\physics\engine\queries.cpp" />
+    <ClCompile Include="src\physics\engine\debug.cpp" />
+    <ClCompile Include="src\physics\engine\scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -165,7 +165,7 @@
     <ClInclude Include="src\core\timer.h" />
     <ClInclude Include="src\engine\input_manager.h" />
     <ClInclude Include="src\physics\broadphase\broadphase_manager.h" />
-    <ClInclude Include="src\physics\broadphase\broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\contact_types.h" />
     <ClInclude Include="src\graphics\debug\quad_renderer.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
@@ -195,19 +195,18 @@
     <ClInclude Include="debug_config.h" />
     <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_types.h" />
-    <ClInclude Include="src\physics\broadphase\rigidbody_broadphase_types.h" />
+    <ClInclude Include="src\physics\broadphase\rigidbody_types.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
     <ClInclude Include="src\physics\world\runtime_caches.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
-    <ClInclude Include="src\physics\public\physics_debug_types.h" />
+    <ClInclude Include="src\physics\public\debug_types.h" />
     <ClInclude Include="src\physics\public\physics_engine.h" />
-    <ClInclude Include="src\physics\public\physics_contact_types.h" />
-    <ClInclude Include="src\physics\public\physics_query_types.h" />
-    <ClInclude Include="src\physics\public\physics_scene_types.h" />
-    <ClInclude Include="src\physics\public\physics_handles.h" />
+    <ClInclude Include="src\physics\public\contact_types.h" />
+    <ClInclude Include="src\physics\public\query_types.h" />
+    <ClInclude Include="src\physics\public\handles.h" />
     <ClInclude Include="src\core\handle.h" />
     <ClInclude Include="src\game\game_handles.h" />
     <ClInclude Include="src\physics\public\physics_types.h" />
@@ -219,7 +218,7 @@
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\physics\engine\commands\physics_command_buffer.h" />
+    <ClInclude Include="src\physics\engine\cmd_processor\cmd_buffer.h" />
     <ClInclude Include="src\physics\error_logging.h" />
     <ClInclude Include="src\physics\physics_engine.h" />
   </ItemGroup>

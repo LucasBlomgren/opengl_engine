@@ -4,7 +4,7 @@
 
 #include "physics/world/runtime_caches.h"
 #include "physics/colliders/aabb.h"
-#include "physics/broadphase/broadphase_types.h"
+#include "physics/broadphase/contact_types.h"
 
 namespace physics::internal {
 

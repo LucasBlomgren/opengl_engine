@@ -5,7 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include "physics/public/collider_desc.h"
-#include "physics/public/physics_handles.h"
+#include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
 namespace physics::internal {

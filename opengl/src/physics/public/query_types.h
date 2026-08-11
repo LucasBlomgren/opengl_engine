@@ -3,7 +3,7 @@
 #include <limits>
 #include <glm/vec3.hpp>
 
-#include "physics/public/physics_handles.h"
+#include "physics/public/handles.h"
 
 namespace physics {
 

@@ -687,7 +687,11 @@ void SceneBuilder::createBrickWall(
         }
         glm::vec3 randomColor;
         if (fullColorRange) {
-            randomColor = glm::vec3(randomRange(colorRange.x, colorRange.y));
+            randomColor = glm::vec3(
+                randomRange(colorRange.x, colorRange.y),
+                randomRange(colorRange.x, colorRange.y),
+                randomRange(colorRange.x, colorRange.y)
+            );
         }
         else {
             float c = randomRange(colorRange.x, colorRange.y);
@@ -754,10 +758,9 @@ void SceneBuilder::createBrickWall(
         pos = startPos;
         pos.y += brickSize.y + brickSize.y / 2 + col * brickSize.y * 2;
         if (wallDirection == 0) {
-            pos.x = 
-                startPos.x + 
-                wallWidth - 1 * brickSize.x + 
-                brickDistance * wallWidth - 
+            pos.x =
+                startPos.x +
+                (wallWidth - 1) * (brickSize.x + brickDistance) -
                 (edgeBrickSize.x - brickSize.x) / 2;
             pos.z = startPos.z;
         }
@@ -765,8 +768,7 @@ void SceneBuilder::createBrickWall(
             pos.x = startPos.x;
             pos.z = 
                 startPos.z + 
-                wallWidth - 1 * brickSize.z + 
-                brickDistance * wallWidth - 
+                (wallWidth - 1) * (brickSize.z + brickDistance) - 
                 (edgeBrickSize.z - brickSize.z) / 2;
         }
         if (fullColorRange) {

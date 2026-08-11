@@ -8,7 +8,7 @@
 #include "sphere.h"
 #include "collider_transform_cache.h"
 
-#include "physics/public/physics_handles.h"
+#include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
 namespace physics::internal {

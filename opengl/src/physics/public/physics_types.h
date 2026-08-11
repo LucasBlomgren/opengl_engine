@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <array>
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 
@@ -31,6 +32,17 @@ enum class ColliderType {
 struct Pose {
     glm::vec3 position{ 0.0f };
     glm::quat orientation{ 1.0f, 0.0f, 0.0f, 0.0f };
+};
+
+struct BoxGeometry {
+    glm::vec3 worldCenter{ 0.0f };
+    glm::vec3 localHalfExtents{ 0.5f };
+    glm::vec3 scale{ 1.0f };
+};
+
+struct SphereGeometry {
+    glm::vec3 worldCenter{ 0.0f };
+    float radius = 0.5f;
 };
 
 struct AABB {
@@ -108,15 +120,27 @@ struct AABB {
     }
 };
 
-struct BoxGeometry {
-    glm::vec3 worldCenter{ 0.0f };
-    glm::vec3 localHalfExtents{ 0.5f };
-    glm::vec3 scale{ 1.0f };
+struct Triangle {
+    int id = -1;
+    std::array<glm::vec3, 3> vertices{};
+    physics::AABB bounds{};
+
+    Triangle() = default;
+
+    Triangle(
+        int id,
+        const glm::vec3& v0,
+        const glm::vec3& v1,
+        const glm::vec3& v2)
+        : id(id),
+        vertices{ v0, v1, v2 }
+    {
+        bounds.worldMin = glm::min(v0, glm::min(v1, v2));
+        bounds.worldMax = glm::max(v0, glm::max(v1, v2));
+        bounds.worldCenter = (bounds.worldMin + bounds.worldMax) * 0.5f;
+        bounds.worldHalfExtents = (bounds.worldMax - bounds.worldMin) * 0.5f;
+    }
 };
 
-struct SphereGeometry {
-    glm::vec3 worldCenter{ 0.0f };
-    float radius = 0.5f;
-};
 
 }
