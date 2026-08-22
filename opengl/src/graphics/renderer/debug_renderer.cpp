@@ -115,7 +115,10 @@ void DebugRenderer::prepareObjectLocalNormals(
     const std::vector<GameObject>& objects,
     World& world,
     GameObjectHandle& selectedObjectHandle,
-    int selectedSubPartIndex) {
+    int selectedSubPartIndex) 
+{
+    if (!selectedObjectHandle.isValid()) return;
+
     GameObject* selectedObject = world.getGameObject(selectedObjectHandle);
     if (!selectedObject) return;
 

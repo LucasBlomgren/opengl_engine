@@ -3,50 +3,51 @@
 #include "physics/engine/cmd/buffer.h"
 
 #include <algorithm>
-#include <iterator>
 #include <utility>
+
+#include "physics/world/physics_world.h"
 
 namespace physics::internal::cmd {
 
 namespace {
-    template<class T>
-    bool contains(
-        const std::vector<T>& values,
-        const T& value) {
-        return std::find(
-            values.begin(),
-            values.end(),
-            value)
-            != values.end();
-    }
-
-    template<class T>
-    bool addUnique(
-        std::vector<T>& values,
-        const T& value)
-    {
-        if (contains(values, value)) {
-            return false;
-        }
-
-        values.push_back(value);
-        return true;
-    }
-
-    template<class T>
-    void moveAndClear(
-        std::vector<T>& source,
-        std::vector<T>& destination)
+    template<class AssociativeContainer>
+    void transferNodes(
+        AssociativeContainer& source,
+        AssociativeContainer& destination)
     {
         destination.reserve(source.size());
 
-        std::move(
-            source.begin(),
-            source.end(),
-            std::back_inserter(destination)
-        );
+        while (!source.empty()) {
+            destination.insert(source.extract(source.begin()));
+        }
+    }
 
-        source.clear();
+    bool targetsBody(
+        const Buffer::Mutation& mutation,
+        BodyHandle body)
+    {
+        return std::visit([body](const auto& command) {
+            if constexpr (requires { command.body; }) {
+                return command.body == body;
+            }
+            else {
+                return false;
+            }
+            }, mutation);
+    }
+
+    bool targetsCollider(
+        const Buffer::Mutation& mutation,
+        ColliderHandle collider)
+    {
+        return std::visit([collider](const auto& command) {
+            if constexpr (requires { command.collider; }) {
+                return command.collider == collider;
+            }
+            else {
+                return false;
+            }
+            }, mutation);
     }
 }
 
@@ -58,39 +59,53 @@ void Buffer::reserve(
     size_t colliderCount,
     size_t mutationCount)
 {
-    bodyCreates.reserve(bodyCount);
-    bodyDestroys.reserve(bodyCount);
+    pendingBodyCreates.reserve(bodyCount);
+    pendingBodyDestroys.reserve(bodyCount);
 
-    colliderCreates.reserve(colliderCount);
-    colliderDestroys.reserve(colliderCount);
+    pendingColliderCreates.reserve(colliderCount);
+    pendingColliderDestroys.reserve(colliderCount);
 
     mutations.reserve(mutationCount);
 }
 
-void Buffer::clear() {
-    bodyCreates.clear();
-    colliderCreates.clear();
-    bodyDestroys.clear();
-    colliderDestroys.clear();
+void Buffer::clear(PhysicsWorld& physicsWorld) {
+    for (const auto& entry : pendingColliderCreates) {
+        physicsWorld.releaseColliderReservation(entry.first);
+    }
+
+    for (const auto& entry : pendingBodyCreates) {
+        physicsWorld.releaseBodyReservation(entry.first);
+    }
+
+    pendingBodyCreates.clear();
+    pendingColliderCreates.clear();
+    pendingBodyDestroys.clear();
+    pendingColliderDestroys.clear();
     mutations.clear();
 }
 
 bool Buffer::empty() const noexcept {
-    return bodyCreates.empty() &&
-        colliderCreates.empty() &&
-        bodyDestroys.empty() &&
-        colliderDestroys.empty() &&
+    return pendingBodyCreates.empty() &&
+        pendingColliderCreates.empty() &&
+        pendingBodyDestroys.empty() &&
+        pendingColliderDestroys.empty() &&
         mutations.empty();
 }
 
 Buffer::Batch Buffer::take() {
     Batch batch;
 
-    moveAndClear(bodyCreates, batch.bodyCreates);
-    moveAndClear(colliderCreates, batch.colliderCreates);
-    moveAndClear(bodyDestroys, batch.bodyDestroys);
-    moveAndClear(colliderDestroys, batch.colliderDestroys);
-    moveAndClear(mutations, batch.mutations);
+    transferNodes(pendingBodyCreates, batch.bodyCreates);
+    transferNodes(pendingColliderCreates, batch.colliderCreates);
+    transferNodes(pendingBodyDestroys, batch.bodyDestroys);
+    transferNodes(pendingColliderDestroys, batch.colliderDestroys);
+
+    batch.mutations.reserve(mutations.size());
+    for (Mutation& mutation : mutations) {
+        batch.mutations.push_back(std::move(mutation));
+    }
+
+    mutations.clear();
 
     return batch;
 }
@@ -99,33 +114,242 @@ Buffer::Batch Buffer::take() {
 // Lifecycle recording
 //=========================================
 void Buffer::recordBodyCreate(
-    BodyHandle body) {
-    bodyCreates.push_back(body);
+    BodyHandle body,
+    RigidBody&& rigidBody)
+{
+    pendingBodyCreates.insert_or_assign(
+        body,
+        std::move(rigidBody)
+    );
 }
 
 void Buffer::recordColliderCreate(
-    ColliderHandle collider) {
-    colliderCreates.push_back(collider);
+    ColliderHandle collider,
+    Collider&& colliderData)
+{
+    pendingColliderCreates.insert_or_assign(
+        collider,
+        std::move(colliderData)
+    );
 }
 
 bool Buffer::recordBodyDestroy(
-    BodyHandle body) {
-    return addUnique(bodyDestroys, body);
+    BodyHandle body,
+    PhysicsWorld& physicsWorld)
+{
+    if (pendingBodyDestroys.contains(body)) {
+        return false;
+    }
+
+    std::unordered_set<ColliderHandle> removedColliders;
+    auto create = pendingBodyCreates.find(body);
+
+    if (create != pendingBodyCreates.end()) {
+        removedColliders.insert(
+            create->second.colliderHandles.begin(),
+            create->second.colliderHandles.end()
+        );
+
+        cancelPendingCollidersForBody(
+            body,
+            physicsWorld,
+            removedColliders
+        );
+        absorbColliderDestroysForBody(body, removedColliders);
+        removeMutationsTargeting(body, removedColliders);
+
+        pendingBodyCreates.erase(create);
+        physicsWorld.releaseBodyReservation(body);
+        return true;
+    }
+
+    RigidBody* activeBody = physicsWorld.tryGetBody(body);
+
+    if (!activeBody) {
+        return false;
+    }
+
+    pendingBodyDestroys.insert(body);
+    removedColliders.insert(
+        activeBody->colliderHandles.begin(),
+        activeBody->colliderHandles.end()
+    );
+
+    cancelPendingCollidersForBody(
+        body,
+        physicsWorld,
+        removedColliders
+    );
+    absorbColliderDestroysForBody(body, removedColliders);
+    removeMutationsTargeting(body, removedColliders);
+
+    return true;
 }
 
 bool Buffer::recordColliderDestroy(
-    ColliderHandle collider) {
-    return addUnique(colliderDestroys, collider);
+    ColliderHandle collider,
+    PhysicsWorld& physicsWorld)
+{
+    if (pendingColliderDestroys.contains(collider)) {
+        return false;
+    }
+
+    auto create = pendingColliderCreates.find(collider);
+
+    if (create != pendingColliderCreates.end()) {
+        const BodyHandle parent = create->second.rigidBodyHandle;
+
+        if (RigidBody* pendingBody = tryGetPendingBody(parent)) {
+            std::vector<ColliderHandle>& colliderHandles =
+                pendingBody->colliderHandles;
+
+            colliderHandles.erase(
+                std::remove(
+                    colliderHandles.begin(),
+                    colliderHandles.end(),
+                    collider
+                ),
+                colliderHandles.end()
+            );
+        }
+
+        pendingColliderCreates.erase(create);
+        removeMutationsTargeting(collider);
+        physicsWorld.releaseColliderReservation(collider);
+        return true;
+    }
+
+    const Collider* activeCollider =
+        physicsWorld.tryGetCollider(collider);
+
+    if (!activeCollider ||
+        pendingBodyDestroys.contains(activeCollider->rigidBodyHandle)) {
+        return false;
+    }
+
+    auto [it, inserted] = pendingColliderDestroys.emplace(
+        collider,
+        activeCollider->rigidBodyHandle
+    );
+
+    if (inserted) {
+        removeMutationsTargeting(collider);
+    }
+
+    return inserted;
+}
+
+RigidBody* Buffer::tryGetPendingBody(BodyHandle body) {
+    auto found = pendingBodyCreates.find(body);
+    return found != pendingBodyCreates.end() ? &found->second : nullptr;
+}
+
+const RigidBody* Buffer::tryGetPendingBody(
+    BodyHandle body) const
+{
+    auto found = pendingBodyCreates.find(body);
+    return found != pendingBodyCreates.end() ? &found->second : nullptr;
+}
+
+Collider* Buffer::tryGetPendingCollider(
+    ColliderHandle collider)
+{
+    auto found = pendingColliderCreates.find(collider);
+    return found != pendingColliderCreates.end() ? &found->second : nullptr;
+}
+
+const Collider* Buffer::tryGetPendingCollider(
+    ColliderHandle collider) const
+{
+    auto found = pendingColliderCreates.find(collider);
+    return found != pendingColliderCreates.end() ? &found->second : nullptr;
 }
 
 bool Buffer::isBodyPendingDestroy(
     BodyHandle body) const {
-    return contains(bodyDestroys, body);
+    return pendingBodyDestroys.contains(body);
 }
 
 bool Buffer::isColliderPendingDestroy(
     ColliderHandle collider) const {
-    return contains(colliderDestroys, collider);
+    return pendingColliderDestroys.contains(collider);
+}
+
+void Buffer::cancelPendingCollidersForBody(
+    BodyHandle body,
+    PhysicsWorld& physicsWorld,
+    std::unordered_set<ColliderHandle>& removedColliders)
+{
+    for (auto collider = pendingColliderCreates.begin();
+        collider != pendingColliderCreates.end();) {
+        if (collider->second.rigidBodyHandle != body) {
+            ++collider;
+            continue;
+        }
+
+        const ColliderHandle colliderHandle = collider->first;
+        removedColliders.insert(colliderHandle);
+        physicsWorld.releaseColliderReservation(colliderHandle);
+        collider = pendingColliderCreates.erase(collider);
+    }
+}
+
+void Buffer::absorbColliderDestroysForBody(
+    BodyHandle body,
+    std::unordered_set<ColliderHandle>& removedColliders)
+{
+    for (auto collider = pendingColliderDestroys.begin();
+        collider != pendingColliderDestroys.end();) {
+        if (collider->second != body) {
+            ++collider;
+            continue;
+        }
+
+        removedColliders.insert(collider->first);
+        collider = pendingColliderDestroys.erase(collider);
+    }
+}
+
+void Buffer::removeMutationsTargeting(
+    BodyHandle body,
+    const std::unordered_set<ColliderHandle>& colliders)
+{
+    mutations.erase(
+        std::remove_if(
+            mutations.begin(),
+            mutations.end(),
+            [body, &colliders](const Mutation& mutation) {
+                if (targetsBody(mutation, body)) {
+                    return true;
+                }
+
+                return std::visit([&colliders](const auto& command) {
+                    if constexpr (requires { command.collider; }) {
+                        return colliders.contains(command.collider);
+                    }
+                    else {
+                        return false;
+                    }
+                    }, mutation);
+            }
+        ),
+        mutations.end()
+    );
+}
+
+void Buffer::removeMutationsTargeting(
+    ColliderHandle collider)
+{
+    mutations.erase(
+        std::remove_if(
+            mutations.begin(),
+            mutations.end(),
+            [collider](const Mutation& mutation) {
+                return targetsCollider(mutation, collider);
+            }
+        ),
+        mutations.end()
+    );
 }
 
 //=========================================
@@ -210,7 +434,7 @@ void Buffer::recordSetRigidBodyCanMoveLinearly(
     mutations.emplace_back(SetRigidBodyCanMoveLinearly{
         body,
         canMoveLinearly
-    });
+        });
 }
 
 //=========================================
@@ -230,7 +454,7 @@ void Buffer::recordSetColliderLocalTransform(
         collider,
         localPose,
         localScale
-    });
+        });
 }
 
 void Buffer::recordSetColliderShape(
@@ -262,4 +486,23 @@ void Buffer::recordAwakenAllObjects() {
     mutations.emplace_back(AwakenAllObjects{});
 }
 
+//=========================================
+// Command buffer inspection
+//=========================================
+const RigidBody* Buffer::getPendingBodyCreate(BodyHandle body) const {
+    auto found = pendingBodyCreates.find(body);
+    if (found == pendingBodyCreates.end()) {
+        return nullptr;
+    }
+    return &found->second;
+}
+
+const Collider* Buffer::getPendingColliderCreate(ColliderHandle collider) const {
+    auto found = pendingColliderCreates.find(collider);
+    if (found == pendingColliderCreates.end()) {
+        return nullptr;
+    }
+    return &found->second;
+
+}
 }

@@ -5,7 +5,6 @@
 #include "SAT/sat.h"
 #include "narrowphase_types.h"
 
-#include "physics/world/runtime_caches.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider_transform_cache.h"
 
@@ -145,7 +144,6 @@ public:
     static constexpr uint32_t MaxClippedPoints = 16;
     static constexpr uint32_t MaxMeshContactCandidates = 256;
 
-    void init(RuntimeCaches* caches) { this->caches = caches; }
     size_t generateKey(int idA, int idB);
 
     Contact* boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
@@ -155,8 +153,6 @@ public:
     Contact* sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
 
 private:
-    RuntimeCaches* caches = nullptr;
-
     // reference face selection for box-box and box-mesh collisions
     void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
     void selectOOBBCollisionIncidentFace(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);

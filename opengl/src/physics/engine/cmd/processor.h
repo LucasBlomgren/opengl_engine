@@ -7,7 +7,6 @@ namespace physics::internal {
 class BroadphaseManager;
 class PhysicsWorld;
 class RigidBody;
-struct RuntimeCaches;
 
 namespace cmd {
 
@@ -15,16 +14,15 @@ class Processor {
 public:
     Processor(
         PhysicsWorld& physicsWorld,
-        RuntimeCaches& caches,
         BroadphaseManager& broadphaseManager);
 
     void process(
-        const Buffer::Batch& batch,
+        Buffer::Batch& batch,
         float dt);
 
 private:
     void processLifecycleCommands(
-        const Buffer::Batch& batch);
+        Buffer::Batch& batch);
 
     void applyMutationCommands(
         const std::vector<Buffer::Mutation>& mutations,
@@ -58,7 +56,6 @@ private:
     void applyCommand(const Buffer::AwakenAllObjects&, float dt);
 
     PhysicsWorld& physicsWorld;
-    RuntimeCaches& caches;
     BroadphaseManager& broadphaseManager;
 };
 

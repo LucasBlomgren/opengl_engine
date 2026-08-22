@@ -8,10 +8,8 @@ namespace physics::internal {
 // Clear all data
 //===========================================
 void PhysicsWorld::clear() {
-    pendingColliders.clear();
-    pendingRigidBodies.clear();
     colliders.clear();
-    rigidBodies.clear();
+    bodies.clear();
     colliderId = 0;
     rigidBodyId = 0;
 }
@@ -19,54 +17,38 @@ void PhysicsWorld::clear() {
 //===========================================
 // Getters
 //===========================================
-RigidBody* PhysicsWorld::getRigidBody(BodyHandle handle) {
-    if (RigidBody* body = rigidBodies.try_get(handle)) {
-        return body;
-    }
-
-    auto pending = pendingRigidBodies.find(handle);
-    return pending != pendingRigidBodies.end() ? &pending->second : nullptr;
+RigidBody& PhysicsWorld::getBody(BodyHandle handle) {
+    return bodies.get(handle);
+}
+RigidBody* PhysicsWorld::tryGetBody(BodyHandle handle) {
+    return bodies.try_get(handle, FUNC_NAME);
+}
+const RigidBody* PhysicsWorld::tryGetBody(BodyHandle handle) const {
+    return bodies.try_get(handle, FUNC_NAME);
 }
 
-const RigidBody* PhysicsWorld::getRigidBody(BodyHandle handle) const {
-    if (const RigidBody* body = rigidBodies.try_get(handle)) {
-        return body;
-    }
-
-    auto pending = pendingRigidBodies.find(handle);
-    return pending != pendingRigidBodies.end() ? &pending->second : nullptr;
+Collider& PhysicsWorld::getCollider(ColliderHandle handle) {
+    return colliders.get(handle);
+}
+Collider* PhysicsWorld::tryGetCollider(ColliderHandle handle) {
+    return colliders.try_get(handle, FUNC_NAME);
+}
+const Collider* PhysicsWorld::tryGetCollider(ColliderHandle handle) const {
+    return colliders.try_get(handle, FUNC_NAME);
 }
 
-Collider* PhysicsWorld::getCollider(ColliderHandle handle) {
-    if (Collider* collider = colliders.try_get(handle)) {
-        return collider;
-    }
-
-    auto pending = pendingColliders.find(handle);
-    return pending != pendingColliders.end() ? &pending->second : nullptr;
+SlotMap<RigidBody, BodyHandle>& PhysicsWorld::bodyStorage() {
+    return bodies;
+}
+const SlotMap<RigidBody, BodyHandle>& PhysicsWorld::bodyStorage() const {
+    return bodies;
 }
 
-const Collider* PhysicsWorld::getCollider(ColliderHandle handle) const {
-    if (const Collider* collider = colliders.try_get(handle)) {
-        return collider;
-    }
-
-    auto pending = pendingColliders.find(handle);
-    return pending != pendingColliders.end() ? &pending->second : nullptr;
-}
-
-SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() {
+SlotMap<Collider, ColliderHandle>& PhysicsWorld::colliderStorage() {
     return colliders;
 }
-SlotMap<RigidBody, BodyHandle>& PhysicsWorld::getRigidBodiesMap() {
-    return rigidBodies;
-}
-const SlotMap<Collider, ColliderHandle>& PhysicsWorld::getCollidersMap() const {
+const SlotMap<Collider, ColliderHandle>& PhysicsWorld::colliderStorage() const {
     return colliders;
-}
-
-const SlotMap<RigidBody, BodyHandle>& PhysicsWorld::getRigidBodiesMap() const {
-    return rigidBodies;
 }
 
 AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
@@ -80,18 +62,15 @@ AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
     }
 
     if (body.colliderHandles.size() == 1) {
-        Collider* collider = getCollider(body.colliderHandles[0]);
-        return collider ? collider->getAABB() : AABB{};
+        Collider& collider = getCollider(body.colliderHandles[0]);
+        return collider.getAABB();
     }
 
-    Collider* first = getCollider(body.colliderHandles[0]);
-    if (!first) {
-        return AABB{};
-    }
+    Collider& first = getCollider(body.colliderHandles[0]);
 
-    AABB merged = first->getAABB();
+    AABB merged = first.getAABB();
     for (size_t i = 1; i < body.colliderHandles.size(); ++i) {
-        Collider* c = getCollider(body.colliderHandles[i]);
+        Collider* c = tryGetCollider(body.colliderHandles[i]);
         if (!c) {
             continue;
         }
@@ -102,97 +81,46 @@ AABB PhysicsWorld::computeBodyAABB(const RigidBody& body) {
 }
 
 //===========================================
+// Reservation
+//===========================================
+BodyHandle PhysicsWorld::reserveBodyHandle() {
+    return bodies.reserve();
+}
+ColliderHandle PhysicsWorld::reserveColliderHandle() {
+    return colliders.reserve();
+}
+
+void PhysicsWorld::releaseBodyReservation(BodyHandle handle) {
+    bodies.release_reserved(handle);
+}
+void PhysicsWorld::releaseColliderReservation(ColliderHandle handle) {
+    colliders.release_reserved(handle);
+}
+
+
+//===========================================
 // Creation
 //===========================================
-BodyHandle PhysicsWorld::createPendingRigidBody() {
-    BodyHandle handle = rigidBodies.reserve();
-    RigidBody& body = pendingRigidBodies[handle];
+RigidBody* PhysicsWorld::commitBody(
+    BodyHandle handle,
+    RigidBody&& body) {
     body.id = rigidBodyId++;
-    return handle;
+    return bodies.create_reserved(handle, std::move(body));
 }
-
-ColliderHandle PhysicsWorld::createPendingCollider() {
-    ColliderHandle handle = colliders.reserve();
-    Collider& collider = pendingColliders[handle];
+Collider* PhysicsWorld::commitCollider(
+    ColliderHandle handle,
+    Collider&& collider) {
     collider.id = colliderId++;
-    return handle;
-}
-
-bool PhysicsWorld::activateRigidBody(BodyHandle handle) {
-    auto pending = pendingRigidBodies.find(handle);
-    if (pending == pendingRigidBodies.end()) {
-        return false;
-    }
-
-    RigidBody* body =
-        rigidBodies.create_reserved(handle, std::move(pending->second));
-
-    pendingRigidBodies.erase(pending);
-
-    if (!body) {
-        rigidBodies.release_reserved(handle);
-        return false;
-    }
-
-    return true;
-}
-
-bool PhysicsWorld::activateCollider(ColliderHandle handle) {
-    auto pending = pendingColliders.find(handle);
-    if (pending == pendingColliders.end()) {
-        return false;
-    }
-
-    Collider* collider =
-        colliders.create_reserved(handle, std::move(pending->second));
-
-    pendingColliders.erase(pending);
-
-    if (!collider) {
-        colliders.release_reserved(handle);
-        return false;
-    }
-
-    return true;
-}
-
-void PhysicsWorld::discardPendingRigidBody(BodyHandle handle) {
-    if (pendingRigidBodies.erase(handle) > 0) {
-        rigidBodies.release_reserved(handle);
-    }
-}
-
-void PhysicsWorld::discardPendingCollider(ColliderHandle handle) {
-    if (pendingColliders.erase(handle) > 0) {
-        colliders.release_reserved(handle);
-    }
+    return colliders.create_reserved(handle, std::move(collider));
 }
 
 //===========================================
 // Deletion
 //===========================================
-void PhysicsWorld::deleteRigidBody(BodyHandle handle) {
-    rigidBodies.destroy(handle);
+void PhysicsWorld::destroyBody(BodyHandle handle) {
+    bodies.destroy(handle);
 }
-
-void PhysicsWorld::deleteCollider(ColliderHandle handle) {
+void PhysicsWorld::destroyCollider(ColliderHandle handle) {
     colliders.destroy(handle);
 }
-
-bool PhysicsWorld::isRigidBodyActive(BodyHandle handle) const {
-    return rigidBodies.alive(handle);
-}
-
-bool PhysicsWorld::isColliderActive(ColliderHandle handle) const {
-    return colliders.alive(handle);
-}
-
-bool PhysicsWorld::isRigidBodyPending(BodyHandle handle) const {
-    return pendingRigidBodies.contains(handle);
-}
-
-bool PhysicsWorld::isColliderPending(ColliderHandle handle) const {
-    return pendingColliders.contains(handle);
-}
-
 }

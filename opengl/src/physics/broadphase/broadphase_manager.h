@@ -5,7 +5,6 @@
 #include "rigidbody_types.h"
 #include "contact_types.h"
 
-#include "physics/world/runtime_caches.h"
 #include "physics/bvh/bvh.h"
 #include "physics/bvh/bvh_terrain.h"
 
@@ -18,7 +17,10 @@ class Tri;
 
 class BroadphaseManager {
 public:
-    void init(PhysicsWorld* world, RuntimeCaches* caches, std::vector<Tri>* terrainTris);
+    void init(
+        PhysicsWorld* world, 
+        std::vector<Tri>* terrainTris
+    );
     void clear();
 
     // update BVHs if dirty
@@ -67,8 +69,8 @@ public:
     void updateBVHRenderData(const physics::debug::BvhType& type, bool update);
 
 private:
-    // references to pointer caches and terrain triangles
-    RuntimeCaches* caches = nullptr;
+    // references to world and terrain
+    PhysicsWorld* world = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of indices into dynamicObjects

@@ -3,10 +3,9 @@
 namespace physics::internal {
 
 class RigidBody;
-struct RuntimeCaches;
 
 void updateCollidersAndBodyAABB(
-    RuntimeCaches& caches,
+    PhysicsWorld& world,
     RigidBody* body);
 
-}
+} // namespace physics::internal

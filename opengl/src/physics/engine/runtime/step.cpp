@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include <algorithm>
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "engine/engine_state.h"
 
 namespace physics {
@@ -13,19 +13,14 @@ using namespace internal;
 //==============================
 void Engine::init(FrameTimers* frameTimers) {
     this->frameTimers = frameTimers;
-
-    collisionManifold = std::make_unique<CollisionManifold>();
-    collisionManifold->init(&caches);
-
     commandBuffer.reserve(1024, 4096, 4096);
 }
 
 //==============================
 // Step-loop preparation
 //==============================
-void Engine::prepareStepLoop() {
-    caches.clear();
-
+void Engine::prepareStepLoop() 
+{
     frameTimers->reset("Physics");
     frameTimers->reset("Pre step");
     frameTimers->reset("Sync");
@@ -137,7 +132,7 @@ void Engine::step(float dt, EngineState& engine) {
 
     // Collision resolution
     start = glfwGetTime() * 1000.0;
-    pgsSolver.solve(contactBatch, caches, pgsIterations, dt);
+    pgsSolver.solve(contactBatch, pgsIterations, dt);
     frameTimers->submit(
         "Collision resolution", 
         frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
@@ -193,7 +188,7 @@ void Engine::beginPhysicsStep(float outerDt) {
     processPendingCommands();
 
     uint32_t bodySlotCapacity =
-        physicsWorld.getRigidBodiesMap().slot_capacity();
+        physicsWorld.bodyStorage().slot_capacity();
 
     toWake.reserve(bodySlotCapacity);
     toSleep.reserve(bodySlotCapacity);

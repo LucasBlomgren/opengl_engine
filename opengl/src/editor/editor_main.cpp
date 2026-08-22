@@ -5,7 +5,7 @@
 #include "imgui.h"
 #include "engine/input_manager.h"
 #include "game/scene_builder.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "graphics/renderer/renderer.h"
 #include "game/game_object.h"
 #include "graphics/shaders/shader.h"

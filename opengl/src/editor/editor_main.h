@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/input.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "viewport_fbo.h"
 #include "panel_manager.h"
 

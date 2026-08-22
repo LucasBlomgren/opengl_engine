@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 namespace physics {
 
@@ -9,7 +9,7 @@ using namespace internal;
 //====================================
 // Internal scene setup
 //====================================
-void Engine::setupScene(
+void Engine::activateScene(
     const std::vector<Triangle>& terrainInput) 
 {
     terrainTriangles.clear();
@@ -24,35 +24,35 @@ void Engine::setupScene(
         );
     }
 
-    caches.colliders.init(physicsWorld.getCollidersMap(), "Collider");
-    caches.bodies.init(physicsWorld.getRigidBodiesMap(), "RigidBody");
-
     uint32_t colliderSlotCapacity = 
-        physicsWorld.getCollidersMap().slot_capacity();
+        physicsWorld.colliderStorage().slot_capacity();
 
     toWake.reserve(colliderSlotCapacity);
     toSleep.reserve(colliderSlotCapacity);
 
     broadphaseManager.init(
         &physicsWorld,
-        &caches,
         &terrainTriangles
     );
 
     narrowphaseManager.init(
-        std::make_unique<CollisionManifold>(), 
+        &physicsWorld,
+        &collisionManifold,
         &debugSpeculativeContacts, 
         &contactCache, 
-        &caches, 
         &toWake
     );
+
+    pgsSolver.init(physicsWorld);
+
+    processPendingCommands();
 }
 
 //====================================
 // Scene cleanup
 //====================================
 void Engine::clear() {
-    commandBuffer.clear();
+    commandBuffer.clear(physicsWorld);
 
     toWake.clear();
     toSleep.clear();
@@ -66,19 +66,7 @@ void Engine::clear() {
     pgsSolver.clear();
 
     physicsWorld.clear();
-    caches.clear();
     terrainTriangles.clear();
-}
-
-//====================================
-// Scene-wide command submission
-//====================================
-void Engine::sleepAllObjects() {
-    commandBuffer.recordSleepAllObjects();
-}
-
-void Engine::awakenAllObjects() {
-    commandBuffer.recordAwakenAllObjects();
 }
 
 }

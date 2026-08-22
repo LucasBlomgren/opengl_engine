@@ -15,8 +15,8 @@ struct Transform {
     Transform(
         const glm::vec3& position = glm::vec3{0.0f},
         const glm::quat& orientation = glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f },
-        const glm::vec3& scale = glm::vec3{ 1.0f }
-    ) {
+        const glm::vec3& scale = glm::vec3{ 1.0f }) 
+    {
         this->position = position;
         this->orientation = orientation;
         this->scale = scale;

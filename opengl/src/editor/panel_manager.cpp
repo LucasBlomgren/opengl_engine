@@ -5,7 +5,7 @@
 
 #include "imgui.h"
 #include "panel_manager.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "game/world.h"
 
 // Initialize panels

@@ -7,7 +7,10 @@
 
 namespace physics::internal {
 
-void PGSSolver::init() {
+void PGSSolver::init(PhysicsWorld& world) 
+{
+    this->physicsWorld = &world;
+
     // #TODO: PGSSolver init - arbitrary limits, or dynamic resizing?
     solverBodies.reserve(1024);
     contactConstraints.reserve(1024);
@@ -34,13 +37,12 @@ void PGSSolver::clear() {
 //================================================================
 void PGSSolver::solve(
     ContactBatch& batch, 
-    RuntimeCaches& caches, 
     const int PGSiterations, 
     const float dt) 
 {
-    buildSolverData(batch, caches, dt);
+    buildSolverData(batch, dt);
     resolveContacts(PGSiterations, dt);
-    postSolve(caches, dt);
+    postSolve(dt);
 }
 
 //================================================================
@@ -476,7 +478,6 @@ float PGSSolver::solveSpeculativeContactsOneIteration(float dt) {
 //  Post-solve: write back solver results to original Contact and RigidBody
 //===========================================================================
 void PGSSolver::postSolve(
-    RuntimeCaches& caches,
     const float dt) 
 {
     // Apply restitution impulses for speculative contacts.

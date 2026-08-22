@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "physics/raycast/raycast.h"
 
 namespace physics {
@@ -35,7 +35,7 @@ RaycastHit Engine::raycast(
     BodyHandle ignoredBody)
 {
     const SlotMap<RigidBody, BodyHandle>& bodyMap =
-        physicsWorld.getRigidBodiesMap();
+        physicsWorld.bodyStorage();
 
     RaycastHit bestHit;
 
@@ -95,8 +95,13 @@ std::optional<BodyState>
 Engine::getRigidBodyState(
     BodyHandle handle) const
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
-
+    // Check if the body is pending creation, 
+    // already exists in the physics world or
+    // is pending destruction.
+    const RigidBody* body = commandBuffer.getPendingBodyCreate(handle);
+    if (!body) {
+        body = physicsWorld.tryGetBody(handle);
+    }
     if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
         return std::nullopt;
     }
@@ -123,7 +128,16 @@ std::optional<ColliderState>
 Engine::getColliderState(
     ColliderHandle handle) const
 {
-    const Collider* collider = physicsWorld.getCollider(handle);
+    // Check if the collider is pending creation, 
+    // already exists in the physics world or
+    // is pending destruction.
+    const Collider* collider = commandBuffer.getPendingColliderCreate(handle);
+    if (!collider) {
+        collider = physicsWorld.tryGetCollider(handle);
+    }
+    if (!collider || commandBuffer.isColliderPendingDestroy(handle)) {
+        return std::nullopt;
+    }
 
     if (!collider ||
         commandBuffer.isColliderPendingDestroy(handle) ||

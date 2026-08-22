@@ -2,7 +2,7 @@
 
 #include "pch.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "game/game_handles.h"
 
 #include "graphics/shaders/shader.h"

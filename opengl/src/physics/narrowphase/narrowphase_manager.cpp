@@ -8,16 +8,16 @@ namespace physics::internal {
 //              Initialization
 //=======================================================
 void NarrowphaseManager::init(
-    std::unique_ptr<CollisionManifold> collisionManifold,
+    PhysicsWorld* physicsWorld,
+    CollisionManifold* collisionManifold,
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
     std::unordered_map<size_t, Contact>* contactCache,
-    RuntimeCaches* caches,
     std::vector<BodyHandle>* toWake)
 {
-    this->collisionManifold = std::move(collisionManifold);
+    this->physicsWorld = physicsWorld;
+    this->collisionManifold = collisionManifold;
     this->debugSpeculativeContacts = debugSpeculativeContacts;
     this->contactCache = contactCache;
-    this->caches = caches;
     this->toWake = toWake;
 }
 
@@ -83,27 +83,23 @@ void NarrowphaseManager::processDynamicPairs(
     ContactBatch& batch,
     float dt)
 {
-    RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
-    RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
-
-    if (!bodyA || !bodyB) return;
+    RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
+    RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
 
     // If both bodies are static or kinematic and not externally controlled, skip contact generation
-    if ((bodyA->motionControl != MotionControl::External && (bodyA->type == BodyType::Static || bodyA->type == BodyType::Kinematic)) && 
-        (bodyB->motionControl != MotionControl::External && (bodyB->type == BodyType::Static || bodyB->type == BodyType::Kinematic))) {
+    if ((bodyA.motionControl != MotionControl::External && (bodyA.type == BodyType::Static || bodyA.type == BodyType::Kinematic)) && 
+        (bodyB.motionControl != MotionControl::External && (bodyB.type == BodyType::Static || bodyB.type == BodyType::Kinematic))) {
         return;
     }
 
-    for (const ColliderHandle& colAH : bodyA->colliderHandles) {
-        for (const ColliderHandle& colBH : bodyB->colliderHandles) {
-            Collider* colliderA = caches->colliders.get(colAH, FUNC_NAME);
-            Collider* colliderB = caches->colliders.get(colBH, FUNC_NAME);
-
-            if (!colliderA || !colliderB) continue;
+    for (const ColliderHandle& colAH : bodyA.colliderHandles) {
+        for (const ColliderHandle& colBH : bodyB.colliderHandles) {
+            Collider& colliderA = physicsWorld->getCollider(colAH);
+            Collider& colliderB = physicsWorld->getCollider(colBH);
 
             // If either body is compound, check if the colliders' AABBs intersect
-            if (bodyA->isCompound() || bodyB->isCompound()) {
-                if (!colliderA->aabb.intersects(colliderB->aabb)) {
+            if (bodyA.isCompound() || bodyB.isCompound()) {
+                if (!colliderA.aabb.intersects(colliderB.aabb)) {
                     continue;
                 }
             }
@@ -115,10 +111,10 @@ void NarrowphaseManager::processDynamicPairs(
                     pair.bodyB,
                     colAH,
                     colBH,
-                    bodyA,
-                    bodyB,
-                    colliderA,
-                    colliderB
+                    &bodyA,
+                    &bodyB,
+                    &colliderA,
+                    &colliderB
                 }
             );
         }
@@ -175,22 +171,18 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
     const SpeculativeDynamicPair& pair,
     float dt)
 {
-    RigidBody* bodyA = caches->bodies.get(pair.bodyA, FUNC_NAME);
-    RigidBody* bodyB = caches->bodies.get(pair.bodyB, FUNC_NAME);
+    RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
+    RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
 
-    if (!bodyA || !bodyB) return;
-
-    for (const ColliderHandle& colAH : bodyA->colliderHandles) {
-        for (const ColliderHandle& colBH : bodyB->colliderHandles) {
-            Collider* colliderA = caches->colliders.get(colAH, FUNC_NAME);
-            Collider* colliderB = caches->colliders.get(colBH, FUNC_NAME);
-
-            if (!colliderA || !colliderB) continue;
+    for (const ColliderHandle& colAH : bodyA.colliderHandles) {
+        for (const ColliderHandle& colBH : bodyB.colliderHandles) {
+            Collider& colliderA = physicsWorld->getCollider(colAH);
+            Collider& colliderB = physicsWorld->getCollider(colBH);
 
             // #TODO: Need to use the swept AABBs for speculative collision detection, not the current AABBs.
             //// If either body is compound, check if the colliders' AABBs intersect
-            //if (bodyA->isCompound() || bodyB->isCompound()) {
-            //    if (!colliderA->aabb.intersects(colliderB->aabb)) {
+            //if (bodyA.isCompound() || bodyB.isCompound()) {
+            //    if (!colliderA.aabb.intersects(colliderB.aabb)) {
             //        continue;
             //    }
             //}
@@ -201,10 +193,10 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
                     pair.bodyB,
                     colAH,
                     colBH,
-                    bodyA,
-                    bodyB,
-                    colliderA,
-                    colliderB
+                    &bodyA,
+                    &bodyB,
+                    &colliderA,
+                    &colliderB
                 },
                 dt,
                 pair.sweepOwner
@@ -270,17 +262,17 @@ void NarrowphaseManager::processColliderPairSpeculative(
 //     Normal Terrain pair processing
 //=======================================================
 void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
-    RigidBody* body = caches->bodies.get(terrainPair.body, FUNC_NAME);
-    if (body->asleep || body->type == BodyType::Kinematic) return;
+    RigidBody& body = physicsWorld->getBody(terrainPair.body);
+    if (body.asleep || body.type == BodyType::Kinematic) return;
 
     // per collider in body, collect candidate tris and send to SAT + collision manifold generation
-    for (const ColliderHandle& colH : body->colliderHandles) {
-        Collider* collider = caches->colliders.get(colH, FUNC_NAME);
+    for (const ColliderHandle& colH : body.colliderHandles) {
+        Collider& collider = physicsWorld->getCollider(colH);
 
         const std::vector<Tri*>* candidates = &terrainPair.tris;
 
         // if compound, do mid phase AABB tests to filter terrain tris before SAT, otherwise just send all terrain tris to SAT
-        if (body->isCompound()) {
+        if (body.isCompound()) {
             terrainTriCandidates.clear();
             terrainTriCandidates.reserve(terrainPair.tris.size());
             collectTerrainTriCandidates(collider, terrainPair.tris, terrainTriCandidates);
@@ -295,13 +287,13 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
         SAT_resultsList.clear();
         SAT_resultsList.reserve(candidates->size());
 
-        switch (collider->type) {
+        switch (collider.type) {
         case ColliderType::CUBOID:
-            processTerrainTriBox(batch, collider->rigidBodyHandle, collider, body, *candidates);
+            processTerrainTriBox(batch, collider.rigidBodyHandle, &collider, &body, *candidates);
             break;
 
         case ColliderType::SPHERE:
-            processTerrainTriSphere(batch, collider->rigidBodyHandle, collider, body, *candidates);
+            processTerrainTriSphere(batch, collider.rigidBodyHandle, &collider, &body, *candidates);
             break;
         }
     }
@@ -314,18 +306,18 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
     const SpeculativeTerrainPair& pair,
     float dt)
 {
-    RigidBody* body = caches->bodies.get(pair.body, FUNC_NAME);
+    RigidBody& body = physicsWorld->getBody(pair.body);
 
-    if (!body || body->asleep || body->type == BodyType::Kinematic) {
+    if (body.asleep || body.type == BodyType::Kinematic) {
         return;
     }
 
-    for (const ColliderHandle& colH : body->colliderHandles) {
-        Collider* collider = caches->colliders.get(colH, FUNC_NAME);
+    for (const ColliderHandle& colH : body.colliderHandles) {
+        Collider& collider = physicsWorld->getCollider(colH);
 
         const std::vector<Tri*>* candidates = &pair.tris;
 
-        if (body->isCompound()) {
+        if (body.isCompound()) {
             terrainTriCandidates.clear();
             terrainTriCandidates.reserve(pair.tris.size());
 
@@ -342,8 +334,8 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
             ContactBuildInput in{};
             in.bodyHandleA = pair.body;
             in.colliderHandleA = colH;
-            in.bodyA = body;
-            in.colliderA = collider;
+            in.bodyA = &body;
+            in.colliderA = &collider;
 
             // B = terrain
             in.bodyB = nullptr;
@@ -353,12 +345,12 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
             candidate.partnerTypeA = ContactPartnerType::RigidBody;
             candidate.partnerTypeB = ContactPartnerType::Terrain;
 
-            if (collider->type == ColliderType::CUBOID) {
+            if (collider.type == ColliderType::CUBOID) {
                 if (!trySpeculativeBoxTriangle(in, tri, candidate, dt)) {
                     continue;
                 }
             }
-            else if (collider->type == ColliderType::SPHERE) {
+            else if (collider.type == ColliderType::SPHERE) {
                 if (!trySpeculativeSphereTriangle(in, tri, candidate, dt)) {
                     continue;
                 }
@@ -423,13 +415,13 @@ ContactRuntime NarrowphaseManager::makeRuntimeData(
 //     Terrain tri candidate collection
 //=======================================================
 void NarrowphaseManager::collectTerrainTriCandidates(
-    Collider* collider,
+    Collider& collider,
     const std::vector<Tri*>& inputTris,
     std::vector<Tri*>& outCandidates)
 {
     outCandidates.clear();
 
-    const AABB& colAABB = collider->getAABB();
+    const AABB& colAABB = collider.getAABB();
     for (Tri* tri : inputTris) {
         if (tri->getAABB().intersects(colAABB)) {
             outCandidates.push_back(tri);

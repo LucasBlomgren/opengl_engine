@@ -7,7 +7,7 @@
 #include "narrowphase_types.h"
 #include "collision_manifold.h"
 
-#include "physics/world/runtime_caches.h"
+#include "physics/world/physics_world.h"
 #include "physics/broadphase/contact_types.h"
 
 namespace physics::internal {
@@ -15,10 +15,10 @@ namespace physics::internal {
 class NarrowphaseManager {
 public:
     void init(
-        std::unique_ptr<CollisionManifold> collisionManifold,
+        PhysicsWorld* physicsWorld,
+        CollisionManifold* collisionManifold,
         std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
         std::unordered_map<size_t, Contact>* contactCache,
-        RuntimeCaches* caches,
         std::vector<BodyHandle>* toWake
     );
     void clear();
@@ -35,11 +35,11 @@ public:
     );
 
 private:
-    // references to caches
-    std::unique_ptr<CollisionManifold> collisionManifold;
+    // references to external systems
+    PhysicsWorld* physicsWorld = nullptr;
+    CollisionManifold* collisionManifold = nullptr;
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts = nullptr;
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
-    RuntimeCaches* caches = nullptr;
 
     std::unordered_set<PairKey, PairKeyHash> normalHitPairs;
     std::vector<PendingSpeculativeContact> pendingSpeculativeContacts;
@@ -85,12 +85,33 @@ private:
     bool tryBoxSphere(ContactBuildInput& in, DynamicContactCandidate& out);
     bool trySphereSphere(ContactBuildInput& in, DynamicContactCandidate& out);
 
-    bool trySpeculativeBoxBox(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
-    bool trySpeculativeBoxSphere(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
-    bool trySpeculativeBoxTriangle(ContactBuildInput& in, Tri* tri, DynamicContactCandidate& out, float dt);
-    bool trySpeculativeSphereSphere(ContactBuildInput& in, DynamicContactCandidate& out, float dt);
-    bool trySpeculativeSphereTriangle(ContactBuildInput& in, Tri* tri, DynamicContactCandidate& out, float dt);
-
+    bool trySpeculativeBoxBox(
+        ContactBuildInput& in, 
+        DynamicContactCandidate& out, 
+        float dt
+    );
+    bool trySpeculativeBoxSphere(
+        ContactBuildInput& in, 
+        DynamicContactCandidate& out, 
+        float dt
+    );
+    bool trySpeculativeBoxTriangle(
+        ContactBuildInput& in, 
+        Tri* tri, 
+        DynamicContactCandidate& out, 
+        float dt
+    );
+    bool trySpeculativeSphereSphere(
+        ContactBuildInput& in, 
+        DynamicContactCandidate& out, 
+        float dt
+    );
+    bool trySpeculativeSphereTriangle(
+        ContactBuildInput& in, 
+        Tri* tri, 
+        DynamicContactCandidate& out, 
+        float dt
+    );
 
     //=======================================================
     //     Contact emission
@@ -171,16 +192,23 @@ private:
         Collider* colliderA
     ) const;
 
-    std::vector<BodyHandle>* toWake = nullptr; // for wake-up requests for bodies that should be woken up after processing dynamic pairs
+    // for wake-up requests for bodies that should be 
+    // woken up after processing dynamic pairs
+    std::vector<BodyHandle>* toWake = nullptr; 
 
-    std::vector<SAT::Result> SAT_resultsList; // for storing multiple SAT results for a single collider vs terrain pair
-    std::vector<ExternalMotionContact> externalContacts; // contacts to be sent to character controller for external motion handling
+    // for storing multiple SAT results for 
+    // a single collider vs terrain pair
+    std::vector<SAT::Result> SAT_resultsList;
+
+    // contacts to be sent to character controller 
+    // for external motion handling
+    std::vector<ExternalMotionContact> externalContacts;
 
     // Helpers
     glm::vec3 getAvgNormal(const std::vector<SAT::Result>& SAT_resultsList) const;
 
     void collectTerrainTriCandidates(
-        Collider* collider,
+        Collider& collider,
         const std::vector<Tri*>& inputTris,
         std::vector<Tri*>& outCandidates
     );

@@ -12,7 +12,7 @@
 #include "game/world.h"
 #include "game/game_handles.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 namespace {
     physics::ColliderShapeDesc buildColliderShape(
@@ -107,7 +107,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
     ImGui::Spacing();
     ImGui::Spacing();
 
-    if (!ctx.objectIsSelected)
+    if (!ctx.objectIsSelected || !ctx.selectedObjectHandle.isValid())
     {
         ImGui::TextDisabled("No object selected");
         ImGui::End();

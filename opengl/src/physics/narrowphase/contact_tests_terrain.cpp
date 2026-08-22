@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/gtx/norm.hpp>
 #include "narrowphase_manager.h"
 
 namespace physics::internal {
@@ -6,7 +7,12 @@ namespace physics::internal {
 //===============================================
 //     Tris vs Box
 //===============================================
-void NarrowphaseManager::processTerrainTriBox(ContactBatch& batch, BodyHandle bodyH, Collider* collider, RigidBody* body, const std::vector<Tri*>& candidates)
+void NarrowphaseManager::processTerrainTriBox(
+    ContactBatch& batch, 
+    BodyHandle bodyH, 
+    Collider* collider, 
+    RigidBody* body, 
+    const std::vector<Tri*>& candidates)
 {
     SAT_resultsList.clear();
 

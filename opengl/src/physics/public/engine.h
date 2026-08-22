@@ -26,7 +26,6 @@
 #include "physics/narrowphase/narrowphase_manager.h"
 #include "physics/solver/pgs_solver.h"
 #include "physics/world/physics_world.h"
-#include "physics/world/runtime_caches.h"
 
 class EngineState;
 class FrameTimers;
@@ -47,7 +46,7 @@ public:
     // Scene
     //======================================
     void init(FrameTimers* frameTimers);
-    void setupScene(const std::vector<Triangle>& terrainTriangles);
+    void activateScene(const std::vector<Triangle>& terrainTriangles);
     void clear();
 
     void sleepAllObjects();
@@ -232,20 +231,17 @@ private:
     // Internal systems
     //======================================
     internal::PhysicsWorld physicsWorld;
-    internal::RuntimeCaches caches;
 
     internal::BroadphaseManager broadphaseManager;
     internal::NarrowphaseManager narrowphaseManager;
+    internal::CollisionManifold collisionManifold;
     internal::PGSSolver pgsSolver;
 
-    std::unique_ptr<internal::CollisionManifold> collisionManifold;
-
     internal::cmd::Buffer commandBuffer;
-
     internal::cmd::Processor commandProcessor{
         physicsWorld,
-        caches,
         broadphaseManager
     };
 };
-}
+
+} // namespace physics

@@ -1,7 +1,7 @@
 #pragma once
 #include "solver_types.h"
 
-#include "physics/world/runtime_caches.h"
+#include "physics/world/physics_world.h"
 #include "physics/narrowphase/narrowphase_types.h"
 #include "physics/narrowphase/collision_manifold.h"
 
@@ -9,17 +9,18 @@ namespace physics::internal {
 
 class PGSSolver {
 public:
-    void init();
+    void init(PhysicsWorld& world);
     void clear();
 
     void solve(
         ContactBatch& batch,
-        RuntimeCaches& caches,
         const int PGSiterations,
         const float dt
     );
 
 private:
+    PhysicsWorld* physicsWorld = nullptr;
+
     // Solver data structures
     std::vector<SolverBody> solverBodies;
     std::vector<ContactConstraint> contactConstraints;
@@ -37,7 +38,6 @@ private:
     // Builds the solver data structures from the contact batch and runtime caches.
     void buildSolverData(
         ContactBatch& batch, 
-        RuntimeCaches& caches,
         float dt
     );
     uint32_t getOrCreateSolverBody(BodyHandle bodyHandle, RigidBody* body);
@@ -87,10 +87,8 @@ private:
 
     // post-solve: update RigidBody velocities and bias velocities based on solver results
     void postSolve(
-        RuntimeCaches& caches, 
         const float dt
     );
-
 };
 
 }

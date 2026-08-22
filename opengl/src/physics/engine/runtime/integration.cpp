@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "physics/physics_engine.h"
-#include "physics/engine/body_spatial_update.h"
+#include "physics/public/engine.h"
+#include "physics/engine/runtime/body_spatial_update.h"
 
 namespace physics {
 
@@ -15,25 +15,21 @@ void Engine::integrateForcesAndVelocities(
     float dt)
 {
     for (const BodyHandle& bodyHandle : bodies) {
-        RigidBody* body = caches.bodies.get(bodyHandle, FUNC_NAME);
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
 
-        if (!body || body->colliderHandles.empty()) {
+        if (body.colliderHandles.empty()) {
             continue;
         }
 
-        Collider* mainCollider =
-            caches.colliders.get(body->colliderHandles[0], FUNC_NAME);
+        Collider& mainCollider =
+            physicsWorld.getCollider(body.colliderHandles[0]);
 
-        if (!mainCollider) {
-            continue;
+        if (body.colliderHandles.size() == 1) {
+            body.applyRollingFriction(mainCollider.type, dt);
         }
 
-        if (body->colliderHandles.size() == 1) {
-            body->applyRollingFriction(mainCollider->type, dt);
-        }
-
-        body->applyVelocityDamping(dt);
-        body->applyGravity(dt);
+        body.applyVelocityDamping(dt);
+        body.applyGravity(dt);
     }
 }
 
@@ -45,15 +41,11 @@ void Engine::integratePositionsAndColliders(
     float dt)
 {
     for (const BodyHandle& bodyHandle : bodies) {
-        RigidBody* body = caches.bodies.get(bodyHandle, FUNC_NAME);
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
 
-        if (!body) {
-            continue;
-        }
-
-        body->integratePose(dt);
-        body->updateInertiaWorld();
-        updateCollidersAndBodyAABB(caches, body);
+        body.integratePose(dt);
+        body.updateInertiaWorld();
+        updateCollidersAndBodyAABB(physicsWorld, &body);
     }
 }
 
@@ -61,7 +53,7 @@ void Engine::integratePositionsAndColliders(
 // Update Collider Poses and Body AABB
 //==============================================================
 void internal::updateCollidersAndBodyAABB(
-    RuntimeCaches& caches,
+    PhysicsWorld& world,
     RigidBody* body)
 {
     if (!body) {
@@ -72,18 +64,18 @@ void internal::updateCollidersAndBodyAABB(
     internal::AABB combinedAABB;
 
     for (ColliderHandle colliderHandle : body->colliderHandles) {
-        Collider* collider =
-            caches.colliders.get(colliderHandle, FUNC_NAME);
+        Collider& collider =
+            world.getCollider(colliderHandle);
 
-        if (!collider || !collider->enabled) {
+        if (!collider.enabled) {
             continue;
         }
 
-        collider->updateWorldPose(body->pose, body->scale);
-        collider->updateShape();
-        collider->updateAABB();
+        collider.updateWorldPose(body->pose, body->scale);
+        collider.updateShape();
+        collider.updateAABB();
 
-        const internal::AABB& colliderAABB = collider->getAABB();
+        const internal::AABB& colliderAABB = collider.getAABB();
 
         if (!hasAABB) {
             combinedAABB = colliderAABB;

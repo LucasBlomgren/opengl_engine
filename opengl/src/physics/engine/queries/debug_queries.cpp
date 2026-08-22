@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 namespace physics {
 
@@ -52,7 +52,7 @@ physics::debug::Data Engine::getDebugData() const {
     debugData.awake = broadphaseManager.getAwakeList().size();
     debugData.asleep = broadphaseManager.getAsleepList().size();
     debugData.staticBodies = broadphaseManager.getStaticList().size();
-    debugData.colliders = physicsWorld.getCollidersMap().dense().size();
+    debugData.colliders = physicsWorld.colliderStorage().dense().size();
     debugData.terrainTris = terrainTriangles.size();
     debugData.contacts = contactsThisFrame;
     debugData.speculativeContacts = speculativeContactsThisFrame;

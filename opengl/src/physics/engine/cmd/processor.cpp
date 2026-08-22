@@ -1,188 +1,125 @@
 #include "pch.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <type_traits>
+#include <unordered_set>
+#include <utility>
 #include <variant>
 
 #include "physics/engine/cmd/processor.h"
 
 #include "physics/broadphase/broadphase_manager.h"
-#include "physics/engine/body_spatial_update.h"
 #include "physics/world/physics_world.h"
-#include "physics/world/runtime_caches.h"
 
 namespace physics::internal::cmd {
 
-
-//================================================
-// Helper functions
-//================================================
 namespace {
-    template<class Handle>
-    bool containsHandle(
-        const std::vector<Handle>& handles,
-        Handle handle)
-    {
-        return std::find(
-            handles.begin(),
-            handles.end(),
-            handle) != handles.end();
+
+BroadphaseBucket getBodyBucket(const RigidBody& body)
+{
+    if (body.type == BodyType::Static) {
+        return BroadphaseBucket::Static;
     }
 
-    template<class Handle>
-    void addUniqueHandle(
-        std::vector<Handle>& handles,
-        Handle handle)
-    {
-        if (!containsHandle(handles, handle)) {
-            handles.push_back(handle);
-        }
+    if (body.type == BodyType::Dynamic &&
+        body.asleep &&
+        body.motionControl != MotionControl::External) {
+        return BroadphaseBucket::Asleep;
     }
 
-    template<class Handle>
-    void eraseHandle(
-        std::vector<Handle>& handles,
-        Handle handle)
-    {
-        handles.erase(
-            std::remove(
-                handles.begin(),
-                handles.end(),
-                handle),
-            handles.end());
-    }
-
-    BroadphaseBucket getBodyBucket(
-        const RigidBody& body)
-    {
-        if (body.type == BodyType::Static) {
-            return BroadphaseBucket::Static;
-        }
-
-        if (body.type == BodyType::Dynamic &&
-            body.asleep &&
-            body.motionControl != MotionControl::External) {
-            return BroadphaseBucket::Asleep;
-        }
-
-        return BroadphaseBucket::Awake;
-    }
-
-    bool hasEnabledCollider(
-        PhysicsWorld& physicsWorld,
-        const RigidBody& body)
-    {
-        for (ColliderHandle colliderHandle : body.colliderHandles) {
-            if (!physicsWorld.isColliderActive(colliderHandle)) {
-                continue;
-            }
-
-            const Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-            if (collider && collider->enabled) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    Collider* findFirstEnabledCollider(
-        PhysicsWorld& physicsWorld,
-        const RigidBody& body)
-    {
-        for (ColliderHandle colliderHandle : body.colliderHandles) {
-            if (!physicsWorld.isColliderActive(colliderHandle)) {
-                continue;
-            }
-
-            Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-            if (collider && collider->enabled) {
-                return collider;
-            }
-        }
-
-        return nullptr;
-    }
-
-    bool applyShape(
-        Collider& collider,
-        const ColliderShapeDesc& shape)
-    {
-        bool validShape = true;
-
-        std::visit([&](const auto& shapeDesc) {
-            using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
-
-            if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-                collider.type = ColliderType::CUBOID;
-                collider.shape = OOBB(
-                    shapeDesc.halfExtents,
-                    shapeDesc.center
-                );
-            }
-            else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
-                collider.type = ColliderType::SPHERE;
-                collider.shape = Sphere(
-                    shapeDesc.radius,
-                    shapeDesc.center
-                );
-            }
-            else {
-                validShape = false;
-            }
-        }, shape);
-
-        return validShape;
-    }
-
-    glm::vec3 calculateAngularVelocity(
-        const glm::quat& currentRotation,
-        const glm::quat& targetRotation,
-        float dt)
-    {
-        if (dt <= 0.0f) {
-            return glm::vec3(0.0f);
-        }
-
-        const glm::quat current = glm::normalize(currentRotation);
-        const glm::quat target = glm::normalize(targetRotation);
-
-        // Rotation som tar current till target.
-        glm::quat delta = target * glm::conjugate(current);
-
-        // Välj den kortaste rotationsvägen.
-        if (delta.w < 0.0f) {
-            delta = -delta;
-        }
-
-        const glm::vec3 imaginary(delta.x, delta.y, delta.z);
-        const float sinHalfAngle = glm::length(imaginary);
-
-        if (sinHalfAngle < 1e-6f) {
-            return glm::vec3(0.0f);
-        }
-
-        const glm::vec3 axis = imaginary / sinHalfAngle;
-        const float angle = 2.0f * std::atan2(sinHalfAngle, delta.w);
-
-        return axis * (angle / dt);
-    }
+    return BroadphaseBucket::Awake;
 }
+
+Collider* findFirstEnabledCollider(
+    PhysicsWorld& physicsWorld,
+    const RigidBody& body)
+{
+    for (ColliderHandle colliderHandle : body.colliderHandles) {
+        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
+
+        if (collider && collider->enabled) {
+            return collider;
+        }
+    }
+
+    return nullptr;
+}
+
+bool applyShape(
+    Collider& collider,
+    const ColliderShapeDesc& shape)
+{
+    bool validShape = true;
+
+    std::visit([&](const auto& shapeDesc) {
+        using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
+
+        if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
+            collider.type = ColliderType::CUBOID;
+            collider.shape = OOBB(
+                shapeDesc.halfExtents,
+                shapeDesc.center
+            );
+        }
+        else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
+            collider.type = ColliderType::SPHERE;
+            collider.shape = Sphere(
+                shapeDesc.radius,
+                shapeDesc.center
+            );
+        }
+        else {
+            validShape = false;
+        }
+    }, shape);
+
+    return validShape;
+}
+
+glm::vec3 calculateAngularVelocity(
+    const glm::quat& currentRotation,
+    const glm::quat& targetRotation,
+    float dt)
+{
+    if (dt <= 0.0f) {
+        return glm::vec3(0.0f);
+    }
+
+    const glm::quat current = glm::normalize(currentRotation);
+    const glm::quat target = glm::normalize(targetRotation);
+
+    glm::quat delta = target * glm::conjugate(current);
+
+    if (delta.w < 0.0f) {
+        delta = -delta;
+    }
+
+    const glm::vec3 imaginary(delta.x, delta.y, delta.z);
+    const float sinHalfAngle = glm::length(imaginary);
+
+    if (sinHalfAngle < 1e-6f) {
+        return glm::vec3(0.0f);
+    }
+
+    const glm::vec3 axis = imaginary / sinHalfAngle;
+    const float angle = 2.0f * std::atan2(sinHalfAngle, delta.w);
+
+    return axis * (angle / dt);
+}
+
+} // namespace
 
 Processor::Processor(
     PhysicsWorld& physicsWorld,
-    RuntimeCaches& caches,
     BroadphaseManager& broadphaseManager)
     : physicsWorld(physicsWorld),
-      caches(caches),
       broadphaseManager(broadphaseManager)
 {}
 
 void Processor::process(
-    const Buffer::Batch& batch,
+    Buffer::Batch& batch,
     float dt)
 {
     processLifecycleCommands(batch);
@@ -190,253 +127,97 @@ void Processor::process(
 }
 
 void Processor::processLifecycleCommands(
-    const Buffer::Batch& batch)
+    Buffer::Batch& batch)
 {
-    if (batch.bodyCreates.empty() &&
-        batch.colliderCreates.empty() &&
-        batch.bodyDestroys.empty() &&
-        batch.colliderDestroys.empty()) {
-        return;
-    }
-
-    std::vector<BodyHandle> affectedBodies;
+    std::unordered_set<BodyHandle> bodiesToRefresh;
+    bodiesToRefresh.reserve(
+        batch.bodyCreates.size() +
+        batch.colliderCreates.size() +
+        batch.colliderDestroys.size()
+    );
 
     //----------------------------------
-    // Collect affected bodies
-    //----------------------------------
-    for (BodyHandle bodyHandle : batch.bodyCreates) {
-        addUniqueHandle(affectedBodies, bodyHandle);
-    }
-
-    for (BodyHandle bodyHandle : batch.bodyDestroys) {
-        addUniqueHandle(affectedBodies, bodyHandle);
-    }
-
-    for (ColliderHandle colliderHandle : batch.colliderCreates) {
-        const Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-        if (collider) {
-            addUniqueHandle(affectedBodies, collider->rigidBodyHandle);
-        }
-    }
-
-    for (ColliderHandle colliderHandle : batch.colliderDestroys) {
-        const Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-        if (collider) {
-            addUniqueHandle(affectedBodies, collider->rigidBodyHandle);
-        }
-    }
-
-    //----------------------------------
-    // Remove affected active bodies from broadphase
-    //----------------------------------
-    for (BodyHandle bodyHandle : affectedBodies) {
-        if (!physicsWorld.isRigidBodyActive(bodyHandle)) {
-            continue;
-        }
-
-        RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
-
-        if (body && body->broadphaseHandle.bucket != BroadphaseBucket::None) {
-            broadphaseManager.remove(bodyHandle);
-        }
-    }
-
-    bool activeStorageChanged = false;
-
-    //----------------------------------
-    // Destroy individual colliders
-    //----------------------------------
-    for (ColliderHandle colliderHandle : batch.colliderDestroys) {
-        Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-        if (!collider) {
-            continue;
-        }
-
-        BodyHandle bodyHandle = collider->rigidBodyHandle;
-
-        // The body-destroy phase owns all colliders belonging to a destroyed body.
-        if (containsHandle(batch.bodyDestroys, bodyHandle)) {
-            continue;
-        }
-
-        RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
-
-        if (body) {
-            eraseHandle(body->colliderHandles, colliderHandle);
-        }
-
-        if (physicsWorld.isColliderActive(colliderHandle)) {
-            physicsWorld.deleteCollider(colliderHandle);
-            activeStorageChanged = true;
-        }
-        else if (physicsWorld.isColliderPending(colliderHandle)) {
-            physicsWorld.discardPendingCollider(colliderHandle);
-        }
-    }
-
-    //----------------------------------
-    // Destroy bodies and their colliders
+    // Remove every destroyed body from broadphase before mutating
+    // dense body storage. This keeps all broadphase lookups valid
+    // throughout the removal pass.
     //----------------------------------
     for (BodyHandle bodyHandle : batch.bodyDestroys) {
-        RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
-
-        if (!body) {
-            continue;
-        }
-
-        const std::vector<ColliderHandle> activeColliders =
-            body->colliderHandles;
-
-        // Destroy all colliders belonging to the body being destroyed.
-        for (ColliderHandle colliderHandle : activeColliders) {
-            physicsWorld.deleteCollider(colliderHandle);
-            activeStorageChanged = true;
-        }
-
-        // Pending colliders are not necessarily present in body->colliderHandles yet.
-        for (ColliderHandle colliderHandle : batch.colliderCreates) {
-            Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-            // Check if the collider belongs to the body being destroyed
-            if (!collider || collider->rigidBodyHandle != bodyHandle) {
-                continue;
-            }
-
-            // If we are here it means the collider is pending,
-            // so discard it from the pending colliders list.
-            physicsWorld.discardPendingCollider(colliderHandle);
-        }
-
-        if (physicsWorld.isRigidBodyActive(bodyHandle)) {
-            physicsWorld.deleteRigidBody(bodyHandle);
-            activeStorageChanged = true;
-        }
-        else if (physicsWorld.isRigidBodyPending(bodyHandle)) {
-            physicsWorld.discardPendingRigidBody(bodyHandle);
-        }
+        broadphaseManager.remove(bodyHandle);
     }
 
     //----------------------------------
-    // Activate pending bodies
+    // Destroy individual colliders.
+    // Buffer guarantees that their parents survive this batch.
     //----------------------------------
-    for (BodyHandle bodyHandle : batch.bodyCreates) {
-        if (containsHandle(batch.bodyDestroys, bodyHandle)) {
-            continue;
-        }
+    for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) {
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        const size_t erased = std::erase(
+            body.colliderHandles,
+            colliderHandle
+        );
 
-        if (physicsWorld.activateRigidBody(bodyHandle)) {
-            activeStorageChanged = true;
-        }
+        assert(erased == 1);
+        (void)erased;
+
+        physicsWorld.destroyCollider(colliderHandle);
+        bodiesToRefresh.insert(bodyHandle);
     }
 
     //----------------------------------
-    // Activate pending colliders
+    // Destroy bodies and their colliders.
     //----------------------------------
-    for (ColliderHandle colliderHandle : batch.colliderCreates) {
-        if (containsHandle(batch.colliderDestroys, colliderHandle)) {
-            continue;
+    for (BodyHandle bodyHandle : batch.bodyDestroys) {
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
+
+        for (ColliderHandle colliderHandle : body.colliderHandles) {
+            physicsWorld.destroyCollider(colliderHandle);
         }
 
-        Collider* collider = physicsWorld.getCollider(colliderHandle);
-
-        if (!collider) {
-            continue;
-        }
-
-        BodyHandle bodyHandle = collider->rigidBodyHandle;
-
-        if (containsHandle(batch.bodyDestroys, bodyHandle) ||
-            !physicsWorld.isRigidBodyActive(bodyHandle)) {
-            if (physicsWorld.isColliderPending(colliderHandle)) {
-                physicsWorld.discardPendingCollider(colliderHandle);
-            }
-
-            continue;
-        }
-
-        RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
-
-        if (!body) {
-            physicsWorld.discardPendingCollider(colliderHandle);
-            continue;
-        }
-
-        collider->updateWorldPose(body->pose, body->scale);
-        collider->updateShape();
-        collider->updateAABB();
-
-        if (!physicsWorld.activateCollider(colliderHandle)) {
-            physicsWorld.discardPendingCollider(colliderHandle);
-            continue;
-        }
-
-        if (!containsHandle(body->colliderHandles, colliderHandle)) {
-            body->colliderHandles.push_back(colliderHandle);
-        }
-
-        activeStorageChanged = true;
+        physicsWorld.destroyBody(bodyHandle);
     }
 
     //----------------------------------
-    // Clear pointer caches after dense storage changes
+    // Commit bodies before their colliders.
     //----------------------------------
-    if (activeStorageChanged) {
-        caches.clear();
+    for (auto& [bodyHandle, body] : batch.bodyCreates) {
+        RigidBody* committedBody = physicsWorld.commitBody(
+            bodyHandle,
+            std::move(body)
+        );
+
+        assert(committedBody);
+        (void)committedBody;
+        bodiesToRefresh.insert(bodyHandle);
     }
 
     //----------------------------------
-    // Rebuild affected surviving bodies
+    // Commit colliders and attach them to their active parents.
     //----------------------------------
-    for (BodyHandle bodyHandle : affectedBodies) {
-        if (!physicsWorld.isRigidBodyActive(bodyHandle)) {
-            continue;
-        }
+    for (auto& [colliderHandle, collider] : batch.colliderCreates) {
+        const BodyHandle bodyHandle = collider.rigidBodyHandle;
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
 
-        RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
+        Collider* committedCollider = physicsWorld.commitCollider(
+            colliderHandle,
+            std::move(collider)
+        );
 
-        if (!body) {
-            continue;
-        }
+        assert(committedCollider);
+        (void)committedCollider;
 
-        std::vector<ColliderHandle>& colliderHandles =
-            body->colliderHandles;
-
-        colliderHandles.erase(
-            std::remove_if(
-                colliderHandles.begin(),
-                colliderHandles.end(),
-                [this](ColliderHandle colliderHandle) {
-                    return !physicsWorld.isColliderActive(colliderHandle);
-                }),
-            colliderHandles.end());
-
-        if (!hasEnabledCollider(physicsWorld, *body)) {
-            body->aabb = internal::AABB{};
-            continue;
-        }
-
-        body->aabb = physicsWorld.computeBodyAABB(*body);
-
-        const float radius = 0.5f *
-            glm::length(body->aabb.worldMax - body->aabb.worldMin);
-
-        body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
-
-        refreshBodyInertia(*body);
-
-        broadphaseManager.add(bodyHandle, getBodyBucket(*body));
+        body.colliderHandles.push_back(colliderHandle);
+        bodiesToRefresh.insert(bodyHandle);
     }
 
-    // #TODO: Can't clear contact cache here because it may contain contacts
-    // for bodies that are still active. Need to implement a more selective
-    // contact cache clearing mechanism.
+    //----------------------------------
+    // Rebuild every surviving body affected by lifecycle changes.
+    //----------------------------------
+    for (BodyHandle bodyHandle : bodiesToRefresh) {
+        refreshBodySpatialState(bodyHandle);
+    }
 }
 
-void Processor::refreshBodyInertia(
-    RigidBody& body)
+void Processor::refreshBodyInertia(RigidBody& body)
 {
     if (body.type != BodyType::Dynamic) {
         body.invInertiaLocal = glm::mat3(0.0f);
@@ -474,22 +255,60 @@ void Processor::refreshBodySpatialState(
     BodyHandle bodyHandle,
     bool shouldRefreshInertia)
 {
-    RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
+    RigidBody* body = physicsWorld.tryGetBody(bodyHandle);
 
-    if (!body || !physicsWorld.isRigidBodyActive(bodyHandle)) {
+    if (!body) {
         return;
     }
 
-    updateCollidersAndBodyAABB(caches, body);
+    bool hasAABB = false;
+    AABB combinedAABB;
+
+    for (ColliderHandle colliderHandle : body->colliderHandles) {
+        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
+
+        if (!collider || !collider->enabled) {
+            continue;
+        }
+
+        collider->updateWorldPose(body->pose, body->scale);
+        collider->updateShape();
+        collider->updateAABB();
+
+        const AABB& colliderAABB = collider->getAABB();
+
+        if (!hasAABB) {
+            combinedAABB = colliderAABB;
+            hasAABB = true;
+        }
+        else {
+            combinedAABB.growToInclude(colliderAABB.worldMin);
+            combinedAABB.growToInclude(colliderAABB.worldMax);
+        }
+    }
+
+    if (hasAABB) {
+        combinedAABB.worldCenter =
+            (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
+
+        combinedAABB.worldHalfExtents =
+            (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
+
+        body->aabb = combinedAABB;
+
+        const float radius = glm::length(combinedAABB.worldHalfExtents);
+        body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
+    }
+    else {
+        body->aabb = AABB{};
+        body->invRadius = 0.0f;
+    }
 
     if (shouldRefreshInertia) {
         refreshBodyInertia(*body);
     }
 
-    const bool hasEnabledCollider =
-        findFirstEnabledCollider(physicsWorld, *body) != nullptr;
-
-    if (!hasEnabledCollider) {
+    if (!hasAABB) {
         if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
             broadphaseManager.remove(bodyHandle);
         }
@@ -498,19 +317,7 @@ void Processor::refreshBodySpatialState(
     }
 
     if (body->broadphaseHandle.bucket == BroadphaseBucket::None) {
-        BroadphaseBucket bucket = BroadphaseBucket::Awake;
-
-        if (body->type == BodyType::Static) {
-            bucket = BroadphaseBucket::Static;
-        }
-        else if (
-            body->type == BodyType::Dynamic &&
-            body->asleep &&
-            body->motionControl != MotionControl::External) {
-            bucket = BroadphaseBucket::Asleep;
-        }
-
-        broadphaseManager.add(bodyHandle, bucket);
+        broadphaseManager.add(bodyHandle, getBodyBucket(*body));
         return;
     }
 
@@ -538,11 +345,9 @@ void Processor::applyCommand(
     const Buffer::ApplyLinearImpulse& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body ||
-        !physicsWorld.isRigidBodyActive(command.body) ||
-        body->type != BodyType::Dynamic) {
+    if (!body || body->type != BodyType::Dynamic) {
         return;
     }
 
@@ -557,11 +362,9 @@ void Processor::applyCommand(
     const Buffer::SetLinearVelocity& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body ||
-        !physicsWorld.isRigidBodyActive(command.body) ||
-        body->type == BodyType::Static) {
+    if (!body || body->type == BodyType::Static) {
         return;
     }
 
@@ -572,11 +375,9 @@ void Processor::applyCommand(
     const Buffer::SetAngularVelocity& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body ||
-        !physicsWorld.isRigidBodyActive(command.body) ||
-        body->type == BodyType::Static) {
+    if (!body || body->type == BodyType::Static) {
         return;
     }
 
@@ -587,12 +388,11 @@ void Processor::applyCommand(
     const Buffer::SetKinematicTarget& command,
     float dt)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
     if (!body ||
-        !physicsWorld.isRigidBodyActive(command.body) ||
-        body->type != BodyType::Kinematic) 
-    {
+        body->type != BodyType::Kinematic ||
+        dt <= 0.0f) {
         return;
     }
 
@@ -602,16 +402,17 @@ void Processor::applyCommand(
     body->angularVelocity = calculateAngularVelocity(
         body->pose.orientation,
         command.target.orientation,
-        dt);
+        dt
+    );
 }
 
 void Processor::applyCommand(
     const Buffer::SetRigidBodyTransform& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+    if (!body) {
         return;
     }
 
@@ -625,9 +426,11 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodySleepState& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+    if (!body ||
+        body->type != BodyType::Dynamic ||
+        !body->allowSleep) {
         return;
     }
 
@@ -645,9 +448,9 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyType& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+    if (!body) {
         return;
     }
 
@@ -675,7 +478,6 @@ void Processor::applyCommand(
             body->setAwake();
             broadphaseManager.moveToAwake(command.body);
         }
-
         break;
 
     case BodyType::Kinematic:
@@ -704,9 +506,9 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyMotionControl& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+    if (!body || body->type == BodyType::Static) {
         return;
     }
 
@@ -717,9 +519,9 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyResponseMode& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (!body || !physicsWorld.isRigidBodyActive(command.body)) {
+    if (!body) {
         return;
     }
 
@@ -730,10 +532,9 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyMass& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
     if (!body ||
-        !physicsWorld.isRigidBodyActive(command.body) ||
         body->type != BodyType::Dynamic ||
         command.mass <= 0.0f) {
         return;
@@ -748,9 +549,9 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyAllowGravity& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (body && physicsWorld.isRigidBodyActive(command.body)) {
+    if (body) {
         body->allowGravity = command.allowGravity;
     }
 }
@@ -759,20 +560,22 @@ void Processor::applyCommand(
     const Buffer::SetRigidBodyAllowSleep& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (body && physicsWorld.isRigidBodyActive(command.body)) {
-        body->allowSleep = command.allowSleep;
+    if (!body || body->type != BodyType::Dynamic) {
+        return;
     }
+
+    body->allowSleep = command.allowSleep;
 }
 
 void Processor::applyCommand(
     const Buffer::SetRigidBodyCanMoveLinearly& command,
     float)
 {
-    RigidBody* body = physicsWorld.getRigidBody(command.body);
+    RigidBody* body = physicsWorld.tryGetBody(command.body);
 
-    if (body && physicsWorld.isRigidBodyActive(command.body)) {
+    if (body) {
         body->canMoveLinearly = command.canMoveLinearly;
     }
 }
@@ -784,9 +587,9 @@ void Processor::applyCommand(
     const Buffer::SetColliderLocalPose& command,
     float)
 {
-    Collider* collider = physicsWorld.getCollider(command.collider);
+    Collider* collider = physicsWorld.tryGetCollider(command.collider);
 
-    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+    if (!collider) {
         return;
     }
 
@@ -798,9 +601,9 @@ void Processor::applyCommand(
     const Buffer::SetColliderLocalTransform& command,
     float)
 {
-    Collider* collider = physicsWorld.getCollider(command.collider);
+    Collider* collider = physicsWorld.tryGetCollider(command.collider);
 
-    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+    if (!collider) {
         return;
     }
 
@@ -813,11 +616,9 @@ void Processor::applyCommand(
     const Buffer::SetColliderShape& command,
     float)
 {
-    Collider* collider = physicsWorld.getCollider(command.collider);
+    Collider* collider = physicsWorld.tryGetCollider(command.collider);
 
-    if (!collider ||
-        !physicsWorld.isColliderActive(command.collider) ||
-        !applyShape(*collider, command.shape)) {
+    if (!collider || !applyShape(*collider, command.shape)) {
         return;
     }
 
@@ -828,9 +629,9 @@ void Processor::applyCommand(
     const Buffer::SetColliderEnabled& command,
     float)
 {
-    Collider* collider = physicsWorld.getCollider(command.collider);
+    Collider* collider = physicsWorld.tryGetCollider(command.collider);
 
-    if (!collider || !physicsWorld.isColliderActive(command.collider)) {
+    if (!collider) {
         return;
     }
 
@@ -842,9 +643,9 @@ void Processor::applyCommand(
     const Buffer::SetColliderTrigger& command,
     float)
 {
-    Collider* collider = physicsWorld.getCollider(command.collider);
+    Collider* collider = physicsWorld.tryGetCollider(command.collider);
 
-    if (collider && physicsWorld.isColliderActive(command.collider)) {
+    if (collider) {
         collider->isTrigger = command.isTrigger;
     }
 }
@@ -856,11 +657,13 @@ void Processor::applyCommand(
     const Buffer::SleepAllObjects&,
     float)
 {
-    auto& bodyMap = physicsWorld.getRigidBodiesMap();
-    auto& dense = bodyMap.dense();
+    auto& bodyStorage = physicsWorld.bodyStorage();
+    auto& denseBodies = bodyStorage.dense();
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(dense.size()); ++i) {
-        RigidBody& body = dense[i];
+    for (uint32_t i = 0;
+         i < static_cast<uint32_t>(denseBodies.size());
+         ++i) {
+        RigidBody& body = denseBodies[i];
 
         if (body.asleep) continue;
         if (body.type == BodyType::Static) continue;
@@ -868,7 +671,7 @@ void Processor::applyCommand(
         if (body.motionControl == MotionControl::External) continue;
 
         broadphaseManager.moveToAsleep(
-            bodyMap.handle_from_dense_index(i)
+            bodyStorage.handle_from_dense_index(i)
         );
     }
 }
@@ -877,11 +680,13 @@ void Processor::applyCommand(
     const Buffer::AwakenAllObjects&,
     float)
 {
-    auto& bodyMap = physicsWorld.getRigidBodiesMap();
-    auto& dense = bodyMap.dense();
+    auto& bodyStorage = physicsWorld.bodyStorage();
+    auto& denseBodies = bodyStorage.dense();
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(dense.size()); ++i) {
-        RigidBody& body = dense[i];
+    for (uint32_t i = 0;
+         i < static_cast<uint32_t>(denseBodies.size());
+         ++i) {
+        RigidBody& body = denseBodies[i];
 
         if (!body.asleep) continue;
         if (body.type == BodyType::Static) continue;
@@ -889,9 +694,9 @@ void Processor::applyCommand(
         if (body.motionControl == MotionControl::External) continue;
 
         broadphaseManager.moveToAwake(
-            bodyMap.handle_from_dense_index(i)
+            bodyStorage.handle_from_dense_index(i)
         );
     }
 }
 
-}
+} // namespace physics::internal::cmd

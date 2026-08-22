@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "wake_sleep_utils.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 namespace physics {
 
@@ -13,10 +13,8 @@ void Engine::processWakeList() {
     for (BodyHandle rb : toWake) {
         broadphaseManager.moveToAwake(rb);
 
-        RigidBody* body = caches.bodies.get(rb, FUNC_NAME);
-        if (body) {
-            body->inSleepTransition = false;
-        }
+        RigidBody& body = physicsWorld.getBody(rb);
+        body.inSleepTransition = false;
     }
 
     toWake.clear();
@@ -32,17 +30,15 @@ void Engine::processSleepList(float outerDt) {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
 
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
-        if (!body) continue;
-
-        if (body->type != BodyType::Dynamic) continue;
-        if (body->motionControl == MotionControl::External) continue;
-        if (body->asleep) continue;
-        if (!body->allowSleep) continue;
-        if (body->inSleepTransition) continue;
+        RigidBody& body = physicsWorld.getBody(handle);
+        if (body.type != BodyType::Dynamic) continue;
+        if (body.motionControl == MotionControl::External) continue;
+        if (body.asleep) continue;
+        if (!body.allowSleep) continue;
+        if (body.inSleepTransition) continue;
 
         bool goingToSleep =
-            WakeSleep::updateSleepStateAndCheckIfShouldSleep(*body, outerDt);
+            WakeSleep::updateSleepStateAndCheckIfShouldSleep(body, outerDt);
 
         if (goingToSleep) {
             toSleep.push_back(handle);
@@ -63,34 +59,34 @@ void Engine::processSleepList(float outerDt) {
 void Engine::updateSleepThresholds() {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
+        RigidBody& body = physicsWorld.getBody(handle);
 
-        if (body->asleep || !body->allowSleep ||
-            body->motionControl == MotionControl::External || body->type != BodyType::Dynamic)
+        if (body.asleep || !body.allowSleep ||
+            body.motionControl == MotionControl::External || body.type != BodyType::Dynamic)
             continue;
 
-        body->collisionHistory.push(body->totalCollisionCount);
-        body->totalCollisionCount = 0;
-        float avg = body->collisionHistory.average();
+        body.collisionHistory.push(body.totalCollisionCount);
+        body.totalCollisionCount = 0;
+        float avg = body.collisionHistory.average();
 
         if (avg <= 0.0f) {
-            if (std::abs(avg - body->lastAvg) >= 1) {
-                body->sleepCounter = 0.0f;
+            if (std::abs(avg - body.lastAvg) >= 1) {
+                body.sleepCounter = 0.0f;
             }
-            body->lastAvg = avg;
+            body.lastAvg = avg;
 
             continue;
         }
 
         avg = std::max(avg, 1.0f);
-        body->lastAvg = avg;
+        body.lastAvg = avg;
 
         constexpr float linearFactor = 0.2f;
         constexpr float angularFactor = 0.1f;
 
         // set thresholds
-        body->velocityThreshold = avg * linearFactor;
-        body->angularVelocityThreshold = avg * angularFactor * body->invRadius;
+        body.velocityThreshold = avg * linearFactor;
+        body.angularVelocityThreshold = avg * angularFactor * body.invRadius;
     }
 }
 
@@ -102,14 +98,14 @@ void Engine::updateSleepThresholds() {
 void Engine::addSleepDamping() {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody* body = caches.bodies.get(handle, FUNC_NAME);
-        if (body->type != BodyType::Dynamic) continue;
-        if (body->motionControl == MotionControl::External) continue;
-        if (!body->allowSleep) continue;
-        if (body->totalCollisionCount == 0) continue;
-        if (body->sleepCounter <= 0.0f) continue;
+        RigidBody& body = physicsWorld.getBody(handle);
+        if (body.type != BodyType::Dynamic) continue;
+        if (body.motionControl == MotionControl::External) continue;
+        if (!body.allowSleep) continue;
+        if (body.totalCollisionCount == 0) continue;
+        if (body.sleepCounter <= 0.0f) continue;
 
-        float sleepT = glm::clamp(body->sleepCounter / body->sleepCounterThreshold, 0.0f, 1.0f);
+        float sleepT = glm::clamp(body.sleepCounter / body.sleepCounterThreshold, 0.0f, 1.0f);
 
         // Smoothstep
         sleepT = sleepT * sleepT * (3.0f - 2.0f * sleepT);
@@ -120,8 +116,8 @@ void Engine::addSleepDamping() {
         float linearFactor = std::exp(-linearDampingStrength * sleepT * dt);
         float angularFactor = std::exp(-angularDampingStrength * sleepT * dt);
 
-        body->linearVelocity *= linearFactor;
-        body->angularVelocity *= angularFactor;
+        body.linearVelocity *= linearFactor;
+        body.angularVelocity *= angularFactor;
     }
 }
 

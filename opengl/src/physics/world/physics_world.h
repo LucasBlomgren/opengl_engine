@@ -14,46 +14,48 @@ class PhysicsWorld {
 public:
     void clear();
 
-    // getters
-    RigidBody* getRigidBody(BodyHandle handle);
-    const RigidBody* getRigidBody(BodyHandle handle) const;
+    // Handle reservation
+    BodyHandle reserveBodyHandle();
+    ColliderHandle reserveColliderHandle();
 
-    Collider* getCollider(ColliderHandle handle);
-    const Collider* getCollider(ColliderHandle handle) const;
+    void releaseBodyReservation(BodyHandle handle);
+    void releaseColliderReservation(ColliderHandle handle);
+
+    // Commit to active storage
+    RigidBody* commitBody(
+        BodyHandle handle,
+        RigidBody&& body);
+
+    Collider* commitCollider(
+        ColliderHandle handle,
+        Collider&& collider);
+
+    // Active deletion
+    void destroyBody(BodyHandle handle);
+    void destroyCollider(ColliderHandle handle);
+
+    // Active lookup only
+    RigidBody& getBody(BodyHandle handle);
+    RigidBody* tryGetBody(BodyHandle handle);
+    const RigidBody* tryGetBody(BodyHandle handle) const;
+
+    Collider& getCollider(ColliderHandle handle);
+    Collider* tryGetCollider(ColliderHandle handle);
+    const Collider* tryGetCollider(ColliderHandle handle) const;
+
+    // Needed by caches, iteration and queries
+    SlotMap<RigidBody, BodyHandle>& bodyStorage();
+    const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
+
+    SlotMap<Collider, ColliderHandle>& colliderStorage();
+    const SlotMap<Collider, ColliderHandle>& colliderStorage() const;
 
     AABB computeBodyAABB(const RigidBody& body);
-
-    SlotMap<Collider, ColliderHandle>& getCollidersMap();
-    SlotMap<RigidBody, BodyHandle>& getRigidBodiesMap();
-
-    const SlotMap<Collider, ColliderHandle>& getCollidersMap() const;
-    const SlotMap<RigidBody, BodyHandle>& getRigidBodiesMap() const;
-
-    // creation and deletion
-    BodyHandle createPendingRigidBody();
-    ColliderHandle createPendingCollider();
-
-    bool activateRigidBody(BodyHandle handle);
-    bool activateCollider(ColliderHandle handle);
-
-    void discardPendingRigidBody(BodyHandle handle);
-    void discardPendingCollider(ColliderHandle handle);
-
-    void deleteRigidBody(BodyHandle handle);
-    void deleteCollider(ColliderHandle handle);
-
-    bool isRigidBodyActive(BodyHandle handle) const;
-    bool isColliderActive(ColliderHandle handle) const;
-    bool isRigidBodyPending(BodyHandle handle) const;
-    bool isColliderPending(ColliderHandle handle) const;
 
 private:
     int colliderId = 0;
     int rigidBodyId = 0;
-    SlotMap<Collider, ColliderHandle> colliders;
-    SlotMap<RigidBody, BodyHandle> rigidBodies;
-    std::unordered_map<ColliderHandle, Collider> pendingColliders;
-    std::unordered_map<BodyHandle, RigidBody> pendingRigidBodies;
+    SlotMap<RigidBody, BodyHandle> bodies{"RigidBody"};
+    SlotMap<Collider, ColliderHandle> colliders{"Collider"};
 };
-
 }

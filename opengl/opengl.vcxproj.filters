@@ -63,7 +63,7 @@
     <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
-    <ClCompile Include="src\physics\updateBodiesAndColliders.cpp" />
+    <ClCompile Include="src\physics\engine\runtime\integration.cpp" />
     <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
     <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
@@ -85,14 +85,15 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_sphere.cpp" />
-    <ClCompile Include="src\physics\engine\step.cpp" />
+    <ClCompile Include="src\physics\engine\runtime\step.cpp" />
     <ClCompile Include="src\physics\engine\cmd\buffer.cpp" />
     <ClCompile Include="src\physics\engine\cmd\processor.cpp" />
-    <ClCompile Include="src\physics\engine\body_submission.cpp" />
-    <ClCompile Include="src\physics\engine\collider_submission.cpp" />
-    <ClCompile Include="src\physics\engine\queries.cpp" />
-    <ClCompile Include="src\physics\engine\debug.cpp" />
-    <ClCompile Include="src\physics\engine\scene.cpp" />
+    <ClCompile Include="src\physics\engine\submission\body_commands.cpp" />
+    <ClCompile Include="src\physics\engine\submission\collider_commands.cpp" />
+    <ClCompile Include="src\physics\engine\submission\scene_commands.cpp" />
+    <ClCompile Include="src\physics\engine\queries\queries.cpp" />
+    <ClCompile Include="src\physics\engine\queries\debug_queries.cpp" />
+    <ClCompile Include="src\physics\engine\runtime\scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -201,7 +202,7 @@
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClInclude Include="src\physics\public\debug_types.h" />
-    <ClInclude Include="src\physics\public\physics_engine.h" />
+    <ClInclude Include="src\physics\public\engine.h" />
     <ClInclude Include="src\physics\public\contact_types.h" />
     <ClInclude Include="src\physics\public\query_types.h" />
     <ClInclude Include="src\physics\public\handles.h" />
@@ -216,11 +217,10 @@
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\physics\engine\body_spatial_update.h" />
+    <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\error_logging.h" />
-    <ClInclude Include="src\physics\physics_engine.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

@@ -8,9 +8,8 @@ namespace physics::internal {
 //=====================================================================
 void PGSSolver::buildSolverData(
     ContactBatch& batch,
-    RuntimeCaches& caches,
-    float dt
-) {
+    float dt) 
+{
     solverBodies.clear();
     contactConstraints.clear();
     contactPoints.clear();
@@ -25,16 +24,16 @@ void PGSSolver::buildSolverData(
     // #TODO: bör vara touched bodies i scope, inte alla bodies i caches
     // om slot_capacity() är mycket större än antalet aktiva bodies, nollställs
     // mer än nödvändigt varje frame.
-    size_t slotCap = caches.bodies.sm->slot_capacity();
+    size_t slotCap = physicsWorld->bodyStorage().slot_capacity();
     solverBodyIndexBySlot.assign(slotCap, InvalidSolverBody);
 
-    solverBodies.reserve(caches.bodies.sm->dense().size());
+    solverBodies.reserve(physicsWorld->bodyStorage().dense().size());
     contactConstraints.reserve(batch.contacts.size());
     contactPoints.reserve(batch.contacts.size() * 4);
     speculativeConstraints.reserve(batch.speculativeContacts.size());
 
-    solverBodySources.reserve(caches.bodies.sm->dense().size());
-    solverBodyWriteBack.reserve(caches.bodies.sm->dense().size());
+    solverBodySources.reserve(physicsWorld->bodyStorage().dense().size());
+    solverBodyWriteBack.reserve(physicsWorld->bodyStorage().dense().size());
     constraintSources.reserve(batch.contacts.size());
     pointSources.reserve(batch.contacts.size() * 4);
 

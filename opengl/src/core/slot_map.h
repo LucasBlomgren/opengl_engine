@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -8,8 +9,10 @@ template<class T, class Id>
 class SlotMap {
 public:
     static constexpr uint32_t INVALID = 0xFFFFFFFFu;
+    const char* elementName = "";
 
-    SlotMap() {
+    SlotMap(const char* name = "Unknown") {
+        this->elementName = name;
         slotGen.reserve(100000);
         slotToDense.reserve(100000);
         denseToSlot.reserve(100000);
@@ -23,21 +26,30 @@ public:
             slotToDense[handle.slot] != INVALID;
     }
 
-    T* get(Id handle) {
+    T& get(Id handle) {
+        return denseStorage[slotToDense[handle.slot]];
+    }
+    const T& get(Id handle) const {
+        return denseStorage[slotToDense[handle.slot]];
+    }
+
+    T* try_get(Id handle, const char* func) {
+        if (!alive(handle)) {
+            std::cout
+                << "[" << func << "] Error: Invalid "
+                << elementName << " handle.\n";
+            return nullptr;
+        }
         return &denseStorage[slotToDense[handle.slot]];
     }
 
-    const T* get(Id handle) const {
-        return &denseStorage[slotToDense[handle.slot]];
-    }
-
-    T* try_get(Id handle) {
-        if (!alive(handle)) return nullptr;
-        return &denseStorage[slotToDense[handle.slot]];
-    }
-
-    const T* try_get(Id handle) const {
-        if (!alive(handle)) return nullptr;
+    const T* try_get(Id handle, const char* func) const {
+        if (!alive(handle)) {
+            std::cout
+                << "[" << func << "] Error: Invalid " 
+                << elementName << " handle.\n";
+            return nullptr;
+        }
         return &denseStorage[slotToDense[handle.slot]];
     }
 

@@ -3,7 +3,7 @@
 #include "core/slot_map.h"
 #include "game/game_object.h"
 #include "game/transform.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 #include <unordered_map>
 
@@ -47,14 +47,26 @@ struct GameObjectDesc {
 class World {
 public:
     World(
-        physics::Engine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm) :
-        physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm)
+        physics::Engine& pe, 
+        Renderer& re, 
+        TextureManager& tm, 
+        MeshManager& mm, 
+        ShaderManager& sm)
+        : physicsEngine(pe)
+        , renderer(re)
+        , textureManager(tm)
+        , meshManager(mm)
+        , shaderManager(sm)
     {}
 
     void clear();
 
-    SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() { return gameObjects; }
-    SlotMap<Transform, TransformHandle>& getTransformsMap() { return transforms; }
+    SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() { 
+        return gameObjects; 
+    }
+    SlotMap<Transform, TransformHandle>& getTransformsMap() { 
+        return transforms; 
+    }
     GameObject* getGameObject(const GameObjectHandle& handle);
     Transform* getTransform(const TransformHandle& handle); 
     GameObjectHandle getGameObjectHandle(physics::BodyHandle body) const;
@@ -73,10 +85,9 @@ public:
 
 private:
     int objectId = 0;
-    SlotMap<GameObject, GameObjectHandle> gameObjects;
-    SlotMap<Transform, TransformHandle> transforms;
-    std::unordered_map<physics::BodyHandle, GameObjectHandle>
-        bodyToGameObject;
+    SlotMap<GameObject, GameObjectHandle> gameObjects{"GameObject"};
+    SlotMap<Transform, TransformHandle> transforms{"Transform"};
+    std::unordered_map<physics::BodyHandle, GameObjectHandle> bodyToGameObject;
 
     physics::Engine& physicsEngine;
     Renderer& renderer;

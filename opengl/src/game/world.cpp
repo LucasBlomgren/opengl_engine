@@ -6,7 +6,7 @@
 #include "graphics/renderer/renderer.h"
 #include "graphics/shaders/shader_manager.h"
 #include "graphics/textures/texture_manager.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 namespace {
     constexpr float kSyncEpsilon = 1e-6f;
@@ -60,12 +60,12 @@ void World::clear() {
 
 GameObject* World::getGameObject(
     const GameObjectHandle& handle) {
-    return gameObjects.try_get(handle);
+    return gameObjects.try_get(handle, FUNC_NAME);
 }
 
 Transform* World::getTransform(
     const TransformHandle& handle) {
-    return transforms.try_get(handle);
+    return transforms.try_get(handle, FUNC_NAME);
 }
 
 GameObjectHandle World::getGameObjectHandle(
@@ -91,7 +91,7 @@ GameObjectHandle World::createGameObject(
     GameObjectDesc& objectDesc)
 {
     Transform* rootTransform =
-        transforms.try_get(objectDesc.rootTransformHandle);
+        transforms.try_get(objectDesc.rootTransformHandle, FUNC_NAME);
 
     if (!rootTransform) {
         std::cerr
@@ -104,7 +104,7 @@ GameObjectHandle World::createGameObject(
     GameObjectHandle gameObjectHandle =
         gameObjects.create(objectId, objectDesc.rootTransformHandle);
     GameObject* gameObject =
-        gameObjects.try_get(gameObjectHandle);
+        gameObjects.try_get(gameObjectHandle, FUNC_NAME);
 
     if (!gameObject) {
         return {};
@@ -144,7 +144,7 @@ GameObjectHandle World::createGameObject(
     size_t createdColliderCount = 0;
     for (const SubPartDesc& partDesc : objectDesc.parts) {
         Transform* partTransform =
-            transforms.try_get(partDesc.localTransformHandle);
+            transforms.try_get(partDesc.localTransformHandle, FUNC_NAME);
 
         if (!partTransform) {
             std::cerr
@@ -284,7 +284,7 @@ GameObjectHandle World::createGameObject(
 void World::deleteGameObject(
     GameObjectHandle handle)
 {
-    GameObject* object = gameObjects.try_get(handle);
+    GameObject* object = gameObjects.try_get(handle, FUNC_NAME);
 
     if (!object) {
         std::cerr
@@ -309,14 +309,14 @@ void World::deleteGameObject(
 void World::syncGameObjectTransformToPhysics(
     GameObjectHandle handle)
 {
-    GameObject* object = gameObjects.try_get(handle);
+    GameObject* object = gameObjects.try_get(handle, FUNC_NAME);
 
     if (!object) {
         return;
     }
 
     Transform* rootTransform =
-        transforms.try_get(object->rootTransformHandle);
+        transforms.try_get(object->rootTransformHandle, FUNC_NAME);
     const std::optional<physics::BodyState> bodyState =
         physicsEngine.getRigidBodyState(object->rigidBodyHandle);
 
@@ -336,7 +336,7 @@ void World::syncGameObjectTransformToPhysics(
 
     for (const SubPart& part : object->parts) {
         Transform* localTransform =
-            transforms.try_get(part.localTransformHandle);
+            transforms.try_get(part.localTransformHandle, FUNC_NAME);
         const std::optional<physics::ColliderState> colliderState =
             physicsEngine.getColliderState(part.colliderHandle);
 
@@ -388,7 +388,7 @@ void World::syncTransformsToPhysics() {
         for (const SubPart& part : object.parts)
         {
             Transform* localTransform =
-                transforms.try_get(part.localTransformHandle);
+                transforms.try_get(part.localTransformHandle, FUNC_NAME);
 
             const std::optional<physics::ColliderState> colliderState =
                 physicsEngine.getColliderState(part.colliderHandle);
@@ -436,7 +436,7 @@ void World::syncPhysicsToTransforms()
         }
 
         Transform* transform =
-            transforms.try_get(object.rootTransformHandle);
+            transforms.try_get(object.rootTransformHandle, FUNC_NAME);
 
         if (!transform) {
             continue;

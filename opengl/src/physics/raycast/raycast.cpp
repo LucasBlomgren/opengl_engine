@@ -27,16 +27,12 @@ namespace raycast {
                 continue;
             }
 
-            const RigidBody* body = bodyMap.try_get(handle);
-
-            if (!body) {
-                continue;
-            }
+            const RigidBody& body = bodyMap.get(handle);
 
             const glm::vec3 tMin =
-                (body->aabb.worldMin - ray.start) / ray.direction;
+                (body.aabb.worldMin - ray.start) / ray.direction;
             const glm::vec3 tMax =
-                (body->aabb.worldMax - ray.start) / ray.direction;
+                (body.aabb.worldMax - ray.start) / ray.direction;
 
             const glm::vec3 t1 = glm::min(tMin, tMax);
             const glm::vec3 t2 = glm::max(tMin, tMax);
@@ -57,16 +53,12 @@ namespace raycast {
             return {};
         }
 
-        const RigidBody* bestBody = bodyMap.try_get(bestBodyHandle);
-
-        if (!bestBody) {
-            return {};
-        }
+        const RigidBody& bestBody = bodyMap.get(bestBodyHandle);
 
         const glm::vec3 tMin =
-            (bestBody->aabb.worldMin - ray.start) / ray.direction;
+            (bestBody.aabb.worldMin - ray.start) / ray.direction;
         const glm::vec3 tMax =
-            (bestBody->aabb.worldMax - ray.start) / ray.direction;
+            (bestBody.aabb.worldMax - ray.start) / ray.direction;
         const glm::vec3 entry = glm::min(tMin, tMax);
 
         int hitAxis = 2;

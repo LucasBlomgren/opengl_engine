@@ -1,9 +1,33 @@
 #include "pch.h"
-#include "physics/physics_engine.h"
+
+#include <utility>
+
+#include "physics/public/engine.h"
 
 namespace physics {
 
 using namespace internal;
+
+namespace {
+
+const RigidBody* resolveBody(
+    const cmd::Buffer& commandBuffer,
+    const PhysicsWorld& physicsWorld,
+    BodyHandle handle)
+{
+    if (commandBuffer.isBodyPendingDestroy(handle)) {
+        return nullptr;
+    }
+
+    if (const RigidBody* body =
+        commandBuffer.tryGetPendingBody(handle)) {
+        return body;
+    }
+
+    return physicsWorld.tryGetBody(handle);
+}
+
+}
 
 //=========================================
 // Rigid body creation and destruction
@@ -16,50 +40,46 @@ BodyHandle Engine::createRigidBody(
         return {};
     }
 
-    BodyHandle bodyHandle =
-        physicsWorld.createPendingRigidBody();
+    BodyHandle bodyHandle = physicsWorld.reserveBodyHandle();
 
-    RigidBody* body =
-        physicsWorld.getRigidBody(bodyHandle);
-
-    if (!body) {
-        return {};
-    }
-
-    commandBuffer.recordBodyCreate(bodyHandle);
-
-    body->pose = desc.pose;
-    body->scale = desc.scale;
-    body->type = desc.type;
-    body->motionControl = desc.motionControl;
-    body->responseMode = desc.responseMode;
-    body->linearVelocity = desc.linearVelocity;
-    body->angularVelocity = desc.angularVelocity;
-    body->allowGravity = desc.allowGravity;
-    body->allowSleep = desc.allowSleep;
-    body->canMoveLinearly = desc.canMoveLinearly;
-    body->asleep = desc.startAsleep;
-    body->sleepCounterThreshold = desc.sleepCounterThreshold;
-    body->anchorPoint = desc.pose.position;
+    RigidBody body;
+    body.pose = desc.pose;
+    body.scale = desc.scale;
+    body.type = desc.type;
+    body.motionControl = desc.motionControl;
+    body.responseMode = desc.responseMode;
+    body.linearVelocity = desc.linearVelocity;
+    body.angularVelocity = desc.angularVelocity;
+    body.allowGravity = desc.allowGravity;
+    body.allowSleep = desc.allowSleep;
+    body.canMoveLinearly = desc.canMoveLinearly;
+    body.asleep = desc.startAsleep;
+    body.sleepCounterThreshold = desc.sleepCounterThreshold;
+    body.anchorPoint = desc.pose.position;
 
     const float radius = 0.5f * glm::length(desc.scale);
-    body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
+    body.invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
 
     if (desc.type == BodyType::Dynamic) {
-        body->mass = desc.mass;
-        body->invMass = 1.0f / desc.mass;
+        body.mass = desc.mass;
+        body.invMass = 1.0f / desc.mass;
     }
     else {
-        body->mass = 0.0f;
-        body->invMass = 0.0f;
+        body.mass = 0.0f;
+        body.invMass = 0.0f;
     }
 
+    commandBuffer.recordBodyCreate(bodyHandle, std::move(body));
+
+    // Stage the body before its colliders so createCollider() can resolve the
+    // pending parent through the command buffer.
+    // recordBodyCreate() must therefore stay before this loop.
     for (const ColliderDesc& colliderDesc : desc.colliders) {
         ColliderHandle colliderHandle =
             createCollider(bodyHandle, colliderDesc);
 
         if (!colliderHandle.isValid()) {
-            destroyRigidBody(bodyHandle);
+            commandBuffer.recordBodyDestroy(bodyHandle, physicsWorld);
             return {};
         }
     }
@@ -70,15 +90,11 @@ BodyHandle Engine::createRigidBody(
 bool Engine::destroyRigidBody(
     BodyHandle bodyHandle)
 {
-    RigidBody* body = physicsWorld.getRigidBody(bodyHandle);
-
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(bodyHandle)) {
+    if (!resolveBody(commandBuffer, physicsWorld, bodyHandle)) {
         return false;
     }
 
-    commandBuffer.recordBodyDestroy(bodyHandle);
-    return true;
+    return commandBuffer.recordBodyDestroy(bodyHandle, physicsWorld);
 }
 
 //=========================================
@@ -88,11 +104,13 @@ bool Engine::applyLinearImpulse(
     BodyHandle handle,
     const glm::vec3& impulse)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type != BodyType::Dynamic) {
+    if (!body || body->type != BodyType::Dynamic) {
         return false;
     }
 
@@ -104,11 +122,13 @@ bool Engine::setLinearVelocity(
     BodyHandle handle,
     const glm::vec3& velocity)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type == BodyType::Static) {
+    if (!body || body->type == BodyType::Static) {
         return false;
     }
 
@@ -120,11 +140,13 @@ bool Engine::setAngularVelocity(
     BodyHandle handle,
     const glm::vec3& velocity)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type == BodyType::Static) {
+    if (!body || body->type == BodyType::Static) {
         return false;
     }
 
@@ -136,11 +158,13 @@ bool Engine::setKinematicTarget(
     BodyHandle handle,
     const Pose& target)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type != BodyType::Kinematic) {
+    if (!body || body->type != BodyType::Kinematic) {
         return false;
     }
 
@@ -153,9 +177,13 @@ bool Engine::setRigidBodyTransform(
     const Pose& pose,
     const glm::vec3& scale)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body) {
         return false;
     }
 
@@ -167,11 +195,13 @@ bool Engine::setRigidBodySleepState(
     BodyHandle handle,
     bool asleep)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type != BodyType::Dynamic) {
+    if (!body || body->type != BodyType::Dynamic) {
         return false;
     }
 
@@ -188,10 +218,13 @@ bool Engine::setRigidBodyType(
     BodyHandle handle,
     BodyType type)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body) {
         return false;
     }
 
@@ -203,11 +236,13 @@ bool Engine::setRigidBodyMotionControl(
     BodyHandle handle,
     MotionControl motionControl)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type == BodyType::Static) {
+    if (!body || body->type == BodyType::Static) {
         return false;
     }
 
@@ -223,9 +258,13 @@ bool Engine::setRigidBodyResponseMode(
     BodyHandle handle,
     ResponseMode responseMode)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body) {
         return false;
     }
 
@@ -237,10 +276,13 @@ bool Engine::setRigidBodyMass(
     BodyHandle handle,
     float mass)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
     if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
         body->type != BodyType::Dynamic ||
         mass <= 0.0f) {
         return false;
@@ -254,9 +296,13 @@ bool Engine::setRigidBodyAllowGravity(
     BodyHandle handle,
     bool allowGravity)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body) {
         return false;
     }
 
@@ -268,11 +314,13 @@ bool Engine::setRigidBodyAllowSleep(
     BodyHandle handle,
     bool allowSleep)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body ||
-        commandBuffer.isBodyPendingDestroy(handle) ||
-        body->type != BodyType::Dynamic) {
+    if (!body || body->type != BodyType::Dynamic) {
         return false;
     }
 
@@ -284,9 +332,13 @@ bool Engine::setRigidBodyCanMoveLinearly(
     BodyHandle handle,
     bool canMoveLinearly)
 {
-    const RigidBody* body = physicsWorld.getRigidBody(handle);
+    const RigidBody* body = resolveBody(
+        commandBuffer,
+        physicsWorld,
+        handle
+    );
 
-    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
+    if (!body) {
         return false;
     }
 

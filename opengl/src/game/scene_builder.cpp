@@ -4,7 +4,7 @@
 #include "geometry/vertex.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/lighting/light_manager.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 
 SceneBuilder::TerrainData& SceneBuilder::getTerrainData() {
     return terrainData;
@@ -124,7 +124,7 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
     default: break;
     }
 
-    physicsEngine.setupScene(terrainData.triangles);
+    physicsEngine.activateScene(terrainData.triangles);
 
     glcount::print();
 }

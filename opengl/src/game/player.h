@@ -1,7 +1,7 @@
 #pragma once
 
 #include "scene_builder.h"
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "engine/camera.h"
 #include "graphics/renderer/renderer.h"
 

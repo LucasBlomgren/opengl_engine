@@ -10,7 +10,7 @@
 
 #include "imgui.h"
 
-#include "physics/physics_engine.h"
+#include "physics/public/engine.h"
 #include "game/scene_builder.h"
 #include "graphics/renderer/renderer.h"
 #include "graphics/textures/texture_manager.h"

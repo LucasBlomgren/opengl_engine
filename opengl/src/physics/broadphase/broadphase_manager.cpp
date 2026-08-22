@@ -15,21 +15,20 @@ namespace physics::internal {
 //=======================================
 void BroadphaseManager::init(
     PhysicsWorld* world, 
-    RuntimeCaches* caches, 
     std::vector<Tri>* terrainTris) 
 {
-    this->caches = caches;
+    this->world = world;
     this->terrainTriangles = terrainTris;
 
-    SlotMap<RigidBody, BodyHandle>* bMap = caches->bodies.sm;
-    size_t slotCap = bMap->dense().capacity();
+    SlotMap<RigidBody, BodyHandle>& bMap = world->bodyStorage();
+    size_t slotCap = bMap.dense().capacity();
 
-    awakeBvh.init(world, caches, slotCap, true);
-    asleepBvh.init(world, caches, slotCap, true);
-    staticBvh.init(world, caches, slotCap, true);
+    awakeBvh.init(world, slotCap, true);
+    asleepBvh.init(world, slotCap, true);
+    staticBvh.init(world, slotCap, true);
 
     // false = speculative pairs don't need to write leaf indices
-    speculativeBvh.init(world, caches, slotCap, false);
+    speculativeBvh.init(world, slotCap, false);
 
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);
@@ -89,14 +88,14 @@ void BroadphaseManager::buildPairsBruteForce(
 {
     for (int i = 0; i < bodies.size(); ++i) {
         BodyHandle aH = bodies[i];
-        RigidBody* a = caches->bodies.get(aH, FUNC_NAME);
+        RigidBody& a = world->getBody(aH);
 
         for (int j = i + 1; j < bodies.size(); ++j) {
             BodyHandle bH = bodies[j];
-            RigidBody* b = caches->bodies.get(bH, FUNC_NAME);
+            RigidBody& b = world->getBody(bH);
 
-            if (a->asleep && b->asleep) continue;
-            if (!a->aabb.intersects(b->aabb)) continue;
+            if (a.asleep && b.asleep) continue;
+            if (!a.aabb.intersects(b.aabb)) continue;
 
             outPairs.push_back(DynamicPair{aH, bH});
         }
@@ -356,19 +355,15 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
 void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHandle>& outBodies, std::vector<AABB>& outAABBs) {
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
+        RigidBody& body = world->getBody(handle);
 
-        if (!body || body->colliderHandles.empty()) {
+        if (body.colliderHandles.empty()) {
             continue;
         }
 
-        Collider* mainCollider = caches->colliders.get(body->colliderHandles[0], FUNC_NAME);
+        Collider& mainCollider = world->getCollider(body.colliderHandles[0]);
 
-        if (!mainCollider) {
-            continue;
-        }
-
-        if (body->motionControl != MotionControl::Physics) {
+        if (body.motionControl != MotionControl::Physics) {
             continue;
         }
 
@@ -378,7 +373,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
         // -----------------------------
         // 1. Estimate object size
         // -----------------------------
-        const glm::vec3& scale = body->scale;
+        const glm::vec3& scale = body.scale;
         float minExtent = std::min(scale.x, std::min(scale.y, scale.z));
         float boundingRadius = 0.5f * glm::length(scale);
         float safeDistance = std::max(minExtent * safeFraction, minSafeDistance);
@@ -386,8 +381,8 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
         // -----------------------------
         // 2. Estimate motion this frame
         // -----------------------------
-        float linearMotion = glm::length(body->linearVelocity) * dt;
-        float angularMotion = glm::length(body->angularVelocity) * boundingRadius * dt;
+        float linearMotion = glm::length(body.linearVelocity) * dt;
+        float angularMotion = glm::length(body.angularVelocity) * boundingRadius * dt;
         float totalMotion = linearMotion + angularMotion;
 
         // Not fast enough to matter.
@@ -400,9 +395,9 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
         // -----------------------------
         // 3. Build swept AABB
         // -----------------------------
-        AABB& currentAABB = body->aabb;
+        AABB& currentAABB = body.aabb;
 
-        glm::vec3 delta = body->linearVelocity * dt;
+        glm::vec3 delta = body.linearVelocity * dt;
 
         AABB endAABB = currentAABB;
         endAABB.worldMin += delta;
@@ -416,18 +411,18 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
         // -----------------------------
         // 4. Expand for rotation
         // -----------------------------
-        if (mainCollider->type != ColliderType::SPHERE || body->isCompound()) {
-            float omega = glm::length(body->angularVelocity);
+        if (mainCollider.type != ColliderType::SPHERE || body.isCompound()) {
+            float omega = glm::length(body.angularVelocity);
             if (omega > 1e-6f) {
-                glm::vec3 axis = body->angularVelocity / omega;
+                glm::vec3 axis = body.angularVelocity / omega;
 
                 // Use the box's OWN oriented axes + local half-extents.
                 // The world AABB is sign-agnostic: currentHalf is always the
                 // all-positive corner, a phantom point that sits far from the
                 // axis when the body's long dimension points "against" it.
                 // Measuring that corner's distance to the axis is the bug.
-                glm::mat3 R = glm::mat3_cast(body->pose.orientation);
-                glm::vec3 h = 0.5f * body->scale; // local half-extents
+                glm::mat3 R = glm::mat3_cast(body.pose.orientation);
+                glm::vec3 h = 0.5f * body.scale; // local half-extents
 
                 // Max perpendicular distance of any box point to the spin axis
                 // (conservative). A box axis PARALLEL to the spin axis contributes
@@ -466,12 +461,12 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
 //    List management
 //==================================================
 void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
-    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
-    if (!rigidBody || dst == BroadphaseBucket::None) {
+    RigidBody& rigidBody = world->getBody(handle);
+    if (dst == BroadphaseBucket::None) {
         return;
     }
 
-    auto& h = rigidBody->broadphaseHandle;
+    auto& h = rigidBody.broadphaseHandle;
     if (h.bucket != BroadphaseBucket::None) {
         return;
     }
@@ -489,12 +484,9 @@ void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
 
 // Remove from current list
 void BroadphaseManager::remove(const BodyHandle& handle) {
-    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
-    if (!rigidBody) {
-        return;
-    }
+    RigidBody& rigidBody = world->getBody(handle);
 
-    auto& h = rigidBody->broadphaseHandle;
+    auto& h = rigidBody.broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
 
     // remove from list
@@ -510,14 +502,11 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
 
 // Move to awake
 void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
-    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
-    if (!body) {
-        return;
-    }
+    RigidBody& body = world->getBody(handle);
 
-    body->setAwake();
+    body.setAwake();
 
-    if (body->broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+    if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         return;
     }
 
@@ -527,14 +516,11 @@ void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
-    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
-    if (!body) {
-        return;
-    }
+    RigidBody& body = world->getBody(handle);
 
-    body->setAsleep();
+    body.setAsleep();
 
-    if (body->broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+    if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         return;
     }
 
@@ -544,23 +530,20 @@ void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
 }
 // Move to static
 void BroadphaseManager::moveToStatic(const BodyHandle& handle) {
-    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
-    if (!body) {
+    RigidBody& body = world->getBody(handle);
+    if (body.broadphaseHandle.bucket == BroadphaseBucket::Static) {
         return;
     }
 
-    if (body->broadphaseHandle.bucket == BroadphaseBucket::Static)
-        return;
-
     remove(handle);
-    body->setStatic();
+    body.setStatic();
     add(handle, BroadphaseBucket::Static);
     staticBvh.dirty = true;
 }
 
 void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
-    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
-    auto& h = rigidBody->broadphaseHandle;
+    RigidBody& rigidBody = world->getBody(handle);
+    auto& h = rigidBody.broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
     bvhFor(h.bucket).dirty = true;
 }
@@ -569,13 +552,13 @@ void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
 //     Helpers
 //==================================================
 // Swap and pop from list
-void BroadphaseManager::swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list) {
-    RigidBody* rigidBody = caches->bodies.get(handle, FUNC_NAME);
-    if (!rigidBody) {
-        return;
-    }
+void BroadphaseManager::swapAndPop(
+    const BodyHandle& handle, 
+    std::vector<BodyHandle>& list) 
+{
+    RigidBody& rigidBody = world->getBody(handle);
 
-    int i = rigidBody->broadphaseHandle.listIdx;
+    int i = rigidBody.broadphaseHandle.listIdx;
     if (i == -1) return;
 
     if (i < 0 ||
@@ -583,12 +566,12 @@ void BroadphaseManager::swapAndPop(const BodyHandle& handle, std::vector<BodyHan
         !(list[static_cast<size_t>(i)] == handle)) {
         auto position = std::find(list.begin(), list.end(), handle);
         if (position == list.end()) {
-            rigidBody->broadphaseHandle.listIdx = -1;
+            rigidBody.broadphaseHandle.listIdx = -1;
             return;
         }
 
         i = static_cast<int>(std::distance(list.begin(), position));
-        rigidBody->broadphaseHandle.listIdx = i;
+        rigidBody.broadphaseHandle.listIdx = i;
     }
 
     int lastPos = (int)list.size() - 1;
@@ -596,14 +579,12 @@ void BroadphaseManager::swapAndPop(const BodyHandle& handle, std::vector<BodyHan
         BodyHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        RigidBody* moved = caches->bodies.get(movedHandle, FUNC_NAME);
-        if (moved) {
-            moved->broadphaseHandle.listIdx = i;
-        }
+        RigidBody& moved = world->getBody(movedHandle);
+        moved.broadphaseHandle.listIdx = i;
     }
 
     list.pop_back();
-    rigidBody->broadphaseHandle.listIdx = -1;
+    rigidBody.broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket

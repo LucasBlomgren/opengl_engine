@@ -35,7 +35,7 @@ struct PointerCache {
             return slot;
         }
 
-        slot = sm->try_get(h);
+        slot = sm->try_get(h, func);
         if (!slot) {
             std::cout << "[" << func << "] Error: Dead or missing " << name << " for valid-looking handle.\n";
         }

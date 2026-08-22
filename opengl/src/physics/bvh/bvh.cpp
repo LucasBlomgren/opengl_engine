@@ -8,12 +8,10 @@ namespace physics::internal {
 //=======================================================
 void BVHTree::init(
     PhysicsWorld* world,
-    RuntimeCaches* caches,
     size_t allocSize,
     bool writeBodyLeafIndices) 
 {
     this->world = world;
-    this->caches = caches;
     this->writeBodyLeafIndices = writeBodyLeafIndices;
 
     nodes.reserve(allocSize * 2);
@@ -100,9 +98,9 @@ bool BVHTree::queryAny(const AABB& qBox, BodyHandle ignoreBody) const {
 //      Insert Leaf
 //========================================================
 int BVHTree::insertLeaf(BodyHandle handle) {
-    RigidBody* body = caches->bodies.get(handle, FUNC_NAME);
+    RigidBody& body = world->getBody(handle);
 
-    if (body->broadphaseHandle.leafIdx != -1) {
+    if (body.broadphaseHandle.leafIdx != -1) {
         // already in tree
         return -1;
     }
@@ -157,8 +155,8 @@ int BVHTree::insertLeaf(BodyHandle handle) {
     return leaf.selfIdx;
 }
 
-int BVHTree::createLeaf(BodyHandle handle, RigidBody* body) {
-    AABB aabb = world->computeBodyAABB(*body);
+int BVHTree::createLeaf(BodyHandle handle, RigidBody& body) {
+    AABB aabb = world->computeBodyAABB(body);
 
     Node& leaf = nodes.emplace_back();
     leaf.selfIdx = nodes.size() - 1;
@@ -168,7 +166,7 @@ int BVHTree::createLeaf(BodyHandle handle, RigidBody* body) {
     leaf.fatBox = leaf.tightBox;
     leaf.fatBox.grow(fatBoxMargin);
 
-    body->broadphaseHandle.leafIdx = leaf.selfIdx;
+    body.broadphaseHandle.leafIdx = leaf.selfIdx;
 
     if (shouldUpdateRenderData)
         updateRenderData(leaf);
@@ -231,8 +229,8 @@ void BVHTree::removeLeaf(int leafIdx)
 
     // root is leaf, clear tree
     if (leafIdx == rootIdx) {
-        RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
-        body->broadphaseHandle.leafIdx = -1;
+        RigidBody& body = world->getBody(leaf.element);
+        body.broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
         nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
@@ -268,9 +266,9 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.alive = false;
     leaf.parentIdx = -1;
 
-    RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
+    RigidBody& body = world->getBody(leaf.element);
 
-    body->broadphaseHandle.leafIdx = -1;
+    body.broadphaseHandle.leafIdx = -1;
     leaf.element = BodyHandle{};
 
     parent.alive = false;
@@ -309,8 +307,8 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        RigidBody* body = caches->bodies.get(n.element, FUNC_NAME);
-        n.tightBox = body->aabb;
+        RigidBody& body = world->getBody(n.element);
+        n.tightBox = body.aabb;
 
         if (n.fatBox.contains(n.tightBox)) {
             continue;
@@ -385,13 +383,13 @@ void BVHTree::createPrimitivesFromBodyAABBs(
     prims.reserve(handles.size());
 
     for (const BodyHandle& bodyH : handles) {
-        RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
+        RigidBody& body = world->getBody(bodyH);
 
         if (writeBodyLeafIndices) {
-            body->broadphaseHandle.leafIdx = -1;
+            body.broadphaseHandle.leafIdx = -1;
         }
 
-        const AABB& box = body->aabb;
+        const AABB& box = body.aabb;
 
         BVHPrimitive prim{};
         prim.min = box.worldMin;
@@ -419,8 +417,8 @@ void BVHTree::createPrimitivesFromExternalAABBs(
         const AABB& box = boxes[i];
 
         if (writeBodyLeafIndices) {
-            RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
-            body->broadphaseHandle.leafIdx = -1;
+            RigidBody& body = world->getBody(bodyH);
+            body.broadphaseHandle.leafIdx = -1;
         }
 
         BVHPrimitive prim{};
@@ -542,10 +540,10 @@ void BVHTree::createPrimitives(std::vector<BodyHandle>& handles) {
     prims.reserve(handles.size());
 
     for (BodyHandle& bodyH : handles) {
-        RigidBody* body = caches->bodies.get(bodyH, FUNC_NAME);
-        body->broadphaseHandle.leafIdx = -1;
+        RigidBody& body = world->getBody(bodyH);
+        body.broadphaseHandle.leafIdx = -1;
         
-        AABB& box = body->aabb;
+        AABB& box = body.aabb;
 
         BVHPrimitive prim;
         prim.min = box.worldMin;
@@ -643,8 +641,8 @@ void BVHTree::makeLeaf(int nodeIdx)
     leaf.fatBox = leaf.tightBox;
 
     if (writeBodyLeafIndices) {
-        RigidBody* body = caches->bodies.get(leaf.element, FUNC_NAME);
-        body->broadphaseHandle.leafIdx = leaf.selfIdx;
+        RigidBody& body = world->getBody(leaf.element);
+        body.broadphaseHandle.leafIdx = leaf.selfIdx;
     }
 }
 

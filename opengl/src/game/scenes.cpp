@@ -506,9 +506,6 @@ void SceneBuilder::testFloorScene(int amount) {
         );
     }
 
-
-
-
     GameObjectDesc tumblerFrontWall;
     tumblerFrontWall.name = "TumblerFrontWall";
     tumblerFrontWall.rootTransformHandle = world.createTransform(

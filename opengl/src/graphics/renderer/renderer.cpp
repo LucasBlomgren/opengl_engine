@@ -310,13 +310,16 @@ void Renderer::render(
     uploadDirectionalLight();
     uploadLightsToShader();
 
-    GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
-    if (obj) {
-        Transform* t = world->getTransform(obj->rootTransformHandle);
-        std::vector<Light>& selectedLights = lightManager->getLights();
+    // update selected light position to match selected object position
+    if (editor->selectedObjectHandle.isValid()) {
+        GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
+        if (obj) {
+            Transform* t = world->getTransform(obj->rootTransformHandle);
+            std::vector<Light>& selectedLights = lightManager->getLights();
 
-        if (!selectedLights.empty()) {
-            selectedLights[0].position = t->position;
+            if (!selectedLights.empty()) {
+                selectedLights[0].position = t->position;
+            }
         }
     }
 
@@ -853,6 +856,8 @@ void Renderer::renderHoveredObjectOutline(
     Camera& camera, 
     SceneBuilder& builder) 
 {
+    if (!handle.isValid()) return;
+
     GameObject* obj = world->getGameObject(handle);
     if (!obj || !physicsEngine) return;
 
@@ -904,6 +909,8 @@ void Renderer::renderSelectedObjectOutline(
     Camera& camera, 
     SceneBuilder& builder) 
 {
+    if (!handle.isValid()) return;
+
     GameObject* obj = world->getGameObject(handle);
     if (!obj || !physicsEngine) return;
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "physics/world/runtime_caches.h"
 #include "physics/world/physics_world.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/aabb.h"
@@ -34,7 +33,6 @@ public:
     using Element = BodyHandle;
     void init(
         PhysicsWorld* world, 
-        RuntimeCaches* caches, 
         size_t allocSize, 
         bool writeBodyLeafIndices
     );
@@ -89,7 +87,7 @@ public:
 
     int insertLeaf(BodyHandle handle);
     int findBestSibling(AABB& box);
-    int createLeaf(BodyHandle handle, RigidBody* body);
+    int createLeaf(BodyHandle handle, RigidBody& body);
 
     void removeLeaf(int leafIdx);
     void refitParents(int leafIdx);
@@ -101,11 +99,10 @@ public:
 
 private:
     PhysicsWorld* world = nullptr;
-    RuntimeCaches* caches = nullptr;
 
     bool writeBodyLeafIndices = true;
 
-    int rebuildCooldown = 10;
+    int rebuildCooldown = 5;
     int rebuildCooldownCounter = 0;
     int numRefits = 0;
     int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
