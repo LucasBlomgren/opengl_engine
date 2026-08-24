@@ -22,7 +22,7 @@ const RigidBody* resolveBody(
     }
 
     if (const RigidBody* body =
-        commandBuffer.tryGetPendingBody(handle)) {
+        commandBuffer.tryGetPendingBodyCreate(handle)) {
         return body;
     }
 
@@ -39,7 +39,7 @@ const Collider* resolveCollider(
     }
 
     const Collider* collider =
-        commandBuffer.tryGetPendingCollider(handle);
+        commandBuffer.tryGetPendingColliderCreate(handle);
 
     if (!collider) {
         collider = physicsWorld.tryGetCollider(handle);

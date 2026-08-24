@@ -19,8 +19,7 @@ const RigidBody* resolveBody(
         return nullptr;
     }
 
-    if (const RigidBody* body =
-        commandBuffer.tryGetPendingBody(handle)) {
+    if (const RigidBody* body = commandBuffer.tryGetPendingBodyCreate(handle)) {
         return body;
     }
 

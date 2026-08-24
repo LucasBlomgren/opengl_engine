@@ -493,8 +493,9 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
     swapAndPop(handle, listFor(h.bucket));
 
     // remove from BVH
-    bvhFor(h.bucket).removeLeaf(h.leafIdx);
-    bvhFor(h.bucket).dirty = true;
+    auto& bvh = bvhFor(h.bucket);
+    bvh.removeLeaf(h.leafIdx);
+    bvh.dirty = true;
 
     h.leafIdx = -1;
     h.bucket = BroadphaseBucket::None;

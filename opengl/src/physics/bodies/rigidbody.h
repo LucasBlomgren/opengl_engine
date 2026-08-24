@@ -8,7 +8,6 @@
 
 namespace physics::internal {
 
-// #TODO: decide what is private/public in RigidBody
 class RigidBody {
 public:
     int id = -1;
@@ -17,7 +16,8 @@ public:
     ResponseMode responseMode = ResponseMode::Normal;
 
     // #TODO: lägga till COM
-    // annars fungerar fysiken bara om collidernas lokala transform är centrerade runt COM
+    // annars fungerar fysiken bara om collidernas 
+    // lokala transform är centrerade runt COM
 
     Pose pose;
     glm::vec3 scale{ 1.0f };
@@ -26,9 +26,13 @@ public:
     BroadphaseHandle broadphaseHandle;
     std::vector<ColliderHandle> colliderHandles;
 
-    AABB aabb; // if compound, this is the AABB of the whole body, otherwise AABB of the single collider.
+    // if compound, this is the AABB of the whole body, 
+    // otherwise AABB of the single collider.
+    AABB aabb;
 
-    // physics properties
+    //==============================
+    // physics
+    //=============================
     uint32_t lastBiasCommitFrame = 0;
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
@@ -43,12 +47,20 @@ public:
     bool canMoveLinearly = true;
     float radius = 0.0f;
     float invRadius = 0.0f;
-    static constexpr glm::vec3 g = glm::vec3(0.0f, -9.81f, 0.0f);
 
-    // sleep
+    static constexpr glm::vec3 g = 
+        glm::vec3(0.0f, -9.81f, 0.0f);
+
+    //==============================
+    // sleep 
+    //==============================
     bool asleep = false;
     bool allowSleep = true;
-    bool inSleepTransition = false; // to avoid waking up immediately and to not add duplicate wake-up requests
+
+    // to avoid waking up immediately and 
+    // to not add duplicate wake-up requests
+    bool inSleepTransition = false;
+
     float sleepCounter = 0;
     float sleepCounterThreshold = 1.5f;
     float velocityThreshold = 0;

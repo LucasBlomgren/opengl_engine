@@ -58,6 +58,7 @@ void Engine::processSleepList(float outerDt) {
 //====================================================================
 void Engine::updateSleepThresholds() {
     const std::vector<BodyHandle>& awakeHandles = broadphaseManager.getAwakeList();
+
     for (const BodyHandle& handle : awakeHandles) {
         RigidBody& body = physicsWorld.getBody(handle);
 

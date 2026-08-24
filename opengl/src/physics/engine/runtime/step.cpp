@@ -225,9 +225,9 @@ void Engine::endPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
     processWakeList();
+    addSleepDamping();
     updateSleepThresholds();
     processSleepList(outerDt);
-    addSleepDamping();
     updateContactCache();
 
     frameTimers->submit(

@@ -10,14 +10,9 @@
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
+#include "physics/world/physics_world.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
-
-namespace physics::internal {
-
-class PhysicsWorld;
-
-}
 
 namespace physics::internal::cmd {
 
@@ -174,8 +169,6 @@ public:
     //=========================================
     void reserve(size_t bodyCount, size_t colliderCount, size_t mutationCount);
     void clear(PhysicsWorld& physicsWorld);
-
-    [[nodiscard]] bool empty() const noexcept;
     [[nodiscard]] Batch take();
 
     //=========================================
@@ -187,11 +180,11 @@ public:
     bool recordBodyDestroy(BodyHandle body, PhysicsWorld& physicsWorld);
     bool recordColliderDestroy(ColliderHandle collider, PhysicsWorld& physicsWorld);
 
-    RigidBody* tryGetPendingBody(BodyHandle body);
-    const RigidBody* tryGetPendingBody(BodyHandle body) const;
+    RigidBody* tryGetPendingBodyCreate(BodyHandle body);
+    const RigidBody* tryGetPendingBodyCreate(BodyHandle body) const;
 
-    Collider* tryGetPendingCollider(ColliderHandle collider);
-    const Collider* tryGetPendingCollider(ColliderHandle collider) const;
+    Collider* tryGetPendingColliderCreate(ColliderHandle collider);
+    const Collider* tryGetPendingColliderCreate(ColliderHandle collider) const;
 
     [[nodiscard]] bool isBodyPendingDestroy(BodyHandle body) const;
     [[nodiscard]] bool isColliderPendingDestroy(ColliderHandle collider) const;
@@ -248,18 +241,7 @@ public:
     void recordSleepAllObjects();
     void recordAwakenAllObjects();
 
-    //=========================================
-    // Pending creation queries
-    //=========================================
-    const RigidBody* getPendingBodyCreate(BodyHandle body) const;
-    const Collider* getPendingColliderCreate(ColliderHandle collider) const;
-
 private:
-    void cancelPendingCollidersForBody(
-        BodyHandle body,
-        PhysicsWorld& physicsWorld,
-        std::unordered_set<ColliderHandle>& removedColliders);
-
     void absorbColliderDestroysForBody(
         BodyHandle body,
         std::unordered_set<ColliderHandle>& removedColliders);
@@ -271,10 +253,10 @@ private:
     void removeMutationsTargeting(ColliderHandle collider);
 
     std::vector<Mutation> mutations;
-    std::unordered_map<BodyHandle, RigidBody> pendingBodyCreates;
-    std::unordered_set<BodyHandle> pendingBodyDestroys;
-    std::unordered_map<ColliderHandle, Collider> pendingColliderCreates;
-    std::unordered_map<ColliderHandle, BodyHandle> pendingColliderDestroys;
+    std::unordered_map<BodyHandle, RigidBody> bodyCreates;
+    std::unordered_set<BodyHandle> bodyDestroys;
+    std::unordered_map<ColliderHandle, Collider> colliderCreates;
+    std::unordered_map<ColliderHandle, BodyHandle> colliderDestroys;
 };
 
 }

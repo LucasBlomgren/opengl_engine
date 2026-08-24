@@ -60,7 +60,6 @@
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
     <ClCompile Include="src\physics\narrowphase\collision_manifold.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\sat.cpp" />
-    <ClCompile Include="src\physics\broadphase\sweep_and_prune.cpp" />
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
     <ClCompile Include="src\physics\engine\runtime\integration.cpp" />
@@ -192,13 +191,11 @@
     <ClInclude Include="src\physics\narrowphase\SAT\sat.h" />
     <ClInclude Include="src\physics\bvh\query_sametree.h" />
     <ClInclude Include="debug_config.h" />
-    <ClInclude Include="src\physics\broadphase\sweep_and_prune.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_types.h" />
     <ClInclude Include="src\physics\broadphase\rigidbody_types.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
     <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
-    <ClInclude Include="src\physics\world\runtime_caches.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClInclude Include="src\physics\public\debug_types.h" />
@@ -220,7 +217,6 @@
     <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
-    <ClInclude Include="src\physics\error_logging.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

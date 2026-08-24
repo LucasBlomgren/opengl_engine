@@ -13,6 +13,99 @@
 #include <glm/gtc/random.hpp>
 #include <random>
 
+namespace {
+    GameObjectHandle createChair(
+        World& world, 
+        glm::vec3 position, 
+        float size, 
+        float mass) 
+    {
+        GameObjectDesc chair;
+        chair.name = "Chair";
+        glm::quat orientation = 
+            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        chair.rootTransformHandle = 
+            world.createTransform(position, orientation, glm::vec3{size});
+        chair.bodyType = physics::BodyType::Dynamic;
+        chair.mass = mass;
+
+        // seat
+        SubPartDesc seat;
+        seat.name = "Seat";
+        glm::vec3 positionSeat = { 0,0,0 };
+        glm::quat orientationSeat = 
+            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
+        seat.localTransformHandle = 
+            world.createTransform(positionSeat, orientationSeat, scaleSeat);
+        seat.meshName = "cube";
+        seat.textureName = "checker_magenta";
+        seat.shaderName = "default";
+        seat.colliderType = physics::ColliderType::CUBOID;
+        chair.parts.push_back(seat);
+
+        // backrest
+        SubPartDesc backrest;
+        backrest.name = "Backrest";
+        glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
+        glm::quat orientationBackrest = 
+            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+        glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
+        backrest.localTransformHandle = 
+            world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+        backrest.meshName = "cube";
+        backrest.textureName = "checker_magenta";
+        backrest.shaderName = "default";
+        backrest.colliderType = physics::ColliderType::CUBOID;
+        chair.parts.push_back(backrest);
+
+        // legs
+        std::array<glm::vec3, 4> legPositions{
+            glm::vec3(-0.4f, -0.6f, -0.4f),
+            glm::vec3(0.4f, -0.6f, -0.4f),
+            glm::vec3(-0.4f, -0.6f, 0.4f),
+            glm::vec3(0.4f, -0.6f, 0.4f)
+        };
+        for (int i = 0; i < 4; i++) {
+            SubPartDesc leg;
+            leg.name = "Leg" + std::to_string(i);
+            glm::vec3 positionLeg = legPositions[i];
+            glm::quat orientationLeg = 
+                glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+            glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
+            leg.localTransformHandle = 
+                world.createTransform(positionLeg, orientationLeg, scaleLeg);
+            leg.meshName = "cube";
+            leg.textureName = "checker_magenta";
+            leg.shaderName = "default";
+            leg.colliderType = physics::ColliderType::CUBOID;
+            chair.parts.push_back(leg);
+        }
+        return world.createGameObject(chair);
+    }
+
+    GameObjectHandle createSphere(
+        World& world, 
+        glm::vec3 position, 
+        float size, 
+        float mass) 
+    {
+        GameObjectDesc sphere;
+        sphere.name = "Sphere";
+        sphere.rootTransformHandle = 
+            world.createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, glm::vec3{ size });
+        sphere.mass = mass;
+        SubPartDesc part;
+        part.name = "MainPart";
+        part.localTransformHandle = world.createTransform();
+        part.colliderType = physics::ColliderType::SPHERE;
+        part.meshName = "sphere";
+        part.textureName = "checker_magenta";
+        sphere.parts.push_back(part);
+        return world.createGameObject(sphere);
+    }
+}
+
 // ====================================================
 //      Main functions
 // ====================================================
@@ -32,8 +125,8 @@ void Editor::EditorMain::init(
     MeshManager* meshManager,
     TextureManager* textureManager,
     FrameTimers* frameTimers,
-    GpuTimers* gpuTimers
-) {
+    GpuTimers* gpuTimers) 
+{
     this->SCR_WIDTH = SCR_WIDTH;
     this->SCR_HEIGHT = SCR_HEIGHT;
     this->engineState = engineState;
@@ -209,27 +302,8 @@ void Editor::EditorMain::handleInput(
         // single shot
         if (in.mousePressed[GLFW_MOUSE_BUTTON_3] && !shootContinuously)
         {
-            GameObjectDesc newObj;
             glm::vec3 position = { camera->position + camera->front * 5.0f };
-            glm::vec3 size = glm::vec3{ shootSize };
-            newObj.mass = shootMass;
-
-            newObj.rootTransformHandle = 
-                world->createTransform(
-                    position, 
-                    glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, 
-                    size
-                );
-
-            SubPartDesc part;
-            part.localTransformHandle = world->createTransform();
-            part.colliderType = physics::ColliderType::SPHERE;
-            part.textureName = "checker_magenta";
-            part.meshName = "sphere";
-            newObj.parts.push_back(part);
-
-            // create new object & apply shoot velocity
-            GameObjectHandle newObject = world->createGameObject(newObj);
+            GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
             GameObject* object = world->getGameObject(newObject);
 
             // apply shoot velocity
@@ -291,31 +365,13 @@ void Editor::EditorMain::handleInput(
                         + right * (glm::linearRand(-jitter, jitter))
                         + camera->up * (glm::linearRand(-jitter, jitter));
 
-                    // create new object description
-                    GameObjectDesc newObj;
 
-                    glm::vec3 position = 
-                    { camera->position + camera->front * 5.0f + offset };
+                    glm::vec3 position =
+                        { camera->position + camera->front * 5.0f + offset * shootSize };
 
-                    glm::vec3 size = glm::vec3{ shootSize };
-                    newObj.mass = shootMass;
+                    GameObjectHandle newObject = 
+                        createSphere(*world, position, shootSize, shootMass);
 
-                    newObj.rootTransformHandle = 
-                        world->createTransform(
-                            position, 
-                            glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, 
-                            size
-                        );
-
-                    SubPartDesc part;
-                    part.localTransformHandle = world->createTransform();
-                    part.colliderType = physics::ColliderType::SPHERE;
-                    part.textureName = "checker_gray";
-                    part.meshName = "sphere";
-                    newObj.parts.push_back(part);
-
-                    // create new object & apply shoot velocity
-                    GameObjectHandle newObject = world->createGameObject(newObj);
                     GameObject* object = world->getGameObject(newObject);
 
                     // apply shoot velocity
@@ -370,6 +426,7 @@ void Editor::EditorMain::handleInput(
             consumed.keyboard = true;
         }
 
+        // delete 10 random objects
         if (in.keyDown[GLFW_KEY_C]) {
             static size_t nextIndex = 0;
 
@@ -381,23 +438,6 @@ void Editor::EditorMain::handleInput(
             int removed = 0;
             size_t checked = 0;
 
-            //while (!objects.empty() && checked < objects.size() && removed < 10) 
-            //{
-            //    if (nextIndex >= objects.size()) {
-            //        nextIndex = 0;
-            //    }
-
-            //    GameObjectHandle handle = 
-            //        map.handle_from_dense_index((int)nextIndex);
-
-            //    GameObject* obj = world->getGameObject(handle);
-
-            //    world->deleteGameObject(handle);
-
-            //    nextIndex++;
-            //    checked++;
-            //    removed++;
-            //}
             static std::mt19937 rng(std::random_device{}());
             while (!objects.empty() && removed < 10)
             {
@@ -583,7 +623,9 @@ void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
     if (!selectedObjectHandle.isValid())
         return;
 
-    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+    GameObject* selectedObject =
+        world->getGameObject(selectedObjectHandle);
+
     if (!selectedObject) {
         return;
     }

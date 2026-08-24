@@ -98,7 +98,7 @@ Engine::getRigidBodyState(
     // Check if the body is pending creation, 
     // already exists in the physics world or
     // is pending destruction.
-    const RigidBody* body = commandBuffer.getPendingBodyCreate(handle);
+    const RigidBody* body = commandBuffer.tryGetPendingBodyCreate(handle);
     if (!body) {
         body = physicsWorld.tryGetBody(handle);
     }
@@ -131,7 +131,7 @@ Engine::getColliderState(
     // Check if the collider is pending creation, 
     // already exists in the physics world or
     // is pending destruction.
-    const Collider* collider = commandBuffer.getPendingColliderCreate(handle);
+    const Collider* collider = commandBuffer.tryGetPendingColliderCreate(handle);
     if (!collider) {
         collider = physicsWorld.tryGetCollider(handle);
     }

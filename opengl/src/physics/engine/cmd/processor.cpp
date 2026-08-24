@@ -118,6 +118,9 @@ Processor::Processor(
       broadphaseManager(broadphaseManager)
 {}
 
+//================================================
+// Batch processing
+//================================================
 void Processor::process(
     Buffer::Batch& batch,
     float dt)
@@ -126,6 +129,9 @@ void Processor::process(
     applyMutationCommands(batch.mutations, dt);
 }
 
+//================================================
+// Lifecycle processing
+//================================================
 void Processor::processLifecycleCommands(
     Buffer::Batch& batch)
 {
@@ -136,36 +142,28 @@ void Processor::processLifecycleCommands(
         batch.colliderDestroys.size()
     );
 
-    //----------------------------------
     // Remove every destroyed body from broadphase before mutating
     // dense body storage. This keeps all broadphase lookups valid
-    // throughout the removal pass.
-    //----------------------------------
+    // throughout the removal pass
     for (BodyHandle bodyHandle : batch.bodyDestroys) {
         broadphaseManager.remove(bodyHandle);
     }
 
-    //----------------------------------
     // Destroy individual colliders.
-    // Buffer guarantees that their parents survive this batch.
-    //----------------------------------
-    for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) {
+    // Buffer guarantees that their parents survive this batch
+    for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) 
+    {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
-        const size_t erased = std::erase(
+        std::erase(
             body.colliderHandles,
             colliderHandle
         );
-
-        assert(erased == 1);
-        (void)erased;
 
         physicsWorld.destroyCollider(colliderHandle);
         bodiesToRefresh.insert(bodyHandle);
     }
 
-    //----------------------------------
-    // Destroy bodies and their colliders.
-    //----------------------------------
+    // Destroy bodies and their colliders
     for (BodyHandle bodyHandle : batch.bodyDestroys) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
 
@@ -176,156 +174,38 @@ void Processor::processLifecycleCommands(
         physicsWorld.destroyBody(bodyHandle);
     }
 
-    //----------------------------------
-    // Commit bodies before their colliders.
-    //----------------------------------
+    // Commit bodies before their colliders
     for (auto& [bodyHandle, body] : batch.bodyCreates) {
-        RigidBody* committedBody = physicsWorld.commitBody(
+        physicsWorld.commitBody(
             bodyHandle,
             std::move(body)
         );
 
-        assert(committedBody);
-        (void)committedBody;
         bodiesToRefresh.insert(bodyHandle);
     }
 
-    //----------------------------------
-    // Commit colliders and attach them to their active parents.
-    //----------------------------------
+    // Commit colliders and attach them to their active parents
     for (auto& [colliderHandle, collider] : batch.colliderCreates) {
         const BodyHandle bodyHandle = collider.rigidBodyHandle;
         RigidBody& body = physicsWorld.getBody(bodyHandle);
 
-        Collider* committedCollider = physicsWorld.commitCollider(
+        physicsWorld.commitCollider(
             colliderHandle,
             std::move(collider)
         );
-
-        assert(committedCollider);
-        (void)committedCollider;
 
         body.colliderHandles.push_back(colliderHandle);
         bodiesToRefresh.insert(bodyHandle);
     }
 
-    //----------------------------------
-    // Rebuild every surviving body affected by lifecycle changes.
-    //----------------------------------
+    // Rebuild every surviving body affected by lifecycle changes
     for (BodyHandle bodyHandle : bodiesToRefresh) {
         refreshBodySpatialState(bodyHandle);
     }
 }
 
-void Processor::refreshBodyInertia(RigidBody& body)
-{
-    if (body.type != BodyType::Dynamic) {
-        body.invInertiaLocal = glm::mat3(0.0f);
-        body.invInertiaWorld = glm::mat3(0.0f);
-        return;
-    }
-
-    Collider* collider = findFirstEnabledCollider(
-        physicsWorld,
-        body
-    );
-
-    if (!collider) {
-        body.invInertiaLocal = glm::mat3(0.0f);
-        body.invInertiaWorld = glm::mat3(0.0f);
-        return;
-    }
-
-    glm::vec3 inertiaScale = collider->worldScale;
-
-    if (collider->type == ColliderType::SPHERE) {
-        const Sphere& sphere = std::get<Sphere>(collider->shape);
-        inertiaScale = glm::vec3(sphere.radiusWorld * 2.0f);
-    }
-
-    body.calculateInverseInertia(
-        collider->type,
-        *collider,
-        inertiaScale
-    );
-    body.updateInertiaWorld();
-}
-
-void Processor::refreshBodySpatialState(
-    BodyHandle bodyHandle,
-    bool shouldRefreshInertia)
-{
-    RigidBody* body = physicsWorld.tryGetBody(bodyHandle);
-
-    if (!body) {
-        return;
-    }
-
-    bool hasAABB = false;
-    AABB combinedAABB;
-
-    for (ColliderHandle colliderHandle : body->colliderHandles) {
-        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
-
-        if (!collider || !collider->enabled) {
-            continue;
-        }
-
-        collider->updateWorldPose(body->pose, body->scale);
-        collider->updateShape();
-        collider->updateAABB();
-
-        const AABB& colliderAABB = collider->getAABB();
-
-        if (!hasAABB) {
-            combinedAABB = colliderAABB;
-            hasAABB = true;
-        }
-        else {
-            combinedAABB.growToInclude(colliderAABB.worldMin);
-            combinedAABB.growToInclude(colliderAABB.worldMax);
-        }
-    }
-
-    if (hasAABB) {
-        combinedAABB.worldCenter =
-            (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
-
-        combinedAABB.worldHalfExtents =
-            (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
-
-        body->aabb = combinedAABB;
-
-        const float radius = glm::length(combinedAABB.worldHalfExtents);
-        body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
-    }
-    else {
-        body->aabb = AABB{};
-        body->invRadius = 0.0f;
-    }
-
-    if (shouldRefreshInertia) {
-        refreshBodyInertia(*body);
-    }
-
-    if (!hasAABB) {
-        if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
-            broadphaseManager.remove(bodyHandle);
-        }
-
-        return;
-    }
-
-    if (body->broadphaseHandle.bucket == BroadphaseBucket::None) {
-        broadphaseManager.add(bodyHandle, getBodyBucket(*body));
-        return;
-    }
-
-    broadphaseManager.setBVHDirty(bodyHandle);
-}
-
 //================================================
-// Command processing
+// Mutation processing
 //================================================
 void Processor::applyMutationCommands(
     const std::vector<Buffer::Mutation>& mutations,
@@ -339,7 +219,7 @@ void Processor::applyMutationCommands(
 }
 
 //================================================
-// Rigid body command processing
+// Body commands
 //================================================
 void Processor::applyCommand(
     const Buffer::ApplyLinearImpulse& command,
@@ -581,7 +461,7 @@ void Processor::applyCommand(
 }
 
 //================================================
-// Collider command processing
+// Collider commands
 //================================================
 void Processor::applyCommand(
     const Buffer::SetColliderLocalPose& command,
@@ -651,7 +531,7 @@ void Processor::applyCommand(
 }
 
 //================================================
-// Scene-wide command processing
+// Scene-wide commands
 //================================================
 void Processor::applyCommand(
     const Buffer::SleepAllObjects&,
@@ -696,6 +576,117 @@ void Processor::applyCommand(
         broadphaseManager.moveToAwake(
             bodyStorage.handle_from_dense_index(i)
         );
+    }
+}
+
+//================================================
+// Private helpers
+//================================================
+void Processor::refreshBodyInertia(RigidBody& body)
+{
+    // #TODO: Combine inertia for compound bodies. 
+    // For now, just use the first collider.
+
+    if (body.type != BodyType::Dynamic) {
+        body.invInertiaLocal = glm::mat3(0.0f);
+        body.invInertiaWorld = glm::mat3(0.0f);
+        return;
+    }
+
+    Collider* collider = findFirstEnabledCollider(
+        physicsWorld,
+        body
+    );
+
+    if (!collider) {
+        body.invInertiaLocal = glm::mat3(0.0f);
+        body.invInertiaWorld = glm::mat3(0.0f);
+        return;
+    }
+
+    glm::vec3 inertiaScale = collider->worldScale;
+
+    if (collider->type == ColliderType::SPHERE) {
+        const Sphere& sphere = std::get<Sphere>(collider->shape);
+        inertiaScale = glm::vec3(sphere.radiusWorld * 2.0f);
+    }
+
+    body.calculateInverseInertia(
+        collider->type,
+        *collider,
+        inertiaScale
+    );
+    body.updateInertiaWorld();
+}
+
+void Processor::refreshBodySpatialState(
+    BodyHandle bodyHandle,
+    bool shouldRefreshInertia)
+{
+    RigidBody* body = physicsWorld.tryGetBody(bodyHandle);
+
+    if (!body) {
+        return;
+    }
+
+    bool hasAABB = false;
+    AABB combinedAABB;
+
+    for (ColliderHandle colliderHandle : body->colliderHandles) {
+        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
+
+        if (!collider || !collider->enabled) {
+            continue;
+        }
+
+        collider->updateWorldPose(body->pose, body->scale);
+        collider->updateShape();
+        collider->updateAABB();
+
+        const AABB& colliderAABB = collider->getAABB();
+
+        if (!hasAABB) {
+            combinedAABB = colliderAABB;
+            hasAABB = true;
+        }
+        else {
+            combinedAABB.growToInclude(colliderAABB.worldMin);
+            combinedAABB.growToInclude(colliderAABB.worldMax);
+        }
+    }
+
+    if (hasAABB) {
+        combinedAABB.worldCenter =
+            (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
+
+        combinedAABB.worldHalfExtents =
+            (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
+
+        body->aabb = combinedAABB;
+
+        const float radius = glm::length(combinedAABB.worldHalfExtents);
+        body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
+    }
+    else {
+        body->aabb = AABB{};
+        body->invRadius = 0.0f;
+    }
+
+    if (shouldRefreshInertia) {
+        refreshBodyInertia(*body);
+    }
+
+    if (!hasAABB) {
+        if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
+            broadphaseManager.remove(bodyHandle);
+        }
+
+        return;
+    }
+
+    if (body->broadphaseHandle.bucket == BroadphaseBucket::None) {
+        broadphaseManager.add(bodyHandle, getBodyBucket(*body));
+        return;
     }
 }
 
