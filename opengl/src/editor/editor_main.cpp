@@ -443,7 +443,8 @@ void Editor::EditorMain::handleInput(
             {
                 int minIndex = 0;
                 int maxIndex = (int)objects.size() - 1;
-                int randomIndex = std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+                int randomIndex = 
+                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
 
                 GameObjectHandle handle =
                     map.handle_from_dense_index((int)randomIndex);
@@ -452,6 +453,46 @@ void Editor::EditorMain::handleInput(
 
                 world->deleteGameObject(handle);
 
+                removed++;
+            }
+        }
+
+        // delete 10 random colliders
+        if (in.keyDown[GLFW_KEY_B]) {
+            static size_t nextIndex = 0;
+
+            SlotMap<GameObject, GameObjectHandle>& map =
+                world->getGameObjectsMap();
+
+            auto& objects = map.dense();
+
+            int removed = 0;
+            size_t checked = 0;
+
+            static std::mt19937 rng(std::random_device{}());
+            while (!objects.empty() && removed < 10)
+            {
+                int minIndex = 0;
+                int maxIndex = (int)objects.size() - 1;
+                int randomIndex = 
+                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+
+                GameObjectHandle handle =
+                    map.handle_from_dense_index((int)randomIndex);
+
+                GameObject* obj = world->getGameObject(handle);
+
+                if (obj->parts.empty()) {
+                    removed++;
+                    continue;
+                }
+
+                minIndex = 0;
+                maxIndex = (int)obj->parts.size() - 1;
+                randomIndex =
+                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+
+                world->deleteSubPart(handle, randomIndex);
                 removed++;
             }
         }

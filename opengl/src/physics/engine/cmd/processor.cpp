@@ -150,10 +150,11 @@ void Processor::processLifecycleCommands(
     }
 
     // Destroy individual colliders.
-    // Buffer guarantees that their parents survive this batch
-    for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) 
-    {
+    // Buffer guarantees that their parent bodies 
+    // will not be destroyed in the same batch.
+    for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
+
         std::erase(
             body.colliderHandles,
             colliderHandle
@@ -550,6 +551,10 @@ void Processor::applyCommand(
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
 
+        if (body.colliderHandles.empty()) {
+            continue;
+        }
+
         broadphaseManager.moveToAsleep(
             bodyStorage.handle_from_dense_index(i)
         );
@@ -572,6 +577,10 @@ void Processor::applyCommand(
         if (body.type == BodyType::Static) continue;
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
+
+        if (body.colliderHandles.empty()) {
+            continue;
+        }
 
         broadphaseManager.moveToAwake(
             bodyStorage.handle_from_dense_index(i)
@@ -604,7 +613,7 @@ void Processor::refreshBodyInertia(RigidBody& body)
         return;
     }
 
-    glm::vec3 inertiaScale = collider->worldScale;
+    glm::vec3 inertiaScale = body.scale * collider->worldScale;
 
     if (collider->type == ColliderType::SPHERE) {
         const Sphere& sphere = std::get<Sphere>(collider->shape);
@@ -623,69 +632,57 @@ void Processor::refreshBodySpatialState(
     BodyHandle bodyHandle,
     bool shouldRefreshInertia)
 {
-    RigidBody* body = physicsWorld.tryGetBody(bodyHandle);
+    // #TODO: We don't need to update each collider 
+    // just because one collider or the body has changed.
 
-    if (!body) {
+    RigidBody& body = physicsWorld.getBody(bodyHandle);
+
+    // If the body has no colliders, reset its AABB, 
+    // inverse radius and remove it from the broadphase
+    if (body.colliderHandles.empty()) {
+        body.aabb = AABB();
+        body.invRadius = 0.0f;
+        broadphaseManager.remove(bodyHandle);
         return;
     }
 
-    bool hasAABB = false;
-    AABB combinedAABB;
+    Collider& firstCollider = 
+        physicsWorld.getCollider(body.colliderHandles.front());
 
-    for (ColliderHandle colliderHandle : body->colliderHandles) {
-        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
+    AABB combinedAABB = firstCollider.getAABB();
 
-        if (!collider || !collider->enabled) {
-            continue;
-        }
+    // Update all colliders and compute the combined AABB
+    for (ColliderHandle colliderHandle : body.colliderHandles) {
+        Collider& collider = physicsWorld.getCollider(colliderHandle);
 
-        collider->updateWorldPose(body->pose, body->scale);
-        collider->updateShape();
-        collider->updateAABB();
+        collider.updateWorldPose(body.pose, body.scale);
+        collider.updateShape();
+        collider.updateAABB();
 
-        const AABB& colliderAABB = collider->getAABB();
+        const AABB& colliderAABB = collider.getAABB();
 
-        if (!hasAABB) {
-            combinedAABB = colliderAABB;
-            hasAABB = true;
-        }
-        else {
-            combinedAABB.growToInclude(colliderAABB.worldMin);
-            combinedAABB.growToInclude(colliderAABB.worldMax);
-        }
+        combinedAABB.growToInclude(colliderAABB.worldMin);
+        combinedAABB.growToInclude(colliderAABB.worldMax);
     }
 
-    if (hasAABB) {
-        combinedAABB.worldCenter =
-            (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
+    // Compute the combined AABB's center and half extents
+    combinedAABB.worldCenter =
+        (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
 
-        combinedAABB.worldHalfExtents =
-            (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
+    combinedAABB.worldHalfExtents =
+        (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
 
-        body->aabb = combinedAABB;
+    body.aabb = combinedAABB;
 
-        const float radius = glm::length(combinedAABB.worldHalfExtents);
-        body->invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
-    }
-    else {
-        body->aabb = AABB{};
-        body->invRadius = 0.0f;
-    }
+    const float radius = glm::length(combinedAABB.worldHalfExtents);
+    body.invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
 
     if (shouldRefreshInertia) {
-        refreshBodyInertia(*body);
+        refreshBodyInertia(body);
     }
 
-    if (!hasAABB) {
-        if (body->broadphaseHandle.bucket != BroadphaseBucket::None) {
-            broadphaseManager.remove(bodyHandle);
-        }
-
-        return;
-    }
-
-    if (body->broadphaseHandle.bucket == BroadphaseBucket::None) {
-        broadphaseManager.add(bodyHandle, getBodyBucket(*body));
+    if (body.broadphaseHandle.bucket == BroadphaseBucket::None) {
+        broadphaseManager.add(bodyHandle, getBodyBucket(body));
         return;
     }
 }

@@ -303,7 +303,46 @@ void World::deleteGameObject(
     physicsEngine.destroyRigidBody(bodyHandle);
     renderer.removeObjectFromBatch(handle);
     bodyToGameObject.erase(bodyHandle);
+
+    transforms.destroy(object->rootTransformHandle);
     gameObjects.destroy(handle);
+}
+
+void World::deleteSubPart(
+    GameObjectHandle handle,
+    int partIndex)
+{
+    GameObject* object = gameObjects.try_get(handle, FUNC_NAME);
+    if (!object) {
+        std::cerr
+            << "[World] Warning: Tried to delete sub-part from "
+            << "non-existing GameObject with handle (slot: "
+            << handle.slot
+            << ", gen: "
+            << handle.gen
+            << ")\n";
+        return;
+    }
+    if (partIndex < 0 || partIndex >= static_cast<int>(object->parts.size())) {
+        std::cerr
+            << "[World] Warning: Tried to delete sub-part with invalid index "
+            << partIndex
+            << " from GameObject '"
+            << object->name
+            << "'\n";
+        return;
+    }
+    SubPart& part = object->parts[partIndex];
+    physicsEngine.destroyCollider(part.colliderHandle);
+
+    renderer.removeObjectFromBatch(handle);
+    transforms.destroy(part.localTransformHandle);
+
+    object->parts.erase(object->parts.begin() + partIndex);
+
+    if (!object->parts.empty()) {
+        renderer.addObjectToBatch(handle);
+    }
 }
 
 void World::syncGameObjectTransformToPhysics(

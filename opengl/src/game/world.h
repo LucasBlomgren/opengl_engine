@@ -79,6 +79,7 @@ public:
     );
 
     void deleteGameObject(GameObjectHandle handle);
+    void deleteSubPart(GameObjectHandle handle, int partIndex);
     void syncTransformsToPhysics();
     void syncPhysicsToTransforms();
     void syncGameObjectTransformToPhysics(GameObjectHandle handle);

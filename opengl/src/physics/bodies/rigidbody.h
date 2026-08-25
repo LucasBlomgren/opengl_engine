@@ -20,6 +20,10 @@ public:
     // lokala transform är centrerade runt COM
 
     Pose pose;
+
+    // #TODO: ta bort scale helt från fysiken,
+    // scale behövs bara initialt för att bakea en 
+    // mesh till en collider och det kan göras utanför fysikmotorn
     glm::vec3 scale{ 1.0f };
 
     // physics-internal handles
