@@ -1,23 +1,43 @@
 #include "narrowphase_manager.h"
 #include "physics/sleep/wake_sleep_utils.h"
 
+#include <type_traits>
+
 namespace physics::internal {
 
 //=======================================================
 //   Flush pending speculative contacts, 
 //   filtering by earliest TOI per sweep owner
 //=======================================================
-void NarrowphaseManager::flushPendingSpeculativeContacts(
-    ContactBatch& batch,
-    float dt)
+void NarrowphaseManager::flushPendingSweepHits(ContactBatch& batch)
 {
     std::unordered_map<uint64_t, float> minToiBySweepOwner;
-    minToiBySweepOwner.reserve(pendingSpeculativeContacts.size());
+    minToiBySweepOwner.reserve(pendingSweepHits.size());
+
+    const auto geometryOf = [](const PendingSweepHit& pending)
+        -> const SAT::Result&
+    {
+        return std::visit(
+            [](const auto& hit) -> const SAT::Result& {
+                return hit.geometry;
+            },
+            pending
+        );
+    };
+
+    const auto sweepOwnerOf = [](const PendingSweepHit& pending) {
+        return std::visit(
+            [](const auto& hit) {
+                return hit.sweepOwner;
+            },
+            pending
+        );
+    };
 
     // Pass 1: find min TOI per sweep owner
-    for (const PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
-        const float toi = pending.candidate.sat.toi;
-        uint64_t ownerKey = packBodyHandle(pending.sweepOwner);
+    for (const PendingSweepHit& pending : pendingSweepHits) {
+        const float toi = geometryOf(pending).toi;
+        uint64_t ownerKey = packBodyHandle(sweepOwnerOf(pending));
 
         auto it = minToiBySweepOwner.find(ownerKey);
         if (it == minToiBySweepOwner.end() || toi < it->second) {
@@ -27,25 +47,40 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
 
     // Pass 2: emit contacts close to the earliest TOI
     std::unordered_set<PairKey, PairKeyHash> emittedSpeculativePairs;
-    emittedSpeculativePairs.reserve(pendingSpeculativeContacts.size());
+    emittedSpeculativePairs.reserve(pendingSweepHits.size());
 
     // #TODO: Ska egentligen vara ett field framför 
     // collidern som bestämmer vilka träffar som ska generera kontakt.
     const float toiSlop = 5.5f;
 
-    for (PendingSpeculativeContact& pending : pendingSpeculativeContacts) {
-        const uint64_t ownerKey = packBodyHandle(pending.sweepOwner);
+    for (const PendingSweepHit& pending : pendingSweepHits) {
+        const uint64_t ownerKey = packBodyHandle(sweepOwnerOf(pending));
 
         const float minToi = minToiBySweepOwner[ownerKey];
-        const float toi = pending.candidate.sat.toi;
+        const float toi = geometryOf(pending).toi;
 
         if (toi > minToi + toiSlop) {
             continue;
         }
 
-        PairKey key = makeColliderPairKey(
-            pending.input.colliderHandleA,
-            pending.input.colliderHandleB
+        PairKey key = std::visit(
+            [this](const auto& hit) -> PairKey {
+                using HitType = std::decay_t<decltype(hit)>;
+
+                if constexpr (std::is_same_v<HitType, SweepHit>) {
+                    return makeColliderPairKey(
+                        hit.pair.a.colliderHandle,
+                        hit.pair.b.colliderHandle
+                    );
+                }
+                else {
+                    return makeColliderPairKey(
+                        hit.collider.colliderHandle,
+                        ColliderHandle{}
+                    );
+                }
+            },
+            pending
         );
 
         // Avoid emitting duplicate speculative contacts for the same collider pair.
@@ -56,12 +91,42 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
             continue;
         }
 
-        emitSpeculativeContact(
-            batch,
-            pending.input,
-            pending.candidate
+        std::visit(
+            [this, &batch](const auto& hit) {
+                emitSpeculativeContact(batch, hit);
+            },
+            pending
         );
     }
+}
+
+//=======================================================
+//     Adapt typed sweep hits to common contact emission
+//=======================================================
+void NarrowphaseManager::emitSpeculativeContact(
+    ContactBatch& batch,
+    const SweepHit& hit)
+{
+    emitSpeculativeContact(
+        batch,
+        hit.pair.a,
+        &hit.pair.b,
+        ContactPartnerType::RigidBody,
+        hit.geometry
+    );
+}
+
+void NarrowphaseManager::emitSpeculativeContact(
+    ContactBatch& batch,
+    const TerrainSweepHit& hit)
+{
+    emitSpeculativeContact(
+        batch,
+        hit.collider,
+        nullptr,
+        ContactPartnerType::Terrain,
+        hit.geometry
+    );
 }
 
 //=======================================================
@@ -69,24 +134,27 @@ void NarrowphaseManager::flushPendingSpeculativeContacts(
 //=======================================================
 void NarrowphaseManager::emitSpeculativeContact(
     ContactBatch& batch,
-    ContactBuildInput& in,
-    DynamicContactCandidate& candidate)
+    const ColliderEndpointRef& a,
+    const ColliderEndpointRef* b,
+    ContactPartnerType partnerTypeB,
+    const SAT::Result& geometry)
 {
-    const bool isRigidA =
-        candidate.partnerTypeA == ContactPartnerType::RigidBody && in.bodyA;
+    const bool isRigidA = a.body != nullptr;
 
     const bool isRigidB =
-        candidate.partnerTypeB == ContactPartnerType::RigidBody && in.bodyB;
+        partnerTypeB == ContactPartnerType::RigidBody &&
+        b != nullptr &&
+        b->body != nullptr;
 
     if (!isRigidA && !isRigidB) {
         return;
     }
 
     if (isRigidA) {
-        in.bodyA->totalCollisionCount++;
+        a.body->totalCollisionCount++;
     }
     if (isRigidB) {
-        in.bodyB->totalCollisionCount++;
+        b->body->totalCollisionCount++;
     }
 
     bool wakeA = false;
@@ -95,14 +163,14 @@ void NarrowphaseManager::emitSpeculativeContact(
     // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
     if (isRigidA && isRigidB) {
         WakeSleep::WakeUpInfo wakeInfo =
-            WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);
+            WakeSleep::computeWakeUpInfo(*a.body, *b->body);
 
         WakeSleep::enqueueWakeRequests(
             wakeInfo,
-            *in.bodyA,
-            *in.bodyB,
-            in.bodyHandleA,
-            in.bodyHandleB,
+            *a.body,
+            *b->body,
+            a.bodyHandle,
+            b->bodyHandle,
             *toWake
         );
 
@@ -112,27 +180,27 @@ void NarrowphaseManager::emitSpeculativeContact(
 
     SpeculativeContact contact{};
 
-    contact.partnerTypeA = candidate.partnerTypeA;
-    contact.partnerTypeB = candidate.partnerTypeB;
+    contact.partnerTypeA = ContactPartnerType::RigidBody;
+    contact.partnerTypeB = partnerTypeB;
 
-    contact.bodyHandleA = in.bodyHandleA;
-    contact.bodyHandleB = in.bodyHandleB;
+    contact.bodyHandleA = a.bodyHandle;
+    contact.bodyHandleB = b ? b->bodyHandle : BodyHandle{};
 
-    contact.bodyA = in.bodyA;
-    contact.bodyB = in.bodyB;
+    contact.bodyA = a.body;
+    contact.bodyB = b ? b->body : nullptr;
 
-    contact.normal = candidate.sat.normal;
-    contact.separation = candidate.sat.separation;
-    contact.toi = candidate.sat.toi;
+    contact.normal = geometry.normal;
+    contact.separation = geometry.separation;
+    contact.toi = geometry.toi;
 
     if (isRigidA) {
         contact.noSolverResponseA =
-            computeNoSolverResponse(*in.bodyA, wakeA);
+            computeNoSolverResponse(*a.body, wakeA);
 
         contact.contributesMotionA =
             computeContributesMotion(
-                candidate.partnerTypeA,
-                *in.bodyA,
+                ContactPartnerType::RigidBody,
+                *a.body,
                 wakeA
             );
     }
@@ -143,12 +211,12 @@ void NarrowphaseManager::emitSpeculativeContact(
 
     if (isRigidB) {
         contact.noSolverResponseB =
-            computeNoSolverResponse(*in.bodyB, wakeB);
+            computeNoSolverResponse(*b->body, wakeB);
 
         contact.contributesMotionB =
             computeContributesMotion(
-                candidate.partnerTypeB,
-                *in.bodyB,
+                partnerTypeB,
+                *b->body,
                 wakeB
             );
     }
@@ -166,9 +234,9 @@ void NarrowphaseManager::emitSpeculativeContact(
 
     if (debugSpeculativeContacts) {
         DebugSpeculativeContact debugContact{};
-        debugContact.bodyA = in.bodyHandleA;
-        debugContact.bodyB = in.bodyHandleB;
-        debugContact.worldPos = candidate.sat.point;
+        debugContact.bodyA = a.bodyHandle;
+        debugContact.bodyB = b ? b->bodyHandle : BodyHandle{};
+        debugContact.worldPos = geometry.point;
 
         debugSpeculativeContacts->push_back(debugContact);
     }

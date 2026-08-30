@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <unordered_set>
 #include <unordered_map>
 #include <vector>
@@ -42,7 +43,7 @@ private:
     std::unordered_map<size_t, Contact>* contactCache = nullptr;
 
     std::unordered_set<PairKey, PairKeyHash> normalHitPairs;
-    std::vector<PendingSpeculativeContact> pendingSpeculativeContacts;
+    std::vector<PendingSweepHit> pendingSweepHits;
 
     //=======================================================
     //     Dispatching to specific pair processing functions
@@ -69,11 +70,11 @@ private:
 
     void processColliderPairNormal(
         ContactBatch& batch,
-        ContactBuildInput in
+        ResolvedColliderPair pair
     );
 
     void processColliderPairSpeculative(
-        ContactBuildInput in,
+        ResolvedColliderPair pair,
         float dt,
         BodyHandle sweepOwner
     );
@@ -81,36 +82,36 @@ private:
     //=======================================================
     //     SAT tests
     //=======================================================
-    bool tryBoxBox(ContactBuildInput& in, DynamicContactCandidate& out);
-    bool tryBoxSphere(ContactBuildInput& in, DynamicContactCandidate& out);
-    bool trySphereSphere(ContactBuildInput& in, DynamicContactCandidate& out);
+    std::optional<OverlapHit> tryBoxBox(ResolvedColliderPair pair);
+    std::optional<OverlapHit> tryBoxSphere(ResolvedColliderPair pair);
+    std::optional<OverlapHit> trySphereSphere(ResolvedColliderPair pair);
 
-    bool trySpeculativeBoxBox(
-        ContactBuildInput& in, 
-        DynamicContactCandidate& out, 
-        float dt
+    std::optional<SweepHit> trySpeculativeBoxBox(
+        ResolvedColliderPair pair,
+        float dt,
+        BodyHandle sweepOwner
     );
-    bool trySpeculativeBoxSphere(
-        ContactBuildInput& in, 
-        DynamicContactCandidate& out, 
-        float dt
+    std::optional<SweepHit> trySpeculativeBoxSphere(
+        ResolvedColliderPair pair,
+        float dt,
+        BodyHandle sweepOwner
     );
-    bool trySpeculativeBoxTriangle(
-        ContactBuildInput& in, 
-        Tri* tri, 
-        DynamicContactCandidate& out, 
-        float dt
+    std::optional<TerrainSweepHit> trySpeculativeBoxTriangle(
+        ColliderEndpointRef collider,
+        Tri* tri,
+        float dt,
+        BodyHandle sweepOwner
     );
-    bool trySpeculativeSphereSphere(
-        ContactBuildInput& in, 
-        DynamicContactCandidate& out, 
-        float dt
+    std::optional<SweepHit> trySpeculativeSphereSphere(
+        ResolvedColliderPair pair,
+        float dt,
+        BodyHandle sweepOwner
     );
-    bool trySpeculativeSphereTriangle(
-        ContactBuildInput& in, 
-        Tri* tri, 
-        DynamicContactCandidate& out, 
-        float dt
+    std::optional<TerrainSweepHit> trySpeculativeSphereTriangle(
+        ColliderEndpointRef collider,
+        Tri* tri,
+        float dt,
+        BodyHandle sweepOwner
     );
 
     //=======================================================
@@ -118,23 +119,31 @@ private:
     //=======================================================
     void emitRigidContact(
         ContactBatch& batch,
-        ContactBuildInput& in,
-        DynamicContactCandidate& candidate
+        OverlapHit& hit
     );
 
     void emitSpeculativeContact(
         ContactBatch& batch,
-        ContactBuildInput& in,
-        DynamicContactCandidate& candidate
+        const SweepHit& hit
     );
 
-    void flushPendingSpeculativeContacts(
+    void emitSpeculativeContact(
         ContactBatch& batch,
-        float dt
+        const TerrainSweepHit& hit
     );
+
+    void emitSpeculativeContact(
+        ContactBatch& batch,
+        const ColliderEndpointRef& a,
+        const ColliderEndpointRef* b,
+        ContactPartnerType partnerTypeB,
+        const SAT::Result& geometry
+    );
+
+    void flushPendingSweepHits(ContactBatch& batch);
 
     bool tryExportExternalContact(
-        const ContactBuildInput& in,
+        const ResolvedColliderPair& pair,
         const SAT::Result& satResult
     );
 
@@ -151,7 +160,7 @@ private:
 
     Contact* createManifold(
         Contact& contact,
-        DynamicContactCandidate& candidate
+        OverlapHit& hit
     );
 
     PairKey makeColliderPairKey(

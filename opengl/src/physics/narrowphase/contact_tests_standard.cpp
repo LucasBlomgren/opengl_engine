@@ -6,60 +6,68 @@ namespace physics::internal {
 //=======================================================
 //     Box-Box
 //=======================================================
-bool NarrowphaseManager::tryBoxBox(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out)
+std::optional<OverlapHit> NarrowphaseManager::tryBoxBox(
+    ResolvedColliderPair pair)
 {
-    if (in.colliderA->id > in.colliderB->id) {
-        in.swapAB();
+    if (pair.a.collider->id > pair.b.collider->id) {
+        pair.swapAB();
     }
 
-    if (!SAT::boxBox(*in.colliderA, *in.colliderB, out.sat)) {
-        return false;
+    SAT::Result geometry{};
+    if (!SAT::boxBox(*pair.a.collider, *pair.b.collider, geometry)) {
+        return std::nullopt;
     }
 
-    glm::vec3 centerA = std::get<OOBB>(in.colliderA->shape).worldCenter;
-    glm::vec3 centerB = std::get<OOBB>(in.colliderB->shape).worldCenter;
-    SAT::reverseNormal(centerA, centerB, out.sat.normal);
+    glm::vec3 centerA = std::get<OOBB>(pair.a.collider->shape).worldCenter;
+    glm::vec3 centerB = std::get<OOBB>(pair.b.collider->shape).worldCenter;
+    SAT::reverseNormal(centerA, centerB, geometry.normal);
 
-    out.manifoldType = ManifoldType::BoxBox;
-    return true;
+    return OverlapHit{ std::move(pair), std::move(geometry) };
 }
 
 //=======================================================
 //     Box-Sphere
 //=======================================================
-bool NarrowphaseManager::tryBoxSphere(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out)
+std::optional<OverlapHit> NarrowphaseManager::tryBoxSphere(
+    ResolvedColliderPair pair)
 {
-    if (in.colliderA->type != ColliderType::CUBOID) {
-        in.swapAB();
+    if (pair.a.collider->type != ColliderType::CUBOID) {
+        pair.swapAB();
     }
 
-    in.colliderA->transformCache.ensureInvModelMatrix(in.colliderA->worldPose);
+    pair.a.collider->transformCache.ensureInvModelMatrix(
+        pair.a.collider->worldPose
+    );
 
-    if (!SAT::boxSphere(*in.colliderA, *in.colliderB, in.colliderA->transformCache, out.sat)) {
-        return false;
+    SAT::Result geometry{};
+    if (!SAT::boxSphere(
+        *pair.a.collider,
+        *pair.b.collider,
+        pair.a.collider->transformCache,
+        geometry))
+    {
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::BoxSphere;
-    return true;
+    return OverlapHit{ std::move(pair), std::move(geometry) };
 }
 
 //=======================================================
 //     Sphere-Sphere
 //=======================================================
-bool NarrowphaseManager::trySphereSphere(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out)
+std::optional<OverlapHit> NarrowphaseManager::trySphereSphere(
+    ResolvedColliderPair pair)
 {
-    if (!SAT::sphereSphere(*in.colliderA, *in.colliderB, out.sat)) {
-        return false;
+    SAT::Result geometry{};
+    if (!SAT::sphereSphere(
+        *pair.a.collider,
+        *pair.b.collider,
+        geometry))
+    {
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::SphereSphere;
-    return true;
+    return OverlapHit{ std::move(pair), std::move(geometry) };
 }
 
 }

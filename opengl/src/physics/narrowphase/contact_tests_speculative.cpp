@@ -2,123 +2,132 @@
 
 namespace physics::internal {
 
-bool NarrowphaseManager::trySpeculativeBoxBox(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out,
-    float dt)
+std::optional<SweepHit> NarrowphaseManager::trySpeculativeBoxBox(
+    ResolvedColliderPair pair,
+    float dt,
+    BodyHandle sweepOwner)
 {
+    SAT::Result geometry{};
     if (!SAT::speculativeBoxBox(
-        *in.colliderA,
-        *in.colliderB,
-        *in.bodyA,
-        *in.bodyB,
+        *pair.a.collider,
+        *pair.b.collider,
+        *pair.a.body,
+        *pair.b.body,
         dt,
-        out.sat))
+        geometry))
     {
-        return false;
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::BoxBox;
-    out.partnerTypeA = ContactPartnerType::RigidBody;
-    out.partnerTypeB = ContactPartnerType::RigidBody;
-    return true;
+    return SweepHit{
+        std::move(pair),
+        std::move(geometry),
+        sweepOwner
+    };
 }
 
-bool NarrowphaseManager::trySpeculativeBoxSphere(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out,
-    float dt)
+std::optional<SweepHit> NarrowphaseManager::trySpeculativeBoxSphere(
+    ResolvedColliderPair pair,
+    float dt,
+    BodyHandle sweepOwner)
 {
-    if (in.colliderA->type != ColliderType::CUBOID) {
-        in.swapAB();
+    if (pair.a.collider->type != ColliderType::CUBOID) {
+        pair.swapAB();
     }
 
+    SAT::Result geometry{};
     if (!SAT::speculativeBoxSphere(
-        *in.colliderA,
-        *in.colliderB,
-        *in.bodyA,
-        *in.bodyB,
+        *pair.a.collider,
+        *pair.b.collider,
+        *pair.a.body,
+        *pair.b.body,
         dt,
-        out.sat))
+        geometry))
     {
-        return false;
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::BoxSphere;
-    out.partnerTypeA = ContactPartnerType::RigidBody;
-    out.partnerTypeB = ContactPartnerType::RigidBody;
-    return true;
+    return SweepHit{
+        std::move(pair),
+        std::move(geometry),
+        sweepOwner
+    };
 }
 
-bool NarrowphaseManager::trySpeculativeBoxTriangle(
-    ContactBuildInput& in,
+std::optional<TerrainSweepHit> NarrowphaseManager::trySpeculativeBoxTriangle(
+    ColliderEndpointRef collider,
     Tri* tri,
-    DynamicContactCandidate& out,
-    float dt)
+    float dt,
+    BodyHandle sweepOwner)
 {
     if (!tri) {
-        return false;
+        return std::nullopt;
     }
 
+    SAT::Result geometry{};
     if (!SAT::speculativeBoxTriangle(
-        *in.colliderA,
-        *in.bodyA,
+        *collider.collider,
+        *collider.body,
         *tri,
         dt,
-        out.sat))
+        geometry))
     {
-        return false;
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::BoxTriangle;
-    out.partnerTypeA = ContactPartnerType::RigidBody;
-    out.partnerTypeB = ContactPartnerType::Terrain;
-    return true;
+    return TerrainSweepHit{
+        collider,
+        std::move(geometry),
+        sweepOwner
+    };
 }
 
-bool NarrowphaseManager::trySpeculativeSphereSphere(
-    ContactBuildInput& in,
-    DynamicContactCandidate& out,
-    float dt)
+std::optional<SweepHit> NarrowphaseManager::trySpeculativeSphereSphere(
+    ResolvedColliderPair pair,
+    float dt,
+    BodyHandle sweepOwner)
 {
+    SAT::Result geometry{};
     if (!SAT::speculativeSphereSphere(
-        *in.colliderA,
-        *in.colliderB,
-        *in.bodyA,
-        *in.bodyB,
+        *pair.a.collider,
+        *pair.b.collider,
+        *pair.a.body,
+        *pair.b.body,
         dt,
-        out.sat))
+        geometry))
     {
-        return false;
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::SphereSphere;
-    out.partnerTypeA = ContactPartnerType::RigidBody;
-    out.partnerTypeB = ContactPartnerType::RigidBody;
-
-    return true;
+    return SweepHit{
+        std::move(pair),
+        std::move(geometry),
+        sweepOwner
+    };
 }
 
-bool NarrowphaseManager::trySpeculativeSphereTriangle(
-    ContactBuildInput& in,
+std::optional<TerrainSweepHit> NarrowphaseManager::trySpeculativeSphereTriangle(
+    ColliderEndpointRef collider,
     Tri* tri,
-    DynamicContactCandidate& out,
-    float dt)
+    float dt,
+    BodyHandle sweepOwner)
 {
+    SAT::Result geometry{};
     if (!SAT::speculativeSphereTriangle(
-        *in.colliderA,
-        *in.bodyA,
+        *collider.collider,
+        *collider.body,
         *tri,
         dt,
-        out.sat))
+        geometry))
     {
-        return false;
+        return std::nullopt;
     }
 
-    out.manifoldType = ManifoldType::SphereTriangle;
-    out.partnerTypeA = ContactPartnerType::RigidBody;
-    out.partnerTypeB = ContactPartnerType::Terrain;
-    return true;
+    return TerrainSweepHit{
+        collider,
+        std::move(geometry),
+        sweepOwner
+    };
 }
 
 }

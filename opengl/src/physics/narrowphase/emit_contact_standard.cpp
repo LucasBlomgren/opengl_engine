@@ -8,56 +8,66 @@ namespace physics::internal {
 //=======================================================
 void NarrowphaseManager::emitRigidContact(
     ContactBatch& batch,
-    ContactBuildInput& in,
-    DynamicContactCandidate& candidate)
+    OverlapHit& hit)
 {
-    in.bodyA->totalCollisionCount++;
-    in.bodyB->totalCollisionCount++;
+    ColliderEndpointRef& a = hit.pair.a;
+    ColliderEndpointRef& b = hit.pair.b;
+
+    a.body->totalCollisionCount++;
+    b.body->totalCollisionCount++;
 
     WakeSleep::WakeUpInfo wakeInfo =
-        WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);
+        WakeSleep::computeWakeUpInfo(*a.body, *b.body);
 
     WakeSleep::enqueueWakeRequests(
         wakeInfo,
-        *in.bodyA,
-        *in.bodyB,
-        in.bodyHandleA,
-        in.bodyHandleB,
+        *a.body,
+        *b.body,
+        a.bodyHandle,
+        b.bodyHandle,
         *toWake
     );
 
-    if (tryExportExternalContact(in, candidate.sat)) {
+    if (tryExportExternalContact(hit.pair, hit.geometry)) {
         return;
     }
 
-    bool noSolverResponseA = computeNoSolverResponse(*in.bodyA, wakeInfo.A);
-    bool noSolverResponseB = computeNoSolverResponse(*in.bodyB, wakeInfo.B);
+    bool noSolverResponseA = computeNoSolverResponse(*a.body, wakeInfo.A);
+    bool noSolverResponseB = computeNoSolverResponse(*b.body, wakeInfo.B);
 
     if (noSolverResponseA && noSolverResponseB) {
         return;
     }
 
     ContactRuntime runtimeData = makeRuntimeData(
-        in.bodyA,
-        in.bodyB,
-        in.colliderA,
-        in.colliderB
+        a.body,
+        b.body,
+        a.collider,
+        b.collider
     );
 
     Contact contact(
-        in.bodyHandleA,
-        in.bodyHandleB,
+        a.bodyHandle,
+        b.bodyHandle,
         runtimeData,
-        candidate.sat.normal
+        hit.geometry.normal
     );
 
     contact.noSolverResponseA = noSolverResponseA;
     contact.noSolverResponseB = noSolverResponseB;
 
-    contact.contributesMotionA = computeContributesMotion(contact.partnerTypeA, *in.bodyA, wakeInfo.A);
-    contact.contributesMotionB = computeContributesMotion(contact.partnerTypeB, *in.bodyB, wakeInfo.B);
+    contact.contributesMotionA = computeContributesMotion(
+        contact.partnerTypeA,
+        *a.body,
+        wakeInfo.A
+    );
+    contact.contributesMotionB = computeContributesMotion(
+        contact.partnerTypeB,
+        *b.body,
+        wakeInfo.B
+    );
 
-    Contact* contactPtr = createManifold(contact, candidate);
+    Contact* contactPtr = createManifold(contact, hit);
     batch.contacts.push_back(contactPtr);
 }
 
@@ -66,28 +76,28 @@ void NarrowphaseManager::emitRigidContact(
 //=======================================================
 Contact* NarrowphaseManager::createManifold(
     Contact& contact,
-    DynamicContactCandidate& candidate)
+    OverlapHit& hit)
 {
-    switch (candidate.manifoldType) {
-    case ManifoldType::BoxBox:
+    switch (hit.pair.shapePair) {
+    case ShapePairKind::BoxBox:
         return collisionManifold->boxBox(
             contact,
             *contactCache,
-            candidate.sat
+            hit.geometry
         );
 
-    case ManifoldType::BoxSphere:
+    case ShapePairKind::BoxSphere:
         return collisionManifold->boxSphere(
             contact,
             *contactCache,
-            candidate.sat
+            hit.geometry
         );
 
-    case ManifoldType::SphereSphere:
+    case ShapePairKind::SphereSphere:
         return collisionManifold->sphereSphere(
             contact,
             *contactCache,
-            candidate.sat
+            hit.geometry
         );
     }
 
@@ -98,26 +108,28 @@ Contact* NarrowphaseManager::createManifold(
 //     Export external motion contacts for character controllers
 //=======================================================
 bool NarrowphaseManager::tryExportExternalContact(
-    const ContactBuildInput& in,
+    const ResolvedColliderPair& pair,
     const SAT::Result& sat)
 {
     if (sat.hitType == SAT::HitType::Speculative) {
         return false;
     }
 
-    bool aCharacter = in.bodyA->motionControl == MotionControl::External && 
-        in.bodyA->responseMode == ResponseMode::Character;
+    bool aCharacter =
+        pair.a.body->motionControl == MotionControl::External &&
+        pair.a.body->responseMode == ResponseMode::Character;
 
-    bool bCharacter = in.bodyB->motionControl == MotionControl::External &&
-        in.bodyB->responseMode == ResponseMode::Character;
+    bool bCharacter =
+        pair.b.body->motionControl == MotionControl::External &&
+        pair.b.body->responseMode == ResponseMode::Character;
 
     if (!aCharacter && !bCharacter) {
         return false;
     }
 
     externalContacts.emplace_back(
-        in.colliderA->rigidBodyHandle,
-        in.colliderB->rigidBodyHandle,
+        pair.a.collider->rigidBodyHandle,
+        pair.b.collider->rigidBodyHandle,
         sat.normal,
         sat.depth
     );

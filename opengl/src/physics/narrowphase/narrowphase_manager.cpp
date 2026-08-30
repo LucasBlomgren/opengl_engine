@@ -3,6 +3,43 @@
 
 namespace physics::internal {
 
+namespace {
+
+std::optional<ShapePairKind> classifyShapePair(
+    const Collider& colliderA,
+    const Collider& colliderB)
+{
+    const bool boxBox =
+        colliderA.type == ColliderType::CUBOID &&
+        colliderB.type == ColliderType::CUBOID;
+
+    if (boxBox) {
+        return ShapePairKind::BoxBox;
+    }
+
+    const bool boxSphere =
+        (colliderA.type == ColliderType::CUBOID &&
+            colliderB.type == ColliderType::SPHERE) ||
+        (colliderA.type == ColliderType::SPHERE &&
+            colliderB.type == ColliderType::CUBOID);
+
+    if (boxSphere) {
+        return ShapePairKind::BoxSphere;
+    }
+
+    const bool sphereSphere =
+        colliderA.type == ColliderType::SPHERE &&
+        colliderB.type == ColliderType::SPHERE;
+
+    if (sphereSphere) {
+        return ShapePairKind::SphereSphere;
+    }
+
+    return std::nullopt;
+}
+
+}
+
 
 //=======================================================
 //              Initialization
@@ -37,7 +74,7 @@ void NarrowphaseManager::narrowPhase(
 {
     externalContacts.clear();
     normalHitPairs.clear();
-    pendingSpeculativeContacts.clear();
+    pendingSweepHits.clear();
 
     // Normal terrain
     for (const TerrainPair& pair : pairs.terrainPairs) {
@@ -61,7 +98,7 @@ void NarrowphaseManager::narrowPhase(
         processSpeculativeDynamicPairs(pair, dt);
     }
 
-    flushPendingSpeculativeContacts(batch, dt);
+    flushPendingSweepHits(batch);
 }
 
 //=======================================================
@@ -93,17 +130,29 @@ void NarrowphaseManager::processDynamicPairs(
                 }
             }
 
+            const std::optional<ShapePairKind> shapePair =
+                classifyShapePair(colliderA, colliderB);
+
+            if (!shapePair) {
+                continue;
+            }
+
             processColliderPairNormal(
                 batch,
-                ContactBuildInput{
-                    pair.bodyA,
-                    pair.bodyB,
-                    colAH,
-                    colBH,
-                    &bodyA,
-                    &bodyB,
-                    &colliderA,
-                    &colliderB
+                ResolvedColliderPair{
+                    ColliderEndpointRef{
+                        pair.bodyA,
+                        colAH,
+                        &bodyA,
+                        &colliderA
+                    },
+                    ColliderEndpointRef{
+                        pair.bodyB,
+                        colBH,
+                        &bodyB,
+                        &colliderB
+                    },
+                    *shapePair
                 }
             );
         }
@@ -112,31 +161,22 @@ void NarrowphaseManager::processDynamicPairs(
 
 void NarrowphaseManager::processColliderPairNormal(
     ContactBatch& batch,
-    ContactBuildInput in)
+    ResolvedColliderPair pair)
 {
-    DynamicContactCandidate candidate;
-    bool hit = false;
+    std::optional<OverlapHit> hit;
 
-    const bool boxBox =
-        in.colliderA->type == ColliderType::CUBOID &&
-        in.colliderB->type == ColliderType::CUBOID;
+    switch (pair.shapePair) {
+    case ShapePairKind::BoxBox:
+        hit = tryBoxBox(std::move(pair));
+        break;
 
-    const bool boxSphere =
-        (in.colliderA->type == ColliderType::CUBOID && in.colliderB->type == ColliderType::SPHERE) ||
-        (in.colliderA->type == ColliderType::SPHERE && in.colliderB->type == ColliderType::CUBOID);
+    case ShapePairKind::BoxSphere:
+        hit = tryBoxSphere(std::move(pair));
+        break;
 
-    const bool sphereSphere =
-        in.colliderA->type == ColliderType::SPHERE &&
-        in.colliderB->type == ColliderType::SPHERE;
-
-    if (boxBox) {
-        hit = tryBoxBox(in, candidate);
-    }
-    else if (boxSphere) {
-        hit = tryBoxSphere(in, candidate);
-    }
-    else if (sphereSphere) {
-        hit = trySphereSphere(in, candidate);
+    case ShapePairKind::SphereSphere:
+        hit = trySphereSphere(std::move(pair));
+        break;
     }
 
     if (!hit) {
@@ -144,13 +184,13 @@ void NarrowphaseManager::processColliderPairNormal(
     }
 
     PairKey key = makeColliderPairKey(
-        in.colliderHandleA,
-        in.colliderHandleB
+        hit->pair.a.colliderHandle,
+        hit->pair.b.colliderHandle
     );
 
     normalHitPairs.insert(key);
 
-    emitRigidContact(batch, in, candidate);
+    emitRigidContact(batch, *hit);
 }
 
 //=======================================================
@@ -176,16 +216,28 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
             //    }
             //}
 
+            const std::optional<ShapePairKind> shapePair =
+                classifyShapePair(colliderA, colliderB);
+
+            if (!shapePair) {
+                continue;
+            }
+
             processColliderPairSpeculative(
-                ContactBuildInput{
-                    pair.bodyA,
-                    pair.bodyB,
-                    colAH,
-                    colBH,
-                    &bodyA,
-                    &bodyB,
-                    &colliderA,
-                    &colliderB
+                ResolvedColliderPair{
+                    ColliderEndpointRef{
+                        pair.bodyA,
+                        colAH,
+                        &bodyA,
+                        &colliderA
+                    },
+                    ColliderEndpointRef{
+                        pair.bodyB,
+                        colBH,
+                        &bodyB,
+                        &colliderB
+                    },
+                    *shapePair
                 },
                 dt,
                 pair.sweepOwner
@@ -195,13 +247,13 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
 }
 
 void NarrowphaseManager::processColliderPairSpeculative(
-    ContactBuildInput in,
+    ResolvedColliderPair pair,
     float dt,
     BodyHandle sweepOwner)
 {
     PairKey key = makeColliderPairKey(
-        in.colliderHandleA,
-        in.colliderHandleB
+        pair.a.colliderHandle,
+        pair.b.colliderHandle
     );
 
     // If normal narrowphase already created a real contact,
@@ -210,41 +262,39 @@ void NarrowphaseManager::processColliderPairSpeculative(
         return;
     }
 
-    DynamicContactCandidate candidate;
-    bool hit = false;
+    std::optional<SweepHit> hit;
 
-    const bool boxBox =
-        in.colliderA->type == ColliderType::CUBOID &&
-        in.colliderB->type == ColliderType::CUBOID;
+    switch (pair.shapePair) {
+    case ShapePairKind::BoxBox:
+        hit = trySpeculativeBoxBox(
+            std::move(pair),
+            dt,
+            sweepOwner
+        );
+        break;
 
-    const bool boxSphere =
-        (in.colliderA->type == ColliderType::CUBOID && in.colliderB->type == ColliderType::SPHERE) ||
-        (in.colliderA->type == ColliderType::SPHERE && in.colliderB->type == ColliderType::CUBOID);
+    case ShapePairKind::BoxSphere:
+        hit = trySpeculativeBoxSphere(
+            std::move(pair),
+            dt,
+            sweepOwner
+        );
+        break;
 
-    const bool sphereSphere =
-        in.colliderA->type == ColliderType::SPHERE &&
-        in.colliderB->type == ColliderType::SPHERE;
-
-
-    if (boxBox) {
-        hit = trySpeculativeBoxBox(in, candidate, dt);
-    }
-    else if (boxSphere) {
-        hit = trySpeculativeBoxSphere(in, candidate, dt);
-    }
-    else if (sphereSphere) {
-        hit = trySpeculativeSphereSphere(in, candidate, dt);
+    case ShapePairKind::SphereSphere:
+        hit = trySpeculativeSphereSphere(
+            std::move(pair),
+            dt,
+            sweepOwner
+        );
+        break;
     }
 
     if (!hit) {
         return;
     }
 
-    pendingSpeculativeContacts.push_back({
-        in,
-        candidate,
-        sweepOwner
-    });
+    pendingSweepHits.emplace_back(std::move(*hit));
 }
 
 //=======================================================
@@ -320,37 +370,37 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
         }
 
         for (Tri* tri : *candidates) {
-            ContactBuildInput in{};
-            in.bodyHandleA = pair.body;
-            in.colliderHandleA = colH;
-            in.bodyA = &body;
-            in.colliderA = &collider;
+            ColliderEndpointRef colliderRef{
+                pair.body,
+                colH,
+                &body,
+                &collider
+            };
 
-            // B = terrain
-            in.bodyB = nullptr;
-            in.colliderB = nullptr;
-
-            DynamicContactCandidate candidate{};
-            candidate.partnerTypeA = ContactPartnerType::RigidBody;
-            candidate.partnerTypeB = ContactPartnerType::Terrain;
+            std::optional<TerrainSweepHit> hit;
 
             if (collider.type == ColliderType::CUBOID) {
-                if (!trySpeculativeBoxTriangle(in, tri, candidate, dt)) {
-                    continue;
-                }
+                hit = trySpeculativeBoxTriangle(
+                    colliderRef,
+                    tri,
+                    dt,
+                    pair.body
+                );
             }
             else if (collider.type == ColliderType::SPHERE) {
-                if (!trySpeculativeSphereTriangle(in, tri, candidate, dt)) {
-                    continue;
-                }
+                hit = trySpeculativeSphereTriangle(
+                    colliderRef,
+                    tri,
+                    dt,
+                    pair.body
+                );
             }
 
-            PendingSpeculativeContact pending{};
-            pending.input = in;
-            pending.candidate = candidate;
-            pending.sweepOwner = pair.body;
+            if (!hit) {
+                continue;
+            }
 
-            pendingSpeculativeContacts.push_back(pending);
+            pendingSweepHits.emplace_back(std::move(*hit));
         }
     }
 }

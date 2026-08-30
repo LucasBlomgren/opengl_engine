@@ -1,7 +1,9 @@
 #pragma once
 
-#include <vector>
 #include <cstdint>
+#include <utility>
+#include <variant>
+#include <vector>
 
 #include "core/slot_map.h"
 #include "physics/public/contact_types.h"
@@ -15,13 +17,10 @@ struct Collider;
 struct Contact;
 
 
-enum class ManifoldType {
-    None,
+enum class ShapePairKind {
     BoxBox,
     BoxSphere,
-    SphereSphere,
-    SphereTriangle,
-    BoxTriangle,
+    SphereSphere
 };
 
 enum class ContactPartnerType {
@@ -30,53 +29,48 @@ enum class ContactPartnerType {
 };
 
 //======================================================
-//  Contact Build Input 
-//  used to build a contact from SAT results
+// Resolved rigid-rigid narrowphase input
 //======================================================
-struct ContactBuildInput {
-    BodyHandle bodyHandleA;
-    BodyHandle bodyHandleB;
+struct ColliderEndpointRef {
+    BodyHandle bodyHandle;
+    ColliderHandle colliderHandle;
+    RigidBody* body = nullptr;
+    Collider* collider = nullptr;
+};
 
-    ColliderHandle colliderHandleA;
-    ColliderHandle colliderHandleB;
+struct ResolvedColliderPair {
+    ColliderEndpointRef a;
+    ColliderEndpointRef b;
+    ShapePairKind shapePair;
 
-    RigidBody* bodyA = nullptr;
-    RigidBody* bodyB = nullptr;
-
-    Collider* colliderA = nullptr;
-    Collider* colliderB = nullptr;
-
-    void swapAB()
-    {
-        std::swap(bodyHandleA, bodyHandleB);
-        std::swap(colliderHandleA, colliderHandleB);
-        std::swap(bodyA, bodyB);
-        std::swap(colliderA, colliderB);
+    void swapAB() {
+        std::swap(a, b);
     }
 };
 
-//=============================================================
-// Contact Candidates
-// used to store SAT results and manifold type before building a contact
-//=============================================================
-struct DynamicContactCandidate {
-    ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
-    ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
-    ManifoldType manifoldType = ManifoldType::None;
-    SAT::Result sat{};
+//======================================================
+// Successful narrowphase test results
+//======================================================
+struct OverlapHit {
+    ResolvedColliderPair pair;
+    SAT::Result geometry;
 };
 
-struct TerrainContactCandidate {
-    std::vector<SAT::Result> results;
-    glm::vec3 normal{ 0.0f };
-    ManifoldType manifoldType = ManifoldType::None;
-};
-
-struct PendingSpeculativeContact {
-    ContactBuildInput input;
-    DynamicContactCandidate candidate;
+struct SweepHit {
+    ResolvedColliderPair pair;
+    SAT::Result geometry;
     BodyHandle sweepOwner;
 };
+
+// Temporary bridge for the existing terrain path. This becomes a
+// SurfaceSweepHit once terrain and triangle meshes share a surface endpoint.
+struct TerrainSweepHit {
+    ColliderEndpointRef collider;
+    SAT::Result geometry;
+    BodyHandle sweepOwner;
+};
+
+using PendingSweepHit = std::variant<SweepHit, TerrainSweepHit>;
 
 //=============================================================
 // SpeculativeContact
