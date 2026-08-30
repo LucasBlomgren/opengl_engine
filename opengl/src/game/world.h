@@ -39,7 +39,6 @@ struct GameObjectDesc {
     bool asleep = false;
     bool allowSleep = true;
     bool allowGravity = true;
-    bool canMoveLinearly = true;
     physics::MotionControl motionControl = physics::MotionControl::Physics;
     physics::ResponseMode responseMode = physics::ResponseMode::Normal;
 };

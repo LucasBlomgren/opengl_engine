@@ -82,12 +82,9 @@ void NarrowphaseManager::emitSpeculativeContact(
         return;
     }
 
-    // Count speculative collisions too, if you want them included in 
-    // collision debug/stats.
     if (isRigidA) {
         in.bodyA->totalCollisionCount++;
     }
-
     if (isRigidB) {
         in.bodyB->totalCollisionCount++;
     }
@@ -96,8 +93,6 @@ void NarrowphaseManager::emitSpeculativeContact(
     bool wakeB = false;
 
     // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
-    // Sphere-vs-terrain does not wake terrain and does not need 
-    // WakeSleep::computeWakeUpInfo.
     if (isRigidA && isRigidB) {
         WakeSleep::WakeUpInfo wakeInfo =
             WakeSleep::computeWakeUpInfo(*in.bodyA, *in.bodyB);

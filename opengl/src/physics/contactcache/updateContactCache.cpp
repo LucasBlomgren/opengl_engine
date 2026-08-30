@@ -7,7 +7,7 @@ namespace physics {
 //       Contact Cache
 //=================================================
 void Engine::updateContactCache() {
-    constexpr int maxFramesWithoutCollision = 5;
+    constexpr int maxFramesWithoutCollision = 3;
     for (auto it = contactCache.begin(); it != contactCache.end(); ) {
         if (!it->second.wasUsedThisFrame) {
             it->second.framesSinceUsed++;

@@ -51,7 +51,6 @@ BodyHandle Engine::createRigidBody(
     body.angularVelocity = desc.angularVelocity;
     body.allowGravity = desc.allowGravity;
     body.allowSleep = desc.allowSleep;
-    body.canMoveLinearly = desc.canMoveLinearly;
     body.asleep = desc.startAsleep;
     body.sleepCounterThreshold = desc.sleepCounterThreshold;
     body.anchorPoint = desc.pose.position;
@@ -324,27 +323,6 @@ bool Engine::setRigidBodyAllowSleep(
     }
 
     commandBuffer.recordSetRigidBodyAllowSleep(handle, allowSleep);
-    return true;
-}
-
-bool Engine::setRigidBodyCanMoveLinearly(
-    BodyHandle handle,
-    bool canMoveLinearly)
-{
-    const RigidBody* body = resolveBody(
-        commandBuffer,
-        physicsWorld,
-        handle
-    );
-
-    if (!body) {
-        return false;
-    }
-
-    commandBuffer.recordSetRigidBodyCanMoveLinearly(
-        handle,
-        canMoveLinearly
-    );
     return true;
 }
 

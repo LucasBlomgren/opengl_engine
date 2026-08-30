@@ -28,9 +28,8 @@ class BVHTree {
 public:
     BVHTree() = default;
 
-    // #rigidbody vector: bvh should use body handles instead 
-    // of collider to work with compound colliders
     using Element = BodyHandle;
+
     void init(
         PhysicsWorld* world, 
         size_t allocSize, 

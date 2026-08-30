@@ -113,10 +113,6 @@ public:
         BodyHandle body,
         bool allowSleep);
 
-    bool setRigidBodyCanMoveLinearly(
-        BodyHandle body,
-        bool canMoveLinearly);
-
     bool setColliderLocalPose(
         ColliderHandle collider,
         const Pose& localPose);

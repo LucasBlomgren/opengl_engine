@@ -450,17 +450,6 @@ void Processor::applyCommand(
     body->allowSleep = command.allowSleep;
 }
 
-void Processor::applyCommand(
-    const Buffer::SetRigidBodyCanMoveLinearly& command,
-    float)
-{
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
-
-    if (body) {
-        body->canMoveLinearly = command.canMoveLinearly;
-    }
-}
-
 //================================================
 // Collider commands
 //================================================
@@ -613,7 +602,11 @@ void Processor::refreshBodyInertia(RigidBody& body)
         return;
     }
 
-    glm::vec3 inertiaScale = body.scale * collider->worldScale;
+    // worldScale already contains body.scale * collider.localScale.
+    // Multiplying by body.scale again makes elongated bodies artificially
+    // resistant to angular impulses because their inertia grows from a
+    // squared scale.
+    glm::vec3 inertiaScale = collider->worldScale;
 
     if (collider->type == ColliderType::SPHERE) {
         const Sphere& sphere = std::get<Sphere>(collider->shape);

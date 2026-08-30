@@ -39,7 +39,6 @@ namespace SAT {
         float depth = 0.0f;
 
         // Positive only for speculative/non-overlapping contacts.
-        // Example: sphere-sphere gap before impact.
         float separation = 0.0f;
 
         // Time of impact within current dt.

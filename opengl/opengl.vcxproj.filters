@@ -73,7 +73,6 @@
     <ClCompile Include="src\physics\narrowphase\emit_contact_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
-    <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_box.cpp" />
@@ -93,6 +92,7 @@
     <ClCompile Include="src\physics\engine\queries\queries.cpp" />
     <ClCompile Include="src\physics\engine\queries\debug_queries.cpp" />
     <ClCompile Include="src\physics\engine\runtime\scene.cpp" />
+    <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">

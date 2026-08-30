@@ -395,15 +395,6 @@ void Buffer::recordSetRigidBodyAllowSleep(
     mutations.emplace_back(SetRigidBodyAllowSleep{ body, allowSleep });
 }
 
-void Buffer::recordSetRigidBodyCanMoveLinearly(
-    BodyHandle body,
-    bool canMoveLinearly) {
-    mutations.emplace_back(SetRigidBodyCanMoveLinearly{
-        body,
-        canMoveLinearly
-        });
-}
-
 //=========================================
 // Collider command recording
 //=========================================

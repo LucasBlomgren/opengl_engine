@@ -118,7 +118,6 @@ Engine::getRigidBodyState(
     state.asleep = body->asleep;
     state.allowSleep = body->allowSleep;
     state.allowGravity = body->allowGravity;
-    state.canMoveLinearly = body->canMoveLinearly;
     state.bounds = toPublicBounds(body->aabb);
     state.colliders = body->colliderHandles;
     return state;

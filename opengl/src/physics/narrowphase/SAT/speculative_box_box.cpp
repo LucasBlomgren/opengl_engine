@@ -1,5 +1,7 @@
 #include "sat.h"
 
+#include <iostream>
+
 namespace physics::internal {
 
 bool SAT::speculativeBoxBox(
@@ -221,14 +223,16 @@ bool SAT::speculativeBoxBox(
         };
 
     glm::vec3 pointA = supportPoint(centerAAtHit, axesA, halfExtentsA, bestAxis);
-    glm::vec3 pointB = supportPoint(centerBAtHit, axesB, halfExtentsB, -bestAxis);
+    //glm::vec3 pointB = supportPoint(centerBAtHit, axesB, halfExtentsB, -bestAxis);
 
     out.hitType = SAT::HitType::Speculative;
     out.normal = bestAxis; // A -> B
     out.separation = bestSeparation;
     out.depth = -bestSeparation;
     out.toi = enterTime;
-    out.point = 0.5f * (pointA + pointB);
+    //out.point = 0.5f * (pointA + pointB);
+
+    out.point = pointA;
 
     out.feature.type = bestType;
     out.feature.faceIndex = -1;

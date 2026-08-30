@@ -46,7 +46,6 @@ private:
     void applyCommand(const Buffer::SetRigidBodyMass&, float dt);
     void applyCommand(const Buffer::SetRigidBodyAllowGravity&, float dt);
     void applyCommand(const Buffer::SetRigidBodyAllowSleep&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyCanMoveLinearly&, float dt);
     void applyCommand(const Buffer::SetColliderLocalPose&, float dt);
     void applyCommand(const Buffer::SetColliderLocalTransform&, float dt);
     void applyCommand(const Buffer::SetColliderShape&, float dt);

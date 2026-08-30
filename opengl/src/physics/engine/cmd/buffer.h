@@ -82,11 +82,6 @@ public:
         bool allowSleep;
     };
 
-    struct SetRigidBodyCanMoveLinearly {
-        BodyHandle body;
-        bool canMoveLinearly;
-    };
-
     //=========================================
     // Collider mutation commands
     //=========================================
@@ -135,7 +130,6 @@ public:
         SetRigidBodyMass,
         SetRigidBodyAllowGravity,
         SetRigidBodyAllowSleep,
-        SetRigidBodyCanMoveLinearly,
         SetColliderLocalPose,
         SetColliderLocalTransform,
         SetColliderShape,
@@ -213,10 +207,6 @@ public:
     void recordSetRigidBodyMass(BodyHandle body, float mass);
     void recordSetRigidBodyAllowGravity(BodyHandle body, bool allowGravity);
     void recordSetRigidBodyAllowSleep(BodyHandle body, bool allowSleep);
-
-    void recordSetRigidBodyCanMoveLinearly(
-        BodyHandle body,
-        bool canMoveLinearly);
 
     //=========================================
     // Collider command recording

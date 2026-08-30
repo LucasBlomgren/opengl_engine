@@ -26,7 +26,6 @@ struct BodyDesc {
 
     bool allowGravity = true;
     bool allowSleep = true;
-    bool canMoveLinearly = true;
     bool startAsleep = false;
 
     float sleepCounterThreshold = 1.5f;

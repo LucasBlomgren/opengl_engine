@@ -121,7 +121,6 @@ GameObjectHandle World::createGameObject(
     bodyDesc.mass = objectDesc.mass;
     bodyDesc.allowSleep = objectDesc.allowSleep;
     bodyDesc.allowGravity = objectDesc.allowGravity;
-    bodyDesc.canMoveLinearly = objectDesc.canMoveLinearly;
     bodyDesc.startAsleep = objectDesc.asleep;
     bodyDesc.sleepCounterThreshold =
         objectDesc.sleepCounterThreshold;
@@ -259,17 +258,17 @@ GameObjectHandle World::createGameObject(
         ++createdColliderCount;
     }
 
-    // If no colliders were created, clean up and return an invalid handle
-    if (createdColliderCount == 0) {
-        std::cerr
-            << "[World] Cannot create GameObject '"
-            << objectDesc.name
-            << "': no colliders were created.\n";
+    //// If no colliders were created, clean up and return an invalid handle
+    //if (createdColliderCount == 0) {
+    //    std::cerr
+    //        << "[World] Cannot create GameObject '"
+    //        << objectDesc.name
+    //        << "': no colliders were created.\n";
 
-        physicsEngine.destroyRigidBody(bodyHandle);
-        gameObjects.destroy(gameObjectHandle);
-        return {};
-    }
+    //    physicsEngine.destroyRigidBody(bodyHandle);
+    //    gameObjects.destroy(gameObjectHandle);
+    //    return {};
+    //}
 
     // Map the rigid body handle to the game object handle
     bodyToGameObject[bodyHandle] = gameObjectHandle;

@@ -10,7 +10,8 @@
 
 namespace physics::internal {
 
-// for Sutherland-Hodgman clipping in box-box and box-mesh contact point generation
+// for Sutherland-Hodgman clipping in box-box 
+// and box-mesh contact point generation
 struct Plane {
     glm::vec3 normal{ 0.0f };
     glm::vec3 point{ 0.0f };
@@ -46,7 +47,8 @@ struct ContactPoint {
     bool wasWarmStarted = false;
 };
 
-// runtime data for contact point generation and impulse solving, not stored in contact cache
+// runtime data for contact point generation and impulse 
+// solving, not stored in contact cache
 struct ContactRuntime {
     RigidBody* bodyA = nullptr;
     RigidBody* bodyB = nullptr;
@@ -58,8 +60,12 @@ static constexpr uint32_t MaxContactPoints = 4;
 struct Contact {
     size_t hashKey = -1; // generated from collider IDs, used for caching
 
-    float minY = std::numeric_limits<float>::infinity(); // for solver sorting by minY of contact points to improve stability of resting contacts, updated during contact point generation
-    glm::vec3 normal{ 0.0f };           // contact normal, precomputed from SAT result for warm starting and impulse solving
+    // for solver sorting by minY of contact points to improve stability 
+    // of resting contacts, updated during contact point generation
+    float minY = std::numeric_limits<float>::infinity();
+
+    // contact normal, precomputed from SAT result for warm starting and impulse solving
+    glm::vec3 normal{ 0.0f }; 
 
     std::array<ContactPoint, MaxContactPoints> points{};
     uint32_t numPoints = 0;
@@ -69,7 +75,6 @@ struct Contact {
     }
 
     void addPoint(const ContactPoint& cp) {
-        assert(numPoints < points.size());
         points[numPoints++] = cp;
     }
 
@@ -81,7 +86,8 @@ struct Contact {
         return true;
     }
 
-    // tangential basis vectors, precomputed from the contact normal for warm starting and impulse solving
+    // tangential basis vectors, precomputed from 
+    // the contact normal for warm starting and impulse solving
     glm::vec3 t1{ 0.0f };
     glm::vec3 t2{ 0.0f };
 
@@ -91,16 +97,19 @@ struct Contact {
     float accumulatedTwistImpulse = 0.0f;
     float invMassTwist = 0.0f;
 
-    // runtime data for contact point generation and impulse solving, not stored in contact cache
+    // runtime data for contact point generation and 
+    // impulse solving, not stored in contact cache
     ContactRuntime runtimeData;
 
-    // to distinguish between body vs body and body vs terrain contacts, since they have different response and contact point generation logic
+    // to distinguish between body vs body and body vs terrain contacts, 
+    // since they have different response and contact point generation logic
     ContactPartnerType partnerTypeA = ContactPartnerType::RigidBody;
     ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
     BodyHandle bodyA;
     BodyHandle bodyB;
 
-    // reference face and normal for box-box and box-mesh collisions, used for contact point generation and warm starting
+    // reference face and normal for box-box and box-mesh collisions, 
+    // used for contact point generation and warm starting
     bool noSolverResponseA = false;     // default false for dynamic bodies, true for static/kinematic bodies vs terrain
     bool noSolverResponseB = true;      // default true for terrain
     bool contributesMotionA = true;     // default true for dynamic bodies vs terrain
@@ -110,14 +119,19 @@ struct Contact {
     bool wasUsedThisFrame = true;
     int framesSinceUsed = 0;
 
-    // for box-box and box-mesh collisions, to avoid redundant computations in contact point generation and warm starting
+    // for box-box and box-mesh collisions, to avoid redundant 
+    // computations in contact point generation and warm starting
     bool objBisReference = true; 
     std::array<glm::vec3, 4> referenceFace{ glm::vec3(0.0f) };
     std::array<glm::vec3, 4> incidentFace{ glm::vec3(0.0f) };
     glm::vec3 referenceFaceNormal{ 0.0f };
 
     // body vs body
-    Contact(BodyHandle handleA, BodyHandle handleB, ContactRuntime& data, glm::vec3& normal) :
+    Contact(
+        BodyHandle handleA, 
+        BodyHandle handleB, 
+        ContactRuntime& data, 
+        glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::RigidBody),
         partnerTypeB(ContactPartnerType::RigidBody),
         bodyA(handleA),
@@ -127,7 +141,10 @@ struct Contact {
     {}
 
     // body vs terrain
-    Contact(BodyHandle handleA, ContactRuntime& data, glm::vec3& normal) :
+    Contact(
+        BodyHandle handleA, 
+        ContactRuntime& data, 
+        glm::vec3& normal) :
         partnerTypeA(ContactPartnerType::RigidBody),
         partnerTypeB(ContactPartnerType::Terrain),
         bodyA(handleA),
@@ -146,16 +163,47 @@ public:
 
     size_t generateKey(int idA, int idB);
 
-    Contact* boxBox(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    Contact* boxSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    Contact* boxMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
-    Contact* sphereSphere(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, SAT::Result& satResult);
-    Contact* sphereMesh(Contact& outContact, std::unordered_map<size_t, Contact>& contactCache, std::vector<SAT::Result>& allResults);
+    Contact* boxBox(
+        Contact& outContact, 
+        std::unordered_map<size_t, Contact>& contactCache, 
+        SAT::Result& satResult);
+
+    Contact* boxSphere(
+        Contact& outContact, 
+        std::unordered_map<size_t, Contact>& contactCache, 
+        SAT::Result& satResult);
+
+    Contact* boxMesh(
+        Contact& outContact, 
+        std::unordered_map<size_t, Contact>& contactCache, 
+        std::vector<SAT::Result>& allResults);
+
+    Contact* sphereSphere(
+        Contact& outContact, 
+        std::unordered_map<size_t, Contact>& contactCache, 
+        SAT::Result& satResult);
+
+    Contact* sphereMesh(
+        Contact& outContact, 
+        std::unordered_map<size_t, Contact>& contactCache, 
+        std::vector<SAT::Result>& allResults);
 
 private:
     // reference face selection for box-box and box-mesh collisions
-    void selectOOBBCollisionRefFaceAndNormal(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace, glm::vec3& outNormal);
-    void selectOOBBCollisionIncidentFace(const Collider* collider, const Pose& pose, ColliderTransformCache& transformCache, const glm::vec3& normal, std::array<glm::vec3, 4>& outFace);
+    void selectOOBBCollisionRefFaceAndNormal(
+        const Collider* collider,
+        const Pose& pose, 
+        ColliderTransformCache& transformCache, 
+        const glm::vec3& normal, 
+        std::array<glm::vec3, 4>& outFace, 
+        glm::vec3& outNormal);
+
+    void selectOOBBCollisionIncidentFace(
+        const Collider* collider, 
+        const Pose& pose, 
+        ColliderTransformCache& transformCache, 
+        const glm::vec3& normal, 
+        std::array<glm::vec3, 4>& outFace);
 
     // furthest point selection for terrain collisions
     void pickFourFurthestPoints();
@@ -163,10 +211,28 @@ private:
 
     // Sutherland-Hodgman clipping
     std::array<Plane, 4> clippingPlanes;
-    void createClippingPlanes(const std::array<glm::vec3, 4>& face, const glm::vec3& faceNormal);
-    void getIntersectionPoint(const glm::vec3& v1, const glm::vec3& v2, const Plane& plane, glm::vec3& outPoint, bool& outBool);
-    bool isPointInsidePlane(const glm::vec3& point, const glm::vec3& planeNormal, const glm::vec3& planePoint, const float tolerance);
-    void clipPoints(const std::array<glm::vec3, 4>& referenceFace, const std::array<glm::vec3, 4>& incidentFace, int incidentCount, const glm::vec3& referenceFaceNormal);
+    void createClippingPlanes(
+        const std::array<glm::vec3, 4>& face,
+        const glm::vec3& faceNormal);
+
+    void getIntersectionPoint(
+        const glm::vec3& v1, 
+        const glm::vec3& v2, 
+        const Plane& plane, 
+        glm::vec3& outPoint, 
+        bool& outBool);
+
+    bool isPointInsidePlane(
+        const glm::vec3& point, 
+        const glm::vec3& planeNormal, 
+        const glm::vec3& planePoint, 
+        const float tolerance);
+
+    void clipPoints(
+        const std::array<glm::vec3, 4>& referenceFace, 
+        const std::array<glm::vec3, 4>& incidentFace, 
+        int incidentCount, 
+        const glm::vec3& referenceFaceNormal);
 
     // contact point reduction and penetration depth computation
     void contactPointReduction(Contact& contact,
@@ -178,7 +244,9 @@ private:
     void PreComputePointData(ContactPoint& cp, Contact& contact);
 
     // contact cache integration
-    Contact* integrateContact(std::unordered_map<size_t, Contact>& contactCache, Contact& contact);
+    Contact* integrateContact(
+        std::unordered_map<size_t, Contact>& contactCache, 
+        Contact& contact);
 
     void applySatToContactPoint(
         Contact& contact,

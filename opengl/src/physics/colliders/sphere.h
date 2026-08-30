@@ -28,9 +28,7 @@ public:
     void update(const Pose& worldPose, const glm::vec3& worldScale) {
         glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
         centerWorld = worldPose.position + rotation * (worldScale * centerLocal);
-
-        const glm::vec3 absScale = glm::abs(worldScale);
-        radiusWorld = radiusLocal * (std::max)({ absScale.x, absScale.y, absScale.z });
+        radiusWorld = radiusLocal * std::max({ worldScale.x, worldScale.y, worldScale.z });
     }
 };
 

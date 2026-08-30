@@ -48,7 +48,6 @@ public:
     float invMass = 0.0f;
 
     bool allowGravity = true;
-    bool canMoveLinearly = true;
     float radius = 0.0f;
     float invRadius = 0.0f;
 

@@ -48,7 +48,7 @@ void NarrowphaseManager::emitRigidContact(
         in.bodyHandleA,
         in.bodyHandleB,
         runtimeData,
-        candidate.sat.normal    
+        candidate.sat.normal
     );
 
     contact.noSolverResponseA = noSolverResponseA;

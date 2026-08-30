@@ -534,7 +534,11 @@ void Renderer::renderTerrain(
         if (VAO != 0) {
             glDeleteVertexArrays(1, &VAO);
             glDeleteBuffers(1, &VBO);
-            glDeleteBuffers(1, &EBO);
+            glDeleteBuffers(1, &EBO); 
+            
+            glcount::decVAO();
+            glcount::decVBO();
+            glcount::decEBO();
         }
         VAO = 0;
         VBO = 0;

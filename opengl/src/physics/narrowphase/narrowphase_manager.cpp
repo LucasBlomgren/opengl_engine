@@ -49,12 +49,6 @@ void NarrowphaseManager::narrowPhase(
     for (const DynamicPair& pair : pairs.dynamicPairs) {
         processDynamicPairs(pair, batch, dt);
     }
-    double end = glfwGetTime();
-    double elapsed = end - start;
-    /*std::cout << "NARROWPHASE DEBUG INFO" << std::endl;
-    std::cout << pairs.dynamicPairs.size() << " dynamic pairs processed" << std::endl;
-    std::cout << "processDynamicPairs took " << elapsed * 1000.0 << " ms" << std::endl;
-    std::cout << "Per pair time: " << (elapsed * 1000.0) / pairs.dynamicPairs.size() << " ms" << std::endl;*/
 
     // Speculative terrain
     for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
@@ -68,11 +62,6 @@ void NarrowphaseManager::narrowPhase(
     }
 
     flushPendingSpeculativeContacts(batch, dt);
-    end = glfwGetTime();
-    elapsed = end - start;
-    /*std::cout << pairs.speculativeDynamicPairs.size() << " speculative dynamic pairs processed" << std::endl;
-    std::cout << "processSpeculativeDynamicPairs took " << elapsed * 1000.0 << " ms" << std::endl;
-    std::cout << "Per pair time: " << (elapsed * 1000.0) / pairs.speculativeDynamicPairs.size() << " ms" << std::endl;*/
 }
 
 //=======================================================

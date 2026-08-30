@@ -1303,13 +1303,6 @@ void SceneBuilder::sandBox() {
         999.0f
     );
 
-    if (GameObject* object = world.getGameObject(plankHandle)) {
-        physicsEngine.setRigidBodyCanMoveLinearly(
-            object->rigidBodyHandle,
-            false
-        );
-    }
-
     createSinglePartObject(
         "CatapultProjectile",
         "crate",

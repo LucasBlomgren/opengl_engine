@@ -27,7 +27,6 @@ struct BodyState {
     bool asleep = false;
     bool allowSleep = true;
     bool allowGravity = true;
-    bool canMoveLinearly = true;
 
     AABB bounds;
     std::vector<ColliderHandle> colliders;

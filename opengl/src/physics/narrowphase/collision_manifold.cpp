@@ -124,8 +124,6 @@ Contact* CollisionManifold::boxBox(
     uint32_t candidateCount = 0;
 
     for (uint32_t i = 0; i < clippedPointCount; ++i) {
-        assert(candidateCount < candidates.size());
-
         ContactPoint cp{};
         cp.worldPos = clippedPoints[i];
         cp.depth = -glm::dot(clippedPoints[i] - contact.referenceFace[0], contact.referenceFaceNormal);
@@ -424,7 +422,6 @@ void CollisionManifold::addFurthestPoint() {
     }
 
     if (bestIdx >= 0) {
-        assert(selectedCandidateCount < selectedCandidateIndices.size());
         selectedCandidateIndices[selectedCandidateCount++] = bestIdx;
     }
 }
@@ -526,8 +523,6 @@ void CollisionManifold::clipPoints(
 
     clippedPointCount = 0;
 
-    assert(incidentCount <= static_cast<int>(MaxClippedPoints));
-
     for (int i = 0; i < incidentCount; i++) {
         contactPoints[i] = incidentFace[i];
     }
@@ -548,7 +543,6 @@ void CollisionManifold::clipPoints(
         counter = 0;
 
         auto pushNext = [&](const glm::vec3& p) {
-            assert(counter < static_cast<int>(MaxClippedPoints));
             nextContactPoints[counter++] = p;
             };
 
@@ -600,9 +594,8 @@ void CollisionManifold::clipPoints(
             contactPoints[i],
             referenceFaceNormal,
             referenceFace[0],
-            1e-2f
-        )) {
-            assert(clippedPointCount < clippedPoints.size());
+            1e-2f)) 
+        {
             clippedPoints[clippedPointCount++] = contactPoints[i];
         }
     }
@@ -660,10 +653,8 @@ bool CollisionManifold::isPointInsidePlane(const glm::vec3& point, const glm::ve
 void CollisionManifold::contactPointReduction(
     Contact& contact,
     const std::array<ContactPoint, MaxClippedPoints>& candidates,
-    uint32_t candidateCount
-) {
-    assert(candidateCount > MaxContactPoints);
-
+    uint32_t candidateCount) 
+{
     glm::vec3 normal = contact.referenceFaceNormal;
 
     std::array<int, MaxContactPoints> chosen{};
@@ -684,7 +675,6 @@ void CollisionManifold::contactPointReduction(
         if (alreadyChosen(idx))
             return;
 
-        assert(chosenCount < chosen.size());
         chosen[chosenCount++] = idx;
         };
 
@@ -930,8 +920,8 @@ void CollisionManifold::PreComputePointData(ContactPoint& cp, Contact& contact) 
 //==========================================================================================
 Contact* CollisionManifold::integrateContact(
     std::unordered_map<size_t, Contact>& contactCache,
-    Contact& contact
-) {
+    Contact& contact) 
+{
     contact.minY = std::numeric_limits<float>::max();
 
     for (uint32_t i = 0; i < contact.numPoints; ++i) {
@@ -1036,8 +1026,6 @@ Contact* CollisionManifold::integrateContact(
             float dist2 = glm::distance2(contact.points[i].worldPos, cachedWorld[j]);
 
             if (dist2 < thresholdSq) {
-                assert(pairCount < pairs.size());
-
                 pairs[pairCount++] = {
                     static_cast<int>(i),
                     static_cast<int>(j),

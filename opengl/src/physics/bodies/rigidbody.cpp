@@ -14,12 +14,6 @@ void RigidBody::integratePose(float dt) {
 		return;
 	}
 
-	if (!canMoveLinearly) {
-		linearVelocity = glm::vec3(0.0f);
-		angularVelocity.x = 0.0f;
-		angularVelocity.y = 0.0f;
-	}
-
 	pose.position += linearVelocity * dt;
 	updateOrientation(pose.orientation, angularVelocity, dt);
 }
@@ -128,12 +122,6 @@ void RigidBody::pushBiasImpulseAngular(const glm::vec3& j) {
     biasAngularVelocity += j * invInertiaWorld;
 }
 void RigidBody::commitBiasImpulses(float dt) {
-	if (!canMoveLinearly) {
-		biasLinearVelocity = glm::vec3(0.0f);
-		biasAngularVelocity.x = 0.0f;
-		biasAngularVelocity.y = 0.0f;
-	}
-
 	pose.position += biasLinearVelocity * dt;
 	updateOrientation(pose.orientation, biasAngularVelocity, dt);
 
