@@ -13,13 +13,20 @@ void NarrowphaseManager::emitRigidContact(
     ColliderEndpointRef& a = hit.pair.a;
     ColliderEndpointRef& b = hit.pair.b;
 
-    a.body->totalCollisionCount++;
-    b.body->totalCollisionCount++;
+    if (a.body->type == BodyType::Dynamic) {
+        SleepState& sleepA = physicsWorld->getSleepState(a.body->sleepStateHandle);
+        sleepA.collisionCount++;
+    }
+    if (b.body->type == BodyType::Dynamic) {
+        SleepState& sleepB = physicsWorld->getSleepState(b.body->sleepStateHandle);
+        sleepB.collisionCount++;
+    }
 
     WakeSleep::WakeUpInfo wakeInfo =
-        WakeSleep::computeWakeUpInfo(*a.body, *b.body);
+        WakeSleep::computeWakeUpInfo(*physicsWorld, *a.body, *b.body);
 
     WakeSleep::enqueueWakeRequests(
+        *physicsWorld,
         wakeInfo,
         *a.body,
         *b.body,

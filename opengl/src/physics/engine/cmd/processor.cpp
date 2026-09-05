@@ -17,16 +17,22 @@ namespace physics::internal::cmd {
 
 namespace {
 
-BroadphaseBucket getBodyBucket(const RigidBody& body)
+BroadphaseBucket getBodyBucket(
+    PhysicsWorld& physicsWorld,
+    const RigidBody& body)
 {
     if (body.type == BodyType::Static) {
         return BroadphaseBucket::Static;
     }
 
-    if (body.type == BodyType::Dynamic &&
-        body.asleep &&
-        body.motionControl != MotionControl::External) {
-        return BroadphaseBucket::Asleep;
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+
+        if (sleepState.asleep &&
+            body.motionControl != MotionControl::External) 
+        {
+            return BroadphaseBucket::Asleep;
+        }
     }
 
     return BroadphaseBucket::Awake;
@@ -164,7 +170,7 @@ void Processor::processLifecycleCommands(
         bodiesToRefresh.insert(bodyHandle);
     }
 
-    // Destroy bodies and their colliders
+    // Destroy bodies + their motion state, sleep state, and colliders
     for (BodyHandle bodyHandle : batch.bodyDestroys) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
 
@@ -172,6 +178,8 @@ void Processor::processLifecycleCommands(
             physicsWorld.destroyCollider(colliderHandle);
         }
 
+        physicsWorld.destroyMotionState(body.motionStateHandle);
+        physicsWorld.destroySleepState(body.sleepStateHandle);
         physicsWorld.destroyBody(bodyHandle);
     }
 
@@ -232,7 +240,9 @@ void Processor::applyCommand(
         return;
     }
 
-    if (body->asleep) {
+    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+
+    if (sleepState.asleep) {
         broadphaseManager.moveToAwake(command.body);
     }
 
@@ -310,17 +320,21 @@ void Processor::applyCommand(
     RigidBody* body = physicsWorld.tryGetBody(command.body);
 
     if (!body ||
-        body->type != BodyType::Dynamic ||
-        !body->allowSleep) {
+        body->type != BodyType::Dynamic) {
+        return;
+    }
+
+    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    if (!sleepState.allowSleep) {
         return;
     }
 
     if (command.asleep) {
-        body->setAsleep();
+        body->setAsleep(sleepState);
         broadphaseManager.moveToAsleep(command.body);
     }
     else {
-        body->setAwake();
+        body->setAwake(sleepState);
         broadphaseManager.moveToAwake(command.body);
     }
 }
@@ -338,28 +352,33 @@ void Processor::applyCommand(
     body->type = command.type;
 
     switch (command.type) {
-    case BodyType::Dynamic:
+    case BodyType::Dynamic: {
         if (body->mass <= 0.0f) {
             body->mass = 1.0f;
         }
 
         body->invMass = 1.0f / body->mass;
 
-        if (body->sleepCounterThreshold <= 0.0f) {
-            body->sleepCounterThreshold = 1.5f;
+        SleepState& sleepState =
+            physicsWorld.getSleepState(body->sleepStateHandle);
+
+        if (sleepState.counterThreshold <= 0.0f) {
+            sleepState.counterThreshold = 1.5f;
         }
 
         refreshBodyInertia(*body);
 
-        if (body->allowSleep && body->asleep) {
-            body->setAsleep();
+        if (sleepState.allowSleep && sleepState.asleep) {
+            body->setAsleep(sleepState);
             broadphaseManager.moveToAsleep(command.body);
         }
         else {
-            body->setAwake();
+            body->setAwake(sleepState);
             broadphaseManager.moveToAwake(command.body);
         }
+
         break;
+    }
 
     case BodyType::Kinematic:
         body->invMass = 0.0f;
@@ -367,7 +386,6 @@ void Processor::applyCommand(
         body->invInertiaWorld = glm::mat3(0.0f);
         body->linearVelocity = glm::vec3(0.0f);
         body->angularVelocity = glm::vec3(0.0f);
-        body->setAwake();
         broadphaseManager.moveToAwake(command.body);
         break;
 
@@ -394,6 +412,12 @@ void Processor::applyCommand(
     }
 
     body->setMotionControl(command.motionControl);
+
+    if (body->type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+        sleepState.counter = 0.0f;
+        sleepState.anchorTimer = 0.0f;
+    }
 }
 
 void Processor::applyCommand(
@@ -447,7 +471,10 @@ void Processor::applyCommand(
         return;
     }
 
-    body->allowSleep = command.allowSleep;
+    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    sleepState.counter = 0.0f;
+    sleepState.anchorTimer = 0.0f;
+    sleepState.allowSleep = command.allowSleep;
 }
 
 //================================================
@@ -535,10 +562,12 @@ void Processor::applyCommand(
          ++i) {
         RigidBody& body = denseBodies[i];
 
-        if (body.asleep) continue;
         if (body.type == BodyType::Static) continue;
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
+
+        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+        if (sleepState.asleep) continue;
 
         if (body.colliderHandles.empty()) {
             continue;
@@ -562,10 +591,12 @@ void Processor::applyCommand(
          ++i) {
         RigidBody& body = denseBodies[i];
 
-        if (!body.asleep) continue;
         if (body.type == BodyType::Static) continue;
         if (body.type == BodyType::Kinematic) continue;
         if (body.motionControl == MotionControl::External) continue;
+
+        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+        if (!sleepState.asleep) continue;
 
         if (body.colliderHandles.empty()) {
             continue;
@@ -675,7 +706,7 @@ void Processor::refreshBodySpatialState(
     }
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::None) {
-        broadphaseManager.add(bodyHandle, getBodyBucket(body));
+        broadphaseManager.add(bodyHandle, getBodyBucket(physicsWorld, body));
         return;
     }
 }

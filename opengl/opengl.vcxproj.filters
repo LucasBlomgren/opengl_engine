@@ -217,6 +217,8 @@
     <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
+    <ClInclude Include="src\physics\bodies\motion_state.h" />
+    <ClInclude Include="src\physics\bodies\sleep_state.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

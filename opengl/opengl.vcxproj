@@ -329,6 +329,8 @@
     <ClInclude Include="src\ecs\entity.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
+    <ClInclude Include="src\physics\bodies\motion_state.h" />
+    <ClInclude Include="src\physics\bodies\sleep_state.h" />
     <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />

@@ -115,11 +115,16 @@ Engine::getRigidBodyState(
     state.motionControl = body->motionControl;
     state.responseMode = body->responseMode;
     state.mass = body->mass;
-    state.asleep = body->asleep;
-    state.allowSleep = body->allowSleep;
     state.allowGravity = body->allowGravity;
     state.bounds = toPublicBounds(body->aabb);
     state.colliders = body->colliderHandles;
+
+    if (body->type == BodyType::Dynamic) {
+        const SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+        state.asleep = sleepState.asleep;
+        state.allowSleep = sleepState.allowSleep;
+    }
+
     return state;
 }
 

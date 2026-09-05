@@ -104,7 +104,8 @@ void NarrowphaseManager::processTerrainTriBox(
         return;
     }
 
-    body->totalCollisionCount++;
+    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
+    sleepState.collisionCount++;
 
     glm::vec3 avgSolverNormal = getAvgNormal(SAT_resultsList);
 
@@ -190,7 +191,8 @@ void NarrowphaseManager::processTerrainTriSphere(
         return;
     }
 
-    body->totalCollisionCount++;
+    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
+    sleepState.collisionCount++;
 
     glm::vec3 avgSolverNormal = getAvgNormal(SAT_resultsList);
 

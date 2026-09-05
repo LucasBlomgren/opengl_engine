@@ -6,6 +6,8 @@ template<class Tag>
 struct HandleT {
     static constexpr uint32_t INVALID = 0xFFFFFFFFu;
 
+    // #TODO: Use a single uint32_t to pack both slot and generation,
+    // using bit shifting to store the generation in the upper bits and the slot in the lower bits.
     uint32_t slot = INVALID;
     uint32_t gen = INVALID;
 

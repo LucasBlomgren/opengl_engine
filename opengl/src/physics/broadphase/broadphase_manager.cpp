@@ -78,30 +78,6 @@ void BroadphaseManager::updateBVHs() {
     if (staticBvh.dirty) staticBvh.build(staticHandles);
 }
 
-
-//==================================================
-//     Brute force pair building for narrowphase
-//==================================================
-void BroadphaseManager::buildPairsBruteForce(
-    const std::vector<BodyHandle>& bodies,
-    std::vector<DynamicPair>& outPairs)
-{
-    for (int i = 0; i < bodies.size(); ++i) {
-        BodyHandle aH = bodies[i];
-        RigidBody& a = world->getBody(aH);
-
-        for (int j = i + 1; j < bodies.size(); ++j) {
-            BodyHandle bH = bodies[j];
-            RigidBody& b = world->getBody(bH);
-
-            if (a.asleep && b.asleep) continue;
-            if (!a.aabb.intersects(b.aabb)) continue;
-
-            outPairs.push_back(DynamicPair{aH, bH});
-        }
-    }
-}
-
 //==================================================
 //     Global pair building for narrowphase
 //==================================================
@@ -110,7 +86,7 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
     batch.dynamicPairs.reserve(BVHTree::MaxCollisionBuf);
     batch.terrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
-    // ----- dynamic vs terrain -----
+    // dynamic vs terrain
     if (terrainBvh.rootIdx != -1) {
         pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
         pairsBufTerrain.clear();
@@ -141,10 +117,9 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 
     batch.dynamicPairs.clear();
         
-    // ----- dynamic vs dynamic -----
+    // dynamic vs dynamic
     if (awakeBvh.rootIdx != -1) {
         pairsBufDynamic.clear();
-        //treeVsTreeQuery(awakeBvh, awakeBvh, pairsBufDynamic);
         treeVsSameTreeQuery(awakeBvh, pairsBufDynamic);
 
         int cap = static_cast<int>(pairsBufDynamic.size());
@@ -157,7 +132,7 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
         batch.dynamicPairs.resize(sp);
     }
 
-    // ----- dynamic vs asleep -----
+    // dynamic vs asleep
     if (asleepBvh.rootIdx != -1) {
         pairsBufDynamic.clear();
         treeVsTreeQuery(awakeBvh, asleepBvh, pairsBufDynamic);
@@ -171,7 +146,7 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
         }
     }
 
-    // ----- dynamic vs static -----
+    // dynamic vs static
     if (staticBvh.rootIdx != -1) {
         pairsBufDynamic.clear();
         treeVsTreeQuery(awakeBvh, staticBvh, pairsBufDynamic);
@@ -186,6 +161,9 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
     }
 }
 
+//==================================================
+//     Speculative pair building for narrowphase
+//==================================================
 void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) 
 {
     batch.speculativeDynamicPairs.clear();
@@ -367,34 +345,41 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
             continue;
         }
 
+        if (body.type != BodyType::Dynamic) {
+            continue;
+        }
+
         constexpr float safeFraction = 0.50f;
         constexpr float minSafeDistance = 0.02f;
 
-        // -----------------------------
-        // 1. Estimate object size
-        // -----------------------------
         const glm::vec3& scale = body.scale;
-        float minExtent = std::min(scale.x, std::min(scale.y, scale.z));
-        float boundingRadius = 0.5f * glm::length(scale);
-        float safeDistance = std::max(minExtent * safeFraction, minSafeDistance);
 
-        // -----------------------------
-        // 2. Estimate motion this frame
-        // -----------------------------
-        float linearMotion = glm::length(body.linearVelocity) * dt;
-        float angularMotion = glm::length(body.angularVelocity) * boundingRadius * dt;
-        float totalMotion = linearMotion + angularMotion;
+        float minExtent =
+            std::min(scale.x, std::min(scale.y, scale.z));
 
-        // Not fast enough to matter.
-        if (totalMotion <= safeDistance) {
+        float safeDistance =
+            std::max(minExtent * safeFraction, minSafeDistance);
+
+        float scale2 = glm::dot(scale, scale);
+        float dt2 = dt * dt;
+
+        float linearMotion2 =
+            glm::dot(body.linearVelocity, body.linearVelocity) * dt2;
+
+        float angularMotion2 =
+            glm::dot(body.angularVelocity, body.angularVelocity) *
+            (0.25f * scale2) *
+            dt2;
+
+        float safeDistance2 = safeDistance * safeDistance;
+
+        if (linearMotion2 + angularMotion2 <= 0.5f * safeDistance2) {
             continue;
         }
 
         outBodies.push_back(handle);
 
-        // -----------------------------
-        // 3. Build swept AABB
-        // -----------------------------
+        // Build swept AABB
         AABB& currentAABB = body.aabb;
 
         glm::vec3 delta = body.linearVelocity * dt;
@@ -408,13 +393,14 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
         sweptAABB.worldMin = glm::min(currentAABB.worldMin, endAABB.worldMin);
         sweptAABB.worldMax = glm::max(currentAABB.worldMax, endAABB.worldMax);
 
-        // -----------------------------
-        // 4. Expand for rotation
-        // -----------------------------
+        // Expand for rotation
         if (mainCollider.type != ColliderType::SPHERE || body.isCompound()) {
             float omega = glm::length(body.angularVelocity);
             if (omega > 1e-6f) {
                 glm::vec3 axis = body.angularVelocity / omega;
+
+                float boundingRadius =
+                    0.5f * std::sqrt(scale2);
 
                 // Use the box's OWN oriented axes + local half-extents.
                 // The world AABB is sign-agnostic: currentHalf is always the
@@ -450,7 +436,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
             }
         }
 
-        // Optional small skin.
+        // Optional small skin
         constexpr float sweptSkin = 0.01f;
         sweptAABB.worldMin -= glm::vec3(sweptSkin);
         sweptAABB.worldMax += glm::vec3(sweptSkin);
@@ -505,7 +491,10 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
 void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
     RigidBody& body = world->getBody(handle);
 
-    body.setAwake();
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = world->getSleepState(body.sleepStateHandle);
+        body.setAwake(sleepState);
+    }
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         return;
@@ -519,7 +508,8 @@ void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
 void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
     RigidBody& body = world->getBody(handle);
 
-    body.setAsleep();
+    SleepState& sleepState = world->getSleepState(body.sleepStateHandle);
+    body.setAsleep(sleepState);
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         return;
@@ -552,7 +542,6 @@ void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
 //==================================================
 //     Helpers
 //==================================================
-// Swap and pop from list
 void BroadphaseManager::swapAndPop(
     const BodyHandle& handle, 
     std::vector<BodyHandle>& list) 

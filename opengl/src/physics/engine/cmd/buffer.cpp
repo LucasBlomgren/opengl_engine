@@ -159,8 +159,12 @@ bool Buffer::recordBodyDestroy(
     );
 
     // If the body was pending creation, remove it from the pending creates
+    // and release its motion state and body reservation
     if (pendingCreate != bodyCreates.end()) {
         bodyCreates.erase(pendingCreate);
+
+        physicsWorld.destroyMotionState(pendingCreate->second.motionStateHandle);
+        physicsWorld.destroySleepState(pendingCreate->second.sleepStateHandle);
         physicsWorld.releaseBodyReservation(body);
     }
 

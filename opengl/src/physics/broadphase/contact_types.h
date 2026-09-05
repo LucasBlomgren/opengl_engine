@@ -42,14 +42,6 @@ struct PairBatch {
         speculativeDynamicPairs.clear();
         speculativeTerrainPairs.clear();
     }
-
-    size_t totalDynamicPairs() const {
-        return dynamicPairs.size() + speculativeDynamicPairs.size();
-    }
-
-    size_t totalTerrainPairs() const {
-        return terrainPairs.size() + speculativeTerrainPairs.size();
-    }
 };
 
 }

@@ -5,7 +5,12 @@
 namespace physics::internal {
 
 // Broadphase bucket types
-enum class BroadphaseBucket : uint8_t { None, Awake, Asleep, Static };
+enum class BroadphaseBucket : uint8_t { 
+    None, 
+    Awake, 
+    Asleep, 
+    Static 
+};
 
 // Handle for broadphase BVH management
 struct BroadphaseHandle {

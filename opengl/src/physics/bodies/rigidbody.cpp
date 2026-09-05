@@ -8,8 +8,7 @@ namespace physics::internal {
 //===============================================
 void RigidBody::integratePose(float dt) {
 	if (type == BodyType::Static || 
-		motionControl == MotionControl::External ||
-		asleep) 
+		motionControl == MotionControl::External)
 	{
 		return;
 	}
@@ -22,42 +21,33 @@ void RigidBody::integratePose(float dt) {
 //  Gravity and friction/damping
 //===============================================
 void RigidBody::applyGravity(float dt) {
-	if (!allowGravity ||
-		asleep ||
-		type == BodyType::Static ||
-		type == BodyType::Kinematic ||
-		motionControl == MotionControl::External)
+	if (!allowGravity)
 		return;
+
+	static constexpr glm::vec3 g =
+		glm::vec3(0.0f, -9.81f, 0.0f);
 
 	linearVelocity += g * dt;
 }
 
-void RigidBody::applyVelocityDamping(float dt) {
-	if (type == BodyType::Static || 
-        type == BodyType::Kinematic ||
-		motionControl == MotionControl::External || 
-		asleep)
-		return;
-
+void RigidBody::applyVelocityDamping(float dt, SleepState& sleepState) {
     constexpr float epsilon = 0.01f;
 
     // only apply damping if there have been recent collisions,
     // no air resistance when flying freely
-	if (collisionHistory.average() > epsilon) {
+	if (sleepState.collisionHistory.average() > epsilon) {
         linearVelocity *= std::pow(0.98f, dt);
         angularVelocity *= std::pow(0.98f, dt);
     }
 }
 
-void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
-	if (colliderType != ColliderType::SPHERE || 
-		motionControl == MotionControl::External || 
-		asleep)
+void RigidBody::applyRollingFriction(ColliderType colliderType, float dt, SleepState& sleepState) {
+	if (colliderType != ColliderType::SPHERE)
 		return;
 
 	float aLin;
 	float aAng;
-	bool avgCollisions = collisionHistory.average() > 0;
+	bool avgCollisions = sleepState.collisionHistory.average() > 0;
 
 	aLin = 0.1f; // konstant linjär retardation (m/s^2)
 	aAng = 1.0f; // konstant angulär retardation (rad/s^2)
@@ -77,15 +67,9 @@ void RigidBody::applyRollingFriction(ColliderType colliderType, float dt) {
 	}
 }
 
-void RigidBody::applyAntistuckFriction(float dt) {
-	if (type == BodyType::Static ||
-		type == BodyType::Kinematic || 
-		motionControl == MotionControl::External || 
-		asleep)
-		return;
-
+void RigidBody::applyAntistuckFriction(float dt, SleepState& sleepState) {
 	// anti stuck for objects with high collision counts
-	bool avgCollisions = collisionHistory.average() > 3;
+	bool avgCollisions = sleepState.collisionHistory.average() > 3;
 	if (avgCollisions) {
 		linearVelocity = linearVelocity * std::pow(0.98f, dt);
 		angularVelocity = angularVelocity * std::pow(0.98f, dt);
@@ -132,7 +116,7 @@ void RigidBody::commitBiasImpulses(float dt) {
 //===============================================
 //     Asleep and awake
 //===============================================
-void RigidBody::setAsleep() {
+void RigidBody::setAsleep(SleepState& sleepState) {
 	if (type == BodyType::Static || type == BodyType::Kinematic) {
 		return;
 	}
@@ -142,19 +126,20 @@ void RigidBody::setAsleep() {
 	biasLinearVelocity = glm::vec3(0.0f);
 	biasAngularVelocity = glm::vec3(0.0f);
 
-	asleep = true;
-	sleepCounter = 0.0f;
+	sleepState.asleep = true;
+	sleepState.counter = 0.0f;
 
-	anchorTimer = 0.0f;
-	anchorPoint = pose.position;
+	sleepState.anchorTimer = 0.0f;
+	sleepState.anchorPoint = pose.position;
 }
 
-void RigidBody::setAwake() {
+
+void RigidBody::setAwake(SleepState& sleepState) {
 	if (type == BodyType::Static)
 		return;
 
-	asleep = false;
-	sleepCounter = 0.0f;
+	sleepState.asleep = false;
+	sleepState.counter = 0.0f;
 }
 
 //===============================================
@@ -168,8 +153,6 @@ void RigidBody::setStatic() {
 
 void RigidBody::setMotionControl(MotionControl mode) {
 	motionControl = mode;
-	sleepCounter = 0.0f;
-	anchorTimer = 0.0f;
 }
 
 //===============================================

@@ -302,7 +302,14 @@ void NarrowphaseManager::processColliderPairSpeculative(
 //=======================================================
 void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
     RigidBody& body = physicsWorld->getBody(terrainPair.body);
-    if (body.asleep || body.type == BodyType::Kinematic) return;
+    if (body.type == BodyType::Kinematic) return;
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
+        if (sleepState.asleep) {
+            return;
+        }
+    }
 
     // per collider in body, collect candidate tris and send to SAT + collision manifold generation
     for (const ColliderHandle& colH : body.colliderHandles) {
@@ -347,8 +354,15 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
 {
     RigidBody& body = physicsWorld->getBody(pair.body);
 
-    if (body.asleep || body.type == BodyType::Kinematic) {
+    if (body.type == BodyType::Kinematic) {
         return;
+    }
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
+        if (sleepState.asleep) {
+            return;
+        }
     }
 
     for (const ColliderHandle& colH : body.colliderHandles) {

@@ -6,6 +6,8 @@
 
 #include "physics/public/handles.h"
 #include "physics/bodies/rigidbody.h"
+#include "physics/bodies/motion_state.h"
+#include "physics/bodies/sleep_state.h"
 #include "physics/colliders/collider.h"
 
 namespace physics::internal {
@@ -21,7 +23,7 @@ public:
     void releaseBodyReservation(BodyHandle handle);
     void releaseColliderReservation(ColliderHandle handle);
 
-    // Commit to active storage
+    // Commit creation
     RigidBody* commitBody(
         BodyHandle handle,
         RigidBody&& body);
@@ -30,14 +32,27 @@ public:
         ColliderHandle handle,
         Collider&& collider);
 
+    MotionStateHandle commitMotionState(
+        MotionState&& motionState);
+
+    SleepStateHandle commitSleepState(
+        SleepState&& sleepState);
+
     // Active deletion
     void destroyBody(BodyHandle handle);
+    void destroyMotionState(MotionStateHandle handle);
+    void destroySleepState(SleepStateHandle handle);
     void destroyCollider(ColliderHandle handle);
 
     // Active lookup only
     RigidBody& getBody(BodyHandle handle);
     RigidBody* tryGetBody(BodyHandle handle);
     const RigidBody* tryGetBody(BodyHandle handle) const;
+
+    MotionState& getMotionState(MotionStateHandle handle);
+    const MotionState& getMotionState(MotionStateHandle handle) const;
+    SleepState& getSleepState(SleepStateHandle handle);
+    const SleepState& getSleepState(SleepStateHandle handle) const;
 
     Collider& getCollider(ColliderHandle handle);
     Collider* tryGetCollider(ColliderHandle handle);
@@ -47,6 +62,12 @@ public:
     SlotMap<RigidBody, BodyHandle>& bodyStorage();
     const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
 
+    SlotMap<MotionState, MotionStateHandle> motionStatesStorage();
+    const SlotMap<MotionState, MotionStateHandle> motionStatesStorage() const;
+
+    SlotMap<SleepState, SleepStateHandle> sleepStatesStorage();
+    const SlotMap<SleepState, SleepStateHandle> sleepStatesStorage() const;
+
     SlotMap<Collider, ColliderHandle>& colliderStorage();
     const SlotMap<Collider, ColliderHandle>& colliderStorage() const;
 
@@ -55,7 +76,9 @@ public:
 private:
     int colliderId = 0;
     int rigidBodyId = 0;
-    SlotMap<RigidBody, BodyHandle> bodies{"RigidBody"};
-    SlotMap<Collider, ColliderHandle> colliders{"Collider"};
+    SlotMap<RigidBody, BodyHandle> bodies{ "RigidBody" };
+    SlotMap<MotionState, MotionStateHandle> motionStates{ "MotionState" };
+    SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
+    SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
 };
 }

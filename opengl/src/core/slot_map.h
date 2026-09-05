@@ -58,10 +58,6 @@ public:
         return Id{ slot, slotGen[slot] };
     }
 
-    uint32_t slot_capacity() const {
-        return static_cast<uint32_t>(slotGen.size());
-    }
-
     template<class... Args>
     Id create(Args&&... args) {
         Id handle = reserve();
@@ -131,6 +127,14 @@ public:
 
     const std::vector<T>& dense() const {
         return denseStorage;
+    }
+
+    uint32_t slot_capacity() const {
+        return static_cast<uint32_t>(slotGen.size());
+    }
+
+    uint32_t size() const {
+        return static_cast<uint32_t>(denseStorage.size());
     }
 
     void clear() {

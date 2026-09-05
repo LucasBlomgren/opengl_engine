@@ -47,13 +47,10 @@ BodyHandle Engine::createRigidBody(
     body.type = desc.type;
     body.motionControl = desc.motionControl;
     body.responseMode = desc.responseMode;
+
     body.linearVelocity = desc.linearVelocity;
     body.angularVelocity = desc.angularVelocity;
     body.allowGravity = desc.allowGravity;
-    body.allowSleep = desc.allowSleep;
-    body.asleep = desc.startAsleep;
-    body.sleepCounterThreshold = desc.sleepCounterThreshold;
-    body.anchorPoint = desc.pose.position;
 
     const float radius = 0.5f * glm::length(desc.scale);
     body.invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
@@ -65,6 +62,26 @@ BodyHandle Engine::createRigidBody(
     else {
         body.mass = 0.0f;
         body.invMass = 0.0f;
+    }
+
+    // Commit motion and sleep states for dynamic bodies
+    if (desc.type == BodyType::Dynamic) {
+        MotionState motionState;
+        motionState.mass = body.mass;
+        motionState.radius = radius;
+        motionState.invRadius = body.invRadius;
+        motionState.linearVelocity = desc.linearVelocity;
+        motionState.angularVelocity = desc.angularVelocity;
+        motionState.allowGravity = desc.allowGravity;
+
+        SleepState sleepState;
+        sleepState.allowSleep = desc.allowSleep;
+        sleepState.asleep = desc.startAsleep;
+        sleepState.counterThreshold = desc.sleepCounterThreshold;
+        sleepState.anchorPoint = desc.pose.position;
+
+        body.motionStateHandle = physicsWorld.commitMotionState(std::move(motionState));
+        body.sleepStateHandle = physicsWorld.commitSleepState(std::move(sleepState));
     }
 
     commandBuffer.recordBodyCreate(bodyHandle, std::move(body));
@@ -203,7 +220,8 @@ bool Engine::setRigidBodySleepState(
         return false;
     }
 
-    if (!body->allowSleep /*||
+    const SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    if (!sleepState.allowSleep /*||
         body->motionControl == MotionControl::External*/) {
         return false;
     }

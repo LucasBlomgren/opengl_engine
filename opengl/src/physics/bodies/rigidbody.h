@@ -5,6 +5,8 @@
 #include "physics/public/physics_types.h"
 #include "physics/broadphase/rigidbody_types.h"
 #include "physics/colliders/collider.h"
+#include "physics/bodies/motion_state.h"
+#include "physics/bodies/sleep_state.h"
 
 namespace physics::internal {
 
@@ -20,6 +22,9 @@ public:
     // lokala transform är centrerade runt COM
 
     Pose pose;
+
+    MotionStateHandle motionStateHandle;
+    SleepStateHandle sleepStateHandle;
 
     // #TODO: ta bort scale helt från fysiken,
     // scale behövs bara initialt för att bakea en 
@@ -37,6 +42,11 @@ public:
     //==============================
     // physics
     //=============================
+    float mass = 0.0f;
+    float invMass = 0.0f;
+    float radius = 0.0f;
+    float invRadius = 0.0f;
+    bool allowGravity = true;
     uint32_t lastBiasCommitFrame = 0;
     glm::vec3 linearVelocity{ 0.0f };
     glm::vec3 angularVelocity{ 0.0f };
@@ -44,37 +54,6 @@ public:
     glm::vec3 biasAngularVelocity{ 0.0f };
     glm::mat3 invInertiaLocal{ 0.0f };
     glm::mat3 invInertiaWorld{ 0.0f };
-    float mass = 0.0f;
-    float invMass = 0.0f;
-
-    bool allowGravity = true;
-    float radius = 0.0f;
-    float invRadius = 0.0f;
-
-    static constexpr glm::vec3 g = 
-        glm::vec3(0.0f, -9.81f, 0.0f);
-
-    //==============================
-    // sleep 
-    //==============================
-    bool asleep = false;
-    bool allowSleep = true;
-
-    // to avoid waking up immediately and 
-    // to not add duplicate wake-up requests
-    bool inSleepTransition = false;
-
-    float sleepCounter = 0;
-    float sleepCounterThreshold = 1.5f;
-    float velocityThreshold = 0;
-    float angularVelocityThreshold = 0;
-    float anchorTimer = 0.0f;
-    glm::vec3 anchorPoint{ 0.0f };
-    int totalCollisionCount = 0;
-    float lastAvg = 0.0f;
-    RingBuffer collisionHistory;
-
-
     bool isCompound() const {
         return colliderHandles.size() > 1;
     }
@@ -86,8 +65,8 @@ public:
     void applyImpulseLinear(const glm::vec3& impulse);
     void applyImpulseAngular(const glm::vec3& impulse);
 
-    void setAsleep();
-    void setAwake();
+    void setAsleep(SleepState& sleepState);
+    void setAwake(SleepState& sleepState);
     void setStatic();
     void setMotionControl(MotionControl mode);
 
@@ -102,9 +81,9 @@ public:
     void updateInertiaWorld();
 
     void applyGravity(float dt);
-    void applyVelocityDamping(float dt);
-    void applyRollingFriction(ColliderType colliderType, float dt);
-    void applyAntistuckFriction(float dt);
+    void applyVelocityDamping(float dt, SleepState& sleepState);
+    void applyRollingFriction(ColliderType colliderType, float dt, SleepState& sleepState);
+    void applyAntistuckFriction(float dt, SleepState& sleepState);
 
     void calculateInverseInertia(
         const ColliderType& type,

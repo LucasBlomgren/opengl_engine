@@ -28,10 +28,6 @@ public:
 
     //   Build pairs for narrowphase
     void buildPairs(PairBatch& batch);
-    void buildPairsBruteForce(
-        const std::vector<BodyHandle>& bodies,
-        std::vector<DynamicPair>& outPairs
-    );
 
     void buildSpeculativePairs(
         float dt,
@@ -73,7 +69,7 @@ private:
     PhysicsWorld* world = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 
-    // lists of indices into dynamicObjects
+    // lists of handles
     std::vector<BodyHandle> awakeHandles;
     std::vector<BodyHandle> asleepHandles;
     std::vector<BodyHandle> staticHandles;

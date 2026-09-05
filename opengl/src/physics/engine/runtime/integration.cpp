@@ -24,12 +24,21 @@ void Engine::integrateForcesAndVelocities(
         Collider& mainCollider =
             physicsWorld.getCollider(body.colliderHandles[0]);
 
-        if (body.colliderHandles.size() == 1) {
-            body.applyRollingFriction(mainCollider.type, dt);
-        }
+        if (body.type == BodyType::Dynamic) 
+        {
+            SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+            if (sleepState.asleep || 
+                body.motionControl == MotionControl::External) {
+                continue;
+            }
 
-        body.applyVelocityDamping(dt);
-        body.applyGravity(dt);
+            if (body.colliderHandles.size() == 1) {
+                body.applyRollingFriction(mainCollider.type, dt, sleepState);
+            }
+
+            body.applyVelocityDamping(dt, sleepState);
+            body.applyGravity(dt);
+        }
     }
 }
 
@@ -42,6 +51,14 @@ void Engine::integratePositionsAndColliders(
 {
     for (const BodyHandle& bodyHandle : bodies) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
+
+        if (body.type == BodyType::Dynamic) {
+            SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+            if (sleepState.asleep ||
+                body.motionControl == MotionControl::External) {
+                continue;
+            }
+        }
 
         body.integratePose(dt);
         body.updateInertiaWorld();

@@ -7,7 +7,6 @@ namespace physics::internal {
 class Tri {
 public:
     int id = -1;
-    BroadphaseHandle broadphaseHandle;
     std::vector<glm::vec3> vertices{};
     std::vector<glm::vec3> edgeDirs{};
     std::vector<glm::vec3> edgePoints{};

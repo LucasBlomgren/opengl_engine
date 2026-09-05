@@ -10,10 +10,9 @@ namespace WakeSleep
     // velocities and sleep states.
     //========================================================================
     WakeUpInfo computeWakeUpInfo(
+        PhysicsWorld& world,
         const RigidBody& A,
-        const RigidBody& B,
-        float velocityThreshold,
-        float angularThreshold)
+        const RigidBody& B)
     {
         const float v2 = velocityThreshold * velocityThreshold;
         const float w2 = angularThreshold * angularThreshold;
@@ -28,16 +27,24 @@ namespace WakeSleep
         // If body A is asleep and allowed to sleep,
         // check if body B's velocities exceed the thresholds.
         // If so, mark body A to be woken up.
-        if (A.asleep && A.type != BodyType::Static && A.allowSleep) {
-            if (Bv2 > v2 || Bw2 > w2) {
-                info.A = true;
+        if (A.type == BodyType::Dynamic) {
+            SleepState& sleepA = world.getSleepState(A.sleepStateHandle);
+
+            if (sleepA.asleep && sleepA.allowSleep) {
+                if (Bv2 > v2 || Bw2 > w2) {
+                    info.A = true;
+                }
             }
         }
 
         // Same logic for body B: if it's asleep and allowed to sleep,
-        if (B.asleep && B.type != BodyType::Static && B.allowSleep) {
-            if (Av2 > v2 || Aw2 > w2) {
-                info.B = true;
+        if (B.type == BodyType::Dynamic) {
+            SleepState& sleepB = world.getSleepState(B.sleepStateHandle);
+
+            if (sleepB.asleep && sleepB.allowSleep) {
+                if (Av2 > v2 || Aw2 > w2) {
+                    info.B = true;
+                }
             }
         }
 
@@ -51,75 +58,129 @@ namespace WakeSleep
     // to the toWake vector and marks them as in sleep transition.
     //========================================================================
     void enqueueWakeRequests(
+        PhysicsWorld& world,
         const WakeUpInfo& info,
-        RigidBody& A, RigidBody& B,
+        RigidBody& A, 
+        RigidBody& B,
         const BodyHandle& handleA,
         const BodyHandle& handleB,
         std::vector<BodyHandle>& toWake)
     {
-        if (info.A && !A.inSleepTransition) {
-            toWake.push_back(handleA);
-            A.inSleepTransition = true;
+        if (A.type == BodyType::Dynamic) {
+            SleepState& sleepA = world.getSleepState(A.sleepStateHandle);
+            if (info.A && !sleepA.inSleepTransition) {
+                toWake.push_back(handleA);
+                sleepA.inSleepTransition = true;
+            }
+
         }
 
-        if (info.B && !B.inSleepTransition) {
-            toWake.push_back(handleB);
-            B.inSleepTransition = true;
+        if (B.type == BodyType::Dynamic) {
+            SleepState& sleepB = world.getSleepState(B.sleepStateHandle);
+            if (info.B && !sleepB.inSleepTransition) {
+                toWake.push_back(handleB);
+                sleepB.inSleepTransition = true;
+            }
         }
+    }
+
+    //========================================================================
+    // Calculate sleep thresholds for a rigid body based on its collision history.
+    // This function returns a pair of linear and angular velocity thresholds
+    // or std::nullopt if the body is asleep, not allowed to sleep, or not dynamic.
+    //========================================================================
+    std::optional<std::pair<float, float>> calculateSleepThresholds(
+        RigidBody& body, 
+        SleepState& sleepState) 
+    {
+        sleepState.collisionHistory.push(sleepState.collisionCount);
+        sleepState.collisionCount = 0;
+        float avg = sleepState.collisionHistory.average();
+
+        if (avg <= 0.0f) {
+            if (std::abs(avg - sleepState.lastAvg) >= 1) {
+                sleepState.counter = 0.0f;
+            }
+            sleepState.lastAvg = avg;
+
+            return std::nullopt;
+        }
+
+        avg = std::max(avg, 1.0f);
+        sleepState.lastAvg = avg;
+
+        constexpr float linearFactor = 0.2f;
+        constexpr float angularFactor = 0.1f;
+
+        // set thresholds
+        float linearVelocityThreshold = avg * linearFactor;
+        float angularVelocityThreshold = avg * angularFactor * body.invRadius;
+
+        return std::pair<float, float>(linearVelocityThreshold, angularVelocityThreshold);
     }
 
     //========================================================================
     // Update the sleep state of a rigid body and check if it should
     // go to sleep based on its velocity and anchor point.
     //========================================================================
-    bool updateSleepStateAndCheckIfShouldSleep(
+    bool updateSleepState(
+        PhysicsWorld& world,
         RigidBody& body,
-        float dt,
-        float jitterThreshold,
-        float anchorTimerThreshold)
+        float dt)
     {
         bool goingToSleep = false;
+
+        SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
 
         // Sleep check based on anchor point:
         // if the body is staying close to the anchor point, increment the
         // anchor timer.
         // Example: even if the body is moving fast, but is stuck somewhere,
         // it will eventually go to sleep.
-        if (glm::abs(body.anchorPoint.x - body.pose.position.x) < jitterThreshold &&
-            glm::abs(body.anchorPoint.y - body.pose.position.y) < jitterThreshold &&
-            glm::abs(body.anchorPoint.z - body.pose.position.z) < jitterThreshold)
+        if (glm::abs(sleepState.anchorPoint.x - body.pose.position.x) < jitterThreshold &&
+            glm::abs(sleepState.anchorPoint.y - body.pose.position.y) < jitterThreshold &&
+            glm::abs(sleepState.anchorPoint.z - body.pose.position.z) < jitterThreshold)
         {
-            body.anchorTimer += dt;
+            sleepState.anchorTimer += dt;
         }
         else {
-            body.anchorTimer = glm::max(0.0f, body.anchorTimer - dt);
+            sleepState.anchorTimer = glm::max(0.0f, sleepState.anchorTimer - dt);
         }
 
-        if (body.anchorTimer == 0.0f) {
-            body.anchorPoint = body.pose.position;
+        if (sleepState.anchorTimer == 0.0f) {
+            sleepState.anchorPoint = body.pose.position;
         }
 
-        if (body.anchorTimer >= anchorTimerThreshold) {
+        if (sleepState.anchorTimer >= anchorTimerThreshold) {
             goingToSleep = true;
+            return goingToSleep;
         }
 
         // Sleep check based on velocity thresholds:
         // if the body is moving slowly, increment the sleep counter.
-        if (glm::length(body.linearVelocity) < body.velocityThreshold &&
-            glm::length(body.angularVelocity) < body.angularVelocityThreshold)
-        {
-            body.sleepCounter += dt;
-        }
-        else {
-            body.sleepCounter = 0.0f;
+        std::optional<std::pair<float, float>> thresholds = calculateSleepThresholds(body, sleepState);
+        if (!thresholds) {
+            return goingToSleep;
         }
 
-        if (body.sleepCounter >= body.sleepCounterThreshold) {
+        float linearVelocityThreshold = thresholds->first;
+        float angularVelocityThreshold = thresholds->second;
+
+        if (glm::length(body.linearVelocity) < linearVelocityThreshold &&
+            glm::length(body.angularVelocity) < angularVelocityThreshold)
+        {
+            sleepState.counter += dt;
+        }
+        else {
+            sleepState.counter = 0.0f;
+        }
+
+        if (sleepState.counter >= sleepState.counterThreshold) {
             goingToSleep = true;
         }
 
         return goingToSleep;
     }
-}
 
+}
 }

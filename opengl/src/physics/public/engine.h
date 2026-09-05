@@ -192,7 +192,6 @@ private:
     void processWakeList();
     void processSleepList(float outerDt);
     void decideSleep();
-    void updateSleepThresholds();
     void addSleepDamping();
 
     void processPendingCommands();

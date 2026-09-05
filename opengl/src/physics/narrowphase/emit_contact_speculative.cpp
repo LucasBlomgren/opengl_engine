@@ -141,6 +141,7 @@ void NarrowphaseManager::emitSpeculativeContact(
 {
     const bool isRigidA = a.body != nullptr;
 
+    // b == nullptr -> terrain contact
     const bool isRigidB =
         partnerTypeB == ContactPartnerType::RigidBody &&
         b != nullptr &&
@@ -150,11 +151,13 @@ void NarrowphaseManager::emitSpeculativeContact(
         return;
     }
 
-    if (isRigidA) {
-        a.body->totalCollisionCount++;
+    if (isRigidA && a.body->type == BodyType::Dynamic) {
+        SleepState& sleepA = physicsWorld->getSleepState(a.body->sleepStateHandle);
+        sleepA.collisionCount++;
     }
-    if (isRigidB) {
-        b->body->totalCollisionCount++;
+    if (isRigidB && b->body->type == BodyType::Dynamic) {
+        SleepState& sleepB = physicsWorld->getSleepState(b->body->sleepStateHandle);
+        sleepB.collisionCount++;
     }
 
     bool wakeA = false;
@@ -163,9 +166,10 @@ void NarrowphaseManager::emitSpeculativeContact(
     // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
     if (isRigidA && isRigidB) {
         WakeSleep::WakeUpInfo wakeInfo =
-            WakeSleep::computeWakeUpInfo(*a.body, *b->body);
+            WakeSleep::computeWakeUpInfo(*physicsWorld, *a.body, *b->body);
 
         WakeSleep::enqueueWakeRequests(
+            *physicsWorld,
             wakeInfo,
             *a.body,
             *b->body,

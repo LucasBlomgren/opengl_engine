@@ -226,7 +226,6 @@ void Engine::endPhysicsStep(float outerDt) {
 
     processWakeList();
     addSleepDamping();
-    updateSleepThresholds();
     processSleepList(outerDt);
     updateContactCache();
 

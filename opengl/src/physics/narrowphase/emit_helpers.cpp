@@ -2,31 +2,49 @@
 
 namespace physics::internal {
 
-//=======================================================
-//     Compute contributes motion
-//=======================================================
 bool NarrowphaseManager::computeContributesMotion(
     ContactPartnerType partnerType,
     const RigidBody& body,
     bool willWake) const
 {
-    return
-        partnerType == ContactPartnerType::RigidBody &&
-        (
-            body.type == BodyType::Kinematic ||
-            (body.type == BodyType::Dynamic && (!body.asleep || willWake))
-            );
+    if (partnerType == ContactPartnerType::Terrain ||
+        body.type == BodyType::Static) {
+        return false;
+    }
+
+    if (body.type == BodyType::Kinematic) {
+        return true;
+    }
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
+
+        if (!sleepState.asleep || willWake) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool NarrowphaseManager::computeNoSolverResponse(
     const RigidBody& body,
     bool willWake) const
 {
-    return
-        body.motionControl == MotionControl::External ||
+    if (body.motionControl == MotionControl::External ||
         body.type == BodyType::Static ||
-        body.type == BodyType::Kinematic ||
-        (body.type == BodyType::Dynamic && body.asleep && !willWake);
-}
+        body.type == BodyType::Kinematic)
+        return true;
 
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
+
+        if (sleepState.asleep && !willWake) {
+            return true;
+        }
+    }
+
+    return false;
+}
 }
