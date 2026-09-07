@@ -233,6 +233,14 @@ void SleepManager::processSleepCandidates(
         if (sleepState.asleep) continue;
         if (!sleepState.allowSleep) continue;
 
+        // Update collision history
+        sleepState.collisionHistory.push(sleepState.collisionCount);
+        sleepState.collisionCount = 0;
+
+        if (sleepState.getCollisionHistoryAverage() <= 0.0f) {
+            continue;
+        }
+
         // Sleep check based on anchor point:
         // if the body is staying close to the anchor point, increment the
         // anchor timer.
@@ -288,9 +296,6 @@ std::optional<std::pair<float, float>> SleepManager::calculateSleepThresholds(
     RigidBody& body,
     SleepState& sleepState)
 {
-    sleepState.collisionHistory.push(sleepState.collisionCount);
-    sleepState.collisionCount = 0;
-
     float avg = sleepState.collisionHistory.average();
 
     if (avg <= 0.0f) {

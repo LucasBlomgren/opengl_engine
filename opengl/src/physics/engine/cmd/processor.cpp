@@ -517,27 +517,23 @@ void Processor::applyCommand(
     const Buffer::SleepAllObjects&,
     float)
 {
-    auto& bodyStorage = physicsWorld.bodyStorage();
-    auto& denseBodies = bodyStorage.dense();
+    const std::vector<BodyHandle>& awakeHandles = 
+        broadphaseManager.getAwakeList();
 
-    for (uint32_t i = 0;
-         i < static_cast<uint32_t>(denseBodies.size());
-         ++i) {
-        RigidBody& body = denseBodies[i];
+    for (const BodyHandle& bodyHandle : awakeHandles) {
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
 
-        if (body.type == BodyType::Static || 
-            body.type == BodyType::Kinematic) 
-            continue;
-
-        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-        if (sleepState.isAsleep()) continue;
-
-        if (body.colliderHandles.empty()) {
+        if (body.type == BodyType::Kinematic ||
+            body.colliderHandles.empty()) {
             continue;
         }
 
-        broadphaseManager.moveToAsleep(
-            bodyStorage.handle_from_dense_index(i)
+        SleepState& sleepState = 
+            physicsWorld.getSleepState(body.sleepStateHandle);
+
+        sleepManager.sleepBody(
+            bodyHandle,
+            sleepState
         );
     }
 }
@@ -546,27 +542,23 @@ void Processor::applyCommand(
     const Buffer::AwakenAllObjects&,
     float)
 {
-    auto& bodyStorage = physicsWorld.bodyStorage();
-    auto& denseBodies = bodyStorage.dense();
+    const std::vector<BodyHandle>& asleepHandles =
+        broadphaseManager.getAsleepList();
 
-    for (uint32_t i = 0;
-         i < static_cast<uint32_t>(denseBodies.size());
-         ++i) {
-        RigidBody& body = denseBodies[i];
-
-        if (body.type == BodyType::Static ||
-            body.type == BodyType::Kinematic)
-            continue;
-
-        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-        if (!sleepState.isAsleep()) continue;
+    for (const BodyHandle& bodyHandle : asleepHandles) {
+        RigidBody& body = physicsWorld.getBody(bodyHandle);
 
         if (body.colliderHandles.empty()) {
             continue;
         }
 
-        broadphaseManager.moveToAwake(
-            bodyStorage.handle_from_dense_index(i)
+        SleepState& sleepState =
+            physicsWorld.getSleepState(body.sleepStateHandle);
+
+        sleepManager.wakeBody(
+            bodyHandle,
+            body,
+            sleepState
         );
     }
 }

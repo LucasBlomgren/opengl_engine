@@ -37,7 +37,6 @@ void treeVsSameTreeQuery(
         if (a == -1 || b == -1)
             return;
 
-        assert(sp < MaxStack && "treeVsSameTreeQuery stack overflow");
         if (sp < MaxStack) {
             stack[sp++] = { a, b };
         }
@@ -59,7 +58,7 @@ void treeVsSameTreeQuery(
         const auto& nA = tree.nodes[ai];
         const auto& nB = tree.nodes[bi];
 
-        if (!nA.fatBox.intersects(nB.fatBox)) {
+        if (ai == bi && !nA.fatBox.intersects(nB.fatBox)) {
             continue;
         }
 

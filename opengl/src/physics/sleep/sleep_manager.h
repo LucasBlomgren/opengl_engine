@@ -34,12 +34,13 @@ private:
     PhysicsWorld& world;
     BroadphaseManager& broadphase;
 
-
     struct WakeMotion {
         float v2 = 0.0f;
         float w2 = 0.0f;
         bool valid = false;
     };
+
+    std::vector<WakeMotion> wakeMotionBySlot;
 
     bool shouldWake(
         const SleepState& sleepState,
@@ -53,8 +54,6 @@ private:
     std::optional<std::pair<float, float>> calculateSleepThresholds(
         RigidBody& body,
         SleepState& sleepState);
-
-    std::vector<WakeMotion> wakeMotionBySlot;
 
     const float velocityThreshold = 0.4f;
     const float angularThreshold = 0.2f;

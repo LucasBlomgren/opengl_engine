@@ -79,14 +79,6 @@ void Engine::step(float dt, EngineState& engine) {
         frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
     );
 
-    //// BVH update
-    //start = glfwGetTime() * 1000.0;
-    //broadphaseManager.updateBVHs();
-    //frameTimers->submit(
-    //    "BVH update", 
-    //    frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-    //);
-
     // Broadphase
     start = glfwGetTime() * 1000.0;
     pairBatch.clear();
@@ -122,15 +114,14 @@ void Engine::step(float dt, EngineState& engine) {
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // Contact sort 
+    // Contact sort & sleep processing 
     start = glfwGetTime() * 1000.0;
     contactBatch.sortByMinY();
+    sleepManager.processContactWakeUps(contactBatch);
     frameTimers->submit(
-        "Contact collection", 
+        "Contact collection",
         frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
     );
-
-    sleepManager.processContactWakeUps(contactBatch);
 
     // Solver
     start = glfwGetTime() * 1000.0;
@@ -142,7 +133,14 @@ void Engine::step(float dt, EngineState& engine) {
 
     // Debug pause before position integration
     if (engine.isPaused()) {
+        start = glfwGetTime() * 1000.0;
+
         broadphaseManager.updateBVHs();
+
+        frameTimers->submit(
+            "BVH update",
+            frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+        );
 
         debugPhase = physics::debug::StepPhase::PausedBeforePositionIntegration;
         savedPhysicsSurpassedTime = glfwGetTime() * 1000.0 - physicsStart;
