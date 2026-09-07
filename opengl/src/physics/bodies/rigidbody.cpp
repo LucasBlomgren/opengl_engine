@@ -33,7 +33,7 @@ void RigidBody::applyVelocityDamping(float dt, SleepState& sleepState) {
 
     // only apply damping if there have been recent collisions,
     // no air resistance when flying freely
-	if (sleepState.collisionHistory.average() > epsilon) {
+	if (sleepState.getCollisionHistoryAverage() > epsilon) {
         linearVelocity *= std::pow(0.98f, dt);
         angularVelocity *= std::pow(0.98f, dt);
     }
@@ -45,7 +45,7 @@ void RigidBody::applyRollingFriction(ColliderType colliderType, float dt, SleepS
 
 	float aLin;
 	float aAng;
-	bool avgCollisions = sleepState.collisionHistory.average() > 0;
+	bool avgCollisions = sleepState.getCollisionHistoryAverage() > 0;
 
 	aLin = 0.1f; // konstant linjär retardation (m/s^2)
 	aAng = 1.0f; // konstant angulär retardation (rad/s^2)
@@ -67,7 +67,7 @@ void RigidBody::applyRollingFriction(ColliderType colliderType, float dt, SleepS
 
 void RigidBody::applyAntistuckFriction(float dt, SleepState& sleepState) {
 	// anti stuck for objects with high collision counts
-	bool avgCollisions = sleepState.collisionHistory.average() > 3;
+	bool avgCollisions = sleepState.getCollisionHistoryAverage() > 3;
 	if (avgCollisions) {
 		linearVelocity = linearVelocity * std::pow(0.98f, dt);
 		angularVelocity = angularVelocity * std::pow(0.98f, dt);

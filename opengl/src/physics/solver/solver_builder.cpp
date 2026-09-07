@@ -17,10 +17,10 @@ bool PGSSolver::computeContributesMotion(
     }
 
     if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState =
+        const SleepState& sleepState =
             physicsWorld->getSleepState(body.sleepStateHandle);
 
-        if (!sleepState.asleep) {
+        if (!sleepState.isAsleep()) {
             return true;
         }
     }
@@ -34,10 +34,10 @@ bool PGSSolver::computeNoSolverResponse(
         return true;
 
     if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState =
+        const SleepState& sleepState =
             physicsWorld->getSleepState(body.sleepStateHandle);
 
-        if (sleepState.asleep) {
+        if (sleepState.isAsleep()) {
             return true;
         }
     }

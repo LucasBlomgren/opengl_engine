@@ -73,11 +73,11 @@ BodyHandle Engine::createRigidBody(
         motionState.angularVelocity = desc.angularVelocity;
         motionState.allowGravity = desc.allowGravity;
 
-        SleepState sleepState;
-        sleepState.allowSleep = desc.allowSleep;
-        sleepState.asleep = desc.startAsleep;
-        sleepState.counterThreshold = desc.sleepCounterThreshold;
-        sleepState.anchorPoint = desc.pose.position;
+        SleepState sleepState {
+            desc.allowSleep, 
+            desc.startAsleep, 
+            desc.pose.position
+        };
 
         body.motionStateHandle = 
             physicsWorld.commitMotionState(std::move(motionState));
@@ -223,8 +223,8 @@ bool Engine::setRigidBodySleepState(
 
     const SleepState& sleepState = 
         physicsWorld.getSleepState(body->sleepStateHandle);
-    if (!sleepState.allowSleep /*||
-        body->motionControl == MotionControl::External*/) {
+
+    if (!sleepState.canSleep()) {
         return false;
     }
 

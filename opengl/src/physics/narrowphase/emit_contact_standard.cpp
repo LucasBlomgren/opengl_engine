@@ -19,15 +19,6 @@ void NarrowphaseManager::emitRigidContact(
         return;
     }
 
-    if (a.body->type == BodyType::Dynamic) {
-        SleepState& sleepA = physicsWorld->getSleepState(a.body->sleepStateHandle);
-        sleepA.collisionCount++;
-    }
-    if (b.body->type == BodyType::Dynamic) {
-        SleepState& sleepB = physicsWorld->getSleepState(b.body->sleepStateHandle);
-        sleepB.collisionCount++;
-    }
-
     ContactRuntime runtimeData = makeRuntimeData(
         a.body,
         b.body,

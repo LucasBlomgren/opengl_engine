@@ -29,7 +29,7 @@ BroadphaseBucket getBodyBucket(
     if (body.type == BodyType::Dynamic) {
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
 
-        if (sleepState.asleep) {
+        if (sleepState.isAsleep() && sleepState.canSleep()) {
             return BroadphaseBucket::Asleep;
         }
     }
@@ -243,7 +243,7 @@ void Processor::applyCommand(
 
     SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
 
-    if (sleepState.asleep) {
+    if (sleepState.isAsleep() && sleepState.canSleep()) {
         broadphaseManager.moveToAwake(command.body);
     }
 
@@ -326,7 +326,7 @@ void Processor::applyCommand(
     }
 
     SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
-    if (!sleepState.allowSleep) {
+    if (!sleepState.canSleep()) {
         return;
     }
 
@@ -359,12 +359,8 @@ void Processor::applyCommand(
 
         body->invMass = 1.0f / body->mass;
 
-        SleepState& sleepState =
-            physicsWorld.getSleepState(body->sleepStateHandle);
-
-        if (sleepState.counterThreshold <= 0.0f) {
-            sleepState.counterThreshold = 1.5f;
-        }
+        SleepState& sleepState = 
+            sleepManager.ensureSleepState(command.body);
 
         refreshBodyInertia(*body);
         sleepManager.wakeBody(command.body, *body, sleepState);
@@ -441,10 +437,7 @@ void Processor::applyCommand(
         return;
     }
 
-    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
-    sleepState.counter = 0.0f;
-    sleepState.anchorTimer = 0.0f;
-    sleepState.allowSleep = command.allowSleep;
+    sleepManager.setBodyAllowSleep(command.body, command.allowSleep);
 }
 
 //================================================
@@ -537,7 +530,7 @@ void Processor::applyCommand(
             continue;
 
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-        if (sleepState.asleep) continue;
+        if (sleepState.isAsleep()) continue;
 
         if (body.colliderHandles.empty()) {
             continue;
@@ -566,7 +559,7 @@ void Processor::applyCommand(
             continue;
 
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-        if (!sleepState.asleep) continue;
+        if (!sleepState.isAsleep()) continue;
 
         if (body.colliderHandles.empty()) {
             continue;

@@ -130,10 +130,9 @@ void NarrowphaseManager::processTerrainTriBox(
         return;
     }
 
-    if (body->type == BodyType::Kinematic) return;
-
-    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
-    sleepState.collisionCount++;
+    if (body->type == BodyType::Kinematic) {
+        return;
+    }
 
     SAT::findBestTriangles(SAT_resultsList);
 
@@ -223,10 +222,9 @@ void NarrowphaseManager::processTerrainTriSphere(
         return;
     }
 
-    if (body->type == BodyType::Kinematic) return;
-
-    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
-    sleepState.collisionCount++;
+    if (body->type == BodyType::Kinematic) {
+        return;
+    }
 
     SAT::findBestTriangles(SAT_resultsList);
 

@@ -53,6 +53,7 @@ public:
     const MotionState& getMotionState(MotionStateHandle handle) const;
     SleepState& getSleepState(SleepStateHandle handle);
     const SleepState& getSleepState(SleepStateHandle handle) const;
+    SleepState* tryGetSleepState(SleepStateHandle handle);
 
     Collider& getCollider(ColliderHandle handle);
     Collider* tryGetCollider(ColliderHandle handle);

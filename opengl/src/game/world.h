@@ -36,7 +36,6 @@ struct GameObjectDesc {
     physics::BodyType bodyType = physics::BodyType::Dynamic;
     bool reportContacts = false;
     float mass = 1.0f;
-    float sleepCounterThreshold = 1.5f;
     bool asleep = false;
     bool allowSleep = true;
     bool allowGravity = true;

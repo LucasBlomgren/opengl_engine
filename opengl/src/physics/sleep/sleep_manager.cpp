@@ -15,6 +15,37 @@ SleepManager::SleepManager(
 {}
 
 //=====================================================
+//  Ensure that a body has a sleep state, 
+//  creating one if necessary
+//=====================================================
+SleepState& SleepManager::ensureSleepState(BodyHandle handle) {
+    RigidBody& body = world.getBody(handle);
+
+    SleepState* sleepStatePtr =
+        world.tryGetSleepState(body.sleepStateHandle);
+
+    SleepStateHandle sleepStateHandle;
+
+    if (sleepStatePtr) {
+        sleepStateHandle = body.sleepStateHandle;
+    }
+    else {
+        SleepState newSleepState(
+            true, // allow sleep
+            true, // start awake
+            body.pose.position // anchor point
+        );
+
+        sleepStateHandle =
+            world.commitSleepState(std::move(newSleepState));
+
+        body.sleepStateHandle = sleepStateHandle;
+    }
+
+    return world.getSleepState(sleepStateHandle);
+}
+
+//=====================================================
 //  Wake up a body and move it to awake in broadphase
 //=====================================================
 void SleepManager::wakeBody(
@@ -36,7 +67,7 @@ void SleepManager::wakeBody(
 }
 
 //=====================================================
-//  Put a body to sleep and move it to asleep in broadphase
+//  Sleep a body and move it to asleep in broadphase
 //=====================================================
 void SleepManager::sleepBody(
     const BodyHandle handle,
@@ -63,11 +94,33 @@ void SleepManager::sleepBody(
 }
 
 //=====================================================
+//  Set whether a body is allowed to sleep
+//=====================================================
+void SleepManager::setBodyAllowSleep(
+    const BodyHandle handle,
+    bool allowSleep)
+{
+    RigidBody& body = world.getBody(handle);
+    SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
+    sleepState.allowSleep = allowSleep;
+
+    if (!allowSleep) {
+        wakeBody(handle, body, sleepState);
+    }
+}
+
+//=====================================================
 //  Process contact wake-ups
 //=====================================================
 void SleepManager::processContactWakeUps(
     const ContactBatch& batch)
 {
+    wakeMotionBySlot.assign(
+        world.bodyStorage().slot_capacity(),
+        WakeMotion{}
+    );
+
+    // Wake up bodies based on regular contacts
     for (const Contact* contact : batch.contacts) {
         if (!contact) {
             continue;
@@ -76,91 +129,93 @@ void SleepManager::processContactWakeUps(
         RigidBody* A = contact->runtimeData.bodyA;
         RigidBody* B = contact->runtimeData.bodyB;
 
-        // Terrain on B
-        if (!A || !B) {
-            continue;
-        }
+        // Only B is allowed to be null, as it can be a terrain contact
+        if (!A) continue;
 
-        SleepState* sleepA = nullptr;
-        SleepState* sleepB = nullptr;
-
+        // Body A is dynamic, check if it should wake up due to contact with B
         if (A->type == BodyType::Dynamic) {
-            sleepA = &world.getSleepState(A->sleepStateHandle);
+            SleepState& sleepA = world.getSleepState(A->sleepStateHandle);
+
+            sleepA.collisionCount++;
+
+            if (B && shouldWake(sleepA, contact->bodyB, *B)) {
+                wakeBody(contact->bodyA, *A, sleepA);
+            }
         }
 
-        if (B->type == BodyType::Dynamic) {
-            sleepB = &world.getSleepState(B->sleepStateHandle);
-        }
+        // Body B is dynamic, check if it should wake up due to contact with A
+        if (B && B->type == BodyType::Dynamic) {
+            SleepState& sleepB = world.getSleepState(B->sleepStateHandle);
 
-        auto [wakeA, wakeB] = computeWakeUp(*A, *B, sleepA, sleepB);
+            sleepB.collisionCount++;
 
-        if (wakeA) {
-            wakeBody(contact->bodyA, *A, *sleepA);
-        }
-
-        if (wakeB) {
-            wakeBody(contact->bodyB, *B, *sleepB);
+            if (shouldWake(sleepB, contact->bodyA, *A)) {
+                wakeBody(contact->bodyB, *B, sleepB);
+            }
         }
     }
 
-    // Speculative contacts
+    // Wake up bodies based on speculative contacts
     for (const SpeculativeContact& contact :
         batch.speculativeContacts)
     {
         RigidBody* A = contact.bodyA;
         RigidBody* B = contact.bodyB;
 
-        // Terrain on one side
-        if (!A || !B) {
+        if (!A) {
             continue;
         }
 
-        SleepState* sleepA = nullptr;
-        SleepState* sleepB = nullptr;
-
+        // Body A is dynamic, check if it should wake up due to contact with B
         if (A->type == BodyType::Dynamic) {
-            sleepA = &world.getSleepState(A->sleepStateHandle);
+            SleepState& sleepA = world.getSleepState(A->sleepStateHandle);
+
+            if (B && shouldWake(sleepA, contact.bodyHandleB, *B)) {
+                wakeBody(contact.bodyHandleA, *A, sleepA);
+            }
         }
 
-        if (B->type == BodyType::Dynamic) {
-            sleepB = &world.getSleepState(B->sleepStateHandle);
-        }
+        if (B && B->type == BodyType::Dynamic) {
+            SleepState& sleepB =
+                world.getSleepState(B->sleepStateHandle);
 
-        auto [wakeA, wakeB] =
-            computeWakeUp(*A, *B, sleepA, sleepB);
-
-        if (wakeA) {
-            wakeBody(contact.bodyHandleA, *A, *sleepA);
-        }
-
-        if (wakeB) {
-            wakeBody(contact.bodyHandleB, *B, *sleepB);
+            // Body B is dynamic, check if it should wake up due to contact with A
+            if (shouldWake(sleepB, contact.bodyHandleA, *A)) {
+                wakeBody(contact.bodyHandleB, *B, sleepB);
+            }
         }
     }
 }
 
-std::pair<bool, bool> SleepManager::computeWakeUp(
-    const RigidBody& A,
-    const RigidBody& B,
-    const SleepState* sleepA,
-    const SleepState* sleepB)
+bool SleepManager::shouldWake(
+    const SleepState& sleepState,
+    BodyHandle otherHandle,
+    const RigidBody& otherBody)
 {
-    const float Av2 = glm::dot(A.linearVelocity, A.linearVelocity);
-    const float Aw2 = glm::dot(A.angularVelocity, A.angularVelocity);
-    const float Bv2 = glm::dot(B.linearVelocity, B.linearVelocity);
-    const float Bw2 = glm::dot(B.angularVelocity, B.angularVelocity);
+    if (!sleepState.asleep) {
+        return false;
+    }
 
-    bool wakeA =
-        sleepA &&
-        sleepA->asleep &&
-        (Bv2 > v2_threshold || Bw2 > w2_threshold);
+    const WakeMotion& motion =
+        getWakeMotion(otherHandle, otherBody);
 
-    bool wakeB =
-        sleepB &&
-        sleepB->asleep &&
-        (Av2 > v2_threshold || Aw2 > w2_threshold);
+    return motion.v2 > v2_threshold ||
+           motion.w2 > w2_threshold;
+}
 
-    return { wakeA, wakeB };
+const SleepManager::WakeMotion& SleepManager::getWakeMotion(
+    BodyHandle handle,
+    const RigidBody& body)
+{
+    WakeMotion& motion = wakeMotionBySlot[handle.slot];
+
+    if (!motion.valid) {
+        motion.v2 = glm::dot(body.linearVelocity, body.linearVelocity);
+        motion.w2 = glm::dot(body.angularVelocity, body.angularVelocity);
+        motion.valid = true;
+    }
+
+    return motion;
 }
 
 //=====================================================
@@ -235,6 +290,7 @@ std::optional<std::pair<float, float>> SleepManager::calculateSleepThresholds(
 {
     sleepState.collisionHistory.push(sleepState.collisionCount);
     sleepState.collisionCount = 0;
+
     float avg = sleepState.collisionHistory.average();
 
     if (avg <= 0.0f) {
@@ -262,7 +318,9 @@ std::optional<std::pair<float, float>> SleepManager::calculateSleepThresholds(
 //=====================================================
 //  Add sleep damping to bodies that are close to going to sleep
 //=====================================================
-void SleepManager::applySleepDamping(const std::vector<BodyHandle>& awakeHandles, float dt) 
+void SleepManager::applySleepDamping(
+    const std::vector<BodyHandle>& awakeHandles, 
+    float dt) 
 {
     for (const BodyHandle& handle : awakeHandles) {
         RigidBody& body = world.getBody(handle);
@@ -272,9 +330,9 @@ void SleepManager::applySleepDamping(const std::vector<BodyHandle>& awakeHandles
         SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
         if (sleepState.asleep) continue;
         if (!sleepState.allowSleep) continue;
-        if (sleepState.inSleepTransition) continue;
 
-        float sleepT = glm::clamp(sleepState.counter / sleepState.counterThreshold, 0.0f, 1.0f);
+        float sleepT = 
+            glm::clamp(sleepState.counter / sleepState.counterThreshold, 0.0f, 1.0f);
 
         // Smoothstep
         sleepT = sleepT * sleepT * (3.0f - 2.0f * sleepT);

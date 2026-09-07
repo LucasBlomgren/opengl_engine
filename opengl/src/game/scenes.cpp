@@ -115,7 +115,6 @@ void SceneBuilder::testFloorScene(int amount) {
 //            );
 //
 //            plank.allowSleep = true;
-//            plank.sleepCounterThreshold = 2.5f;
 //            plank.mass = 50.0f;
 //
 //            SubPartDesc part;
@@ -139,7 +138,6 @@ void SceneBuilder::testFloorScene(int amount) {
 //            box.name = "Box";
 //            box.rootTransformHandle = world.createTransform(glm::vec3(0 + i * 1.0f, 1.0f + j * 1.5f, 0 + k * 1.0f), glm::quat(), glm::vec3(1.0f,1.0f,1.0f));
 //            box.allowSleep = true;
-//            box.sleepCounterThreshold = 2.5f;
 //            box.mass = 1.0f;
 //
 //            SubPartDesc part;
@@ -842,8 +840,14 @@ void SceneBuilder::tallStructureScene() {
 
     // ----- staplar ----- 
     std::vector<glm::vec3> randomcolors = {
-    glm::vec3(randomRange(0, 255)/255.0f, randomRange(0, 255)/255.0f, randomRange(0, 255)/255.0f),
-    glm::vec3(randomRange(0, 255)/255.0f, randomRange(0, 255)/255.0f, randomRange(0, 255)/255.0f),
+        glm::vec3(
+            randomRange(0, 255)/255.0f, 
+            randomRange(0, 255)/255.0f, 
+            randomRange(0, 255)/255.0f),
+        glm::vec3(
+            randomRange(0, 255)/255.0f, 
+            randomRange(0, 255)/255.0f, 
+            randomRange(0, 255)/255.0f),
     };
 
     //std::vector<glm::vec3> randomcolors = {
@@ -865,7 +869,12 @@ void SceneBuilder::tallStructureScene() {
 
                         GameObjectDesc columnDesc;
                         columnDesc.name = "column";
-                        columnDesc.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), glm::vec3(1, 10, 1));
+                        columnDesc.rootTransformHandle = 
+                            world.createTransform(
+                                pos, 
+                                glm::quat(1, 0, 0, 0), 
+                                glm::vec3(1, 10, 1)
+                            );
                         columnDesc.mass = 10;
                         columnDesc.asleep = true;
                         SubPartDesc columnPart;
@@ -887,7 +896,12 @@ void SceneBuilder::tallStructureScene() {
 
                 GameObjectDesc floorDesc;
                 floorDesc.name = "floor";
-                floorDesc.rootTransformHandle = world.createTransform(pos, glm::quat(1, 0, 0, 0), glm::vec3(6, 1, 6));
+                floorDesc.rootTransformHandle = 
+                    world.createTransform(
+                        pos, 
+                        glm::quat(1, 0, 0, 0), 
+                        glm::vec3(6, 1, 6)
+                    );
                 floorDesc.mass = 10;
                 floorDesc.asleep = true;
                 SubPartDesc floorPart;
@@ -918,22 +932,17 @@ void SceneBuilder::sandBox() {
         const glm::vec3& scale,
         float mass,
         const glm::quat& orientation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        float sleepCounterThreshold = 0.0f,
         bool asleep = false,
         const glm::vec3& color255 = glm::vec3(-1.0f),
         bool seeThrough = false
         ) -> GameObjectHandle {
             GameObjectDesc object;
             object.name = name;
-            object.rootTransformHandle = world.createTransform(position, orientation, scale);
+            object.rootTransformHandle = 
+                world.createTransform(position, orientation, scale);
             object.bodyType = bodyType;
             object.mass = mass;
             object.asleep = asleep;
-
-            if (sleepCounterThreshold > 0.0f || asleep) {
-                object.allowSleep = true;
-                object.sleepCounterThreshold = sleepCounterThreshold;
-            }
 
             SubPartDesc part;
             part.name = "MainPart";
@@ -1005,7 +1014,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(lenX, wallH, thick),
         0.0f,
         identity,
-        0.0f,
         false,
         wallColor
     );
@@ -1020,7 +1028,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(lenX, wallH, thick),
         0.0f,
         identity,
-        0.0f,
         false,
         wallColor
     );
@@ -1035,7 +1042,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(thick, wallH, lenZ),
         0.0f,
         identity,
-        0.0f,
         false,
         wallColor
     );
@@ -1050,7 +1056,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(thick, wallH, lenZ),
         0.0f,
         identity,
-        0.0f,
         false,
         wallColor
     );
@@ -1064,10 +1069,13 @@ void SceneBuilder::sandBox() {
 
     glm::vec3 lastPos = glm::vec3(35.0f, 75.0f, 180.0f);
     float lastAngle = -90.0f;
-    glm::quat lastOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::quat lastOrient = 
+        glm::angleAxis(glm::radians(lastAngle), glm::vec3(0.0f, 0.0f, 1.0f));
 
     for (int i = 0; i < 37; ++i) {
-        glm::quat newOrient = glm::angleAxis(glm::radians(lastAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::quat newOrient = 
+            glm::angleAxis(glm::radians(lastAngle), glm::vec3(0.0f, 0.0f, 1.0f));
+
         glm::vec3 frontTip = lastPos + lastOrient * glm::vec3(halfDepth, 0.0f, 0.0f);
         glm::vec3 newPos = frontTip + newOrient * glm::vec3(halfDepth, 0.0f, 0.0f);
 
@@ -1081,7 +1089,6 @@ void SceneBuilder::sandBox() {
             glm::vec3(wWidth, wHeight, wLength),
             0.0f,
             newOrient,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1126,7 +1133,8 @@ void SceneBuilder::sandBox() {
     float angle = 40.0f;
 
     for (int i = 0; i < 3; i++) {
-        glm::quat orientation = glm::angleAxis(glm::radians(angle), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::quat orientation = 
+            glm::angleAxis(glm::radians(angle), glm::vec3(1.0f, 0.0f, 0.0f));
 
         createSinglePartObject(
             "LeftSlope",
@@ -1138,7 +1146,6 @@ void SceneBuilder::sandBox() {
             glm::vec3(slopeWidth, slopeHeight, slopeLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1149,11 +1156,13 @@ void SceneBuilder::sandBox() {
             "cube",
             physics::ColliderType::CUBOID,
             physics::BodyType::Static,
-            glm::vec3(slopeLeftX + railWidth * 0.5f + slopeWidth * 0.5f, slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight),
+            glm::vec3(
+                slopeLeftX + railWidth * 0.5f + 
+                slopeWidth * 0.5f, slopeLeftY + 
+                slopeHeight + i * distHeight, slopeLeftZ + slopeHeight),
             glm::vec3(railWidth, slopeHeight * railHeight, railLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1164,18 +1173,21 @@ void SceneBuilder::sandBox() {
             "cube",
             physics::ColliderType::CUBOID,
             physics::BodyType::Static,
-            glm::vec3(slopeLeftX - railWidth * 0.5f - slopeWidth * 0.5f, slopeLeftY + slopeHeight + i * distHeight, slopeLeftZ + slopeHeight),
+            glm::vec3(
+                slopeLeftX - railWidth * 0.5f - 
+                slopeWidth * 0.5f, slopeLeftY + 
+                slopeHeight + i * distHeight, slopeLeftZ + slopeHeight),
             glm::vec3(railWidth, slopeHeight * railHeight, railLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
     }
 
     for (int i = 0; i < 3; i++) {
-        glm::quat orientation = glm::angleAxis(glm::radians(-angle), glm::vec3(1.0f, 0.0f, 0.0f));
+        glm::quat orientation = 
+            glm::angleAxis(glm::radians(-angle), glm::vec3(1.0f, 0.0f, 0.0f));
 
         createSinglePartObject(
             "RightSlope",
@@ -1187,7 +1199,6 @@ void SceneBuilder::sandBox() {
             glm::vec3(slopeWidth, slopeHeight, slopeLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1198,11 +1209,12 @@ void SceneBuilder::sandBox() {
             "cube",
             physics::ColliderType::CUBOID,
             physics::BodyType::Static,
-            glm::vec3(slopeRightX + railWidth * 0.5f + slopeWidth * 0.5f, slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight),
+            glm::vec3(slopeRightX + railWidth * 0.5f + 
+                slopeWidth * 0.5f, slopeRightY + slopeHeight + 
+                i * distHeight, slopeRightZ - slopeHeight),
             glm::vec3(railWidth, slopeHeight * railHeight, railLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1213,11 +1225,12 @@ void SceneBuilder::sandBox() {
             "cube",
             physics::ColliderType::CUBOID,
             physics::BodyType::Static,
-            glm::vec3(slopeRightX - railWidth * 0.5f - slopeWidth * 0.5f, slopeRightY + slopeHeight + i * distHeight, slopeRightZ - slopeHeight),
+            glm::vec3(slopeRightX - railWidth * 0.5f - 
+                slopeWidth * 0.5f, slopeRightY + slopeHeight + 
+                i * distHeight, slopeRightZ - slopeHeight),
             glm::vec3(railWidth, slopeHeight * railHeight, railLength),
             0.0f,
             orientation,
-            0.0f,
             false,
             glm::vec3(255.0f)
         );
@@ -1237,7 +1250,8 @@ void SceneBuilder::sandBox() {
 
     // ___________________________________________________________
     // ------------------------ ramp -----------------------------
-    glm::quat rampOrientation = glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+    glm::quat rampOrientation = 
+        glm::angleAxis(glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, -1.0f));
 
     GameObjectHandle rampHandle = createSinglePartObject(
         "Ramp",
@@ -1249,7 +1263,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(30.0f, 0.5f, 30.0f),
         0.0f,
         rampOrientation,
-        0.0f,
         false,
         glm::vec3(255.0f)
     );
@@ -1261,7 +1274,8 @@ void SceneBuilder::sandBox() {
 
     // ___________________________________________________________
     // ------------------------ slanted platform -----------------
-    glm::quat slantedOrientation = glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
+    glm::quat slantedOrientation = 
+        glm::angleAxis(glm::radians(25.0f), glm::vec3(1.0f, 0.5f, 0.0f));
 
     createSinglePartObject(
         "SlantedPlatform",
@@ -1325,8 +1339,7 @@ void SceneBuilder::sandBox() {
         glm::vec3(28.25f, 20.0f, 20.0f),
         glm::vec3(5.2f),
         1000.0f,
-        identity,
-        1.0f
+        identity
     );
 
     // ____________________________________________________________
@@ -1343,8 +1356,7 @@ void SceneBuilder::sandBox() {
             glm::vec3(24.5f, 1.0f + 1.2f * i, 34.5f),
             glm::vec3(1.0f),
             1.0f,
-            identity,
-            2.5f
+            identity
         );
     }
 
@@ -1358,8 +1370,7 @@ void SceneBuilder::sandBox() {
             glm::vec3(25.5f, 1.0f + 1.2f * i, 34.5f),
             glm::vec3(1.0f),
             1.0f,
-            identity,
-            2.5f
+            identity
         );
     }
 
@@ -1373,8 +1384,7 @@ void SceneBuilder::sandBox() {
             glm::vec3(24.5f, 1.0f + 1.2f * i, 35.5f),
             glm::vec3(1.0f),
             1.0f,
-            identity,
-            2.5f
+            identity
         );
     }
 
@@ -1388,8 +1398,7 @@ void SceneBuilder::sandBox() {
             glm::vec3(25.5f, 1.0f + 1.2f * i, 35.5f),
             glm::vec3(1.0f),
             1.0f,
-            identity,
-            2.5f
+            identity
         );
     }
 
@@ -1468,8 +1477,7 @@ void SceneBuilder::sandBox() {
         glm::vec3(254.5f, 9.6f, -30.0f),
         glm::vec3(5.2f),
         100000.0f,
-        identity,
-        1.0f
+        identity
     );
 
     createSinglePartObject(
@@ -1481,8 +1489,7 @@ void SceneBuilder::sandBox() {
         glm::vec3(224.5f, 9.0f, 10.0f),
         glm::vec3(4.0f),
         100000.0f,
-        identity,
-        1.0f
+        identity
     );
 
     // 2D pyramid of colored blocks
@@ -1508,7 +1515,6 @@ void SceneBuilder::sandBox() {
                 glm::vec3(1.0f),
                 1.0f,
                 identity,
-                3.0f,
                 false,
                 randomColor
             );
@@ -1538,7 +1544,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 255.0f, 255.0f)
     );
@@ -1553,7 +1558,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 0.0f, 255.0f)
     );
@@ -1568,7 +1572,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 0.0f, 255.0f)
     );
@@ -1583,7 +1586,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 255.0f, 255.0f)
     );
@@ -1598,7 +1600,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 0.0f, 255.0f)
     );
@@ -1613,13 +1614,13 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         10.0f,
         identity,
-        3.5f,
         false,
         glm::vec3(255.0f, 0.0f, 255.0f)
     );
 
 
-    glm::quat modelOrientation = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::quat modelOrientation 
+        = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
     //createSinglePartObject(
     //    "Girl",
@@ -1646,7 +1647,6 @@ void SceneBuilder::sandBox() {
         glm::vec3(1.0f),
         1.0f,
         modelOrientation,
-        3.5f,
         false,
         glm::vec3(255.0f)
     );

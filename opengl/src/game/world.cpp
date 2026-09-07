@@ -121,8 +121,6 @@ GameObjectHandle World::createGameObject(
     bodyDesc.allowSleep = objectDesc.allowSleep;
     bodyDesc.allowGravity = objectDesc.allowGravity;
     bodyDesc.startAsleep = objectDesc.asleep;
-    bodyDesc.sleepCounterThreshold =
-        objectDesc.sleepCounterThreshold;
 
     physics::BodyHandle bodyHandle =
         physicsEngine.createRigidBody(bodyDesc);

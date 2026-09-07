@@ -41,6 +41,9 @@ SleepState& PhysicsWorld::getSleepState(SleepStateHandle handle) {
 const SleepState& PhysicsWorld::getSleepState(SleepStateHandle handle) const {
     return sleepStates.get(handle);
 }
+SleepState* PhysicsWorld::tryGetSleepState(SleepStateHandle handle) {
+    return sleepStates.try_get(handle, FUNC_NAME);
+}
 
 Collider& PhysicsWorld::getCollider(ColliderHandle handle) {
     return colliders.get(handle);

@@ -121,8 +121,8 @@ Engine::getRigidBodyState(
     if (body->type == BodyType::Dynamic) {
         const SleepState& sleepState = 
             physicsWorld.getSleepState(body->sleepStateHandle);
-        state.asleep = sleepState.asleep;
-        state.allowSleep = sleepState.allowSleep;
+        state.asleep = sleepState.isAsleep();
+        state.allowSleep = sleepState.canSleep();
     }
 
     return state;

@@ -27,8 +27,6 @@ struct BodyDesc {
     bool allowSleep = true;
     bool startAsleep = false;
 
-    float sleepCounterThreshold = 1.5f;
-
     std::vector<ColliderDesc> colliders;
 };
 

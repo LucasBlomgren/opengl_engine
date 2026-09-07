@@ -303,7 +303,7 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
 
     if (body.type == BodyType::Dynamic) {
         SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
-        if (sleepState.asleep) {
+        if (sleepState.isAsleep()) {
             return;
         }
     }
@@ -357,7 +357,7 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
 
     if (body.type == BodyType::Dynamic) {
         SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
-        if (sleepState.asleep) {
+        if (sleepState.isAsleep()) {
             return;
         }
     }
