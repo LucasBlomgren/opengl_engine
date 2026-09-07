@@ -90,12 +90,7 @@ struct Contact {
     // the contact normal for warm starting and impulse solving
     glm::vec3 t1{ 0.0f };
     glm::vec3 t2{ 0.0f };
-
-    // precomputed data for impulse solving
-    glm::mat3 invInertiaA{ 0.0f };
-    glm::mat3 invInertiaB{ 0.0f };
     float accumulatedTwistImpulse = 0.0f;
-    float invMassTwist = 0.0f;
 
     // runtime data for contact point generation and 
     // impulse solving, not stored in contact cache
@@ -107,13 +102,6 @@ struct Contact {
     ContactPartnerType partnerTypeB = ContactPartnerType::RigidBody;
     BodyHandle bodyA;
     BodyHandle bodyB;
-
-    // reference face and normal for box-box and box-mesh collisions, 
-    // used for contact point generation and warm starting
-    bool noSolverResponseA = false;     // default false for dynamic bodies, true for static/kinematic bodies vs terrain
-    bool noSolverResponseB = true;      // default true for terrain
-    bool contributesMotionA = true;     // default true for dynamic bodies vs terrain
-    bool contributesMotionB = false;    // default false for terrain
 
     // for contact caching
     bool wasUsedThisFrame = true;
@@ -241,7 +229,6 @@ private:
     float computePenetrationDepth(const glm::vec3& point,
         const std::array<glm::vec3, 4>& refFace,
         const glm::vec3& refFaceNormal);
-    void PreComputePointData(ContactPoint& cp, Contact& contact);
 
     // contact cache integration
     Contact* integrateContact(

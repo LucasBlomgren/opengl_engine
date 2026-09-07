@@ -16,8 +16,7 @@ struct BodyDesc {
     glm::vec3 scale{ 1.0f };
 
     BodyType type = BodyType::Dynamic;
-    MotionControl motionControl = MotionControl::Physics;
-    ResponseMode responseMode = ResponseMode::Normal;
+    bool reportContacts = false;
 
     float mass = 1.0f;
 

@@ -7,7 +7,7 @@
 #include "physics/public/handles.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/bodies/motion_state.h"
-#include "physics/bodies/sleep_state.h"
+#include "physics/sleep/sleep_state.h"
 #include "physics/colliders/collider.h"
 
 namespace physics::internal {

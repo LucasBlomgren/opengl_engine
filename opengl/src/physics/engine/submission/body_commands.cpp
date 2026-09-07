@@ -45,8 +45,7 @@ BodyHandle Engine::createRigidBody(
     body.pose = desc.pose;
     body.scale = desc.scale;
     body.type = desc.type;
-    body.motionControl = desc.motionControl;
-    body.responseMode = desc.responseMode;
+    body.reportContacts = desc.reportContacts;
 
     body.linearVelocity = desc.linearVelocity;
     body.angularVelocity = desc.angularVelocity;
@@ -80,8 +79,10 @@ BodyHandle Engine::createRigidBody(
         sleepState.counterThreshold = desc.sleepCounterThreshold;
         sleepState.anchorPoint = desc.pose.position;
 
-        body.motionStateHandle = physicsWorld.commitMotionState(std::move(motionState));
-        body.sleepStateHandle = physicsWorld.commitSleepState(std::move(sleepState));
+        body.motionStateHandle = 
+            physicsWorld.commitMotionState(std::move(motionState));
+        body.sleepStateHandle = 
+            physicsWorld.commitSleepState(std::move(sleepState));
     }
 
     commandBuffer.recordBodyCreate(bodyHandle, std::move(body));
@@ -202,7 +203,7 @@ bool Engine::setRigidBodyTransform(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyTransform(handle, pose, scale);
+    commandBuffer.recordSetBodyTransform(handle, pose, scale);
     return true;
 }
 
@@ -220,13 +221,14 @@ bool Engine::setRigidBodySleepState(
         return false;
     }
 
-    const SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    const SleepState& sleepState = 
+        physicsWorld.getSleepState(body->sleepStateHandle);
     if (!sleepState.allowSleep /*||
         body->motionControl == MotionControl::External*/) {
         return false;
     }
 
-    commandBuffer.recordSetRigidBodySleepState(handle, asleep);
+    commandBuffer.recordSetBodySleepState(handle, asleep);
     return true;
 }
 
@@ -244,35 +246,13 @@ bool Engine::setRigidBodyType(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyType(handle, type);
+    commandBuffer.recordSetBodyType(handle, type);
     return true;
 }
 
-bool Engine::setRigidBodyMotionControl(
+bool Engine::setRigidBodyReportContacts(
     BodyHandle handle,
-    MotionControl motionControl)
-{
-    const RigidBody* body = resolveBody(
-        commandBuffer,
-        physicsWorld,
-        handle
-    );
-
-    if (!body || body->type == BodyType::Static) {
-        return false;
-    }
-
-    commandBuffer.recordSetRigidBodyMotionControl(
-        handle,
-        motionControl
-    );
-
-    return true;
-}
-
-bool Engine::setRigidBodyResponseMode(
-    BodyHandle handle,
-    ResponseMode responseMode)
+    bool reportContacts)
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
@@ -284,7 +264,7 @@ bool Engine::setRigidBodyResponseMode(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyResponseMode(handle, responseMode);
+    commandBuffer.recordSetBodyReportContacts(handle, reportContacts);
     return true;
 }
 
@@ -304,7 +284,7 @@ bool Engine::setRigidBodyMass(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyMass(handle, mass);
+    commandBuffer.recordSetBodyMass(handle, mass);
     return true;
 }
 
@@ -322,7 +302,7 @@ bool Engine::setRigidBodyAllowGravity(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyAllowGravity(handle, allowGravity);
+    commandBuffer.recordSetBodyAllowGravity(handle, allowGravity);
     return true;
 }
 
@@ -340,7 +320,7 @@ bool Engine::setRigidBodyAllowSleep(
         return false;
     }
 
-    commandBuffer.recordSetRigidBodyAllowSleep(handle, allowSleep);
+    commandBuffer.recordSetBodyAllowSleep(handle, allowSleep);
     return true;
 }
 

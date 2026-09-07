@@ -1,5 +1,4 @@
 #include "narrowphase_manager.h"
-#include "physics/sleep/wake_sleep_utils.h"
 
 namespace physics::internal {
 
@@ -13,6 +12,13 @@ void NarrowphaseManager::emitRigidContact(
     ColliderEndpointRef& a = hit.pair.a;
     ColliderEndpointRef& b = hit.pair.b;
 
+    tryExportExternalContact(hit.pair, hit.geometry);
+
+    if (a.body->type == BodyType::Kinematic &&
+        b.body->type == BodyType::Kinematic) {
+        return;
+    }
+
     if (a.body->type == BodyType::Dynamic) {
         SleepState& sleepA = physicsWorld->getSleepState(a.body->sleepStateHandle);
         sleepA.collisionCount++;
@@ -20,30 +26,6 @@ void NarrowphaseManager::emitRigidContact(
     if (b.body->type == BodyType::Dynamic) {
         SleepState& sleepB = physicsWorld->getSleepState(b.body->sleepStateHandle);
         sleepB.collisionCount++;
-    }
-
-    WakeSleep::WakeUpInfo wakeInfo =
-        WakeSleep::computeWakeUpInfo(*physicsWorld, *a.body, *b.body);
-
-    WakeSleep::enqueueWakeRequests(
-        *physicsWorld,
-        wakeInfo,
-        *a.body,
-        *b.body,
-        a.bodyHandle,
-        b.bodyHandle,
-        *toWake
-    );
-
-    if (tryExportExternalContact(hit.pair, hit.geometry)) {
-        return;
-    }
-
-    bool noSolverResponseA = computeNoSolverResponse(*a.body, wakeInfo.A);
-    bool noSolverResponseB = computeNoSolverResponse(*b.body, wakeInfo.B);
-
-    if (noSolverResponseA && noSolverResponseB) {
-        return;
     }
 
     ContactRuntime runtimeData = makeRuntimeData(
@@ -58,20 +40,6 @@ void NarrowphaseManager::emitRigidContact(
         b.bodyHandle,
         runtimeData,
         hit.geometry.normal
-    );
-
-    contact.noSolverResponseA = noSolverResponseA;
-    contact.noSolverResponseB = noSolverResponseB;
-
-    contact.contributesMotionA = computeContributesMotion(
-        contact.partnerTypeA,
-        *a.body,
-        wakeInfo.A
-    );
-    contact.contributesMotionB = computeContributesMotion(
-        contact.partnerTypeB,
-        *b.body,
-        wakeInfo.B
     );
 
     Contact* contactPtr = createManifold(contact, hit);
@@ -122,15 +90,8 @@ bool NarrowphaseManager::tryExportExternalContact(
         return false;
     }
 
-    bool aCharacter =
-        pair.a.body->motionControl == MotionControl::External &&
-        pair.a.body->responseMode == ResponseMode::Character;
-
-    bool bCharacter =
-        pair.b.body->motionControl == MotionControl::External &&
-        pair.b.body->responseMode == ResponseMode::Character;
-
-    if (!aCharacter && !bCharacter) {
+    if (!pair.a.body->reportContacts && 
+        !pair.b.body->reportContacts) {
         return false;
     }
 

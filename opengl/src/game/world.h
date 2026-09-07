@@ -34,13 +34,12 @@ struct GameObjectDesc {
 
     // rigid body
     physics::BodyType bodyType = physics::BodyType::Dynamic;
+    bool reportContacts = false;
     float mass = 1.0f;
     float sleepCounterThreshold = 1.5f;
     bool asleep = false;
     bool allowSleep = true;
     bool allowGravity = true;
-    physics::MotionControl motionControl = physics::MotionControl::Physics;
-    physics::ResponseMode responseMode = physics::ResponseMode::Normal;
 };
 
 class World {

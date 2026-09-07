@@ -5,6 +5,7 @@
 namespace physics::internal {
 
 class BroadphaseManager;
+class SleepManager;
 class PhysicsWorld;
 class RigidBody;
 
@@ -14,6 +15,7 @@ class Processor {
 public:
     Processor(
         PhysicsWorld& physicsWorld,
+        SleepManager& sleepManager,
         BroadphaseManager& broadphaseManager);
 
     void process(
@@ -38,14 +40,13 @@ private:
     void applyCommand(const Buffer::SetLinearVelocity&, float dt);
     void applyCommand(const Buffer::SetAngularVelocity&, float dt);
     void applyCommand(const Buffer::SetKinematicTarget&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyTransform&, float dt);
-    void applyCommand(const Buffer::SetRigidBodySleepState&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyType&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyMotionControl&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyResponseMode&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyMass&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyAllowGravity&, float dt);
-    void applyCommand(const Buffer::SetRigidBodyAllowSleep&, float dt);
+    void applyCommand(const Buffer::SetBodyTransform&, float dt);
+    void applyCommand(const Buffer::SetBodySleepState&, float dt);
+    void applyCommand(const Buffer::SetBodyType&, float dt);
+    void applyCommand(const Buffer::SetBodyReportContacts&, float dt);
+    void applyCommand(const Buffer::SetBodyMass&, float dt);
+    void applyCommand(const Buffer::SetBodyAllowGravity&, float dt);
+    void applyCommand(const Buffer::SetBodyAllowSleep&, float dt);
     void applyCommand(const Buffer::SetColliderLocalPose&, float dt);
     void applyCommand(const Buffer::SetColliderLocalTransform&, float dt);
     void applyCommand(const Buffer::SetColliderShape&, float dt);
@@ -55,6 +56,7 @@ private:
     void applyCommand(const Buffer::AwakenAllObjects&, float dt);
 
     PhysicsWorld& physicsWorld;
+    SleepManager& sleepManager;
     BroadphaseManager& broadphaseManager;
 };
 

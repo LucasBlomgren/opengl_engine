@@ -6,7 +6,7 @@
 #include "physics/broadphase/rigidbody_types.h"
 #include "physics/colliders/collider.h"
 #include "physics/bodies/motion_state.h"
-#include "physics/bodies/sleep_state.h"
+#include "physics/sleep/sleep_state.h"
 
 namespace physics::internal {
 
@@ -14,8 +14,7 @@ class RigidBody {
 public:
     int id = -1;
     BodyType type = BodyType::Dynamic;
-    MotionControl motionControl = MotionControl::Physics;
-    ResponseMode responseMode = ResponseMode::Normal;
+    bool reportContacts = false;
 
     // #TODO: lägga till COM
     // annars fungerar fysiken bara om collidernas 
@@ -65,11 +64,9 @@ public:
     void applyImpulseLinear(const glm::vec3& impulse);
     void applyImpulseAngular(const glm::vec3& impulse);
 
-    void setAsleep(SleepState& sleepState);
-    void setAwake(SleepState& sleepState);
-    void setStatic();
-    void setMotionControl(MotionControl mode);
-
+    void setReportContacts(bool report) {
+        reportContacts = report;
+    }
     void integratePose(float dt);
 
     void updateOrientation(

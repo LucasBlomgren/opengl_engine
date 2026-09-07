@@ -575,16 +575,16 @@ void PGSSolver::postSolve(
     }
 
     // Write back twist impulses to Contacts
-    for (size_t i = 0; i < contactConstraints.size(); i++) {
-        Contact* dst = constraintSources[i];
-        if (!dst) {
-            continue;
-        }
+    // #TODO: twist impulse warmstarting is not implemented yet
+    //for (size_t i = 0; i < contactConstraints.size(); i++) {
+    //    Contact* dst = constraintSources[i];
+    //    if (!dst) {
+    //        continue;
+    //    }
 
-        const ContactConstraint& src = contactConstraints[i];
-
-        dst->accumulatedTwistImpulse = src.accumulatedTwistImpulse;
-    }
+    //    const ContactConstraint& src = contactConstraints[i];
+    //    dst->accumulatedTwistImpulse = src.accumulatedTwistImpulse;
+    //}
 
     // Write back solver velocities to RigidBodies
     for (size_t i = 0; i < solverBodies.size(); i++) {

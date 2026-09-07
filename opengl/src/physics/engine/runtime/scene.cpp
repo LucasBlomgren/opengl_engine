@@ -27,9 +27,6 @@ void Engine::activateScene(
     uint32_t colliderSlotCapacity = 
         physicsWorld.colliderStorage().slot_capacity();
 
-    toWake.reserve(colliderSlotCapacity);
-    toSleep.reserve(colliderSlotCapacity);
-
     broadphaseManager.init(
         &physicsWorld,
         &terrainTriangles
@@ -39,8 +36,7 @@ void Engine::activateScene(
         &physicsWorld,
         &collisionManifold,
         &debugSpeculativeContacts, 
-        &contactCache, 
-        &toWake
+        &contactCache
     );
 
     pgsSolver.init(physicsWorld);
@@ -53,9 +49,6 @@ void Engine::activateScene(
 //====================================
 void Engine::clear() {
     commandBuffer.clear(physicsWorld);
-
-    toWake.clear();
-    toSleep.clear();
 
     contactCache.clear();
     debugSweeps.clear();

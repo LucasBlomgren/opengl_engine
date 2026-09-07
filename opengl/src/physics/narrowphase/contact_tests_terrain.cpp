@@ -67,11 +67,13 @@ void NarrowphaseManager::processTerrainTriBox(
         float signedDist = glm::dot(boxCenter - tri->vertices[0], triNormal);
 
         // Penetration measured along the terrain face normal.
-        // This stays valid even if the box center has gone partly/fully through the plane.
+        // This stays valid even if the box center has gone partly/fully 
+        // through the plane.
         float faceDepth = boxRadiusOnTriNormal - signedDist;
 
         // For terrain-face-only character collision:
-        // If there is no penetration through the face plane, ignore edge-only contacts.
+        // If there is no penetration through the face plane, 
+        // ignore edge-only contacts.
         if (faceDepth <= 0.0f) {
             continue;
         }
@@ -104,13 +106,10 @@ void NarrowphaseManager::processTerrainTriBox(
         return;
     }
 
-    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
-    sleepState.collisionCount++;
-
     glm::vec3 avgSolverNormal = getAvgNormal(SAT_resultsList);
 
     // Export to character controller
-    if (body->motionControl == MotionControl::External)
+    if (body->reportContacts)
     {
         glm::vec3 avgPushOutNormal;
         if (glm::length2(pushOutSum) > 1e-10f) {
@@ -131,17 +130,26 @@ void NarrowphaseManager::processTerrainTriBox(
         return;
     }
 
+    if (body->type == BodyType::Kinematic) return;
+
+    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
+    sleepState.collisionCount++;
+
     SAT::findBestTriangles(SAT_resultsList);
 
     // collision manifold generation
     glm::vec3 avgNormal = getAvgNormal(SAT_resultsList);
-    if (glm::length2(avgNormal) < 1e-8f) {
-        avgNormal = SAT_resultsList[0].normal; // temporary fallback for degenerate cases where all SAT normals cancel each other out, resulting in zero avg normal.
+    if (glm::length2(avgNormal) < 1e-8f) 
+    {
+        // temporary fallback for degenerate cases where all SAT normals cancel 
+        // each other out, resulting in zero avg normal.
+        avgNormal = SAT_resultsList[0].normal;
     }
 
     ContactRuntime runtimeData = makeRuntimeData(body, collider);
     Contact contact(bodyH, runtimeData, avgNormal);
-    Contact* contactPtr = collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
+    Contact* contactPtr = 
+        collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
     batch.contacts.push_back(contactPtr);
 }
 
@@ -191,13 +199,10 @@ void NarrowphaseManager::processTerrainTriSphere(
         return;
     }
 
-    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
-    sleepState.collisionCount++;
-
     glm::vec3 avgSolverNormal = getAvgNormal(SAT_resultsList);
 
     // Export to character controller
-    if (body->motionControl == MotionControl::External)
+    if (body->reportContacts)
     {
         glm::vec3 avgPushOutNormal;
         if (glm::length2(pushOutSum) > 1e-10f) {
@@ -218,6 +223,11 @@ void NarrowphaseManager::processTerrainTriSphere(
         return;
     }
 
+    if (body->type == BodyType::Kinematic) return;
+
+    SleepState& sleepState = physicsWorld->getSleepState(body->sleepStateHandle);
+    sleepState.collisionCount++;
+
     SAT::findBestTriangles(SAT_resultsList);
 
     ContactRuntime runtimeData = makeRuntimeData(body, collider);
@@ -232,7 +242,9 @@ void NarrowphaseManager::processTerrainTriSphere(
 //===============================================
 //     Helper functions
 //===============================================
-glm::vec3 NarrowphaseManager::getAvgNormal(const std::vector<SAT::Result>& results) const {
+glm::vec3 NarrowphaseManager::getAvgNormal(
+    const std::vector<SAT::Result>& results) const 
+{
     glm::vec3 avgNormal(0.0f);
 
     for (const SAT::Result& res : results) {

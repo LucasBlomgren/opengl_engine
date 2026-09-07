@@ -41,43 +41,38 @@ public:
         Pose target;
     };
 
-    struct SetRigidBodyTransform {
+    struct SetBodyTransform {
         BodyHandle body;
         Pose pose;
         glm::vec3 scale;
     };
 
-    struct SetRigidBodySleepState {
+    struct SetBodySleepState {
         BodyHandle body;
         bool asleep;
     };
 
-    struct SetRigidBodyType {
+    struct SetBodyType {
         BodyHandle body;
         BodyType type;
     };
 
-    struct SetRigidBodyMotionControl {
+    struct SetBodyReportContacts {
         BodyHandle body;
-        MotionControl motionControl;
+        bool reportContacts;
     };
 
-    struct SetRigidBodyResponseMode {
-        BodyHandle body;
-        ResponseMode responseMode;
-    };
-
-    struct SetRigidBodyMass {
+    struct SetBodyMass {
         BodyHandle body;
         float mass;
     };
 
-    struct SetRigidBodyAllowGravity {
+    struct SetBodyAllowGravity {
         BodyHandle body;
         bool allowGravity;
     };
 
-    struct SetRigidBodyAllowSleep {
+    struct SetBodyAllowSleep {
         BodyHandle body;
         bool allowSleep;
     };
@@ -122,14 +117,13 @@ public:
         SetLinearVelocity,
         SetAngularVelocity,
         SetKinematicTarget,
-        SetRigidBodyTransform,
-        SetRigidBodySleepState,
-        SetRigidBodyType,
-        SetRigidBodyMotionControl,
-        SetRigidBodyResponseMode,
-        SetRigidBodyMass,
-        SetRigidBodyAllowGravity,
-        SetRigidBodyAllowSleep,
+        SetBodyTransform,
+        SetBodySleepState,
+        SetBodyType,
+        SetBodyReportContacts,
+        SetBodyMass,
+        SetBodyAllowGravity,
+        SetBodyAllowSleep,
         SetColliderLocalPose,
         SetColliderLocalTransform,
         SetColliderShape,
@@ -170,7 +164,7 @@ public:
     //=========================================
     void recordBodyCreate(BodyHandle body, RigidBody&& rigidBody);
     void recordColliderCreate(ColliderHandle collider, Collider&& colliderData);
-
+    
     bool recordBodyDestroy(BodyHandle body, PhysicsWorld& physicsWorld);
     bool recordColliderDestroy(ColliderHandle collider, PhysicsWorld& physicsWorld);
 
@@ -191,22 +185,18 @@ public:
     void recordSetAngularVelocity(BodyHandle body, const glm::vec3& velocity);
     void recordSetKinematicTarget(BodyHandle body, const Pose& target);
 
-    void recordSetRigidBodyTransform(
+    void recordSetBodyTransform(
         BodyHandle body,
         const Pose& pose,
         const glm::vec3& scale);
 
-    void recordSetRigidBodySleepState(BodyHandle body, bool asleep);
-    void recordSetRigidBodyType(BodyHandle body, BodyType type);
-    void recordSetRigidBodyMotionControl(BodyHandle body, MotionControl motionControl);
+    void recordSetBodySleepState(BodyHandle body, bool asleep);
+    void recordSetBodyType(BodyHandle body, BodyType type);
+    void recordSetBodyReportContacts(BodyHandle body, bool reportContacts);
 
-    void recordSetRigidBodyResponseMode(
-        BodyHandle body,
-        ResponseMode responseMode);
-
-    void recordSetRigidBodyMass(BodyHandle body, float mass);
-    void recordSetRigidBodyAllowGravity(BodyHandle body, bool allowGravity);
-    void recordSetRigidBodyAllowSleep(BodyHandle body, bool allowSleep);
+    void recordSetBodyMass(BodyHandle body, float mass);
+    void recordSetBodyAllowGravity(BodyHandle body, bool allowGravity);
+    void recordSetBodyAllowSleep(BodyHandle body, bool allowSleep);
 
     //=========================================
     // Collider command recording

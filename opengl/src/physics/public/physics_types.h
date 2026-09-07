@@ -14,16 +14,6 @@ enum class BodyType {
     Static
 };
 
-enum class MotionControl {
-    Physics,
-    External // editor/player selected (no physics response)
-};
-
-enum class ResponseMode {
-    Normal, // for normal physics response
-    Character // for exporting contacts to character controllers
-};
-
 enum class ColliderType {
     CUBOID,
     SPHERE

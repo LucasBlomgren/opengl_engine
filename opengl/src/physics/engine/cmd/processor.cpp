@@ -12,6 +12,7 @@
 
 #include "physics/broadphase/broadphase_manager.h"
 #include "physics/world/physics_world.h"
+#include "physics/sleep/sleep_manager.h"
 
 namespace physics::internal::cmd {
 
@@ -28,9 +29,7 @@ BroadphaseBucket getBodyBucket(
     if (body.type == BodyType::Dynamic) {
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
 
-        if (sleepState.asleep &&
-            body.motionControl != MotionControl::External) 
-        {
+        if (sleepState.asleep) {
             return BroadphaseBucket::Asleep;
         }
     }
@@ -119,8 +118,10 @@ glm::vec3 calculateAngularVelocity(
 
 Processor::Processor(
     PhysicsWorld& physicsWorld,
+    SleepManager& sleepManager,
     BroadphaseManager& broadphaseManager)
     : physicsWorld(physicsWorld),
+      sleepManager(sleepManager),
       broadphaseManager(broadphaseManager)
 {}
 
@@ -298,7 +299,7 @@ void Processor::applyCommand(
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyTransform& command,
+    const Buffer::SetBodyTransform& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -314,7 +315,7 @@ void Processor::applyCommand(
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodySleepState& command,
+    const Buffer::SetBodySleepState& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -330,17 +331,16 @@ void Processor::applyCommand(
     }
 
     if (command.asleep) {
-        body->setAsleep(sleepState);
-        broadphaseManager.moveToAsleep(command.body);
+        sleepManager.sleepBody(command.body, sleepState);
     }
     else {
-        body->setAwake(sleepState);
-        broadphaseManager.moveToAwake(command.body);
+        RigidBody* body = physicsWorld.tryGetBody(command.body);
+        sleepManager.wakeBody(command.body, *body, sleepState);
     }
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyType& command,
+    const Buffer::SetBodyType& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -367,15 +367,7 @@ void Processor::applyCommand(
         }
 
         refreshBodyInertia(*body);
-
-        if (sleepState.allowSleep && sleepState.asleep) {
-            body->setAsleep(sleepState);
-            broadphaseManager.moveToAsleep(command.body);
-        }
-        else {
-            body->setAwake(sleepState);
-            broadphaseManager.moveToAwake(command.body);
-        }
+        sleepManager.wakeBody(command.body, *body, sleepState);
 
         break;
     }
@@ -402,39 +394,17 @@ void Processor::applyCommand(
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyMotionControl& command,
+    const Buffer::SetBodyReportContacts& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
-
-    if (!body || body->type == BodyType::Static) {
-        return;
-    }
-
-    body->setMotionControl(command.motionControl);
-
-    if (body->type == BodyType::Dynamic) {
-        SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
-        sleepState.counter = 0.0f;
-        sleepState.anchorTimer = 0.0f;
+    if (body) {
+        body->reportContacts = command.reportContacts;
     }
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyResponseMode& command,
-    float)
-{
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
-
-    if (!body) {
-        return;
-    }
-
-    body->responseMode = command.responseMode;
-}
-
-void Processor::applyCommand(
-    const Buffer::SetRigidBodyMass& command,
+    const Buffer::SetBodyMass& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -451,7 +421,7 @@ void Processor::applyCommand(
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyAllowGravity& command,
+    const Buffer::SetBodyAllowGravity& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -462,7 +432,7 @@ void Processor::applyCommand(
 }
 
 void Processor::applyCommand(
-    const Buffer::SetRigidBodyAllowSleep& command,
+    const Buffer::SetBodyAllowSleep& command,
     float)
 {
     RigidBody* body = physicsWorld.tryGetBody(command.body);
@@ -562,9 +532,9 @@ void Processor::applyCommand(
          ++i) {
         RigidBody& body = denseBodies[i];
 
-        if (body.type == BodyType::Static) continue;
-        if (body.type == BodyType::Kinematic) continue;
-        if (body.motionControl == MotionControl::External) continue;
+        if (body.type == BodyType::Static || 
+            body.type == BodyType::Kinematic) 
+            continue;
 
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
         if (sleepState.asleep) continue;
@@ -591,9 +561,9 @@ void Processor::applyCommand(
          ++i) {
         RigidBody& body = denseBodies[i];
 
-        if (body.type == BodyType::Static) continue;
-        if (body.type == BodyType::Kinematic) continue;
-        if (body.motionControl == MotionControl::External) continue;
+        if (body.type == BodyType::Static ||
+            body.type == BodyType::Kinematic)
+            continue;
 
         SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
         if (!sleepState.asleep) continue;

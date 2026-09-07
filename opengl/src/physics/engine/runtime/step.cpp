@@ -122,7 +122,7 @@ void Engine::step(float dt, EngineState& engine) {
         frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
     );
 
-    // Contact collection
+    // Contact sort 
     start = glfwGetTime() * 1000.0;
     contactBatch.sortByMinY();
     frameTimers->submit(
@@ -130,7 +130,9 @@ void Engine::step(float dt, EngineState& engine) {
         frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
     );
 
-    // Collision resolution
+    sleepManager.processContactWakeUps(contactBatch);
+
+    // Solver
     start = glfwGetTime() * 1000.0;
     pgsSolver.solve(contactBatch, pgsIterations, dt);
     frameTimers->submit(
@@ -190,12 +192,6 @@ void Engine::beginPhysicsStep(float outerDt) {
     uint32_t bodySlotCapacity =
         physicsWorld.bodyStorage().slot_capacity();
 
-    toWake.reserve(bodySlotCapacity);
-    toSleep.reserve(bodySlotCapacity);
-
-    toWake.clear();
-    toSleep.clear();
-
     debugSweeps.clear();
     debugSpeculativeContacts.clear();
 
@@ -224,9 +220,8 @@ void Engine::beginPhysicsStep(float outerDt) {
 void Engine::endPhysicsStep(float outerDt) {
     double start = glfwGetTime() * 1000.0;
 
-    processWakeList();
-    addSleepDamping();
-    processSleepList(outerDt);
+    sleepManager.applySleepDamping(broadphaseManager.getAwakeList(), dt);
+    sleepManager.processSleepCandidates(broadphaseManager.getAwakeList(), dt);
     updateContactCache();
 
     frameTimers->submit(

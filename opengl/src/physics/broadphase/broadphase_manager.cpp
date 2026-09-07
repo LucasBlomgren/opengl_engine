@@ -341,10 +341,6 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
 
         Collider& mainCollider = world->getCollider(body.colliderHandles[0]);
 
-        if (body.motionControl != MotionControl::Physics) {
-            continue;
-        }
-
         if (body.type != BodyType::Dynamic) {
             continue;
         }
@@ -491,11 +487,6 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
 void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
     RigidBody& body = world->getBody(handle);
 
-    if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState = world->getSleepState(body.sleepStateHandle);
-        body.setAwake(sleepState);
-    }
-
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         return;
     }
@@ -507,9 +498,6 @@ void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
 // Move to asleep
 void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
     RigidBody& body = world->getBody(handle);
-
-    SleepState& sleepState = world->getSleepState(body.sleepStateHandle);
-    body.setAsleep(sleepState);
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         return;
@@ -527,7 +515,6 @@ void BroadphaseManager::moveToStatic(const BodyHandle& handle) {
     }
 
     remove(handle);
-    body.setStatic();
     add(handle, BroadphaseBucket::Static);
     staticBvh.dirty = true;
 }

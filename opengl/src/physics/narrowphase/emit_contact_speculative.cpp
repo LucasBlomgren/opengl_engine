@@ -1,6 +1,4 @@
 #include "narrowphase_manager.h"
-#include "physics/sleep/wake_sleep_utils.h"
-
 #include <type_traits>
 
 namespace physics::internal {
@@ -160,28 +158,6 @@ void NarrowphaseManager::emitSpeculativeContact(
         sleepB.collisionCount++;
     }
 
-    bool wakeA = false;
-    bool wakeB = false;
-
-    // Only dynamic rigid-vs-rigid speculative contacts can wake both bodies.
-    if (isRigidA && isRigidB) {
-        WakeSleep::WakeUpInfo wakeInfo =
-            WakeSleep::computeWakeUpInfo(*physicsWorld, *a.body, *b->body);
-
-        WakeSleep::enqueueWakeRequests(
-            *physicsWorld,
-            wakeInfo,
-            *a.body,
-            *b->body,
-            a.bodyHandle,
-            b->bodyHandle,
-            *toWake
-        );
-
-        wakeA = wakeInfo.A;
-        wakeB = wakeInfo.B;
-    }
-
     SpeculativeContact contact{};
 
     contact.partnerTypeA = ContactPartnerType::RigidBody;
@@ -196,43 +172,6 @@ void NarrowphaseManager::emitSpeculativeContact(
     contact.normal = geometry.normal;
     contact.separation = geometry.separation;
     contact.toi = geometry.toi;
-
-    if (isRigidA) {
-        contact.noSolverResponseA =
-            computeNoSolverResponse(*a.body, wakeA);
-
-        contact.contributesMotionA =
-            computeContributesMotion(
-                ContactPartnerType::RigidBody,
-                *a.body,
-                wakeA
-            );
-    }
-    else {
-        contact.noSolverResponseA = true;
-        contact.contributesMotionA = false;
-    }
-
-    if (isRigidB) {
-        contact.noSolverResponseB =
-            computeNoSolverResponse(*b->body, wakeB);
-
-        contact.contributesMotionB =
-            computeContributesMotion(
-                partnerTypeB,
-                *b->body,
-                wakeB
-            );
-    }
-    else {
-        // Terrain / missing body
-        contact.noSolverResponseB = true;
-        contact.contributesMotionB = false;
-    }
-
-    if (contact.noSolverResponseA && contact.noSolverResponseB) {
-        return;
-    }
 
     batch.speculativeContacts.push_back(contact);
 

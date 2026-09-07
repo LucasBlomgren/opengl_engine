@@ -112,15 +112,15 @@ Engine::getRigidBodyState(
     state.linearVelocity = body->linearVelocity;
     state.angularVelocity = body->angularVelocity;
     state.type = body->type;
-    state.motionControl = body->motionControl;
-    state.responseMode = body->responseMode;
+    state.reportContacts = body->reportContacts;
     state.mass = body->mass;
     state.allowGravity = body->allowGravity;
     state.bounds = toPublicBounds(body->aabb);
     state.colliders = body->colliderHandles;
 
     if (body->type == BodyType::Dynamic) {
-        const SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+        const SleepState& sleepState = 
+            physicsWorld.getSleepState(body->sleepStateHandle);
         state.asleep = sleepState.asleep;
         state.allowSleep = sleepState.allowSleep;
     }
@@ -135,7 +135,8 @@ Engine::getColliderState(
     // Check if the collider is pending creation, 
     // already exists in the physics world or
     // is pending destruction.
-    const Collider* collider = commandBuffer.tryGetPendingColliderCreate(handle);
+    const Collider* collider = 
+        commandBuffer.tryGetPendingColliderCreate(handle);
     if (!collider) {
         collider = physicsWorld.tryGetCollider(handle);
     }

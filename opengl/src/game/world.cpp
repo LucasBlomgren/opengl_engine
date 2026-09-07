@@ -116,8 +116,7 @@ GameObjectHandle World::createGameObject(
     bodyDesc.pose = makePhysicsPose(*rootTransform);
     bodyDesc.scale = rootTransform->scale;
     bodyDesc.type = objectDesc.bodyType;
-    bodyDesc.motionControl = objectDesc.motionControl;
-    bodyDesc.responseMode = objectDesc.responseMode;
+    bodyDesc.reportContacts = objectDesc.reportContacts;
     bodyDesc.mass = objectDesc.mass;
     bodyDesc.allowSleep = objectDesc.allowSleep;
     bodyDesc.allowGravity = objectDesc.allowGravity;
@@ -411,12 +410,7 @@ void World::syncTransformsToPhysics() {
             continue;
         }
 
-        const bool bodyIsExternallyDriven =
-            bodyState->motionControl == physics::MotionControl::External ||
-            bodyState->type == physics::BodyType::Kinematic ||
-            bodyState->type == physics::BodyType::Static;
-
-        if (bodyIsExternallyDriven) {
+        if (bodyState->type == physics::BodyType::Kinematic) {
             syncGameObjectTransformToPhysics(
                 gameObjects.handle_from_dense_index(index)
             );
@@ -463,11 +457,8 @@ void World::syncPhysicsToTransforms()
         }
 
         const bool physicsDrivesPose =
-            bodyState->motionControl == physics::MotionControl::Physics &&
-            (
-                bodyState->type == physics::BodyType::Dynamic ||
-                bodyState->type == physics::BodyType::Kinematic
-                );
+            bodyState->type == physics::BodyType::Dynamic ||
+            bodyState->type == physics::BodyType::Kinematic;
 
         if (!physicsDrivesPose) {
             continue;

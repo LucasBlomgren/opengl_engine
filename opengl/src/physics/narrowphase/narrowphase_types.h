@@ -89,11 +89,6 @@ struct SpeculativeContact {
     glm::vec3 normal{ 0.0f };
     float separation = 0.0f;
     float toi = 0.0f;
-
-    bool noSolverResponseA = false;
-    bool noSolverResponseB = false;
-    bool contributesMotionA = false;
-    bool contributesMotionB = false;
 };
 
 //======================================================

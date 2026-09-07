@@ -110,9 +110,8 @@ void Player::createPlayerObject() {
     glm::vec3 size = glm::vec3{ 1.0f, 1.86f, 1.0f };
     glm::vec3 position = camera->position - glm::vec3(0, 0.76f, 0);
     playerDesc.rootTransformHandle = world->createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, size);
-    playerDesc.allowSleep = false;
-    playerDesc.motionControl = physics::MotionControl::External;
-    playerDesc.responseMode = physics::ResponseMode::Character;
+    playerDesc.bodyType = physics::BodyType::Kinematic;
+    playerDesc.reportContacts = true;
     SubPartDesc part;
     part.seeThrough = true;
     part.localTransformHandle = world->createTransform();
@@ -382,11 +381,7 @@ void Player::selectObject() {
 
     GameObject* obj = world->getGameObject(handle);
     Transform* transform = world->getTransform(obj->rootTransformHandle);
-    physics->setRigidBodyMotionControl(
-        raycast.bodyHandle,
-        physics::MotionControl::External
-    );
-
+    physics->setRigidBodyType(raycast.bodyHandle, physics::BodyType::Kinematic);
     physics->setRigidBodySleepState(raycast.bodyHandle, false);
 
     transform->lastPosition = transform->position;
@@ -412,9 +407,9 @@ void Player::dropObject() {
         GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
 
         if (selectedObject) {
-            physics->setRigidBodyMotionControl(
+            physics->setRigidBodyType(
                 selectedObject->rigidBodyHandle,
-                physics::MotionControl::Physics
+                physics::BodyType::Dynamic
             );
         }
     }

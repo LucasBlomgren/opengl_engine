@@ -19,8 +19,7 @@ struct BodyState {
     glm::vec3 angularVelocity{ 0.0f };
 
     BodyType type = BodyType::Dynamic;
-    MotionControl motionControl = MotionControl::Physics;
-    ResponseMode responseMode = ResponseMode::Normal;
+    bool reportContacts = false;
 
     float mass = 0.0f;
 

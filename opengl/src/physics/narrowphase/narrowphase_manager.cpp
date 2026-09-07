@@ -48,14 +48,12 @@ void NarrowphaseManager::init(
     PhysicsWorld* physicsWorld,
     CollisionManifold* collisionManifold,
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
-    std::unordered_map<size_t, Contact>* contactCache,
-    std::vector<BodyHandle>* toWake)
+    std::unordered_map<size_t, Contact>* contactCache)
 {
     this->physicsWorld = physicsWorld;
     this->collisionManifold = collisionManifold;
     this->debugSpeculativeContacts = debugSpeculativeContacts;
     this->contactCache = contactCache;
-    this->toWake = toWake;
 }
 
 void NarrowphaseManager::clear() {
@@ -112,9 +110,8 @@ void NarrowphaseManager::processDynamicPairs(
     RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
     RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
 
-    // If both bodies are static or kinematic and not externally controlled, skip contact generation
-    if ((bodyA.motionControl != MotionControl::External && (bodyA.type == BodyType::Static || bodyA.type == BodyType::Kinematic)) && 
-        (bodyB.motionControl != MotionControl::External && (bodyB.type == BodyType::Static || bodyB.type == BodyType::Kinematic))) {
+    if (bodyA.type == BodyType::Static && 
+        bodyB.type == BodyType::Static) {
         return;
     }
 
@@ -203,18 +200,15 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
     RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
     RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
 
+    if (bodyA.type == BodyType::Kinematic &&
+        bodyB.type == BodyType::Kinematic) {
+        return;
+    }
+
     for (const ColliderHandle& colAH : bodyA.colliderHandles) {
         for (const ColliderHandle& colBH : bodyB.colliderHandles) {
             Collider& colliderA = physicsWorld->getCollider(colAH);
             Collider& colliderB = physicsWorld->getCollider(colBH);
-
-            // #TODO: Need to use the swept AABBs for speculative collision detection, not the current AABBs.
-            //// If either body is compound, check if the colliders' AABBs intersect
-            //if (bodyA.isCompound() || bodyB.isCompound()) {
-            //    if (!colliderA.aabb.intersects(colliderB.aabb)) {
-            //        continue;
-            //    }
-            //}
 
             const std::optional<ShapePairKind> shapePair =
                 classifyShapePair(colliderA, colliderB);
@@ -302,7 +296,10 @@ void NarrowphaseManager::processColliderPairSpeculative(
 //=======================================================
 void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
     RigidBody& body = physicsWorld->getBody(terrainPair.body);
-    if (body.type == BodyType::Kinematic) return;
+
+    if (body.type == BodyType::Kinematic && !body.reportContacts) {
+        return;
+    }
 
     if (body.type == BodyType::Dynamic) {
         SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);

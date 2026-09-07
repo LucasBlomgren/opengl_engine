@@ -63,15 +63,12 @@
     <ClCompile Include="src\physics\solver\pgs_solver.cpp" />
     <ClCompile Include="src\physics\solver\solver_builder.cpp" />
     <ClCompile Include="src\physics\engine\runtime\integration.cpp" />
-    <ClCompile Include="src\physics\sleep\sleep_functions.cpp" />
-    <ClCompile Include="src\physics\sleep\wake_sleep_utils.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_speculative.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_contact_standard.cpp" />
     <ClCompile Include="src\physics\raycast\raycast.cpp" />
     <ClCompile Include="src\physics\contactcache\updateContactCache.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_standard.cpp" />
     <ClCompile Include="src\physics\narrowphase\emit_contact_speculative.cpp" />
-    <ClCompile Include="src\physics\narrowphase\emit_helpers.cpp" />
     <ClCompile Include="src\physics\narrowphase\contact_tests_terrain.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
@@ -93,6 +90,7 @@
     <ClCompile Include="src\physics\engine\queries\debug_queries.cpp" />
     <ClCompile Include="src\physics\engine\runtime\scene.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
+    <ClCompile Include="src\physics\sleep\sleep_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -195,7 +193,6 @@
     <ClInclude Include="src\physics\broadphase\rigidbody_types.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
-    <ClInclude Include="src\physics\sleep\wake_sleep_utils.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
     <ClInclude Include="src\physics\public\debug_types.h" />
@@ -218,7 +215,8 @@
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\bodies\motion_state.h" />
-    <ClInclude Include="src\physics\bodies\sleep_state.h" />
+    <ClInclude Include="src\physics\sleep\sleep_state.h" />
+    <ClInclude Include="src\physics\sleep\sleep_manager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

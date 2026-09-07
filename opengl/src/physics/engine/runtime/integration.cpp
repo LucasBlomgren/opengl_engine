@@ -27,8 +27,7 @@ void Engine::integrateForcesAndVelocities(
         if (body.type == BodyType::Dynamic) 
         {
             SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-            if (sleepState.asleep || 
-                body.motionControl == MotionControl::External) {
+            if (sleepState.asleep) {
                 continue;
             }
 
@@ -54,8 +53,7 @@ void Engine::integratePositionsAndColliders(
 
         if (body.type == BodyType::Dynamic) {
             SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-            if (sleepState.asleep ||
-                body.motionControl == MotionControl::External) {
+            if (sleepState.asleep) {
                 continue;
             }
         }

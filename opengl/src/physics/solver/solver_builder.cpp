@@ -3,6 +3,48 @@
 
 namespace physics::internal {
 
+bool PGSSolver::computeContributesMotion(
+    ContactPartnerType partnerType,
+    const RigidBody& body) const
+{
+    if (partnerType == ContactPartnerType::Terrain ||
+        body.type == BodyType::Static) {
+        return false;
+    }
+
+    if (body.type == BodyType::Kinematic) {
+        return true;
+    }
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState =
+            physicsWorld->getSleepState(body.sleepStateHandle);
+
+        if (!sleepState.asleep) {
+            return true;
+        }
+    }
+
+    return false;
+}
+bool PGSSolver::computeNoSolverResponse(
+    const RigidBody& body) const
+{
+    if (body.type != BodyType::Dynamic)
+        return true;
+
+    if (body.type == BodyType::Dynamic) {
+        SleepState& sleepState =
+            physicsWorld->getSleepState(body.sleepStateHandle);
+
+        if (sleepState.asleep) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 //=====================================================================
 //  Build solver data structures from contact batch and runtime caches
 //=====================================================================
@@ -46,6 +88,31 @@ void PGSSolver::buildSolverData(
 
         ContactRuntime& rt = contact->runtimeData;
 
+        // A is always a rigid body
+        bool noSolverResponseA = computeNoSolverResponse(*rt.bodyA);
+        bool contributesMotionA =
+            computeContributesMotion(
+                contact->partnerTypeA,
+                *rt.bodyA
+            );
+
+        // B can be terrain or a rigid body
+        bool noSolverResponseB = true;
+        bool contributesMotionB = false;
+
+        if (rt.bodyB) {
+            noSolverResponseB = computeNoSolverResponse(*rt.bodyB);
+            contributesMotionB =
+                computeContributesMotion(
+                    contact->partnerTypeB,
+                    *rt.bodyB
+                );
+        }
+
+        if (noSolverResponseA && noSolverResponseB) {
+            continue;
+        }
+
         uint32_t bodyAIndex = InvalidSolverBody;
         uint32_t bodyBIndex = InvalidSolverBody;
 
@@ -65,22 +132,24 @@ void PGSSolver::buildSolverData(
         cc.t1 = contact->t1;
         cc.t2 = contact->t2;
 
-        cc.invMassTwist = contact->invMassTwist;
-        cc.accumulatedTwistImpulse = contact->accumulatedTwistImpulse;
+        // #TODO: warm-start twist impulse?
+        cc.invMassTwist = 0.0f;
+        cc.accumulatedTwistImpulse = 0.0f;
+
         cc.firstPoint = static_cast<uint32_t>(contactPoints.size());
 
-        if (bodyAIndex != InvalidSolverBody && contact->contributesMotionA) {
+        if (bodyAIndex != InvalidSolverBody && contributesMotionA) {
             cc.flags |= ContributesMotionA;
         }
-        if (bodyBIndex != InvalidSolverBody && contact->contributesMotionB) {
+        if (bodyBIndex != InvalidSolverBody && contributesMotionB) {
             cc.flags |= ContributesMotionB;
         }
-        if (contact->noSolverResponseA) cc.flags |= NoSolverResponseA;
-        if (contact->noSolverResponseB) cc.flags |= NoSolverResponseB;
+        if (noSolverResponseA) cc.flags |= NoSolverResponseA;
+        if (noSolverResponseB) cc.flags |= NoSolverResponseB;
 
         if (bodyAIndex != InvalidSolverBody &&
             contact->partnerTypeA == ContactPartnerType::RigidBody &&
-            !contact->noSolverResponseA)
+            !noSolverResponseA)
         {
             cc.flags |= CanApplyImpulseA;
             solverBodyWriteBack[bodyAIndex] = 1;
@@ -88,7 +157,7 @@ void PGSSolver::buildSolverData(
 
         if (bodyBIndex != InvalidSolverBody &&
             contact->partnerTypeB == ContactPartnerType::RigidBody &&
-            !contact->noSolverResponseB)
+            !noSolverResponseB)
         {
             cc.flags |= CanApplyImpulseB;
             solverBodyWriteBack[bodyBIndex] = 1;
@@ -97,6 +166,16 @@ void PGSSolver::buildSolverData(
         for (size_t i = 0; i < contact->numPoints; ++i) {
             ContactPoint& cp = contact->points[i];
             ContactConstraintPoint& ccp = contactPoints.emplace_back();
+
+            precomputePointData(
+                rt.bodyA,
+                rt.bodyB,
+                ccp,
+                cp.wasWarmStarted,
+                cp.worldPos,
+                cc,
+                contact->framesSinceUsed
+            );
 
             bool active = prepareContactPointBaumgarte(cc, cp, ccp, dt);
 
@@ -136,18 +215,42 @@ void PGSSolver::buildSolverData(
         c.normal = src.normal;
         c.separation = src.separation;
 
+        bool noSolverResponseA =
+            computeNoSolverResponse(*src.bodyA);
+
+        bool contributesMotionA =
+            computeContributesMotion(
+                src.partnerTypeA,
+                *src.bodyA
+            );
+
+        // terrain is always B
+        bool noSolverResponseB = true;
+        bool contributesMotionB = false;
+
+        if (src.bodyB) {
+            noSolverResponseB =
+                computeNoSolverResponse(*src.bodyB);
+
+            contributesMotionB =
+                computeContributesMotion(
+                    src.partnerTypeB,
+                    *src.bodyB
+                );
+        }
+
         // Compute incoming normal velocity for post-solve restitution calculation
         glm::vec3 vA{ 0.0f };
         glm::vec3 vB{ 0.0f };
         if (src.partnerTypeA == ContactPartnerType::RigidBody &&
             src.bodyA &&
-            src.contributesMotionA)
+            contributesMotionA)
         {
             vA = src.bodyA->linearVelocity;
         }
         if (src.partnerTypeB == ContactPartnerType::RigidBody &&
             src.bodyB &&
-            src.contributesMotionB)
+            contributesMotionB)
         {
             vB = src.bodyB->linearVelocity;
         }
@@ -158,24 +261,24 @@ void PGSSolver::buildSolverData(
         // No cross-frame warmstart for MVP.
         c.accumulatedImpulse = 0.0f;
 
-        if (bodyAIndex != InvalidSolverBody && src.contributesMotionA) {
+        if (bodyAIndex != InvalidSolverBody && contributesMotionA) {
             c.flags |= ContributesMotionA;
         }
-        if (bodyBIndex != InvalidSolverBody && src.contributesMotionB) {
+        if (bodyBIndex != InvalidSolverBody && contributesMotionB) {
             c.flags |= ContributesMotionB;
         }
-        if (src.noSolverResponseA) c.flags |= NoSolverResponseA;
-        if (src.noSolverResponseB) c.flags |= NoSolverResponseB;
+        if (noSolverResponseA) c.flags |= NoSolverResponseA;
+        if (noSolverResponseB) c.flags |= NoSolverResponseB;
         if (bodyAIndex != InvalidSolverBody &&
             src.partnerTypeA == ContactPartnerType::RigidBody &&
-            !src.noSolverResponseA)
+            !noSolverResponseA)
         {
             c.flags |= CanApplyImpulseA;
             solverBodyWriteBack[bodyAIndex] = 1;
         }
         if (bodyBIndex != InvalidSolverBody &&
             src.partnerTypeB == ContactPartnerType::RigidBody &&
-            !src.noSolverResponseB)
+            !noSolverResponseB)
         {
             c.flags |= CanApplyImpulseB;
             solverBodyWriteBack[bodyBIndex] = 1;
@@ -236,6 +339,147 @@ void PGSSolver::packInvInertia(const glm::mat3& m, float out[6]) {
     out[5] = m[1][2]; // yz
 }
 
+//=====================================================
+//  Precompute point data
+//=====================================================
+void PGSSolver::precomputePointData(
+    RigidBody* bodyA,
+    RigidBody* bodyB,
+    ContactConstraintPoint& cp,
+    bool warmStarted,
+    glm::vec3& worldPos,
+    ContactConstraint& contact,
+    int framesSinceUsed)
+{
+    // smallest normal velocity to allow restitution (bounce)
+    constexpr float restitutionThreshold = 0.2f;
+    float restitution = 0.0f; // example material
+
+    glm::vec3& normal = contact.normal;
+
+    float invMassA = 0.0f;
+    float invMassB = 0.0f;
+    glm::vec3 rA{ 0.0f };
+    glm::vec3 rB{ 0.0f };
+    glm::mat3 invInertiaA{ 0.0f };
+    glm::mat3 invInertiaB{ 0.0f };
+    glm::vec3 linearVelocityA{ 0.0f };
+    glm::vec3 linearVelocityB{ 0.0f };
+    glm::vec3 angularVelocityA{ 0.0f };
+    glm::vec3 angularVelocityB{ 0.0f };
+
+    // bodyA solver response behavior
+    if (contact.flags & ContactFlags::NoSolverResponseA) {
+        invMassA = 0.0f;
+        invInertiaA = glm::mat3(0.0f);
+    }
+    else {
+        invMassA = bodyA->invMass;
+        invInertiaA = bodyA->invInertiaWorld;
+    }
+    // bodyA motion behavior
+    if (contact.flags & ContactFlags::ContributesMotionA) {
+        rA = worldPos - bodyA->pose.position; // #TODO: use center of mass.
+        linearVelocityA = bodyA->linearVelocity;
+        angularVelocityA = bodyA->angularVelocity;
+    }
+    else {
+        rA = glm::vec3(0.0f);
+        linearVelocityA = glm::vec3(0.0f);
+        angularVelocityA = glm::vec3(0.0f);
+    }
+
+    // bodyB solver response behavior
+    if (contact.flags & ContactFlags::NoSolverResponseB) {
+        invMassB = 0.0f;
+        invInertiaB = glm::mat3(0.0f);
+    }
+    else {
+        invMassB = bodyB->invMass;
+        invInertiaB = bodyB->invInertiaWorld;
+    }
+    // bodyB motion behavior
+    if (contact.flags & ContactFlags::ContributesMotionB) {
+        rB = worldPos - bodyB->pose.position; // #TODO: use center of mass.
+        linearVelocityB = bodyB->linearVelocity;
+        angularVelocityB = bodyB->angularVelocity;
+    }
+    else {
+        rB = glm::vec3(0.0f);
+        linearVelocityB = glm::vec3(0.0f);
+        angularVelocityB = glm::vec3(0.0f);
+    }
+
+    // pre-calculate rA, rB, EffectiveMass
+    cp.rA = rA;
+    cp.rB = rB;
+
+    glm::vec3 rA_cross_n = glm::cross(rA, normal);
+    glm::vec3 rB_cross_n = glm::cross(rB, normal);
+    cp.m_eff = 1.0f / (invMassA + invMassB +
+        glm::dot(rA_cross_n, invInertiaA * rA_cross_n) +
+        glm::dot(rB_cross_n, invInertiaB * rB_cross_n));
+
+    //if (cp.m_eff <= 1e-8f) {
+    //    std::cout 
+    // << "Warning: contact point with near-zero effective mass!" 
+    // << std::endl;
+    //}
+
+    // compute relative velocity at contact point based on current body states
+    glm::vec3 relativeVelocity =
+        (linearVelocityB + glm::cross(angularVelocityB, rB)) -
+        (linearVelocityA + glm::cross(angularVelocityA, rA));
+
+    // if the contact is warm-started (i.e. "old"), we disable 
+    // restitution to avoid bounce due to accumulated penetration 
+    // correction impulses from previous frames, which can cause jitter. 
+    // This also means that only new contacts with sufficient 
+    // impact velocity will bounce, which is a common and 
+    // stable approach in physics engines.
+    bool allowRestitution = true;
+    if (warmStarted || framesSinceUsed > 0) {
+        allowRestitution = false;
+    }
+
+    float normalVelocity = glm::dot(relativeVelocity, normal);
+    if (allowRestitution and normalVelocity < -restitutionThreshold) {
+        cp.targetBounce = -restitution * normalVelocity;
+    }
+    else {
+        cp.targetBounce = 0.0f;
+    }
+
+    glm::vec3 rA_t1 = glm::cross(rA, contact.t1);
+    glm::vec3 rB_t1 = glm::cross(rB, contact.t1);
+    glm::vec3 rA_t2 = glm::cross(rA, contact.t2);
+    glm::vec3 rB_t2 = glm::cross(rB, contact.t2);
+
+    glm::vec3 invIA_rA_t1 = invInertiaA * rA_t1;
+    glm::vec3 invIB_rB_t1 = invInertiaB * rB_t1;
+    glm::vec3 invIA_rA_t2 = invInertiaA * rA_t2;
+    glm::vec3 invIB_rB_t2 = invInertiaB * rB_t2;
+
+    // Compute effective mass along cp.t1 and cp.t2 for friction
+    // calculations in the solver. 
+    // This is needed to determine how much tangential impulse 
+    // to apply for a given desired change in tangential velocity, 
+    // similar to how cp.m_eff is used for normal impulses.
+    float k_t1 =
+        (invMassA + invMassB) +
+        glm::dot(rA_t1, invIA_rA_t1) +
+        glm::dot(rB_t1, invIB_rB_t1);
+
+    cp.invMassT1 = 1.0f / k_t1;
+
+    float k_t2 =
+        (invMassA + invMassB) +
+        glm::dot(rA_t2, invIA_rA_t2) +
+        glm::dot(rB_t2, invIB_rB_t2);
+
+    cp.invMassT2 = 1.0f / k_t2;
+}
+
 //===================================================================================
 //  Prepare contact point for Baumgarte stabilization and warm starting.
 //  Returns true if the contact point is active and should be included in the solver
@@ -247,8 +491,8 @@ bool PGSSolver::prepareContactPointBaumgarte(
     const ContactConstraint& contact,
     ContactPoint& src,
     ContactConstraintPoint& dst,
-    float dt
-) {
+    float dt) 
+{
     constexpr float staticFriction = 0.6f;
 
     constexpr float defaultSlop = 0.0007f;
@@ -283,15 +527,6 @@ bool PGSSolver::prepareContactPointBaumgarte(
     }
 
     src.active = true;
-
-    dst.rA = src.rA;
-    dst.rB = src.rB;
-
-    dst.m_eff = src.m_eff;
-    dst.invMassT1 = src.invMassT1;
-    dst.invMassT2 = src.invMassT2;
-
-    dst.targetBounce = src.targetBounceVelocity;
 
     dst.nImpulse = src.accumulatedNormalImpulse;
     dst.fImpulse1 = src.accumulatedFrictionImpulse1;

@@ -19,8 +19,7 @@ public:
         PhysicsWorld* physicsWorld,
         CollisionManifold* collisionManifold,
         std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
-        std::unordered_map<size_t, Contact>* contactCache,
-        std::vector<BodyHandle>* toWake
+        std::unordered_map<size_t, Contact>* contactCache
     );
     void clear();
 
@@ -200,10 +199,6 @@ private:
         RigidBody* bodyA,
         Collider* colliderA
     ) const;
-
-    // for wake-up requests for bodies that should be 
-    // woken up after processing dynamic pairs
-    std::vector<BodyHandle>* toWake = nullptr; 
 
     // for storing multiple SAT results for 
     // a single collider vs terrain pair

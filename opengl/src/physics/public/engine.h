@@ -24,6 +24,7 @@
 #include "physics/engine/cmd/processor.h"
 #include "physics/narrowphase/collision_manifold.h"
 #include "physics/narrowphase/narrowphase_manager.h"
+#include "physics/sleep/sleep_manager.h"
 #include "physics/solver/pgs_solver.h"
 #include "physics/world/physics_world.h"
 
@@ -93,13 +94,9 @@ public:
         BodyHandle body,
         BodyType type);
 
-    bool setRigidBodyMotionControl(
-        BodyHandle body,
-        MotionControl motionControl);
-
-    bool setRigidBodyResponseMode(
-        BodyHandle body,
-        ResponseMode responseMode);
+    bool setRigidBodyReportContacts(
+        BodyHandle handle,
+        bool reportContacts);
 
     bool setRigidBodyMass(
         BodyHandle body,
@@ -189,11 +186,6 @@ private:
         const std::vector<BodyHandle>& bodies,
         float dt);
 
-    void processWakeList();
-    void processSleepList(float outerDt);
-    void decideSleep();
-    void addSleepDamping();
-
     void processPendingCommands();
 
     void updateContactCache();
@@ -216,9 +208,6 @@ private:
     std::unordered_map<size_t, internal::Contact> contactCache;
     std::vector<internal::Tri> terrainTriangles;
 
-    std::vector<BodyHandle> toWake;
-    std::vector<BodyHandle> toSleep;
-
     std::vector<internal::AABB> debugSweeps;
     std::vector<internal::DebugSpeculativeContact> debugSpeculativeContacts;
 
@@ -230,11 +219,13 @@ private:
     internal::BroadphaseManager broadphaseManager;
     internal::NarrowphaseManager narrowphaseManager;
     internal::CollisionManifold collisionManifold;
+    internal::SleepManager sleepManager{ physicsWorld, broadphaseManager };
     internal::PGSSolver pgsSolver;
 
     internal::cmd::Buffer commandBuffer;
     internal::cmd::Processor commandProcessor{
         physicsWorld,
+        sleepManager,
         broadphaseManager
     };
 };

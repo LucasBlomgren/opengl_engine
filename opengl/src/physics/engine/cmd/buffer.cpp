@@ -350,53 +350,47 @@ void Buffer::recordSetKinematicTarget(
     mutations.emplace_back(SetKinematicTarget{ body, target });
 }
 
-void Buffer::recordSetRigidBodyTransform(
+void Buffer::recordSetBodyTransform(
     BodyHandle body,
     const Pose& pose,
     const glm::vec3& scale) {
-    mutations.emplace_back(SetRigidBodyTransform{ body, pose, scale });
+    mutations.emplace_back(SetBodyTransform{ body, pose, scale });
 }
 
-void Buffer::recordSetRigidBodySleepState(
+void Buffer::recordSetBodySleepState(
     BodyHandle body,
     bool asleep) {
-    mutations.emplace_back(SetRigidBodySleepState{ body, asleep });
+    mutations.emplace_back(SetBodySleepState{ body, asleep });
 }
 
-void Buffer::recordSetRigidBodyType(
+void Buffer::recordSetBodyType(
     BodyHandle body,
     BodyType type) {
-    mutations.emplace_back(SetRigidBodyType{ body, type });
+    mutations.emplace_back(SetBodyType{ body, type });
 }
 
-void Buffer::recordSetRigidBodyMotionControl(
+void Buffer::recordSetBodyReportContacts(
     BodyHandle body,
-    MotionControl motionControl) {
-    mutations.emplace_back(SetRigidBodyMotionControl{ body, motionControl });
+    bool reportContacts) {
+    mutations.emplace_back(SetBodyReportContacts{ body, reportContacts });
 }
 
-void Buffer::recordSetRigidBodyResponseMode(
-    BodyHandle body,
-    ResponseMode responseMode) {
-    mutations.emplace_back(SetRigidBodyResponseMode{ body, responseMode });
-}
-
-void Buffer::recordSetRigidBodyMass(
+void Buffer::recordSetBodyMass(
     BodyHandle body,
     float mass) {
-    mutations.emplace_back(SetRigidBodyMass{ body, mass });
+    mutations.emplace_back(SetBodyMass{ body, mass });
 }
 
-void Buffer::recordSetRigidBodyAllowGravity(
+void Buffer::recordSetBodyAllowGravity(
     BodyHandle body,
     bool allowGravity) {
-    mutations.emplace_back(SetRigidBodyAllowGravity{ body, allowGravity });
+    mutations.emplace_back(SetBodyAllowGravity{ body, allowGravity });
 }
 
-void Buffer::recordSetRigidBodyAllowSleep(
+void Buffer::recordSetBodyAllowSleep(
     BodyHandle body,
     bool allowSleep) {
-    mutations.emplace_back(SetRigidBodyAllowSleep{ body, allowSleep });
+    mutations.emplace_back(SetBodyAllowSleep{ body, allowSleep });
 }
 
 //=========================================

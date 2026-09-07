@@ -40,9 +40,25 @@ private:
         ContactBatch& batch, 
         float dt
     );
+
+    bool computeContributesMotion(
+        ContactPartnerType partnerType,
+        const RigidBody& body) const;
+    bool computeNoSolverResponse(
+        const RigidBody& body) const;
+
     uint32_t getOrCreateSolverBody(BodyHandle bodyHandle, RigidBody* body);
     void makeSolverBody(RigidBody* body);
     static void packInvInertia(const glm::mat3& m, float out[6]);
+
+    void precomputePointData(
+        RigidBody* bodyA,
+        RigidBody* bodyB,
+        ContactConstraintPoint& cp,
+        bool warmStarted,
+        glm::vec3& worldPos,
+        ContactConstraint& contact,
+        int framesSinceUsed);
 
     bool prepareContactPointBaumgarte(
         const ContactConstraint& contact,

@@ -7,9 +7,7 @@ namespace physics::internal {
 //   Velocity integration
 //===============================================
 void RigidBody::integratePose(float dt) {
-	if (type == BodyType::Static || 
-		motionControl == MotionControl::External)
-	{
+	if (type == BodyType::Static) {
 		return;
 	}
 
@@ -111,48 +109,6 @@ void RigidBody::commitBiasImpulses(float dt) {
 
 	biasLinearVelocity = glm::vec3(0.0f);
 	biasAngularVelocity = glm::vec3(0.0f);
-}
-
-//===============================================
-//     Asleep and awake
-//===============================================
-void RigidBody::setAsleep(SleepState& sleepState) {
-	if (type == BodyType::Static || type == BodyType::Kinematic) {
-		return;
-	}
-
-	linearVelocity = glm::vec3(0.0f);
-	angularVelocity = glm::vec3(0.0f);
-	biasLinearVelocity = glm::vec3(0.0f);
-	biasAngularVelocity = glm::vec3(0.0f);
-
-	sleepState.asleep = true;
-	sleepState.counter = 0.0f;
-
-	sleepState.anchorTimer = 0.0f;
-	sleepState.anchorPoint = pose.position;
-}
-
-
-void RigidBody::setAwake(SleepState& sleepState) {
-	if (type == BodyType::Static)
-		return;
-
-	sleepState.asleep = false;
-	sleepState.counter = 0.0f;
-}
-
-//===============================================
-//     State setters
-//===============================================
-void RigidBody::setStatic() {
-	type = BodyType::Static;
-	mass = 0.0f;
-	invMass = 0.0f;
-}
-
-void RigidBody::setMotionControl(MotionControl mode) {
-	motionControl = mode;
 }
 
 //===============================================
