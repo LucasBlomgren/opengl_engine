@@ -121,6 +121,7 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
     case 2: terrainScene(); break;
     case 3: tallStructureScene(); break;
     case 4: castleScene(); break;
+    case 5: staircaseScene(); break;
     default: break;
     }
 

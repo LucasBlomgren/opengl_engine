@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "scene_builder.h"
+#include <cmath>
 
 void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int gridWidth, int gridLength) {
     for (int i = 0; i < gridWidth; i++)
@@ -20,6 +21,150 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
 }
 
 
+
+void SceneBuilder::staircaseScene() {
+    constexpr int stepCount = 12;
+    constexpr float stepDepth = 1.0f;
+    constexpr float stepRise = 0.6f;
+    constexpr float stairWidth = 6.0f;
+    constexpr float startX = -12.0f;
+    constexpr float wallThickness = 0.3f;
+    constexpr float wallHeight = 3.5f;
+    constexpr int gateStep = 9;
+    constexpr float gateHeight = 4.0f;
+    constexpr float gateThickness = 0.25f;
+    constexpr float sphereRadius = 0.2f;
+    static_assert(sphereRadius > 0.0f, "Sphere radius must be positive.");
+    const glm::quat identity(1.0f, 0.0f, 0.0f, 0.0f);
+    const glm::vec3 stairColor(0.48f, 0.67f, 0.46f);
+
+    auto createBox = [&](const std::string& name,
+                         const glm::vec3& position,
+                         const glm::vec3& size,
+                         const glm::vec3& color,
+                         physics::BodyType type = physics::BodyType::Static,
+                         bool seeThrough = false) {
+        GameObjectDesc box;
+        box.name = name;
+        box.rootTransformHandle = world.createTransform(position, identity, size);
+        box.bodyType = type;
+
+        SubPartDesc part;
+        part.localTransformHandle = world.createTransform();
+        part.color = color;
+        part.seeThrough = seeThrough;
+        box.parts.push_back(part);
+        return world.createGameObject(box);
+    };
+
+    createBox("StairFloor", glm::vec3(2.0f, -0.5f, 0.0f),
+        glm::vec3(50.0f, 1.0f, 30.0f), glm::vec3(0.65f));
+
+    // Solid columns form a staircase descending in the +X direction.
+    for (int i = 0; i < stepCount; ++i) {
+        const float height = (stepCount - i) * stepRise;
+        const float x = startX + (i + 0.5f) * stepDepth;
+        createBox("StairStep" + std::to_string(i),
+            glm::vec3(x, height * 0.5f, 0.0f),
+            glm::vec3(stepDepth, height, stairWidth), stairColor);
+
+        for (int side = -1; side <= 1; side += 2) {
+            createBox("StairSide" + std::to_string(side) + "_" + std::to_string(i),
+                glm::vec3(x, height + wallHeight * 0.5f,
+                    side * (stairWidth + wallThickness) * 0.5f),
+                glm::vec3(stepDepth, wallHeight, wallThickness), stairColor,
+                physics::BodyType::Static, side < 0);
+        }
+    }
+
+    // The near side still collides, but is invisible so the spheres are visible.
+    createBox("StairBackWall",
+        glm::vec3(startX - wallThickness * 0.5f,
+            stepCount * stepRise + wallHeight * 0.5f, 0.0f),
+        glm::vec3(wallThickness, wallHeight, stairWidth), stairColor);
+
+    const float gateBase = (stepCount - gateStep) * stepRise;
+    const glm::vec3 gatePosition(
+        startX + (gateStep + 0.8f) * stepDepth,
+        gateBase + gateHeight * 0.5f,
+        0.0f
+    );
+    const GameObjectHandle gate = createBox("StairGate",
+        gatePosition, glm::vec3(gateThickness, gateHeight, stairWidth),
+        glm::vec3(0.08f, 0.42f, 0.5f), physics::BodyType::Kinematic);
+    if (GameObject* object = world.getGameObject(gate)) {
+        physicsEngine.setLinearVelocity(object->rigidBodyHandle,
+            glm::vec3(0.0f, 0.35f, 0.0f));
+    }
+
+    // Fill the space above the stairs and behind the gate using the sphere radius.
+    constexpr float gap = sphereRadius * 0.02f;
+    constexpr float spacing = sphereRadius * 2.0f + gap;
+    constexpr float margin = sphereRadius + gap;
+    constexpr float dropHeight = 1.0f;
+    constexpr float downhillSpeed = 1.2f;
+
+    auto countPositions = [](float minimum, float maximum) {
+        return maximum >= minimum
+            ? static_cast<int>(std::floor((maximum - minimum) / spacing)) + 1
+            : 0;
+    };
+
+    const float minX = startX + margin;
+    const float maxX = gatePosition.x - gateThickness * 0.5f - margin;
+    const float minZ = -stairWidth * 0.5f + margin;
+    const float maxZ = stairWidth * 0.5f - margin;
+    const int rows = countPositions(minX, maxX);
+    const int columns = countPositions(minZ, maxZ);
+    if (rows == 0 || columns == 0) return;
+
+    const float firstX = (minX + maxX - (rows - 1) * spacing) * 0.5f;
+    const float firstZ = (minZ + maxZ - (columns - 1) * spacing) * 0.5f;
+    for (int row = 0; row < rows; ++row) {
+        const float x = firstX + row * spacing;
+        // Clear the highest step under the sphere and the lowest adjacent wall top.
+        const int firstStep = glm::clamp(static_cast<int>(
+            std::floor((x - margin - startX) / stepDepth)), 0, stepCount - 1);
+        const int lastStep = glm::clamp(static_cast<int>(
+            std::floor((x + margin - startX) / stepDepth)), 0, stepCount - 1);
+        const float minY = (stepCount - firstStep) * stepRise + dropHeight + margin;
+        const float maxY = (stepCount - lastStep) * stepRise + wallHeight - margin;
+        const int layers = countPositions(minY, maxY);
+
+        for (int layer = 0; layer < layers; ++layer) {
+            for (int column = 0; column < columns; ++column) {
+                GameObjectDesc sphere;
+                sphere.name = "StairSphere";
+                sphere.bodyType = physics::BodyType::Dynamic;
+                // Keep the demonstration moving while the gate opens slowly.
+                sphere.allowSleep = false;
+                sphere.mass = 1.0f;
+                sphere.rootTransformHandle = world.createTransform(
+                    glm::vec3(x, minY + layer * spacing,
+                        firstZ + column * spacing),
+                    // The existing sphere mesh has a unit radius.
+                    identity, glm::vec3(sphereRadius)
+                );
+
+                SubPartDesc part;
+                part.localTransformHandle = world.createTransform();
+                part.meshName = "sphere";
+                part.colliderType = physics::ColliderType::SPHERE;
+                part.color = glm::vec3(0.35f + 0.12f * ((row + column + layer) % 4));
+                sphere.parts.push_back(part);
+
+                const GameObjectHandle handle = world.createGameObject(sphere);
+                //if (GameObject* object = world.getGameObject(handle)) {
+                //    // A small initial roll carries spheres over the flat treads.
+                //    physicsEngine.setLinearVelocity(object->rigidBodyHandle,
+                //        glm::vec3(downhillSpeed, 0.0f, 0.0f));
+                //    physicsEngine.setAngularVelocity(object->rigidBodyHandle,
+                //        glm::vec3(0.0f, 0.0f, -downhillSpeed / sphereRadius));
+                //}
+            }
+        }
+    }
+}
 
 void SceneBuilder::testFloorScene(int amount) {
     glm::vec3 offset = { -30.0f, -0.5f, -30.0f };

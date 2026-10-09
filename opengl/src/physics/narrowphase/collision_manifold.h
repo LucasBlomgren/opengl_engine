@@ -20,6 +20,7 @@ struct Plane {
 struct ContactPoint {
     glm::vec3 worldPos{ 0.0f };
     glm::vec3 localPos{ 0.0f };
+    float depth = 0.0f;
 
     bool active = false;
 
@@ -28,16 +29,16 @@ struct ContactPoint {
     float separation = 0.0f;
     float toi = 0.0f;
 
-    // pre-computed data for impulse solving
+    // solver state
     float accumulatedNormalImpulse = 0.0f;
     float accumulatedFrictionImpulse1 = 0.0f;
     float accumulatedFrictionImpulse2 = 0.0f;
     float accumulatedBiasImpulse = 0.0f;
 
+    // recomputed before solver
     float m_eff = 0.0f;
     glm::vec3 rA{ 0.0f };
     glm::vec3 rB{ 0.0f };
-    float depth = 0.0f;
     float targetBounceVelocity = 0.0f;
     float biasVelocity = 0.0f;
     float invMassT1{ 0.0f };

@@ -11,10 +11,10 @@ using namespace internal;
 // Integrate Forces / Velocities
 //==============================================================
 void Engine::integrateForcesAndVelocities(
-    const std::vector<BodyHandle>& bodies,
+    const std::vector<BodyHandle>& awakeBodies,
     float dt)
 {
-    for (const BodyHandle& bodyHandle : bodies) {
+    for (const BodyHandle& bodyHandle : awakeBodies) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
 
         if (body.colliderHandles.empty()) {
@@ -24,12 +24,8 @@ void Engine::integrateForcesAndVelocities(
         Collider& mainCollider =
             physicsWorld.getCollider(body.colliderHandles[0]);
 
-        if (body.type == BodyType::Dynamic) 
-        {
+        if (body.type == BodyType::Dynamic) {
             SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-            if (sleepState.isAsleep()) {
-                continue;
-            }
 
             if (body.colliderHandles.size() == 1) {
                 body.applyRollingFriction(mainCollider.type, dt, sleepState);
@@ -45,19 +41,11 @@ void Engine::integrateForcesAndVelocities(
 // Integrate Positions and Update Colliders
 //==============================================================
 void Engine::integratePositionsAndColliders(
-    const std::vector<BodyHandle>& bodies,
+    const std::vector<BodyHandle>& awakeBodies,
     float dt)
 {
-    for (const BodyHandle& bodyHandle : bodies) {
+    for (const BodyHandle& bodyHandle : awakeBodies) {
         RigidBody& body = physicsWorld.getBody(bodyHandle);
-
-        if (body.type == BodyType::Dynamic) {
-            SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
-            if (sleepState.isAsleep()) {
-                continue;
-            }
-        }
-
         body.integratePose(dt);
         body.updateInertiaWorld();
         updateCollidersAndBodyAABB(physicsWorld, &body);
@@ -71,10 +59,6 @@ void internal::updateCollidersAndBodyAABB(
     PhysicsWorld& world,
     RigidBody* body)
 {
-    if (!body) {
-        return;
-    }
-
     bool hasAABB = false;
     internal::AABB combinedAABB;
 

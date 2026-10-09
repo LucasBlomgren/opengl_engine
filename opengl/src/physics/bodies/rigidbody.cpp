@@ -7,10 +7,6 @@ namespace physics::internal {
 //   Velocity integration
 //===============================================
 void RigidBody::integratePose(float dt) {
-	if (type == BodyType::Static) {
-		return;
-	}
-
 	pose.position += linearVelocity * dt;
 	updateOrientation(pose.orientation, angularVelocity, dt);
 }
@@ -119,11 +115,6 @@ void RigidBody::calculateInverseInertia(
     const Collider& collider,
     const glm::vec3& inertiaScale) 
 {
-	if (type == BodyType::Static) {
-		invInertiaLocal = glm::mat3(0.0f);
-		return;
-	}
-
 	if (colliderType == ColliderType::CUBOID) {
 		const OOBB& box = std::get<OOBB>(collider.shape);
 		const glm::vec3 size = box.localHalfExtents * 2.0f * inertiaScale;

@@ -420,12 +420,6 @@ void PGSSolver::precomputePointData(
         glm::dot(rA_cross_n, invInertiaA * rA_cross_n) +
         glm::dot(rB_cross_n, invInertiaB * rB_cross_n));
 
-    //if (cp.m_eff <= 1e-8f) {
-    //    std::cout 
-    // << "Warning: contact point with near-zero effective mass!" 
-    // << std::endl;
-    //}
-
     // compute relative velocity at contact point based on current body states
     glm::vec3 relativeVelocity =
         (linearVelocityB + glm::cross(angularVelocityB, rB)) -

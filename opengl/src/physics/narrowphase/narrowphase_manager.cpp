@@ -355,13 +355,6 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
         return;
     }
 
-    if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
-        if (sleepState.isAsleep()) {
-            return;
-        }
-    }
-
     for (const ColliderHandle& colH : body.colliderHandles) {
         Collider& collider = physicsWorld->getCollider(colH);
 

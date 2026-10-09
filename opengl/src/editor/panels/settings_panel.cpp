@@ -144,7 +144,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
 
     static int currentItem = 0;
     const char* items[] = {
-        "Test", "Sand Box", "Terrain", "Tall structure", "Castle",
+        "Test", "Sand Box", "Terrain", "Tall structure", "Castle", "Stairs and gate",
     };
 
     ImGui::Spacing();
@@ -161,7 +161,7 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
         case 2: ctx.sceneBuilder->createScene(2, playerMode, 0); break;
         case 3: ctx.sceneBuilder->createScene(3, playerMode, 0); break;
         case 4: ctx.sceneBuilder->createScene(4, playerMode, 0); break;
-        //case 5: ctx.sceneBuilder->createScene(5, playerMode, 0); break;
+        case 5: ctx.sceneBuilder->createScene(5, playerMode, 0); break;
         //case 6: ctx.sceneBuilder->createScene(6, playerMode, 0); break;
         //case 7: ctx.sceneBuilder->createScene(7, playerMode, 0); break;
         //case 8: ctx.sceneBuilder->createScene(8, playerMode, 0); break;

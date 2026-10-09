@@ -230,12 +230,12 @@ void SleepManager::processSleepCandidates(
         if (body.type != BodyType::Dynamic) continue;
 
         SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
-        if (sleepState.asleep) continue;
-        if (!sleepState.allowSleep) continue;
-
+        
         // Update collision history
         sleepState.collisionHistory.push(sleepState.collisionCount);
         sleepState.collisionCount = 0;
+
+        if (!sleepState.allowSleep) continue;
 
         if (sleepState.getCollisionHistoryAverage() <= 0.0f) {
             continue;

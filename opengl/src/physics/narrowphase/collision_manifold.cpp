@@ -995,11 +995,8 @@ Contact* CollisionManifold::integrateContact(
         int i = pairs[k].newIdx;
         int j = pairs[k].cachedIdx;
 
-        if (matchedFinalPoints[i])
-            continue;
-
-        if (matchedCachedPoints[j])
-            continue;
+        if (matchedFinalPoints[i]) continue;
+        if (matchedCachedPoints[j]) continue;
 
         ContactPoint& newPoint = contact.points[i];
         ContactPoint& cachedPoint = cachedContact.points[j];
@@ -1045,15 +1042,13 @@ Contact* CollisionManifold::integrateContact(
     for (uint32_t i = 0; i < contact.numPoints; ++i) {
         ContactPoint& cp = contact.points[i];
 
+        contact.points[i].wasUsedThisFrame = true;
+
         if (!cp.wasWarmStarted) {
             cp.accumulatedNormalImpulse = 0.0f;
             cp.accumulatedFrictionImpulse1 = 0.0f;
             cp.accumulatedFrictionImpulse2 = 0.0f;
         }
-    }
-
-    for (uint32_t i = 0; i < contact.numPoints; ++i) {
-        contact.points[i].wasUsedThisFrame = true;
     }
 
     it->second = std::move(contact);
