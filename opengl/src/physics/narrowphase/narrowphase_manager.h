@@ -8,7 +8,7 @@
 #include "narrowphase_types.h"
 #include "collision_manifold.h"
 
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 #include "physics/broadphase/contact_types.h"
 
 namespace physics::internal {
@@ -16,7 +16,7 @@ namespace physics::internal {
 class NarrowphaseManager {
 public:
     void init(
-        PhysicsWorld* physicsWorld,
+        PhysicsStorage* storage,
         CollisionManifold* collisionManifold,
         std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
         std::unordered_map<size_t, Contact>* contactCache
@@ -36,7 +36,7 @@ public:
 
 private:
     // references to external systems
-    PhysicsWorld* physicsWorld = nullptr;
+    PhysicsStorage* physicsStorage = nullptr;
     CollisionManifold* collisionManifold = nullptr;
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts = nullptr;
     std::unordered_map<size_t, Contact>* contactCache = nullptr;

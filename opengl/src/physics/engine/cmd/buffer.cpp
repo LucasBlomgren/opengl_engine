@@ -21,13 +21,13 @@ void Buffer::reserve(
     mutations.reserve(mutationCount);
 }
 
-void Buffer::clear(PhysicsWorld& physicsWorld) {
+void Buffer::clear(PhysicsStorage& physicsStorage) {
     for (const auto& entry : colliderCreates) {
-        physicsWorld.releaseColliderReservation(entry.first);
+        physicsStorage.releaseColliderReservation(entry.first);
     }
 
     for (const auto& entry : bodyCreates) {
-        physicsWorld.releaseBodyReservation(entry.first);
+        physicsStorage.releaseBodyReservation(entry.first);
     }
 
     bodyCreates.clear();
@@ -98,7 +98,7 @@ void Buffer::recordColliderCreate(
 //=========================================
 bool Buffer::recordBodyDestroy(
     BodyHandle body,
-    PhysicsWorld& physicsWorld)
+    PhysicsStorage& physicsStorage)
 {
     if (bodyDestroys.contains(body)) {
         return false;
@@ -110,7 +110,7 @@ bool Buffer::recordBodyDestroy(
     // (if it exists in the active world)
     auto pendingCreate = bodyCreates.find(body);
     if (pendingCreate == bodyCreates.end()) {
-        RigidBody* activeBody = physicsWorld.tryGetBody(body);
+        RigidBody* activeBody = physicsStorage.tryGetBody(body);
 
         if (!activeBody) {
             return false;
@@ -135,7 +135,7 @@ bool Buffer::recordBodyDestroy(
         const ColliderHandle colliderHandle = collider->first;
 
         removedColliders.insert(colliderHandle);
-        physicsWorld.releaseColliderReservation(colliderHandle);
+        physicsStorage.releaseColliderReservation(colliderHandle);
 
         collider = colliderCreates.erase(collider);
     }
@@ -163,9 +163,9 @@ bool Buffer::recordBodyDestroy(
     if (pendingCreate != bodyCreates.end()) {
         bodyCreates.erase(pendingCreate);
 
-        physicsWorld.destroyMotionState(pendingCreate->second.motionStateHandle);
-        physicsWorld.destroySleepState(pendingCreate->second.sleepStateHandle);
-        physicsWorld.releaseBodyReservation(body);
+        physicsStorage.destroyMotionState(pendingCreate->second.motionStateHandle);
+        physicsStorage.destroySleepState(pendingCreate->second.sleepStateHandle);
+        physicsStorage.releaseBodyReservation(body);
     }
 
     return true;
@@ -173,7 +173,7 @@ bool Buffer::recordBodyDestroy(
 
 bool Buffer::recordColliderDestroy(
     ColliderHandle collider,
-    PhysicsWorld& physicsWorld)
+    PhysicsStorage& physicsStorage)
 {
     if (colliderDestroys.contains(collider)) {
         return false;
@@ -197,14 +197,14 @@ bool Buffer::recordColliderDestroy(
 
         colliderCreates.erase(create);
         removeMutationsTargeting(collider);
-        physicsWorld.releaseColliderReservation(collider);
+        physicsStorage.releaseColliderReservation(collider);
         return true;
     }
 
     // If the collider is not active or its parent body is pending 
     // destruction, don't destroy it (it will be destroyed when the parent body is destroyed)
     const Collider* activeCollider =
-        physicsWorld.tryGetCollider(collider);
+        physicsStorage.tryGetCollider(collider);
 
     if (!activeCollider ||
         bodyDestroys.contains(activeCollider->rigidBodyHandle)) {

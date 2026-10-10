@@ -14,7 +14,7 @@ namespace {
 
 const RigidBody* resolveBody(
     const cmd::Buffer& commandBuffer,
-    const PhysicsWorld& physicsWorld,
+    const PhysicsStorage& physicsStorage,
     BodyHandle handle)
 {
     if (commandBuffer.isBodyPendingDestroy(handle)) {
@@ -26,12 +26,12 @@ const RigidBody* resolveBody(
         return body;
     }
 
-    return physicsWorld.tryGetBody(handle);
+    return physicsStorage.tryGetBody(handle);
 }
 
 const Collider* resolveCollider(
     const cmd::Buffer& commandBuffer,
-    const PhysicsWorld& physicsWorld,
+    const PhysicsStorage& physicsStorage,
     ColliderHandle handle)
 {
     if (commandBuffer.isColliderPendingDestroy(handle)) {
@@ -42,7 +42,7 @@ const Collider* resolveCollider(
         commandBuffer.tryGetPendingColliderCreate(handle);
 
     if (!collider) {
-        collider = physicsWorld.tryGetCollider(handle);
+        collider = physicsStorage.tryGetCollider(handle);
     }
 
     if (!collider ||
@@ -65,7 +65,7 @@ ColliderHandle Engine::createCollider(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         bodyHandle
     );
 
@@ -74,7 +74,7 @@ ColliderHandle Engine::createCollider(
     }
 
     ColliderHandle colliderHandle =
-        physicsWorld.reserveColliderHandle();
+        physicsStorage.reserveColliderHandle();
 
     Collider collider;
     collider.rigidBodyHandle = bodyHandle;
@@ -103,7 +103,7 @@ ColliderHandle Engine::createCollider(
     }, desc.shape);
 
     if (!validShape) {
-        physicsWorld.releaseColliderReservation(colliderHandle);
+        physicsStorage.releaseColliderReservation(colliderHandle);
         return {};
     }
 
@@ -123,14 +123,14 @@ bool Engine::destroyCollider(
     ColliderHandle colliderHandle) {
     if (!resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         colliderHandle)) {
         return false;
     }
 
     return commandBuffer.recordColliderDestroy(
         colliderHandle,
-        physicsWorld
+        physicsStorage
     );
 }
 
@@ -143,7 +143,7 @@ bool Engine::setColliderLocalPose(
 {
     const Collider* collider = resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -162,7 +162,7 @@ bool Engine::setColliderLocalTransform(
 {
     const Collider* collider = resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -184,7 +184,7 @@ bool Engine::setColliderShape(
 {
     const Collider* collider = resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -202,7 +202,7 @@ bool Engine::setColliderEnabled(
 {
     const Collider* collider = resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -220,7 +220,7 @@ bool Engine::setColliderTrigger(
 {
     const Collider* collider = resolveCollider(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 

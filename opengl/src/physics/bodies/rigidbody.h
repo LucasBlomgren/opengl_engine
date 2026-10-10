@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/ring_buffer.h"
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 #include "physics/broadphase/rigidbody_types.h"

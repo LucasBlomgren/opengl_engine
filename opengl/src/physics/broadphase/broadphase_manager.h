@@ -18,7 +18,7 @@ class Tri;
 class BroadphaseManager {
 public:
     void init(
-        PhysicsWorld* world, 
+        PhysicsStorage* physicsStorage,
         std::vector<Tri>* terrainTris
     );
     void clear();
@@ -66,7 +66,7 @@ public:
 
 private:
     // references to world and terrain
-    PhysicsWorld* world = nullptr;
+    PhysicsStorage* physicsStorage = nullptr;
     std::vector<Tri>* terrainTriangles = nullptr;
 
     // lists of handles

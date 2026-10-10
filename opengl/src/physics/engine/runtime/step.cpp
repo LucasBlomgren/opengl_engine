@@ -188,7 +188,7 @@ void Engine::beginPhysicsStep(float outerDt) {
     processPendingCommands();
 
     uint32_t bodySlotCapacity =
-        physicsWorld.bodyStorage().slot_capacity();
+        physicsStorage.bodyStorage().slot_capacity();
 
     debugSweeps.clear();
     debugSpeculativeContacts.clear();

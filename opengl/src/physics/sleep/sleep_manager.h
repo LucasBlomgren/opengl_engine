@@ -7,7 +7,7 @@
 
 namespace physics::internal {
 
-class PhysicsWorld;
+class PhysicsStorage;
 class BroadphaseManager;
 class RigidBody;
 class SleepState;
@@ -15,7 +15,7 @@ struct ContactBatch;
 
 class SleepManager {
 public:
-    SleepManager(PhysicsWorld& world, BroadphaseManager& broadphase);
+    SleepManager(PhysicsStorage& storage, BroadphaseManager& broadphase);
 
     SleepState& ensureSleepState(BodyHandle handle);
 
@@ -31,7 +31,7 @@ public:
     void applySleepDamping(const std::vector<BodyHandle>& awakeHandles, float dt);
 
 private:
-    PhysicsWorld& world;
+    PhysicsStorage& storage;
     BroadphaseManager& broadphase;
 
     struct WakeMotion {

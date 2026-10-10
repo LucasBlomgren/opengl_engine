@@ -1,6 +1,6 @@
 #pragma once
 
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/aabb.h"
 
@@ -31,7 +31,7 @@ public:
     using Element = BodyHandle;
 
     void init(
-        PhysicsWorld* world, 
+        PhysicsStorage* storage, 
         size_t allocSize, 
         bool writeBodyLeafIndices
     );
@@ -97,7 +97,7 @@ public:
     }
 
 private:
-    PhysicsWorld* world = nullptr;
+    PhysicsStorage* physicsStorage = nullptr;
 
     bool writeBodyLeafIndices = true;
 

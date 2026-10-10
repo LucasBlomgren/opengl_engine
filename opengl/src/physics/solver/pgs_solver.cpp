@@ -7,9 +7,9 @@
 
 namespace physics::internal {
 
-void PGSSolver::init(PhysicsWorld& world) 
+void PGSSolver::init(PhysicsStorage& storage) 
 {
-    this->physicsWorld = &world;
+    this->physicsStorage = &storage;
 
     // #TODO: PGSSolver init - arbitrary limits, or dynamic resizing?
     solverBodies.reserve(1024);

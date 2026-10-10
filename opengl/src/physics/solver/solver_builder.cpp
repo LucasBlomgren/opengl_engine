@@ -18,7 +18,7 @@ bool PGSSolver::computeContributesMotion(
 
     if (body.type == BodyType::Dynamic) {
         const SleepState& sleepState =
-            physicsWorld->getSleepState(body.sleepStateHandle);
+            physicsStorage->getSleepState(body.sleepStateHandle);
 
         if (!sleepState.isAsleep()) {
             return true;
@@ -35,7 +35,7 @@ bool PGSSolver::computeNoSolverResponse(
 
     if (body.type == BodyType::Dynamic) {
         const SleepState& sleepState =
-            physicsWorld->getSleepState(body.sleepStateHandle);
+            physicsStorage->getSleepState(body.sleepStateHandle);
 
         if (sleepState.isAsleep()) {
             return true;
@@ -66,16 +66,16 @@ void PGSSolver::buildSolverData(
     // #TODO: bör vara touched bodies i scope, inte alla bodies i caches
     // om slot_capacity() är mycket större än antalet aktiva bodies, nollställs
     // mer än nödvändigt varje frame.
-    size_t slotCap = physicsWorld->bodyStorage().slot_capacity();
+    size_t slotCap = physicsStorage->bodyStorage().slot_capacity();
     solverBodyIndexBySlot.assign(slotCap, InvalidSolverBody);
 
-    solverBodies.reserve(physicsWorld->bodyStorage().dense().size());
+    solverBodies.reserve(physicsStorage->bodyStorage().dense().size());
     contactConstraints.reserve(batch.contacts.size());
     contactPoints.reserve(batch.contacts.size() * 4);
     speculativeConstraints.reserve(batch.speculativeContacts.size());
 
-    solverBodySources.reserve(physicsWorld->bodyStorage().dense().size());
-    solverBodyWriteBack.reserve(physicsWorld->bodyStorage().dense().size());
+    solverBodySources.reserve(physicsStorage->bodyStorage().dense().size());
+    solverBodyWriteBack.reserve(physicsStorage->bodyStorage().dense().size());
     constraintSources.reserve(batch.contacts.size());
     pointSources.reserve(batch.contacts.size() * 4);
 

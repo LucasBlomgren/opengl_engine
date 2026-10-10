@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/slot_map.h"
+#include "physics/storage/slot_map.h"
 #include "game/game_object.h"
 #include "game/transform.h"
 #include "physics/public/engine.h"

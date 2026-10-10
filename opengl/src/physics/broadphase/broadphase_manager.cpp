@@ -14,21 +14,21 @@ namespace physics::internal {
 //    Init & Clear
 //=======================================
 void BroadphaseManager::init(
-    PhysicsWorld* world, 
+    PhysicsStorage* physicsStorage, 
     std::vector<Tri>* terrainTris) 
 {
-    this->world = world;
+    this->physicsStorage = physicsStorage;
     this->terrainTriangles = terrainTris;
 
-    SlotMap<RigidBody, BodyHandle>& bMap = world->bodyStorage();
+    SlotMap<RigidBody, BodyHandle>& bMap = physicsStorage->bodyStorage();
     size_t slotCap = bMap.dense().capacity();
 
-    awakeBvh.init(world, slotCap, true);
-    asleepBvh.init(world, slotCap, true);
-    staticBvh.init(world, slotCap, true);
+    awakeBvh.init(physicsStorage, slotCap, true);
+    asleepBvh.init(physicsStorage, slotCap, true);
+    staticBvh.init(physicsStorage, slotCap, true);
 
     // false = speculative pairs don't need to write leaf indices
-    speculativeBvh.init(world, slotCap, false);
+    speculativeBvh.init(physicsStorage, slotCap, false);
 
     awakeHandles.reserve(slotCap * 2);
     asleepHandles.reserve(slotCap * 2);
@@ -116,7 +116,7 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
     }
 
     batch.dynamicPairs.clear();
-        
+
     // dynamic vs dynamic
     if (awakeBvh.rootIdx != -1) {
         pairsBufDynamic.clear();
@@ -164,7 +164,7 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 //==================================================
 //     Speculative pair building for narrowphase
 //==================================================
-void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps) 
+void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps)
 {
     batch.speculativeDynamicPairs.clear();
     batch.speculativeTerrainPairs.clear();
@@ -333,13 +333,13 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
 
 void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHandle>& outBodies, std::vector<AABB>& outAABBs) {
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody& body = world->getBody(handle);
+        RigidBody& body = physicsStorage->getBody(handle);
 
         if (body.colliderHandles.empty()) {
             continue;
         }
 
-        Collider& mainCollider = world->getCollider(body.colliderHandles[0]);
+        Collider& mainCollider = physicsStorage->getCollider(body.colliderHandles[0]);
 
         if (body.type != BodyType::Dynamic) {
             continue;
@@ -399,7 +399,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
                     0.5f * std::sqrt(scale2);
 
                 // Use the box's OWN oriented axes + local half-extents.
-                // The world AABB is sign-agnostic: currentHalf is always the
+                // The physicsStorage AABB is sign-agnostic: currentHalf is always the
                 // all-positive corner, a phantom point that sits far from the
                 // axis when the body's long dimension points "against" it.
                 // Measuring that corner's distance to the axis is the bug.
@@ -443,7 +443,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHan
 //    List management
 //==================================================
 void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
-    RigidBody& rigidBody = world->getBody(handle);
+    RigidBody& rigidBody = physicsStorage->getBody(handle);
     if (dst == BroadphaseBucket::None) {
         return;
     }
@@ -466,7 +466,7 @@ void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
 
 // Remove from current list
 void BroadphaseManager::remove(const BodyHandle& handle) {
-    RigidBody& rigidBody = world->getBody(handle);
+    RigidBody& rigidBody = physicsStorage->getBody(handle);
 
     auto& h = rigidBody.broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
@@ -485,7 +485,7 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
 
 // Move to awake
 void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
-    RigidBody& body = world->getBody(handle);
+    RigidBody& body = physicsStorage->getBody(handle);
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
         return;
@@ -497,7 +497,7 @@ void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
-    RigidBody& body = world->getBody(handle);
+    RigidBody& body = physicsStorage->getBody(handle);
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
         return;
@@ -509,7 +509,7 @@ void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
 }
 // Move to static
 void BroadphaseManager::moveToStatic(const BodyHandle& handle) {
-    RigidBody& body = world->getBody(handle);
+    RigidBody& body = physicsStorage->getBody(handle);
     if (body.broadphaseHandle.bucket == BroadphaseBucket::Static) {
         return;
     }
@@ -520,7 +520,7 @@ void BroadphaseManager::moveToStatic(const BodyHandle& handle) {
 }
 
 void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
-    RigidBody& rigidBody = world->getBody(handle);
+    RigidBody& rigidBody = physicsStorage->getBody(handle);
     auto& h = rigidBody.broadphaseHandle;
     if (h.bucket == BroadphaseBucket::None) return;
     bvhFor(h.bucket).dirty = true;
@@ -530,10 +530,10 @@ void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
 //     Helpers
 //==================================================
 void BroadphaseManager::swapAndPop(
-    const BodyHandle& handle, 
-    std::vector<BodyHandle>& list) 
+    const BodyHandle& handle,
+    std::vector<BodyHandle>& list)
 {
-    RigidBody& rigidBody = world->getBody(handle);
+    RigidBody& rigidBody = physicsStorage->getBody(handle);
 
     int i = rigidBody.broadphaseHandle.listIdx;
     if (i == -1) return;
@@ -556,7 +556,7 @@ void BroadphaseManager::swapAndPop(
         BodyHandle movedHandle = list[lastPos];
         list[i] = movedHandle;
 
-        RigidBody& moved = world->getBody(movedHandle);
+        RigidBody& moved = physicsStorage->getBody(movedHandle);
         moved.broadphaseHandle.listIdx = i;
     }
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <glm/ext/vector_float3.hpp>
-#include "core/ring_buffer.h"
+#include "ring_buffer.h"
 
 namespace physics::internal {
 

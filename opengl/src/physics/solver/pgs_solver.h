@@ -1,7 +1,7 @@
 #pragma once
 #include "solver_types.h"
 
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 #include "physics/narrowphase/narrowphase_types.h"
 #include "physics/narrowphase/collision_manifold.h"
 
@@ -9,7 +9,7 @@ namespace physics::internal {
 
 class PGSSolver {
 public:
-    void init(PhysicsWorld& world);
+    void init(PhysicsStorage& storage);
     void clear();
 
     void solve(
@@ -19,7 +19,7 @@ public:
     );
 
 private:
-    PhysicsWorld* physicsWorld = nullptr;
+    PhysicsStorage* physicsStorage = nullptr;
 
     // Solver data structures
     std::vector<SolverBody> solverBodies;

@@ -322,7 +322,6 @@
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\sat.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_box.cpp" />
-    <ClInclude Include="src\core\handle.h" />
     <ClInclude Include="src\ecs\component_storage.h" />
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity.h" />
@@ -340,7 +339,7 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_tri.cpp" />
     <ClCompile Include="src\physics\sleep\sleep_manager.cpp" />
-    <ClCompile Include="src\physics\world\physics_world.cpp" />
+    <ClCompile Include="src\physics\storage\physics_storage.cpp" />
     <ClCompile Include="src\physics\raycast\raycast.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.h</PrecompiledHeaderFile>
@@ -377,7 +376,7 @@
     <ClInclude Include="src\engine\opengl_init.h" />
     <ClInclude Include="src\engine\input.h" />
     <ClInclude Include="src\engine\input_manager.h" />
-    <ClInclude Include="src\core\slot_map.h" />
+    <ClInclude Include="src\physics\storage\slot_map.h" />
     <ClInclude Include="src\core\timer.h" />
     <ClInclude Include="src\editor\editor_main.h" />
     <ClInclude Include="src\editor\panel.h" />
@@ -387,7 +386,7 @@
     <ClInclude Include="src\editor\panel_manager.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\game\player.h" />
-    <ClInclude Include="src\core\ring_buffer.h" />
+    <ClInclude Include="src\physics\sleep\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
@@ -448,7 +447,7 @@
     <ClInclude Include="src\physics\public\rigid_body_desc.h" />
     <ClInclude Include="src\physics\public\rigid_body_state.h" />
     <ClInclude Include="src\physics\sleep\sleep_manager.h" />
-    <ClInclude Include="src\physics\world\physics_world.h" />
+    <ClInclude Include="src\physics\storage\physics_storage.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\bodies\rigidbody.h" />

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/handle.h"
+#include "physics/public/handles.h"
 
 struct GameObjectTag;
 struct TransformTag;
 
-using GameObjectHandle = HandleT<GameObjectTag>;
-using TransformHandle = HandleT<TransformTag>;
+using GameObjectHandle = physics::HandleT<GameObjectTag>;
+using TransformHandle = physics::HandleT<TransformTag>;

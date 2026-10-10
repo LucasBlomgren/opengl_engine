@@ -5,7 +5,7 @@
 #include <variant>
 #include <vector>
 
-#include "core/slot_map.h"
+#include "physics/storage/slot_map.h"
 #include "physics/public/contact_types.h"
 #include "SAT/sat.h"
 

@@ -15,17 +15,17 @@ void Engine::integrateForcesAndVelocities(
     float dt)
 {
     for (const BodyHandle& bodyHandle : awakeBodies) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
         if (body.colliderHandles.empty()) {
             continue;
         }
 
         Collider& mainCollider =
-            physicsWorld.getCollider(body.colliderHandles[0]);
+            physicsStorage.getCollider(body.colliderHandles[0]);
 
         if (body.type == BodyType::Dynamic) {
-            SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+            SleepState& sleepState = physicsStorage.getSleepState(body.sleepStateHandle);
 
             if (body.colliderHandles.size() == 1) {
                 body.applyRollingFriction(mainCollider.type, dt, sleepState);
@@ -45,10 +45,10 @@ void Engine::integratePositionsAndColliders(
     float dt)
 {
     for (const BodyHandle& bodyHandle : awakeBodies) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
         body.integratePose(dt);
         body.updateInertiaWorld();
-        updateCollidersAndBodyAABB(physicsWorld, &body);
+        updateCollidersAndBodyAABB(physicsStorage, &body);
     }
 }
 
@@ -56,7 +56,7 @@ void Engine::integratePositionsAndColliders(
 // Update Collider Poses and Body AABB
 //==============================================================
 void internal::updateCollidersAndBodyAABB(
-    PhysicsWorld& world,
+    PhysicsStorage& storage,
     RigidBody* body)
 {
     bool hasAABB = false;
@@ -64,7 +64,7 @@ void internal::updateCollidersAndBodyAABB(
 
     for (ColliderHandle colliderHandle : body->colliderHandles) {
         Collider& collider =
-            world.getCollider(colliderHandle);
+            storage.getCollider(colliderHandle);
 
         if (!collider.enabled) {
             continue;

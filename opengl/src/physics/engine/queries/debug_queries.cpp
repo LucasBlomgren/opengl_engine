@@ -52,7 +52,7 @@ physics::debug::Data Engine::getDebugData() const {
     debugData.awake = broadphaseManager.getAwakeList().size();
     debugData.asleep = broadphaseManager.getAsleepList().size();
     debugData.staticBodies = broadphaseManager.getStaticList().size();
-    debugData.colliders = physicsWorld.colliderStorage().dense().size();
+    debugData.colliders = physicsStorage.colliderStorage().dense().size();
     debugData.terrainTris = terrainTriangles.size();
     debugData.contacts = contactsThisFrame;
     debugData.speculativeContacts = speculativeContactsThisFrame;

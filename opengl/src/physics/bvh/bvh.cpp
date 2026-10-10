@@ -7,11 +7,11 @@ namespace physics::internal {
 //    Init & Clear
 //=======================================================
 void BVHTree::init(
-    PhysicsWorld* world,
+    PhysicsStorage* storage,
     size_t allocSize,
     bool writeBodyLeafIndices) 
 {
-    this->world = world;
+    this->physicsStorage = storage;
     this->writeBodyLeafIndices = writeBodyLeafIndices;
 
     nodes.reserve(allocSize * 2);
@@ -98,7 +98,7 @@ bool BVHTree::queryAny(const AABB& qBox, BodyHandle ignoreBody) const {
 //      Insert Leaf
 //========================================================
 int BVHTree::insertLeaf(BodyHandle handle) {
-    RigidBody& body = world->getBody(handle);
+    RigidBody& body = physicsStorage->getBody(handle);
 
     if (body.broadphaseHandle.leafIdx != -1) {
         // already in tree
@@ -156,7 +156,7 @@ int BVHTree::insertLeaf(BodyHandle handle) {
 }
 
 int BVHTree::createLeaf(BodyHandle handle, RigidBody& body) {
-    AABB aabb = world->computeBodyAABB(body);
+    AABB aabb = physicsStorage->computeBodyAABB(body);
 
     Node& leaf = nodes.emplace_back();
     leaf.selfIdx = nodes.size() - 1;
@@ -229,7 +229,7 @@ void BVHTree::removeLeaf(int leafIdx)
 
     // root is leaf, clear tree
     if (leafIdx == rootIdx) {
-        RigidBody& body = world->getBody(leaf.element);
+        RigidBody& body = physicsStorage->getBody(leaf.element);
         body.broadphaseHandle.leafIdx = -1;
 
         rootIdx = -1;
@@ -266,7 +266,7 @@ void BVHTree::removeLeaf(int leafIdx)
     leaf.alive = false;
     leaf.parentIdx = -1;
 
-    RigidBody& body = world->getBody(leaf.element);
+    RigidBody& body = physicsStorage->getBody(leaf.element);
 
     body.broadphaseHandle.leafIdx = -1;
     leaf.element = BodyHandle{};
@@ -307,7 +307,7 @@ void BVHTree::updateLeaves() {
             continue;
         }
 
-        RigidBody& body = world->getBody(n.element);
+        RigidBody& body = physicsStorage->getBody(n.element);
         n.tightBox = body.aabb;
 
         if (n.fatBox.contains(n.tightBox)) {
@@ -383,7 +383,7 @@ void BVHTree::createPrimitivesFromBodyAABBs(
     prims.reserve(handles.size());
 
     for (const BodyHandle& bodyH : handles) {
-        RigidBody& body = world->getBody(bodyH);
+        RigidBody& body = physicsStorage->getBody(bodyH);
 
         if (writeBodyLeafIndices) {
             body.broadphaseHandle.leafIdx = -1;
@@ -417,7 +417,7 @@ void BVHTree::createPrimitivesFromExternalAABBs(
         const AABB& box = boxes[i];
 
         if (writeBodyLeafIndices) {
-            RigidBody& body = world->getBody(bodyH);
+            RigidBody& body = physicsStorage->getBody(bodyH);
             body.broadphaseHandle.leafIdx = -1;
         }
 
@@ -540,7 +540,7 @@ void BVHTree::createPrimitives(std::vector<BodyHandle>& handles) {
     prims.reserve(handles.size());
 
     for (BodyHandle& bodyH : handles) {
-        RigidBody& body = world->getBody(bodyH);
+        RigidBody& body = physicsStorage->getBody(bodyH);
         body.broadphaseHandle.leafIdx = -1;
         
         AABB& box = body.aabb;
@@ -641,7 +641,7 @@ void BVHTree::makeLeaf(int nodeIdx)
     leaf.fatBox = leaf.tightBox;
 
     if (writeBodyLeafIndices) {
-        RigidBody& body = world->getBody(leaf.element);
+        RigidBody& body = physicsStorage->getBody(leaf.element);
         body.broadphaseHandle.leafIdx = leaf.selfIdx;
     }
 }

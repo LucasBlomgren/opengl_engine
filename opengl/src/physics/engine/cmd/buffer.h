@@ -10,7 +10,8 @@
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
+
 #include "physics/bodies/rigidbody.h"
 #include "physics/colliders/collider.h"
 
@@ -156,7 +157,7 @@ public:
     // Storage management
     //=========================================
     void reserve(size_t bodyCount, size_t colliderCount, size_t mutationCount);
-    void clear(PhysicsWorld& physicsWorld);
+    void clear(PhysicsStorage& physicsStorage);
     [[nodiscard]] Batch take();
 
     //=========================================
@@ -165,8 +166,8 @@ public:
     void recordBodyCreate(BodyHandle body, RigidBody&& rigidBody);
     void recordColliderCreate(ColliderHandle collider, Collider&& colliderData);
     
-    bool recordBodyDestroy(BodyHandle body, PhysicsWorld& physicsWorld);
-    bool recordColliderDestroy(ColliderHandle collider, PhysicsWorld& physicsWorld);
+    bool recordBodyDestroy(BodyHandle body, PhysicsStorage& physicsStorage);
+    bool recordColliderDestroy(ColliderHandle collider, PhysicsStorage& physicsStorage);
 
     RigidBody* tryGetPendingBodyCreate(BodyHandle body);
     const RigidBody* tryGetPendingBodyCreate(BodyHandle body) const;

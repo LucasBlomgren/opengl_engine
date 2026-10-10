@@ -1,12 +1,10 @@
 #pragma once
 #include <vector>
-#include <cassert>
 #include <algorithm>
 #include <cstdint>
 #include <utility>
 #include <glm/ext/vector_float3.hpp>
 
-#include "core/slot_map.h"
 #include "physics/colliders/aabb.h"
 
 namespace physics::internal {
@@ -18,8 +16,8 @@ inline uint32_t elementKey(BodyHandle h) {
 template<class BVH>
 void treeVsSameTreeQuery(
     const BVH& tree,
-    std::vector<std::pair<typename BVH::Element, typename BVH::Element>>& out
-) {
+    std::vector<std::pair<typename BVH::Element, typename BVH::Element>>& out) 
+{
     out.clear();
 
     if (tree.nodes.empty() || tree.rootIdx == -1)

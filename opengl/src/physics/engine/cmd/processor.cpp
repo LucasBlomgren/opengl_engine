@@ -11,7 +11,7 @@
 #include "physics/engine/cmd/processor.h"
 
 #include "physics/broadphase/broadphase_manager.h"
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 #include "physics/sleep/sleep_manager.h"
 
 namespace physics::internal::cmd {
@@ -19,7 +19,7 @@ namespace physics::internal::cmd {
 namespace {
 
 BroadphaseBucket getBodyBucket(
-    PhysicsWorld& physicsWorld,
+    PhysicsStorage& physicsStorage,
     const RigidBody& body)
 {
     if (body.type == BodyType::Static) {
@@ -27,7 +27,7 @@ BroadphaseBucket getBodyBucket(
     }
 
     if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState = physicsWorld.getSleepState(body.sleepStateHandle);
+        SleepState& sleepState = physicsStorage.getSleepState(body.sleepStateHandle);
 
         if (sleepState.isAsleep() && sleepState.canSleep()) {
             return BroadphaseBucket::Asleep;
@@ -38,11 +38,11 @@ BroadphaseBucket getBodyBucket(
 }
 
 Collider* findFirstEnabledCollider(
-    PhysicsWorld& physicsWorld,
+    PhysicsStorage& physicsStorage,
     const RigidBody& body)
 {
     for (ColliderHandle colliderHandle : body.colliderHandles) {
-        Collider* collider = physicsWorld.tryGetCollider(colliderHandle);
+        Collider* collider = physicsStorage.tryGetCollider(colliderHandle);
 
         if (collider && collider->enabled) {
             return collider;
@@ -117,10 +117,10 @@ glm::vec3 calculateAngularVelocity(
 } // namespace
 
 Processor::Processor(
-    PhysicsWorld& physicsWorld,
+    PhysicsStorage& physicsStorage,
     SleepManager& sleepManager,
     BroadphaseManager& broadphaseManager)
-    : physicsWorld(physicsWorld),
+    : physicsStorage(physicsStorage),
       sleepManager(sleepManager),
       broadphaseManager(broadphaseManager)
 {}
@@ -160,33 +160,33 @@ void Processor::processLifecycleCommands(
     // Buffer guarantees that their parent bodies 
     // will not be destroyed in the same batch.
     for (const auto& [colliderHandle, bodyHandle] : batch.colliderDestroys) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
         std::erase(
             body.colliderHandles,
             colliderHandle
         );
 
-        physicsWorld.destroyCollider(colliderHandle);
+        physicsStorage.destroyCollider(colliderHandle);
         bodiesToRefresh.insert(bodyHandle);
     }
 
     // Destroy bodies + their motion state, sleep state, and colliders
     for (BodyHandle bodyHandle : batch.bodyDestroys) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
         for (ColliderHandle colliderHandle : body.colliderHandles) {
-            physicsWorld.destroyCollider(colliderHandle);
+            physicsStorage.destroyCollider(colliderHandle);
         }
 
-        physicsWorld.destroyMotionState(body.motionStateHandle);
-        physicsWorld.destroySleepState(body.sleepStateHandle);
-        physicsWorld.destroyBody(bodyHandle);
+        physicsStorage.destroyMotionState(body.motionStateHandle);
+        physicsStorage.destroySleepState(body.sleepStateHandle);
+        physicsStorage.destroyBody(bodyHandle);
     }
 
     // Commit bodies before their colliders
     for (auto& [bodyHandle, body] : batch.bodyCreates) {
-        physicsWorld.commitBody(
+        physicsStorage.commitBody(
             bodyHandle,
             std::move(body)
         );
@@ -197,9 +197,9 @@ void Processor::processLifecycleCommands(
     // Commit colliders and attach them to their active parents
     for (auto& [colliderHandle, collider] : batch.colliderCreates) {
         const BodyHandle bodyHandle = collider.rigidBodyHandle;
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
-        physicsWorld.commitCollider(
+        physicsStorage.commitCollider(
             colliderHandle,
             std::move(collider)
         );
@@ -235,13 +235,13 @@ void Processor::applyCommand(
     const Buffer::ApplyLinearImpulse& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body || body->type != BodyType::Dynamic) {
         return;
     }
 
-    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    SleepState& sleepState = physicsStorage.getSleepState(body->sleepStateHandle);
 
     if (sleepState.isAsleep() && sleepState.canSleep()) {
         broadphaseManager.moveToAwake(command.body);
@@ -254,7 +254,7 @@ void Processor::applyCommand(
     const Buffer::SetLinearVelocity& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body || body->type == BodyType::Static) {
         return;
@@ -267,7 +267,7 @@ void Processor::applyCommand(
     const Buffer::SetAngularVelocity& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body || body->type == BodyType::Static) {
         return;
@@ -280,7 +280,7 @@ void Processor::applyCommand(
     const Buffer::SetKinematicTarget& command,
     float dt)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body ||
         body->type != BodyType::Kinematic ||
@@ -302,7 +302,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyTransform& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body) {
         return;
@@ -318,14 +318,14 @@ void Processor::applyCommand(
     const Buffer::SetBodySleepState& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body ||
         body->type != BodyType::Dynamic) {
         return;
     }
 
-    SleepState& sleepState = physicsWorld.getSleepState(body->sleepStateHandle);
+    SleepState& sleepState = physicsStorage.getSleepState(body->sleepStateHandle);
     if (!sleepState.canSleep()) {
         return;
     }
@@ -334,7 +334,7 @@ void Processor::applyCommand(
         sleepManager.sleepBody(command.body, sleepState);
     }
     else {
-        RigidBody* body = physicsWorld.tryGetBody(command.body);
+        RigidBody* body = physicsStorage.tryGetBody(command.body);
         sleepManager.wakeBody(command.body, *body, sleepState);
     }
 }
@@ -343,7 +343,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyType& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body) {
         return;
@@ -393,7 +393,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyReportContacts& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
     if (body) {
         body->reportContacts = command.reportContacts;
     }
@@ -403,7 +403,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyMass& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body ||
         body->type != BodyType::Dynamic ||
@@ -420,7 +420,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyAllowGravity& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (body) {
         body->allowGravity = command.allowGravity;
@@ -431,7 +431,7 @@ void Processor::applyCommand(
     const Buffer::SetBodyAllowSleep& command,
     float)
 {
-    RigidBody* body = physicsWorld.tryGetBody(command.body);
+    RigidBody* body = physicsStorage.tryGetBody(command.body);
 
     if (!body || body->type != BodyType::Dynamic) {
         return;
@@ -447,7 +447,7 @@ void Processor::applyCommand(
     const Buffer::SetColliderLocalPose& command,
     float)
 {
-    Collider* collider = physicsWorld.tryGetCollider(command.collider);
+    Collider* collider = physicsStorage.tryGetCollider(command.collider);
 
     if (!collider) {
         return;
@@ -461,7 +461,7 @@ void Processor::applyCommand(
     const Buffer::SetColliderLocalTransform& command,
     float)
 {
-    Collider* collider = physicsWorld.tryGetCollider(command.collider);
+    Collider* collider = physicsStorage.tryGetCollider(command.collider);
 
     if (!collider) {
         return;
@@ -476,7 +476,7 @@ void Processor::applyCommand(
     const Buffer::SetColliderShape& command,
     float)
 {
-    Collider* collider = physicsWorld.tryGetCollider(command.collider);
+    Collider* collider = physicsStorage.tryGetCollider(command.collider);
 
     if (!collider || !applyShape(*collider, command.shape)) {
         return;
@@ -489,7 +489,7 @@ void Processor::applyCommand(
     const Buffer::SetColliderEnabled& command,
     float)
 {
-    Collider* collider = physicsWorld.tryGetCollider(command.collider);
+    Collider* collider = physicsStorage.tryGetCollider(command.collider);
 
     if (!collider) {
         return;
@@ -503,7 +503,7 @@ void Processor::applyCommand(
     const Buffer::SetColliderTrigger& command,
     float)
 {
-    Collider* collider = physicsWorld.tryGetCollider(command.collider);
+    Collider* collider = physicsStorage.tryGetCollider(command.collider);
 
     if (collider) {
         collider->isTrigger = command.isTrigger;
@@ -521,7 +521,7 @@ void Processor::applyCommand(
         broadphaseManager.getAwakeList();
 
     for (const BodyHandle& bodyHandle : awakeHandles) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
         if (body.type == BodyType::Kinematic ||
             body.colliderHandles.empty()) {
@@ -529,7 +529,7 @@ void Processor::applyCommand(
         }
 
         SleepState& sleepState = 
-            physicsWorld.getSleepState(body.sleepStateHandle);
+            physicsStorage.getSleepState(body.sleepStateHandle);
 
         sleepManager.sleepBody(
             bodyHandle,
@@ -546,14 +546,14 @@ void Processor::applyCommand(
         broadphaseManager.getAsleepList();
 
     for (const BodyHandle& bodyHandle : asleepHandles) {
-        RigidBody& body = physicsWorld.getBody(bodyHandle);
+        RigidBody& body = physicsStorage.getBody(bodyHandle);
 
         if (body.colliderHandles.empty()) {
             continue;
         }
 
         SleepState& sleepState =
-            physicsWorld.getSleepState(body.sleepStateHandle);
+            physicsStorage.getSleepState(body.sleepStateHandle);
 
         sleepManager.wakeBody(
             bodyHandle,
@@ -578,7 +578,7 @@ void Processor::refreshBodyInertia(RigidBody& body)
     }
 
     Collider* collider = findFirstEnabledCollider(
-        physicsWorld,
+        physicsStorage,
         body
     );
 
@@ -614,7 +614,7 @@ void Processor::refreshBodySpatialState(
     // #TODO: We don't need to update each collider 
     // just because one collider or the body has changed.
 
-    RigidBody& body = physicsWorld.getBody(bodyHandle);
+    RigidBody& body = physicsStorage.getBody(bodyHandle);
 
     // If the body has no colliders, reset its AABB, 
     // inverse radius and remove it from the broadphase
@@ -626,13 +626,13 @@ void Processor::refreshBodySpatialState(
     }
 
     Collider& firstCollider = 
-        physicsWorld.getCollider(body.colliderHandles.front());
+        physicsStorage.getCollider(body.colliderHandles.front());
 
     AABB combinedAABB = firstCollider.getAABB();
 
     // Update all colliders and compute the combined AABB
     for (ColliderHandle colliderHandle : body.colliderHandles) {
-        Collider& collider = physicsWorld.getCollider(colliderHandle);
+        Collider& collider = physicsStorage.getCollider(colliderHandle);
 
         collider.updateWorldPose(body.pose, body.scale);
         collider.updateShape();
@@ -661,7 +661,7 @@ void Processor::refreshBodySpatialState(
     }
 
     if (body.broadphaseHandle.bucket == BroadphaseBucket::None) {
-        broadphaseManager.add(bodyHandle, getBodyBucket(physicsWorld, body));
+        broadphaseManager.add(bodyHandle, getBodyBucket(physicsStorage, body));
         return;
     }
 }

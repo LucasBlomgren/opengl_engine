@@ -26,7 +26,7 @@
 #include "physics/narrowphase/narrowphase_manager.h"
 #include "physics/sleep/sleep_manager.h"
 #include "physics/solver/pgs_solver.h"
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 
 class EngineState;
 class FrameTimers;
@@ -214,17 +214,17 @@ private:
     //======================================
     // Internal systems
     //======================================
-    internal::PhysicsWorld physicsWorld;
+    internal::PhysicsStorage physicsStorage;
 
     internal::BroadphaseManager broadphaseManager;
     internal::NarrowphaseManager narrowphaseManager;
     internal::CollisionManifold collisionManifold;
-    internal::SleepManager sleepManager{ physicsWorld, broadphaseManager };
+    internal::SleepManager sleepManager{ physicsStorage, broadphaseManager };
     internal::PGSSolver pgsSolver;
 
     internal::cmd::Buffer commandBuffer;
     internal::cmd::Processor commandProcessor{
-        physicsWorld,
+        physicsStorage,
         sleepManager,
         broadphaseManager
     };

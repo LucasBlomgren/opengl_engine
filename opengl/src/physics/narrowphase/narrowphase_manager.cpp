@@ -45,12 +45,12 @@ std::optional<ShapePairKind> classifyShapePair(
 //              Initialization
 //=======================================================
 void NarrowphaseManager::init(
-    PhysicsWorld* physicsWorld,
+    PhysicsStorage* storage,
     CollisionManifold* collisionManifold,
     std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
     std::unordered_map<size_t, Contact>* contactCache)
 {
-    this->physicsWorld = physicsWorld;
+    this->physicsStorage = storage;
     this->collisionManifold = collisionManifold;
     this->debugSpeculativeContacts = debugSpeculativeContacts;
     this->contactCache = contactCache;
@@ -107,8 +107,8 @@ void NarrowphaseManager::processDynamicPairs(
     ContactBatch& batch,
     float dt)
 {
-    RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
-    RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
+    RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
+    RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
 
     if (bodyA.type == BodyType::Static && 
         bodyB.type == BodyType::Static) {
@@ -117,8 +117,8 @@ void NarrowphaseManager::processDynamicPairs(
 
     for (const ColliderHandle& colAH : bodyA.colliderHandles) {
         for (const ColliderHandle& colBH : bodyB.colliderHandles) {
-            Collider& colliderA = physicsWorld->getCollider(colAH);
-            Collider& colliderB = physicsWorld->getCollider(colBH);
+            Collider& colliderA = physicsStorage->getCollider(colAH);
+            Collider& colliderB = physicsStorage->getCollider(colBH);
 
             // If either body is compound, check if the colliders' AABBs intersect
             if (bodyA.isCompound() || bodyB.isCompound()) {
@@ -197,8 +197,8 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
     const SpeculativeDynamicPair& pair,
     float dt)
 {
-    RigidBody& bodyA = physicsWorld->getBody(pair.bodyA);
-    RigidBody& bodyB = physicsWorld->getBody(pair.bodyB);
+    RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
+    RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
 
     if (bodyA.type == BodyType::Kinematic &&
         bodyB.type == BodyType::Kinematic) {
@@ -207,8 +207,8 @@ void NarrowphaseManager::processSpeculativeDynamicPairs(
 
     for (const ColliderHandle& colAH : bodyA.colliderHandles) {
         for (const ColliderHandle& colBH : bodyB.colliderHandles) {
-            Collider& colliderA = physicsWorld->getCollider(colAH);
-            Collider& colliderB = physicsWorld->getCollider(colBH);
+            Collider& colliderA = physicsStorage->getCollider(colAH);
+            Collider& colliderB = physicsStorage->getCollider(colBH);
 
             const std::optional<ShapePairKind> shapePair =
                 classifyShapePair(colliderA, colliderB);
@@ -295,14 +295,14 @@ void NarrowphaseManager::processColliderPairSpeculative(
 //     Normal Terrain pair processing
 //=======================================================
 void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
-    RigidBody& body = physicsWorld->getBody(terrainPair.body);
+    RigidBody& body = physicsStorage->getBody(terrainPair.body);
 
     if (body.type == BodyType::Kinematic && !body.reportContacts) {
         return;
     }
 
     if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState = physicsWorld->getSleepState(body.sleepStateHandle);
+        SleepState& sleepState = physicsStorage->getSleepState(body.sleepStateHandle);
         if (sleepState.isAsleep()) {
             return;
         }
@@ -310,7 +310,7 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
 
     // per collider in body, collect candidate tris and send to SAT + collision manifold generation
     for (const ColliderHandle& colH : body.colliderHandles) {
-        Collider& collider = physicsWorld->getCollider(colH);
+        Collider& collider = physicsStorage->getCollider(colH);
 
         const std::vector<Tri*>* candidates = &terrainPair.tris;
 
@@ -349,14 +349,14 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
     const SpeculativeTerrainPair& pair,
     float dt)
 {
-    RigidBody& body = physicsWorld->getBody(pair.body);
+    RigidBody& body = physicsStorage->getBody(pair.body);
 
     if (body.type == BodyType::Kinematic) {
         return;
     }
 
     for (const ColliderHandle& colH : body.colliderHandles) {
-        Collider& collider = physicsWorld->getCollider(colH);
+        Collider& collider = physicsStorage->getCollider(colH);
 
         const std::vector<Tri*>* candidates = &pair.tris;
 

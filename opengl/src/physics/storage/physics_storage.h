@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "core/slot_map.h"
+#include "slot_map.h"
 
 #include "physics/public/handles.h"
 #include "physics/bodies/rigidbody.h"
@@ -12,7 +12,7 @@
 
 namespace physics::internal {
 
-class PhysicsWorld {
+class PhysicsStorage {
 public:
     void clear();
 

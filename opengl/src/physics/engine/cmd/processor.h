@@ -6,7 +6,7 @@ namespace physics::internal {
 
 class BroadphaseManager;
 class SleepManager;
-class PhysicsWorld;
+class PhysicsStorage;
 class RigidBody;
 
 namespace cmd {
@@ -14,7 +14,7 @@ namespace cmd {
 class Processor {
 public:
     Processor(
-        PhysicsWorld& physicsWorld,
+        PhysicsStorage& physicsStorage,
         SleepManager& sleepManager,
         BroadphaseManager& broadphaseManager);
 
@@ -55,7 +55,7 @@ private:
     void applyCommand(const Buffer::SleepAllObjects&, float dt);
     void applyCommand(const Buffer::AwakenAllObjects&, float dt);
 
-    PhysicsWorld& physicsWorld;
+    PhysicsStorage& physicsStorage;
     SleepManager& sleepManager;
     BroadphaseManager& broadphaseManager;
 };

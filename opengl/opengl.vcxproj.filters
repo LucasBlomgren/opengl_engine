@@ -54,7 +54,7 @@
     <ClCompile Include="src\editor\editor_main.cpp" />
     <ClCompile Include="src\editor\panel_manager.cpp" />
     <ClCompile Include="src\game\player.cpp" />
-    <ClCompile Include="src\physics\world\physics_world.cpp" />
+    <ClCompile Include="src\physics\storage\physics_storage.cpp" />
     <ClCompile Include="src\physics\bodies\rigidbody.cpp" />
     <ClCompile Include="src\graphics\renderer\debug_renderer.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_manager.cpp" />
@@ -166,7 +166,7 @@
     <ClInclude Include="src\graphics\debug\arrow_renderer.h" />
     <ClInclude Include="src\graphics\debug\normals_renderer.h" />
     <ClInclude Include="src\game\world.h" />
-    <ClInclude Include="src\core\slot_map.h" />
+    <ClInclude Include="src\physics\storage\slot_map.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
     <ClInclude Include="src\physics\bvh\query_treetree.h" />
     <ClInclude Include="src\editor\panels\inspector_panel.h" />
@@ -177,10 +177,10 @@
     <ClInclude Include="src\editor\panel_manager.h" />
     <ClInclude Include="src\editor\viewport_fbo.h" />
     <ClInclude Include="src\game\player.h" />
-    <ClInclude Include="src\physics\world\physics_world.h" />
+    <ClInclude Include="src\physics\storage\physics_storage.h" />
     <ClInclude Include="src\physics\bodies\rigidbody.h" />
     <ClInclude Include="src\graphics\renderer\debug_renderer.h" />
-    <ClInclude Include="src\core\ring_buffer.h" />
+    <ClInclude Include="src\physics\sleep\ring_buffer.h" />
     <ClInclude Include="src\game\transform.h" />
     <ClInclude Include="src\core\pointer_cache.h" />
     <ClInclude Include="src\physics\narrowphase\narrowphase_manager.h" />
@@ -200,7 +200,6 @@
     <ClInclude Include="src\physics\public\contact_types.h" />
     <ClInclude Include="src\physics\public\query_types.h" />
     <ClInclude Include="src\physics\public\handles.h" />
-    <ClInclude Include="src\core\handle.h" />
     <ClInclude Include="src\game\game_handles.h" />
     <ClInclude Include="src\physics\public\physics_types.h" />
     <ClInclude Include="src\physics\public\collider_desc.h" />

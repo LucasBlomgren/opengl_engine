@@ -35,7 +35,7 @@ RaycastHit Engine::raycast(
     BodyHandle ignoredBody)
 {
     const SlotMap<RigidBody, BodyHandle>& bodyMap =
-        physicsWorld.bodyStorage();
+        physicsStorage.bodyStorage();
 
     RaycastHit bestHit;
 
@@ -100,7 +100,7 @@ Engine::getRigidBodyState(
     // is pending destruction.
     const RigidBody* body = commandBuffer.tryGetPendingBodyCreate(handle);
     if (!body) {
-        body = physicsWorld.tryGetBody(handle);
+        body = physicsStorage.tryGetBody(handle);
     }
     if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
         return std::nullopt;
@@ -120,7 +120,7 @@ Engine::getRigidBodyState(
 
     if (body->type == BodyType::Dynamic) {
         const SleepState& sleepState = 
-            physicsWorld.getSleepState(body->sleepStateHandle);
+            physicsStorage.getSleepState(body->sleepStateHandle);
         state.asleep = sleepState.isAsleep();
         state.allowSleep = sleepState.canSleep();
     }
@@ -138,7 +138,7 @@ Engine::getColliderState(
     const Collider* collider = 
         commandBuffer.tryGetPendingColliderCreate(handle);
     if (!collider) {
-        collider = physicsWorld.tryGetCollider(handle);
+        collider = physicsStorage.tryGetCollider(handle);
     }
     if (!collider || commandBuffer.isColliderPendingDestroy(handle)) {
         return std::nullopt;

@@ -5,7 +5,7 @@ namespace physics::internal {
 class RigidBody;
 
 void updateCollidersAndBodyAABB(
-    PhysicsWorld& world,
+    PhysicsStorage& storage,
     RigidBody* body);
 
 } // namespace physics::internal

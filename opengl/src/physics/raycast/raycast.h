@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/slot_map.h"
+#include "physics/storage/slot_map.h"
 
 #include "physics/bodies/rigidbody.h"
 #include "physics/bvh/bvh.h"

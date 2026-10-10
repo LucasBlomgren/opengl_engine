@@ -1,6 +1,6 @@
 #include "sleep_manager.h"
 
-#include "physics/world/physics_world.h"
+#include "physics/storage/physics_storage.h"
 #include "physics/broadphase/broadphase_manager.h"
 #include "physics/narrowphase/narrowphase_types.h"
 #include "physics/narrowphase/collision_manifold.h"
@@ -8,9 +8,9 @@
 namespace physics::internal {
 
 SleepManager::SleepManager(
-    PhysicsWorld& world,
+    PhysicsStorage& storage,
     BroadphaseManager& broadphase)
-    : world(world)
+    : storage(storage)
     , broadphase(broadphase)
 {}
 
@@ -19,10 +19,10 @@ SleepManager::SleepManager(
 //  creating one if necessary
 //=====================================================
 SleepState& SleepManager::ensureSleepState(BodyHandle handle) {
-    RigidBody& body = world.getBody(handle);
+    RigidBody& body = storage.getBody(handle);
 
     SleepState* sleepStatePtr =
-        world.tryGetSleepState(body.sleepStateHandle);
+        storage.tryGetSleepState(body.sleepStateHandle);
 
     SleepStateHandle sleepStateHandle;
 
@@ -37,12 +37,12 @@ SleepState& SleepManager::ensureSleepState(BodyHandle handle) {
         );
 
         sleepStateHandle =
-            world.commitSleepState(std::move(newSleepState));
+            storage.commitSleepState(std::move(newSleepState));
 
         body.sleepStateHandle = sleepStateHandle;
     }
 
-    return world.getSleepState(sleepStateHandle);
+    return storage.getSleepState(sleepStateHandle);
 }
 
 //=====================================================
@@ -73,7 +73,7 @@ void SleepManager::sleepBody(
     const BodyHandle handle,
     SleepState& sleepState)
 {
-    RigidBody& body = world.getBody(handle);
+    RigidBody& body = storage.getBody(handle);
 
     if (body.type != BodyType::Dynamic || 
         sleepState.asleep ||
@@ -100,8 +100,8 @@ void SleepManager::setBodyAllowSleep(
     const BodyHandle handle,
     bool allowSleep)
 {
-    RigidBody& body = world.getBody(handle);
-    SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
+    RigidBody& body = storage.getBody(handle);
+    SleepState& sleepState = storage.getSleepState(body.sleepStateHandle);
     sleepState.allowSleep = allowSleep;
 
     if (!allowSleep) {
@@ -116,7 +116,7 @@ void SleepManager::processContactWakeUps(
     const ContactBatch& batch)
 {
     wakeMotionBySlot.assign(
-        world.bodyStorage().slot_capacity(),
+        storage.bodyStorage().slot_capacity(),
         WakeMotion{}
     );
 
@@ -134,7 +134,7 @@ void SleepManager::processContactWakeUps(
 
         // Body A is dynamic, check if it should wake up due to contact with B
         if (A->type == BodyType::Dynamic) {
-            SleepState& sleepA = world.getSleepState(A->sleepStateHandle);
+            SleepState& sleepA = storage.getSleepState(A->sleepStateHandle);
 
             sleepA.collisionCount++;
 
@@ -145,7 +145,7 @@ void SleepManager::processContactWakeUps(
 
         // Body B is dynamic, check if it should wake up due to contact with A
         if (B && B->type == BodyType::Dynamic) {
-            SleepState& sleepB = world.getSleepState(B->sleepStateHandle);
+            SleepState& sleepB = storage.getSleepState(B->sleepStateHandle);
 
             sleepB.collisionCount++;
 
@@ -168,7 +168,7 @@ void SleepManager::processContactWakeUps(
 
         // Body A is dynamic, check if it should wake up due to contact with B
         if (A->type == BodyType::Dynamic) {
-            SleepState& sleepA = world.getSleepState(A->sleepStateHandle);
+            SleepState& sleepA = storage.getSleepState(A->sleepStateHandle);
 
             if (B && shouldWake(sleepA, contact.bodyHandleB, *B)) {
                 wakeBody(contact.bodyHandleA, *A, sleepA);
@@ -177,7 +177,7 @@ void SleepManager::processContactWakeUps(
 
         if (B && B->type == BodyType::Dynamic) {
             SleepState& sleepB =
-                world.getSleepState(B->sleepStateHandle);
+                storage.getSleepState(B->sleepStateHandle);
 
             // Body B is dynamic, check if it should wake up due to contact with A
             if (shouldWake(sleepB, contact.bodyHandleA, *A)) {
@@ -226,10 +226,10 @@ void SleepManager::processSleepCandidates(
     float dt) 
 {
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody& body = world.getBody(handle);
+        RigidBody& body = storage.getBody(handle);
         if (body.type != BodyType::Dynamic) continue;
 
-        SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
+        SleepState& sleepState = storage.getSleepState(body.sleepStateHandle);
         
         // Update collision history
         sleepState.collisionHistory.push(sleepState.collisionCount);
@@ -328,11 +328,11 @@ void SleepManager::applySleepDamping(
     float dt) 
 {
     for (const BodyHandle& handle : awakeHandles) {
-        RigidBody& body = world.getBody(handle);
+        RigidBody& body = storage.getBody(handle);
 
         if (body.type != BodyType::Dynamic) continue;
 
-        SleepState& sleepState = world.getSleepState(body.sleepStateHandle);
+        SleepState& sleepState = storage.getSleepState(body.sleepStateHandle);
         if (sleepState.asleep) continue;
         if (!sleepState.allowSleep) continue;
 

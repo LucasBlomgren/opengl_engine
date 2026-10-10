@@ -12,7 +12,7 @@ namespace {
 
 const RigidBody* resolveBody(
     const cmd::Buffer& commandBuffer,
-    const PhysicsWorld& physicsWorld,
+    const PhysicsStorage& physicsStorage,
     BodyHandle handle)
 {
     if (commandBuffer.isBodyPendingDestroy(handle)) {
@@ -23,7 +23,7 @@ const RigidBody* resolveBody(
         return body;
     }
 
-    return physicsWorld.tryGetBody(handle);
+    return physicsStorage.tryGetBody(handle);
 }
 
 }
@@ -39,7 +39,7 @@ BodyHandle Engine::createRigidBody(
         return {};
     }
 
-    BodyHandle bodyHandle = physicsWorld.reserveBodyHandle();
+    BodyHandle bodyHandle = physicsStorage.reserveBodyHandle();
 
     RigidBody body;
     body.pose = desc.pose;
@@ -80,9 +80,9 @@ BodyHandle Engine::createRigidBody(
         };
 
         body.motionStateHandle = 
-            physicsWorld.commitMotionState(std::move(motionState));
+            physicsStorage.commitMotionState(std::move(motionState));
         body.sleepStateHandle = 
-            physicsWorld.commitSleepState(std::move(sleepState));
+            physicsStorage.commitSleepState(std::move(sleepState));
     }
 
     commandBuffer.recordBodyCreate(bodyHandle, std::move(body));
@@ -95,7 +95,7 @@ BodyHandle Engine::createRigidBody(
             createCollider(bodyHandle, colliderDesc);
 
         if (!colliderHandle.isValid()) {
-            commandBuffer.recordBodyDestroy(bodyHandle, physicsWorld);
+            commandBuffer.recordBodyDestroy(bodyHandle, physicsStorage);
             return {};
         }
     }
@@ -106,11 +106,11 @@ BodyHandle Engine::createRigidBody(
 bool Engine::destroyRigidBody(
     BodyHandle bodyHandle)
 {
-    if (!resolveBody(commandBuffer, physicsWorld, bodyHandle)) {
+    if (!resolveBody(commandBuffer, physicsStorage, bodyHandle)) {
         return false;
     }
 
-    return commandBuffer.recordBodyDestroy(bodyHandle, physicsWorld);
+    return commandBuffer.recordBodyDestroy(bodyHandle, physicsStorage);
 }
 
 //=========================================
@@ -122,7 +122,7 @@ bool Engine::applyLinearImpulse(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -140,7 +140,7 @@ bool Engine::setLinearVelocity(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -158,7 +158,7 @@ bool Engine::setAngularVelocity(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -176,7 +176,7 @@ bool Engine::setKinematicTarget(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -195,7 +195,7 @@ bool Engine::setRigidBodyTransform(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -213,7 +213,7 @@ bool Engine::setRigidBodySleepState(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -222,7 +222,7 @@ bool Engine::setRigidBodySleepState(
     }
 
     const SleepState& sleepState = 
-        physicsWorld.getSleepState(body->sleepStateHandle);
+        physicsStorage.getSleepState(body->sleepStateHandle);
 
     if (!sleepState.canSleep()) {
         return false;
@@ -238,7 +238,7 @@ bool Engine::setRigidBodyType(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -256,7 +256,7 @@ bool Engine::setRigidBodyReportContacts(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -274,7 +274,7 @@ bool Engine::setRigidBodyMass(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -294,7 +294,7 @@ bool Engine::setRigidBodyAllowGravity(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 
@@ -312,7 +312,7 @@ bool Engine::setRigidBodyAllowSleep(
 {
     const RigidBody* body = resolveBody(
         commandBuffer,
-        physicsWorld,
+        physicsStorage,
         handle
     );
 

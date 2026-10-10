@@ -25,21 +25,21 @@ void Engine::activateScene(
     }
 
     uint32_t colliderSlotCapacity = 
-        physicsWorld.colliderStorage().slot_capacity();
+        physicsStorage.colliderStorage().slot_capacity();
 
     broadphaseManager.init(
-        &physicsWorld,
+        &physicsStorage,
         &terrainTriangles
     );
 
     narrowphaseManager.init(
-        &physicsWorld,
+        &physicsStorage,
         &collisionManifold,
         &debugSpeculativeContacts, 
         &contactCache
     );
 
-    pgsSolver.init(physicsWorld);
+    pgsSolver.init(physicsStorage);
 
     processPendingCommands();
 }
@@ -48,7 +48,7 @@ void Engine::activateScene(
 // Scene cleanup
 //====================================
 void Engine::clear() {
-    commandBuffer.clear(physicsWorld);
+    commandBuffer.clear(physicsStorage);
 
     contactCache.clear();
     debugSweeps.clear();
@@ -58,7 +58,7 @@ void Engine::clear() {
     narrowphaseManager.clear();
     pgsSolver.clear();
 
-    physicsWorld.clear();
+    physicsStorage.clear();
     terrainTriangles.clear();
 }
 
