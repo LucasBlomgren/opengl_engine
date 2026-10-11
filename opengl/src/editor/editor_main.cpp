@@ -41,7 +41,7 @@ namespace {
         seat.meshName = "cube";
         seat.textureName = "checker_magenta";
         seat.shaderName = "default";
-        seat.colliderType = physics::ColliderType::CUBOID;
+        seat.colliderType = physics::ColliderType::BOX;
         chair.parts.push_back(seat);
 
         // backrest
@@ -56,7 +56,7 @@ namespace {
         backrest.meshName = "cube";
         backrest.textureName = "checker_magenta";
         backrest.shaderName = "default";
-        backrest.colliderType = physics::ColliderType::CUBOID;
+        backrest.colliderType = physics::ColliderType::BOX;
         chair.parts.push_back(backrest);
 
         // legs
@@ -78,7 +78,7 @@ namespace {
             leg.meshName = "cube";
             leg.textureName = "checker_magenta";
             leg.shaderName = "default";
-            leg.colliderType = physics::ColliderType::CUBOID;
+            leg.colliderType = physics::ColliderType::BOX;
             chair.parts.push_back(leg);
         }
         return world.createGameObject(chair);

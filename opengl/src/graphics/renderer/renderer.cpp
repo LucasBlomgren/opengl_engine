@@ -881,7 +881,7 @@ void Renderer::renderHoveredObjectOutline(
         if (!collider) continue;
 
         // render based on collider type
-        if (collider->type == physics::ColliderType::CUBOID) {
+        if (collider->type == physics::ColliderType::BOX) {
             debugRenderer.oobbRenderer.renderBox(
                 *debugShader,
                 collider->worldPose,
@@ -947,7 +947,7 @@ void Renderer::renderSelectedObjectOutline(
         }
 
         // render based on collider type
-        if (collider->type == physics::ColliderType::CUBOID) {
+        if (collider->type == physics::ColliderType::BOX) {
             debugRenderer.oobbRenderer.renderBox(
                 *debugShader,
                 collider->worldPose,

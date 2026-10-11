@@ -10,18 +10,18 @@ std::optional<ShapePairKind> classifyShapePair(
     const Collider& colliderB)
 {
     const bool boxBox =
-        colliderA.type == ColliderType::CUBOID &&
-        colliderB.type == ColliderType::CUBOID;
+        colliderA.type == ColliderType::BOX &&
+        colliderB.type == ColliderType::BOX;
 
     if (boxBox) {
         return ShapePairKind::BoxBox;
     }
 
     const bool boxSphere =
-        (colliderA.type == ColliderType::CUBOID &&
+        (colliderA.type == ColliderType::BOX &&
             colliderB.type == ColliderType::SPHERE) ||
         (colliderA.type == ColliderType::SPHERE &&
-            colliderB.type == ColliderType::CUBOID);
+            colliderB.type == ColliderType::BOX);
 
     if (boxSphere) {
         return ShapePairKind::BoxSphere;
@@ -109,11 +109,6 @@ void NarrowphaseManager::processDynamicPairs(
 {
     RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
     RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
-
-    if (bodyA.type == BodyType::Static && 
-        bodyB.type == BodyType::Static) {
-        return;
-    }
 
     for (const ColliderHandle& colAH : bodyA.colliderHandles) {
         for (const ColliderHandle& colBH : bodyB.colliderHandles) {
@@ -331,7 +326,7 @@ void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, Con
         SAT_resultsList.reserve(candidates->size());
 
         switch (collider.type) {
-        case ColliderType::CUBOID:
+        case ColliderType::BOX:
             processTerrainTriBox(batch, collider.rigidBodyHandle, &collider, &body, *candidates);
             break;
 
@@ -383,7 +378,7 @@ void NarrowphaseManager::processSpeculativeTerrainPairs(
 
             std::optional<TerrainSweepHit> hit;
 
-            if (collider.type == ColliderType::CUBOID) {
+            if (collider.type == ColliderType::BOX) {
                 hit = trySpeculativeBoxTriangle(
                     colliderRef,
                     tri,

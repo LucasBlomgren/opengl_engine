@@ -2,9 +2,9 @@
 
 #include "sat_types.h"
 #include <span>
-#include "physics/colliders/tri.h"
-#include "physics/colliders/collider_transform_cache.h"
-#include "physics/colliders/collider.h"
+#include "physics/collider/geometry/tri.h"
+#include "physics/collider/collider_transform_cache.h"
+#include "physics/collider/collider.h"
 #include "physics/bodies/rigidbody.h"
 
 namespace physics::internal {

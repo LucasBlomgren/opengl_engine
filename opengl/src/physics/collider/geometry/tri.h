@@ -1,6 +1,6 @@
 #pragma once
 #include "physics/broadphase/rigidbody_types.h"
-#include "physics/colliders/aabb.h"
+#include "physics/collider/aabb.h"
 
 namespace physics::internal {
 
@@ -14,16 +14,15 @@ public:
     glm::vec3 normal{ 0.0f };
     glm::vec3 centroid{ 0.0f };
 
-    AABB aabb;
-
-    // constructor
-    Tri(const int id_, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
+    Tri(const int id_, 
+        const glm::vec3& v0, 
+        const glm::vec3& v1, 
+        const glm::vec3& v2)
         : id(id_)
     {
         vertices = { v0, v1, v2 };
         centroid = (v0 + v1 + v2) / 3.0f;
 
-        // Calculate the normal using the cross product
         glm::vec3 edgeA = v1 - v0;
         glm::vec3 edgeB = v2 - v1;
         glm::vec3 edgeC = v0 - v2; 
@@ -37,17 +36,19 @@ public:
 
         normal = glm::normalize(glm::cross(edgeA, edgeB)); 
         axes = { normal, edgeA, edgeB, edgeC };
-
-        aabb.init(vertices);
     }
 
-    Tri(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2)
-    {
+    Tri(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
         vertices = { v0, v1, v2 };
-        aabb.init(vertices);
     }
 
-    AABB getAABB();
+    AABB getAABB() {
+        AABB b;
+        b.worldMin = glm::min(glm::min(vertices[0], vertices[1]), vertices[2]);
+        b.worldMax = glm::max(glm::max(vertices[0], vertices[1]), vertices[2]);
+        b.worldCenter = (b.worldMin + b.worldMax) * 0.5f;
+        return b;
+    }
 };
 
 }

@@ -19,7 +19,7 @@ struct ColliderState {
     Pose worldPose;
     glm::vec3 worldScale{ 1.0f };
 
-    ColliderType type = ColliderType::CUBOID;
+    ColliderType type = ColliderType::BOX;
     std::variant<BoxGeometry, SphereGeometry> shape;
     AABB bounds;
 

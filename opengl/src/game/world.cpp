@@ -206,7 +206,7 @@ GameObjectHandle World::createGameObject(
         colliderDesc.localPose = makePhysicsPose(*partTransform);
         colliderDesc.localScale = partTransform->scale;
 
-        if (partDesc.colliderType == physics::ColliderType::CUBOID) {
+        if (partDesc.colliderType == physics::ColliderType::BOX) {
             colliderDesc.shape = physics::BoxShapeDesc{
                 localCenter,
                 localHalfExtents

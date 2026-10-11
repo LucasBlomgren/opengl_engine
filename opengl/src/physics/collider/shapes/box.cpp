@@ -1,20 +1,20 @@
 #include "pch.h"
-#include "oobb.h"
+#include "box.h"
 
 #include <glm/common.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace physics::internal {
 
-OOBB::OOBB(const std::vector<glm::vec3>& vertices) {
+Box::Box(const std::vector<glm::vec3>& vertices) {
     init(vertices);
 }
 
-OOBB::OOBB(const glm::vec3& halfExtents, const glm::vec3& center) {
+Box::Box(const glm::vec3& halfExtents, const glm::vec3& center) {
     setLocalBounds(center, halfExtents);
 }
 
-void OOBB::init(const std::vector<glm::vec3>& vertices) {
+void Box::init(const std::vector<glm::vec3>& vertices) {
     if (vertices.empty()) {
         setLocalBounds(glm::vec3(0.0f), glm::vec3(0.5f));
         return;
@@ -34,13 +34,13 @@ void OOBB::init(const std::vector<glm::vec3>& vertices) {
     setLocalBounds(center, halfExtents);
 }
 
-void OOBB::setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents) {
+void Box::setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents) {
     localCenter = center;
     localHalfExtents = glm::abs(halfExtents);
     rebuildLocalVertices();
 }
 
-void OOBB::rebuildLocalVertices() {
+void Box::rebuildLocalVertices() {
     const glm::vec3& center = localCenter;
     const glm::vec3& half = localHalfExtents;
 
@@ -54,7 +54,7 @@ void OOBB::rebuildLocalVertices() {
     localVertices[7] = center + glm::vec3(-half.x, half.y, half.z);
 }
 
-void OOBB::update(const Pose& worldPose, const glm::vec3& worldScale) {
+void Box::update(const Pose& worldPose, const glm::vec3& worldScale) {
     scale = worldScale;
 
     glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
@@ -71,7 +71,7 @@ void OOBB::update(const Pose& worldPose, const glm::vec3& worldScale) {
     }
 }
 
-std::array<glm::vec3, 4> OOBB::getLocalFace(FaceId face) const {
+std::array<glm::vec3, 4> Box::getLocalFace(FaceId face) const {
     const std::array<int, 4>& indices = FACE_INDICES[static_cast<size_t>(face)];
 
     return {

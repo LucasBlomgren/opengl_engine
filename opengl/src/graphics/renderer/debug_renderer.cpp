@@ -235,7 +235,7 @@ void DebugRenderer::renderColliders(
                 color = AWAKE_COLOR;
             }
 
-            if (collider->type == physics::ColliderType::CUBOID) {
+            if (collider->type == physics::ColliderType::BOX) {
                 glLineWidth(OOBB_LINE_WIDTH);
                 oobbRenderer.renderBox(
                     *debugShapeShader,

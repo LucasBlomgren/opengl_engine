@@ -21,8 +21,8 @@ namespace {
             return glm::vec3(0.0f);
         }
 
-        if (collider->type == ColliderType::CUBOID) {
-            return std::get<OOBB>(collider->shape).worldCenter;
+        if (collider->type == ColliderType::BOX) {
+            return std::get<Box>(collider->shape).worldCenter;
         }
 
         return std::get<Sphere>(collider->shape).centerWorld;

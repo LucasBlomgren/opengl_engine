@@ -4,7 +4,7 @@
 #include "broadphase_manager.h"
 
 #include "physics/bodies/rigidbody.h"
-#include "physics/colliders/tri.h"
+#include "physics/collider/geometry/tri.h"
 #include "physics/bvh/query_treetree.h"
 #include "physics/bvh/query_sametree.h"
 
@@ -164,7 +164,10 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 //==================================================
 //     Speculative pair building for narrowphase
 //==================================================
-void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::vector<AABB>& debugSweeps)
+void BroadphaseManager::buildSpeculativePairs(
+    float dt, 
+    PairBatch& batch, 
+    std::vector<AABB>& debugSweeps)
 {
     batch.speculativeDynamicPairs.clear();
     batch.speculativeTerrainPairs.clear();
@@ -265,7 +268,8 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
         int sp = 0;
 
         for (auto& [bodyHandle, trisVec] : temp) {
-            batch.speculativeTerrainPairs[sp++] = SpeculativeTerrainPair{ bodyHandle, std::move(trisVec) };
+            batch.speculativeTerrainPairs[sp++] = 
+                SpeculativeTerrainPair{ bodyHandle, std::move(trisVec) };
         }
         batch.speculativeTerrainPairs.resize(sp);
     }
@@ -331,7 +335,11 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch, std::v
     }
 }
 
-void BroadphaseManager::determineSpeculativeBodies(float dt, std::vector<BodyHandle>& outBodies, std::vector<AABB>& outAABBs) {
+void BroadphaseManager::determineSpeculativeBodies(
+    float dt, 
+    std::vector<BodyHandle>& outBodies, 
+    std::vector<AABB>& outAABBs) 
+{
     for (const BodyHandle& handle : awakeHandles) {
         RigidBody& body = physicsStorage->getBody(handle);
 

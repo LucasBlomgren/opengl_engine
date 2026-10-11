@@ -15,7 +15,7 @@ enum class BodyType {
 };
 
 enum class ColliderType {
-    CUBOID,
+    BOX,
     SPHERE
 };
 

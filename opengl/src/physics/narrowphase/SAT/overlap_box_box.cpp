@@ -7,8 +7,8 @@ namespace physics::internal {
 //=======================================================
 bool SAT::boxBox(Collider& colA, Collider& colB, Result& out)
 {
-    const OOBB& A = std::get<OOBB>(colA.shape);
-    const OOBB& B = std::get<OOBB>(colB.shape);
+    const Box& A = std::get<Box>(colA.shape);
+    const Box& B = std::get<Box>(colB.shape);
 
     // Boxarnas world-axlar (ska vara normaliserade)
     const glm::vec3 Au[3] = { A.worldAxes[0], A.worldAxes[1], A.worldAxes[2] };

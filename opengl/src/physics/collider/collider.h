@@ -4,8 +4,8 @@
 #include <variant>
 
 #include "aabb.h"
-#include "oobb.h"
-#include "sphere.h"
+#include "shapes/box.h"
+#include "shapes/sphere.h"
 #include "collider_transform_cache.h"
 
 #include "physics/public/handles.h"
@@ -13,12 +13,12 @@
 
 namespace physics::internal {
 
-using ColliderShape = std::variant<OOBB, Sphere>;
+using ColliderShape = std::variant<Box, Sphere>;
 
 struct Collider {
     int id = -1;
 
-    ColliderType type = ColliderType::CUBOID;
+    ColliderType type = ColliderType::BOX;
     ColliderShape shape;
 
     BodyHandle rigidBodyHandle;

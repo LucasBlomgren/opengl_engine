@@ -162,8 +162,8 @@ Engine::getColliderState(
     state.isTrigger = collider->isTrigger;
     state.userTag = collider->userTag;
 
-    if (collider->type == ColliderType::CUBOID) {
-        const OOBB& box = std::get<OOBB>(collider->shape);
+    if (collider->type == ColliderType::BOX) {
+        const Box& box = std::get<Box>(collider->shape);
         state.shape = BoxGeometry{
             box.worldCenter,
             box.localHalfExtents,

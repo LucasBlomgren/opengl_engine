@@ -6,7 +6,7 @@ namespace physics::internal {
 //  Box-Triangle
 //=======================================================
 bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
-    const OOBB& box = std::get<OOBB>(A.shape);
+    const Box& box = std::get<Box>(A.shape);
     out = {};
     out.depth = FLT_MAX;
     out.tri_ptr = &tri;

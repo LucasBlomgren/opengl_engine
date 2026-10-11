@@ -17,7 +17,7 @@ class Renderer;
 struct SubPartDesc {
     std::string name = "SubPart";
     TransformHandle localTransformHandle;
-    physics::ColliderType colliderType = physics::ColliderType::CUBOID;
+    physics::ColliderType colliderType = physics::ColliderType::BOX;
 
     // render
     std::string shaderName = "default";

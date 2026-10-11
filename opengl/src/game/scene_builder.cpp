@@ -424,7 +424,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //seat.textureName = "checker_magenta";
             //seat.shaderName = "default";
             //seat.color = color;
-            //seat.colliderType = physics::ColliderType::CUBOID;
+            //seat.colliderType = physics::ColliderType::BOX;
             //chair.parts.push_back(seat);
 
             //// backrest
@@ -444,7 +444,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //backrest.textureName = "checker_magenta";
             //backrest.shaderName = "default";
             //backrest.color = color;
-            //backrest.colliderType = physics::ColliderType::CUBOID;
+            //backrest.colliderType = physics::ColliderType::BOX;
             //chair.parts.push_back(backrest);
 
             //// legs
@@ -467,7 +467,7 @@ void SceneBuilder::objectRain(float& current_time, glm::vec3& pos, int mode) {
             //    leg.textureName = "checker_magenta";
             //    leg.shaderName = "default";
             //    leg.color = color;
-            //    leg.colliderType = physics::ColliderType::CUBOID;
+            //    leg.colliderType = physics::ColliderType::BOX;
             //    chair.parts.push_back(leg);
             //}
 

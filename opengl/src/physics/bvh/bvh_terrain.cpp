@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "bvh_terrain.h"
-#include "physics/colliders/tri.h"
+#include "physics/collider/geometry/tri.h"
 
 namespace physics::internal {
 

@@ -675,9 +675,9 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                 // Collider type
                 {
                     int colliderChoice = 0;
-                    const char* colliderItems[] = { "Cuboid", "Sphere" };
+                    const char* colliderItems[] = { "BOX", "Sphere" };
 
-                    if (colliderState->type == physics::ColliderType::CUBOID) {
+                    if (colliderState->type == physics::ColliderType::BOX) {
                         colliderChoice = 0;
                     }
                     else if (colliderState->type == physics::ColliderType::SPHERE) {
@@ -702,7 +702,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                         {
                             const physics::ColliderType selectedType =
                                 colliderChoice == 0
-                                ? physics::ColliderType::CUBOID
+                                ? physics::ColliderType::BOX
                                 : physics::ColliderType::SPHERE;
 
                             ctx.physicsEngine->setColliderShape(

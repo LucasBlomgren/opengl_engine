@@ -13,7 +13,7 @@
 #include "physics/storage/physics_storage.h"
 
 #include "physics/bodies/rigidbody.h"
-#include "physics/colliders/collider.h"
+#include "physics/collider/collider.h"
 
 namespace physics::internal::cmd {
 

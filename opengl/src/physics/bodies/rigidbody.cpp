@@ -115,8 +115,8 @@ void RigidBody::calculateInverseInertia(
     const Collider& collider,
     const glm::vec3& inertiaScale) 
 {
-	if (colliderType == ColliderType::CUBOID) {
-		const OOBB& box = std::get<OOBB>(collider.shape);
+	if (colliderType == ColliderType::BOX) {
+		const Box& box = std::get<Box>(collider.shape);
 		const glm::vec3 size = box.localHalfExtents * 2.0f * inertiaScale;
 		bool isUniform = approxEqual(size.x, size.y) and approxEqual(size.y, size.z);
 

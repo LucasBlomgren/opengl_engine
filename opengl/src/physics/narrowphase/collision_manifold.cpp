@@ -452,7 +452,7 @@ void CollisionManifold::addFurthestPoint() {
 }
 
 //============================================================================
-//  Select OOBB Reference face & normal for clipping based on contact normal
+//  Select Box Reference face & normal for clipping based on contact normal
 //============================================================================
 void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
     const Collider* collider, 
@@ -465,7 +465,7 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
     transformCache.ensureInvModelMatrix(pose);
     transformCache.ensureModelMatrix(pose);
 
-    const OOBB& box = std::get<OOBB>(collider->shape);
+    const Box& box = std::get<Box>(collider->shape);
 
     // rotate the contact normal into the box's local space
     glm::vec3 rotated = transformCache.invModelMatrix * glm::vec4(normal, 0.0f);
@@ -505,7 +505,7 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
 }
 
 //=================================================================
-// Select OOBB Incident face for clipping based on contact normal
+// Select Box Incident face for clipping based on contact normal
 //=================================================================
 void CollisionManifold::selectOOBBCollisionIncidentFace(
     const Collider* collider, 
@@ -517,7 +517,7 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(
     transformCache.ensureInvRotationMatrix(pose);
     transformCache.ensureModelMatrix(pose);
 
-    const OOBB& box = std::get<OOBB>(collider->shape);
+    const Box& box = std::get<Box>(collider->shape);
 
     // rotate the contact normal into the box's local space
     glm::vec3 rotated = transformCache.invRotationMatrix * normal;

@@ -29,11 +29,13 @@ struct BodyTag;
 struct MotionStateTag;
 struct SleepStateTag;
 struct ColliderTag;
+struct ShapeTag;
 
 using BodyHandle = HandleT<BodyTag>;
 using MotionStateHandle = HandleT<MotionStateTag>;
 using SleepStateHandle = HandleT<SleepStateTag>;
 using ColliderHandle = HandleT<ColliderTag>;
+using ShapeHandle = HandleT<ShapeTag>;
 
 } // namespace physics
 

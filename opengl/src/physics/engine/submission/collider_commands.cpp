@@ -90,8 +90,8 @@ ColliderHandle Engine::createCollider(
         using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
 
         if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-            collider.type = ColliderType::CUBOID;
-            collider.shape = OOBB(shapeDesc.halfExtents, shapeDesc.center);
+            collider.type = ColliderType::BOX;
+            collider.shape = Box(shapeDesc.halfExtents, shapeDesc.center);
         }
         else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
             collider.type = ColliderType::SPHERE;

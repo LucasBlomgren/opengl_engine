@@ -6,7 +6,7 @@
 #include "narrowphase_types.h"
 
 #include "physics/bodies/rigidbody.h"
-#include "physics/colliders/collider_transform_cache.h"
+#include "physics/collider/collider_transform_cache.h"
 
 namespace physics::internal {
 

@@ -15,12 +15,12 @@ bool SAT::speculativeBoxTriangle(
         return false;
     }
 
-    const OOBB& box = std::get<OOBB>(boxCollider.shape);
+    const Box& box = std::get<Box>(boxCollider.shape);
 
     glm::vec3 boxCenter = boxCollider.worldPose.position;
     glm::vec3 boxVelocity = boxBody.linearVelocity;
 
-    // Adjust to your actual OOBB field name.
+    // Adjust to your actual Box field name.
     glm::vec3 half = box.localHalfExtents * box.scale;
 
     glm::mat3 rot = glm::mat3_cast(boxCollider.worldPose.orientation);

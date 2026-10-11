@@ -18,8 +18,8 @@ std::optional<OverlapHit> NarrowphaseManager::tryBoxBox(
         return std::nullopt;
     }
 
-    glm::vec3 centerA = std::get<OOBB>(pair.a.collider->shape).worldCenter;
-    glm::vec3 centerB = std::get<OOBB>(pair.b.collider->shape).worldCenter;
+    glm::vec3 centerA = std::get<Box>(pair.a.collider->shape).worldCenter;
+    glm::vec3 centerB = std::get<Box>(pair.b.collider->shape).worldCenter;
     SAT::reverseNormal(centerA, centerB, geometry.normal);
 
     return OverlapHit{ std::move(pair), std::move(geometry) };
@@ -31,7 +31,7 @@ std::optional<OverlapHit> NarrowphaseManager::tryBoxBox(
 std::optional<OverlapHit> NarrowphaseManager::tryBoxSphere(
     ResolvedColliderPair pair)
 {
-    if (pair.a.collider->type != ColliderType::CUBOID) {
+    if (pair.a.collider->type != ColliderType::BOX) {
         pair.swapAB();
     }
 

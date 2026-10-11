@@ -20,7 +20,7 @@ void NarrowphaseManager::processTerrainTriBox(
     float maxDepth = 0.0f;
 
     // Box data once, since collider pose is same for all terrain triangles.
-    const OOBB& box = std::get<OOBB>(collider->shape);
+    const Box& box = std::get<Box>(collider->shape);
 
     glm::mat3 R = glm::mat3_cast(collider->worldPose.orientation);
 

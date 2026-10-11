@@ -23,7 +23,7 @@ void Collider::updateShape() {
     std::visit([&](auto& colliderShape) {
         using ShapeType = std::decay_t<decltype(colliderShape)>;
 
-        if constexpr (std::is_same_v<ShapeType, OOBB>) {
+        if constexpr (std::is_same_v<ShapeType, Box>) {
             colliderShape.update(worldPose, worldScale);
         }
         else if constexpr (std::is_same_v<ShapeType, Sphere>) {
@@ -38,8 +38,8 @@ void Collider::updateAABB() {
 }
 
 void Collider::rebuildAABB() {
-    if (type == ColliderType::CUBOID) {
-        const OOBB& box = std::get<OOBB>(shape);
+    if (type == ColliderType::BOX) {
+        const Box& box = std::get<Box>(shape);
 
         glm::vec3 minimum = box.worldVertices[0];
         glm::vec3 maximum = box.worldVertices[0];

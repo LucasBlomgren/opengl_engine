@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "physics/raycast/raycast.h"
-#include "physics/colliders/aabb.h"
+#include "physics/collider/aabb.h"
 
 namespace physics::internal {
 

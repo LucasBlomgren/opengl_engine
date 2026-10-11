@@ -19,7 +19,7 @@
 #include "core/timer.h"
 
 #include "physics/broadphase/broadphase_manager.h"
-#include "physics/colliders/tri.h"
+#include "physics/collider/geometry/tri.h"
 #include "physics/engine/cmd/buffer.h"
 #include "physics/engine/cmd/processor.h"
 #include "physics/narrowphase/collision_manifold.h"

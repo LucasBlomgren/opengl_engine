@@ -8,7 +8,7 @@
 #include "physics/bodies/rigidbody.h"
 #include "physics/bodies/motion_state.h"
 #include "physics/sleep/sleep_state.h"
-#include "physics/colliders/collider.h"
+#include "physics/collider/collider.h"
 
 namespace physics::internal {
 
@@ -81,5 +81,8 @@ private:
     SlotMap<MotionState, MotionStateHandle> motionStates{ "MotionState" };
     SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
     SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
+
+    SlotMap<Sphere, ShapeHandle> spheres{ "Sphere" };
+    SlotMap<BoxData, ShapeHandle> boxes{ "Box" };
 };
 }

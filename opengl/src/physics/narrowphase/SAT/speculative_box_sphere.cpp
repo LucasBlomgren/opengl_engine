@@ -16,7 +16,7 @@ bool SAT::speculativeBoxSphere(
         return false;
     }
 
-    const OOBB& box = std::get<OOBB>(boxCollider.shape);
+    const Box& box = std::get<Box>(boxCollider.shape);
     const Sphere& sphere = std::get<Sphere>(sphereCollider.shape);
 
     const glm::vec3 boxCenter = boxCollider.worldPose.position;

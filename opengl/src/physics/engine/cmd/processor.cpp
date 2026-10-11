@@ -62,8 +62,8 @@ bool applyShape(
         using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
 
         if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-            collider.type = ColliderType::CUBOID;
-            collider.shape = OOBB(
+            collider.type = ColliderType::BOX;
+            collider.shape = Box(
                 shapeDesc.halfExtents,
                 shapeDesc.center
             );

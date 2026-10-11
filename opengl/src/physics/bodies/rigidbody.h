@@ -3,7 +3,7 @@
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 #include "physics/broadphase/rigidbody_types.h"
-#include "physics/colliders/collider.h"
+#include "physics/collider/collider.h"
 #include "physics/bodies/motion_state.h"
 #include "physics/sleep/sleep_state.h"
 

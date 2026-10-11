@@ -1,5 +1,5 @@
 #pragma once
-#include "physics/colliders/aabb.h"
+#include "physics/collider/aabb.h"
 
 namespace physics::internal {
 

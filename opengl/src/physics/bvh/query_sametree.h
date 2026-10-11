@@ -5,7 +5,7 @@
 #include <utility>
 #include <glm/ext/vector_float3.hpp>
 
-#include "physics/colliders/aabb.h"
+#include "physics/collider/aabb.h"
 
 namespace physics::internal {
 

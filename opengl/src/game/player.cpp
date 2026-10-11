@@ -115,7 +115,7 @@ void Player::createPlayerObject() {
     SubPartDesc part;
     part.seeThrough = true;
     part.localTransformHandle = world->createTransform();
-    part.colliderType = physics::ColliderType::CUBOID;
+    part.colliderType = physics::ColliderType::BOX;
     playerDesc.parts.push_back(part);
     playerHandle = world->createGameObject(playerDesc);
 
@@ -433,7 +433,7 @@ void Player::placeObject() {
 
     SubPartDesc part;
     part.localTransformHandle = world->createTransform();
-    part.colliderType = physics::ColliderType::CUBOID;
+    part.colliderType = physics::ColliderType::BOX;
     part.textureName = "checker_gray";
     part.meshName = "cube";
     newObj.parts.push_back(part);

@@ -18,8 +18,8 @@ bool SAT::speculativeBoxBox(
         return false;
     }
 
-    const OOBB& boxA = std::get<OOBB>(colliderA.shape);
-    const OOBB& boxB = std::get<OOBB>(colliderB.shape);
+    const Box& boxA = std::get<Box>(colliderA.shape);
+    const Box& boxB = std::get<Box>(colliderB.shape);
 
     glm::vec3 centerA = colliderA.worldPose.position;
     glm::vec3 centerB = colliderB.worldPose.position;
