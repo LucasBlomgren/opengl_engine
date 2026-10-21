@@ -12,22 +12,22 @@ namespace physics {
 // describe the properties of a rigid body to be created.
 //==========================================================
 struct BodyDesc {
-    Pose pose;
-    glm::vec3 scale{ 1.0f };
+   Pose pose;
+   glm::vec3 scale{ 1.0f };
 
-    BodyType type = BodyType::Dynamic;
-    bool reportContacts = false;
+   BodyType type = BodyType::Dynamic;
+   bool reportContacts = false;
 
-    float mass = 1.0f;
+   float mass = 1.0f;
 
-    glm::vec3 linearVelocity{ 0.0f };
-    glm::vec3 angularVelocity{ 0.0f };
+   glm::vec3 linearVelocity{ 0.0f };
+   glm::vec3 angularVelocity{ 0.0f };
 
-    bool allowGravity = true;
-    bool allowSleep = true;
-    bool startAsleep = false;
+   bool allowGravity = true;
+   bool allowSleep = true;
+   bool startAsleep = false;
 
-    std::vector<ColliderDesc> colliders;
+   std::vector<ColliderDesc> colliders;
 };
 
 }

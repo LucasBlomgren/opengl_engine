@@ -4,41 +4,41 @@
 namespace physics::internal {
 
 namespace {
-    glm::vec3 worldToBodyLocalPoint(
-        const RigidBody& body,
-        const glm::vec3& worldPoint)
-    {
-        glm::vec3 local =
-            glm::conjugate(glm::normalize(body.pose.orientation)) *
-            (worldPoint - body.pose.position);
+glm::vec3 worldToBodyLocalPoint(
+   const RigidBody& body,
+   const glm::vec3& worldPoint)
+{
+   glm::vec3 local =
+      glm::conjugate(glm::normalize(body.pose.orientation)) *
+      (worldPoint - body.pose.position);
 
-        constexpr float epsilon = 1e-8f;
+   constexpr float epsilon = 1e-8f;
 
-        if (glm::abs(body.scale.x) > epsilon) local.x /= body.scale.x;
-        if (glm::abs(body.scale.y) > epsilon) local.y /= body.scale.y;
-        if (glm::abs(body.scale.z) > epsilon) local.z /= body.scale.z;
+   if (glm::abs(body.scale.x) > epsilon) local.x /= body.scale.x;
+   if (glm::abs(body.scale.y) > epsilon) local.y /= body.scale.y;
+   if (glm::abs(body.scale.z) > epsilon) local.z /= body.scale.z;
 
-        return local;
-    }
+   return local;
+}
 
-    glm::vec3 bodyLocalToWorldPoint(
-        const RigidBody& body,
-        const glm::vec3& localPoint)
-    {
-        return body.pose.position +
-            glm::normalize(body.pose.orientation) *
-            (body.scale * localPoint);
-    }
+glm::vec3 bodyLocalToWorldPoint(
+   const RigidBody& body,
+   const glm::vec3& localPoint)
+{
+   return body.pose.position +
+      glm::normalize(body.pose.orientation) *
+      (body.scale * localPoint);
+}
 
-    RigidBody* getReferenceBody(Contact& contact) {
-        if (contact.objBisReference &&
-            contact.partnerTypeB == ContactPartnerType::RigidBody) 
-        {
-            return contact.runtimeData.bodyB;
-        }
+RigidBody* getReferenceBody(Contact& contact) {
+   if (contact.objBisReference &&
+      contact.partnerTypeB == ContactPartnerType::RigidBody)
+   {
+      return contact.runtimeData.bodyB;
+   }
 
-        return contact.runtimeData.bodyA;
-    }
+   return contact.runtimeData.bodyA;
+}
 }
 
 // #TODO: implementera recycled contacts för att genom heuristik 
@@ -71,486 +71,486 @@ namespace {
 // Box-Box collision
 //=============================================
 Contact* CollisionManifold::boxBox(
-    Contact& contact,
-    std::unordered_map<size_t, Contact>& cache,
-    SAT::Result& satResult
+   Contact& contact,
+   std::unordered_map<size_t, Contact>& cache,
+   SAT::Result& satResult
 ) {
-    ContactRuntime& rt = contact.runtimeData;
-    Collider* colliderA = rt.colliderA;
-    Collider* colliderB = rt.colliderB;
+   ContactRuntime& rt = contact.runtimeData;
+   Collider* colliderA = rt.colliderA;
+   Collider* colliderB = rt.colliderB;
 
-    const float linearSlop = 0.001f;
-    const float k_tol = 0.1f * linearSlop;
+   const float linearSlop = 0.001f;
+   const float k_tol = 0.1f * linearSlop;
 
-    contact.clearPoints();
-    contact.objBisReference = 
-        (satResult.separationB > satResult.separationA + k_tol);
+   contact.clearPoints();
+   contact.objBisReference =
+      (satResult.separationB > satResult.separationA + k_tol);
 
-    if (contact.objBisReference) {
-        selectOOBBCollisionRefFaceAndNormal(
-            colliderB,
-            colliderB->worldPose,
-            colliderB->transformCache,
-            -satResult.normal,
-            contact.referenceFace,
-            contact.referenceFaceNormal
-        );
+   if (contact.objBisReference) {
+      selectOOBBCollisionRefFaceAndNormal(
+         colliderB,
+         colliderB->worldPose,
+         colliderB->transformCache,
+         -satResult.normal,
+         contact.referenceFace,
+         contact.referenceFaceNormal
+      );
 
-        selectOOBBCollisionIncidentFace(
-            colliderA,
-            colliderA->worldPose,
-            colliderA->transformCache,
-            satResult.normal,
-            contact.incidentFace
-        );
-    }
-    else {
-        selectOOBBCollisionRefFaceAndNormal(
-            colliderA,
-            colliderA->worldPose,
-            colliderA->transformCache,
-            satResult.normal,
-            contact.referenceFace,
-            contact.referenceFaceNormal
-        );
+      selectOOBBCollisionIncidentFace(
+         colliderA,
+         colliderA->worldPose,
+         colliderA->transformCache,
+         satResult.normal,
+         contact.incidentFace
+      );
+   }
+   else {
+      selectOOBBCollisionRefFaceAndNormal(
+         colliderA,
+         colliderA->worldPose,
+         colliderA->transformCache,
+         satResult.normal,
+         contact.referenceFace,
+         contact.referenceFaceNormal
+      );
 
-        selectOOBBCollisionIncidentFace(
-            colliderB,
-            colliderB->worldPose,
-            colliderB->transformCache,
-            -satResult.normal,
-            contact.incidentFace
-        );
-    }
+      selectOOBBCollisionIncidentFace(
+         colliderB,
+         colliderB->worldPose,
+         colliderB->transformCache,
+         -satResult.normal,
+         contact.incidentFace
+      );
+   }
 
-    clipPoints(
-        contact.referenceFace, 
-        contact.incidentFace, 4, 
-        contact.referenceFaceNormal
-    );
+   clipPoints(
+      contact.referenceFace,
+      contact.incidentFace, 4,
+      contact.referenceFaceNormal
+   );
 
-    RigidBody* referenceBody = getReferenceBody(contact);
+   RigidBody* referenceBody = getReferenceBody(contact);
 
-    std::array<ContactPoint, MaxClippedPoints> candidates{};
-    uint32_t candidateCount = 0;
+   std::array<ContactPoint, MaxClippedPoints> candidates{};
+   uint32_t candidateCount = 0;
 
-    for (uint32_t i = 0; i < clippedPointCount; ++i) {
-        ContactPoint cp{};
-        cp.worldPos = clippedPoints[i];
-        cp.depth = -glm::dot(
-            clippedPoints[i] - contact.referenceFace[0], 
-            contact.referenceFaceNormal
-        );
-        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
+   for (uint32_t i = 0; i < clippedPointCount; ++i) {
+      ContactPoint cp{};
+      cp.worldPos = clippedPoints[i];
+      cp.depth = -glm::dot(
+         clippedPoints[i] - contact.referenceFace[0],
+         contact.referenceFaceNormal
+      );
+      cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
-        candidates[candidateCount++] = cp;
-    }
+      candidates[candidateCount++] = cp;
+   }
 
-    contact.normal = satResult.normal;
+   contact.normal = satResult.normal;
 
-    if (candidateCount <= MaxContactPoints) {
-        for (uint32_t i = 0; i < candidateCount; ++i) {
-            contact.addPoint(candidates[i]);
-        }
-    }
-    else {
-        // #TODO: different points are chosen different frames, 
-        // causing solver instability, maybe add some temporal coherence 
-        // to point selection?
-        // like remembering which points were chosen last frame and 
-        // prefer those if they are still valid (within some tolerance), 
-        // or add some bias towards points with deeper penetration depth
-        contactPointReduction(contact, candidates, candidateCount);
-    }
+   if (candidateCount <= MaxContactPoints) {
+      for (uint32_t i = 0; i < candidateCount; ++i) {
+         contact.addPoint(candidates[i]);
+      }
+   }
+   else {
+      // #TODO: different points are chosen different frames, 
+      // causing solver instability, maybe add some temporal coherence 
+      // to point selection?
+      // like remembering which points were chosen last frame and 
+      // prefer those if they are still valid (within some tolerance), 
+      // or add some bias towards points with deeper penetration depth
+      contactPointReduction(contact, candidates, candidateCount);
+   }
 
-    contact.hashKey = generateKey(colliderA->id, colliderB->id);
+   contact.hashKey = generateKey(colliderA->id, colliderB->id);
 
-    return integrateContact(cache, contact);
+   return integrateContact(cache, contact);
 }
 
 //==================================================
 // Box-Sphere collision
 //==================================================
 Contact* CollisionManifold::boxSphere(
-    Contact& contact,
-    std::unordered_map<size_t, Contact>& cache,
-    SAT::Result& satResult
+   Contact& contact,
+   std::unordered_map<size_t, Contact>& cache,
+   SAT::Result& satResult
 ) {
-    contact.clearPoints();
-    contact.normal = satResult.normal;
+   contact.clearPoints();
+   contact.normal = satResult.normal;
 
-    RigidBody* referenceBody = getReferenceBody(contact);
+   RigidBody* referenceBody = getReferenceBody(contact);
 
-    ContactPoint cp{};
-    cp.worldPos = satResult.point;
-    cp.depth = satResult.depth;
-    cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
+   ContactPoint cp{};
+   cp.worldPos = satResult.point;
+   cp.depth = satResult.depth;
+   cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
-    contact.addPoint(cp);
+   contact.addPoint(cp);
 
-    contact.hashKey = generateKey(
-        contact.runtimeData.colliderA->id,
-        contact.runtimeData.colliderB->id
-    );
+   contact.hashKey = generateKey(
+      contact.runtimeData.colliderA->id,
+      contact.runtimeData.colliderB->id
+   );
 
-    return integrateContact(cache, contact);
+   return integrateContact(cache, contact);
 }
 
 //===================================================
 // Box-Mesh collision
 //===================================================
 Contact* CollisionManifold::boxMesh(
-    Contact& contact,
-    std::unordered_map<size_t, Contact>& cache,
-    std::vector<SAT::Result>& allResults
+   Contact& contact,
+   std::unordered_map<size_t, Contact>& cache,
+   std::vector<SAT::Result>& allResults
 ) {
-    if (allResults.empty())
-        return nullptr;
+   if (allResults.empty())
+      return nullptr;
 
-    ContactRuntime& rt = contact.runtimeData;
-    Collider* colliderA = rt.colliderA;
+   ContactRuntime& rt = contact.runtimeData;
+   Collider* colliderA = rt.colliderA;
 
-    contact.clearPoints();
+   contact.clearPoints();
 
-    meshCandidateCount = 0;
-    furthestCandidateCount = 0;
-    selectedCandidateCount = 0;
+   meshCandidateCount = 0;
+   furthestCandidateCount = 0;
+   selectedCandidateCount = 0;
 
-    for (int resultIndex = 0; 
-        resultIndex < static_cast<int>(allResults.size()); 
-        ++resultIndex) 
-    {
-        const SAT::Result& satResult = allResults[resultIndex];
+   for (int resultIndex = 0;
+      resultIndex < static_cast<int>(allResults.size());
+      ++resultIndex)
+   {
+      const SAT::Result& satResult = allResults[resultIndex];
 
-        selectOOBBCollisionRefFaceAndNormal(
-            colliderA,
-            colliderA->worldPose,
-            colliderA->transformCache,
-            satResult.normal,
+      selectOOBBCollisionRefFaceAndNormal(
+         colliderA,
+         colliderA->worldPose,
+         colliderA->transformCache,
+         satResult.normal,
+         contact.referenceFace,
+         contact.referenceFaceNormal
+      );
+
+      contact.incidentFace = {
+          satResult.tri_ptr->vertices[0],
+          satResult.tri_ptr->vertices[1],
+          satResult.tri_ptr->vertices[2],
+          glm::vec3(0.0f)
+      };
+
+      clipPoints(
+         contact.referenceFace,
+         contact.incidentFace,
+         3,
+         contact.referenceFaceNormal
+      );
+
+      for (uint32_t i = 0; i < clippedPointCount; ++i) {
+         if (meshCandidateCount >= meshCandidates.size()) {
+            break;
+         }
+
+         MeshContactCandidate candidate{};
+         candidate.worldPos = clippedPoints[i];
+         candidate.depth = computePenetrationDepth(
+            clippedPoints[i],
             contact.referenceFace,
             contact.referenceFaceNormal
-        );
+         );
+         candidate.sourceIndex = resultIndex;
 
-        contact.incidentFace = {
-            satResult.tri_ptr->vertices[0],
-            satResult.tri_ptr->vertices[1],
-            satResult.tri_ptr->vertices[2],
-            glm::vec3(0.0f)
-        };
+         meshCandidates[meshCandidateCount++] = candidate;
+      }
 
-        clipPoints(
-            contact.referenceFace, 
-            contact.incidentFace, 
-            3, 
-            contact.referenceFaceNormal
-        );
+      if (meshCandidateCount >= meshCandidates.size()) {
+         break;
+      }
+   }
 
-        for (uint32_t i = 0; i < clippedPointCount; ++i) {
-            if (meshCandidateCount >= meshCandidates.size()) {
-                break;
-            }
+   if (meshCandidateCount == 0)
+      return nullptr;
 
-            MeshContactCandidate candidate{};
-            candidate.worldPos = clippedPoints[i];
-            candidate.depth = computePenetrationDepth(
-                clippedPoints[i],
-                contact.referenceFace,
-                contact.referenceFaceNormal
-            );
-            candidate.sourceIndex = resultIndex;
+   pickFourFurthestPoints();
 
-            meshCandidates[meshCandidateCount++] = candidate;
-        }
+   RigidBody* referenceBody = contact.runtimeData.bodyA;
 
-        if (meshCandidateCount >= meshCandidates.size()) {
-            break;
-        }
-    }
+   for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
+      ContactPoint cp{};
+      cp.worldPos = furthestCandidates[i].worldPos;
+      cp.depth = furthestCandidates[i].depth;
+      cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
-    if (meshCandidateCount == 0)
-        return nullptr;
+      contact.addPoint(cp);
+   }
 
-    pickFourFurthestPoints();
+   contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
 
-    RigidBody* referenceBody = contact.runtimeData.bodyA;
-
-    for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
-        ContactPoint cp{};
-        cp.worldPos = furthestCandidates[i].worldPos;
-        cp.depth = furthestCandidates[i].depth;
-        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
-
-        contact.addPoint(cp);
-    }
-
-    contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
-
-    return integrateContact(cache, contact);
+   return integrateContact(cache, contact);
 }
 
 //===================================================
 // Sphere-Sphere collision
 //===================================================
 Contact* CollisionManifold::sphereSphere(
-    Contact& contact,
-    std::unordered_map<size_t, Contact>& cache,
-    SAT::Result& satResult
+   Contact& contact,
+   std::unordered_map<size_t, Contact>& cache,
+   SAT::Result& satResult
 ) {
-    ContactRuntime& rt = contact.runtimeData;
-    Collider* colliderA = rt.colliderA;
-    Collider* colliderB = rt.colliderB;
+   ContactRuntime& rt = contact.runtimeData;
+   Collider* colliderA = rt.colliderA;
+   Collider* colliderB = rt.colliderB;
 
-    contact.clearPoints();
-    contact.normal = satResult.normal;
+   contact.clearPoints();
+   contact.normal = satResult.normal;
 
-    RigidBody* referenceBody = getReferenceBody(contact);
+   RigidBody* referenceBody = getReferenceBody(contact);
 
-    ContactPoint cp{};
-    cp.worldPos = satResult.point;
-    cp.depth = satResult.depth;
-    cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
+   ContactPoint cp{};
+   cp.worldPos = satResult.point;
+   cp.depth = satResult.depth;
+   cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
-    cp.speculative = (satResult.hitType == SAT::HitType::Speculative);
-    cp.separation = satResult.separation;
-    cp.toi = satResult.toi;
-    contact.addPoint(cp);
+   cp.speculative = (satResult.hitType == SAT::HitType::Speculative);
+   cp.separation = satResult.separation;
+   cp.toi = satResult.toi;
+   contact.addPoint(cp);
 
-    contact.hashKey = generateKey(colliderA->id, colliderB->id);
+   contact.hashKey = generateKey(colliderA->id, colliderB->id);
 
-    return integrateContact(cache, contact);
+   return integrateContact(cache, contact);
 }
 
 //===================================================
 // Sphere-Mesh collision
 //===================================================
 Contact* CollisionManifold::sphereMesh(
-    Contact& contact,
-    std::unordered_map<size_t, Contact>& cache,
-    std::vector<SAT::Result>& allResults) 
+   Contact& contact,
+   std::unordered_map<size_t, Contact>& cache,
+   std::vector<SAT::Result>& allResults)
 {
-    if (allResults.empty())
-        return nullptr;
+   if (allResults.empty())
+      return nullptr;
 
-    ContactRuntime& rt = contact.runtimeData;
-    Collider* colliderA = rt.colliderA;
+   ContactRuntime& rt = contact.runtimeData;
+   Collider* colliderA = rt.colliderA;
 
-    contact.clearPoints();
+   contact.clearPoints();
 
-    meshCandidateCount = 0;
-    furthestCandidateCount = 0;
-    selectedCandidateCount = 0;
+   meshCandidateCount = 0;
+   furthestCandidateCount = 0;
+   selectedCandidateCount = 0;
 
-    // Om caller inte redan sätter contact.normal, är detta säkrare.
-    contact.normal = allResults[0].normal;
+   // Om caller inte redan sätter contact.normal, är detta säkrare.
+   contact.normal = allResults[0].normal;
 
-    for (int i = 0; i < static_cast<int>(allResults.size()); ++i) {
-        if (meshCandidateCount >= meshCandidates.size()) {
-            break;
-        }
+   for (int i = 0; i < static_cast<int>(allResults.size()); ++i) {
+      if (meshCandidateCount >= meshCandidates.size()) {
+         break;
+      }
 
-        MeshContactCandidate candidate{};
-        candidate.worldPos = allResults[i].point;
-        candidate.depth = allResults[i].depth;
-        candidate.sourceIndex = i;
+      MeshContactCandidate candidate{};
+      candidate.worldPos = allResults[i].point;
+      candidate.depth = allResults[i].depth;
+      candidate.sourceIndex = i;
 
-        meshCandidates[meshCandidateCount++] = candidate;
-    }
+      meshCandidates[meshCandidateCount++] = candidate;
+   }
 
-    if (meshCandidateCount == 0)
-        return nullptr;
+   if (meshCandidateCount == 0)
+      return nullptr;
 
-    pickFourFurthestPoints();
+   pickFourFurthestPoints();
 
-    RigidBody* referenceBody = contact.runtimeData.bodyA;
+   RigidBody* referenceBody = contact.runtimeData.bodyA;
 
-    for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
-        ContactPoint cp{};
-        cp.worldPos = furthestCandidates[i].worldPos;
-        cp.depth = furthestCandidates[i].depth;
-        cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
+   for (uint32_t i = 0; i < furthestCandidateCount; ++i) {
+      ContactPoint cp{};
+      cp.worldPos = furthestCandidates[i].worldPos;
+      cp.depth = furthestCandidates[i].depth;
+      cp.localPos = worldToBodyLocalPoint(*referenceBody, cp.worldPos);
 
-        contact.addPoint(cp);
-    }
+      contact.addPoint(cp);
+   }
 
-    contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
+   contact.hashKey = generateKey(colliderA->id, allResults[0].tri_ptr->id);
 
-    return integrateContact(cache, contact);
+   return integrateContact(cache, contact);
 }
 
 //===================================================
 // Helper function for contact generation
 //===================================================
 void CollisionManifold::pickFourFurthestPoints() {
-    furthestCandidateCount = 0;
+   furthestCandidateCount = 0;
 
-    if (meshCandidateCount == 0)
-        return;
+   if (meshCandidateCount == 0)
+      return;
 
-    if (meshCandidateCount <= MaxContactPoints) {
-        for (uint32_t i = 0; i < meshCandidateCount; ++i) {
-            furthestCandidates[furthestCandidateCount++] = meshCandidates[i];
-        }
-        return;
-    }
+   if (meshCandidateCount <= MaxContactPoints) {
+      for (uint32_t i = 0; i < meshCandidateCount; ++i) {
+         furthestCandidates[furthestCandidateCount++] = meshCandidates[i];
+      }
+      return;
+   }
 
-    // seed deterministiskt med första kandidaten (se TODO om temporal koherens)
-    selectedCandidateCount = 0;
-    selectedCandidateIndices[selectedCandidateCount++] = 0;
+   // seed deterministiskt med första kandidaten (se TODO om temporal koherens)
+   selectedCandidateCount = 0;
+   selectedCandidateIndices[selectedCandidateCount++] = 0;
 
-    for (uint32_t i = 1; i < MaxContactPoints; ++i) {
-        addFurthestPoint();
-    }
+   for (uint32_t i = 1; i < MaxContactPoints; ++i) {
+      addFurthestPoint();
+   }
 
-    for (uint32_t k = 0; k < selectedCandidateCount; ++k) {
-        furthestCandidates[furthestCandidateCount++] =
-            meshCandidates[selectedCandidateIndices[k]];
-    }
+   for (uint32_t k = 0; k < selectedCandidateCount; ++k) {
+      furthestCandidates[furthestCandidateCount++] =
+         meshCandidates[selectedCandidateIndices[k]];
+   }
 }
 
 void CollisionManifold::addFurthestPoint() {
-    int bestIdx = -1;
-    float bestDist = std::numeric_limits<float>::lowest();
+   int bestIdx = -1;
+   float bestDist = std::numeric_limits<float>::lowest();
 
-    for (uint32_t i = 0; i < meshCandidateCount; ++i) {
-        bool alreadyAdded = false;
+   for (uint32_t i = 0; i < meshCandidateCount; ++i) {
+      bool alreadyAdded = false;
 
-        for (uint32_t j = 0; j < selectedCandidateCount; ++j) {
-            if (static_cast<int>(i) == selectedCandidateIndices[j]) {
-                alreadyAdded = true;
-                break;
-            }
-        }
+      for (uint32_t j = 0; j < selectedCandidateCount; ++j) {
+         if (static_cast<int>(i) == selectedCandidateIndices[j]) {
+            alreadyAdded = true;
+            break;
+         }
+      }
 
-        if (alreadyAdded)
-            continue;
+      if (alreadyAdded)
+         continue;
 
-        float shortestDist = std::numeric_limits<float>::max();
+      float shortestDist = std::numeric_limits<float>::max();
 
-        for (uint32_t j = 0; j < selectedCandidateCount; ++j) {
-            int selectedIdx = selectedCandidateIndices[j];
+      for (uint32_t j = 0; j < selectedCandidateCount; ++j) {
+         int selectedIdx = selectedCandidateIndices[j];
 
-            glm::vec3 diff =
-                meshCandidates[i].worldPos -
-                meshCandidates[selectedIdx].worldPos;
+         glm::vec3 diff =
+            meshCandidates[i].worldPos -
+            meshCandidates[selectedIdx].worldPos;
 
-            float dist2 = glm::dot(diff, diff);
+         float dist2 = glm::dot(diff, diff);
 
-            if (dist2 < shortestDist) {
-                shortestDist = dist2;
-            }
-        }
+         if (dist2 < shortestDist) {
+            shortestDist = dist2;
+         }
+      }
 
-        if (shortestDist > bestDist) {
-            bestDist = shortestDist;
-            bestIdx = static_cast<int>(i);
-        }
-    }
+      if (shortestDist > bestDist) {
+         bestDist = shortestDist;
+         bestIdx = static_cast<int>(i);
+      }
+   }
 
-    if (bestIdx >= 0) {
-        selectedCandidateIndices[selectedCandidateCount++] = bestIdx;
-    }
+   if (bestIdx >= 0) {
+      selectedCandidateIndices[selectedCandidateCount++] = bestIdx;
+   }
 }
 
 //============================================================================
 //  Select Box Reference face & normal for clipping based on contact normal
 //============================================================================
 void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
-    const Collider* collider, 
-    const Pose& pose, 
-    ColliderTransformCache& transformCache, 
-    const glm::vec3& normal, 
-    std::array<glm::vec3, 4>& outFace,
-    glm::vec3& outNormal) 
+   const Collider* collider,
+   const Pose& pose,
+   ColliderTransformCache& transformCache,
+   const glm::vec3& normal,
+   std::array<glm::vec3, 4>& outFace,
+   glm::vec3& outNormal)
 {
-    transformCache.ensureInvModelMatrix(pose);
-    transformCache.ensureModelMatrix(pose);
+   transformCache.ensureInvModelMatrix(pose);
+   transformCache.ensureModelMatrix(pose);
 
-    const Box& box = std::get<Box>(collider->shape);
+   const Box& box = std::get<Box>(collider->shape);
 
-    // rotate the contact normal into the box's local space
-    glm::vec3 rotated = transformCache.invModelMatrix * glm::vec4(normal, 0.0f);
-    glm::vec3 absN = glm::abs(rotated);
+   // rotate the contact normal into the box's local space
+   glm::vec3 rotated = transformCache.invModelMatrix * glm::vec4(normal, 0.0f);
+   glm::vec3 absN = glm::abs(rotated);
 
-    // choose the face whose normal is most aligned with 
-    // the contact normal (in local space)
-    std::array<glm::vec3, 4> localFace;
+   // choose the face whose normal is most aligned with 
+   // the contact normal (in local space)
+   std::array<glm::vec3, 4> localFace;
 
-    if (absN.x >= absN.y && absN.x >= absN.z) {
-        localFace = (rotated.x > 0) ? box.getLocalFace(FaceId::MaxX)
-            : box.getLocalFace(FaceId::MinX);
-    }
-    else if (absN.y >= absN.x && absN.y >= absN.z) {
-        localFace = (rotated.y > 0) ? box.getLocalFace(FaceId::MaxY)
-            : box.getLocalFace(FaceId::MinY);
-    }
-    else {
-        localFace = (rotated.z > 0) ? box.getLocalFace(FaceId::MaxZ)
-            : box.getLocalFace(FaceId::MinZ);
-    }
+   if (absN.x >= absN.y && absN.x >= absN.z) {
+      localFace = (rotated.x > 0) ? box.getLocalFace(FaceId::MaxX)
+         : box.getLocalFace(FaceId::MinX);
+   }
+   else if (absN.y >= absN.x && absN.y >= absN.z) {
+      localFace = (rotated.y > 0) ? box.getLocalFace(FaceId::MaxY)
+         : box.getLocalFace(FaceId::MinY);
+   }
+   else {
+      localFace = (rotated.z > 0) ? box.getLocalFace(FaceId::MaxZ)
+         : box.getLocalFace(FaceId::MinZ);
+   }
 
-    // transform the four local face vertices to world space 
-    // using the box's model matrix (which includes rotation and scale)
-    glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
-    glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
+   // transform the four local face vertices to world space 
+   // using the box's model matrix (which includes rotation and scale)
+   glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
+   glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
 
-    for (int i = 0; i < localFace.size(); i++) {
-        outFace[i] = M3 * localFace[i] + T3;
-    }
+   for (int i = 0; i < localFace.size(); i++) {
+      outFace[i] = M3 * localFace[i] + T3;
+   }
 
-    // compute the face normal in world space using the 
-    // cross product of two edges of the face
-    glm::vec3 e0 = outFace[1] - outFace[0];
-    glm::vec3 e1 = outFace[2] - outFace[0];
-    outNormal = glm::normalize(glm::cross(e0, e1));
+   // compute the face normal in world space using the 
+   // cross product of two edges of the face
+   glm::vec3 e0 = outFace[1] - outFace[0];
+   glm::vec3 e1 = outFace[2] - outFace[0];
+   outNormal = glm::normalize(glm::cross(e0, e1));
 }
 
 //=================================================================
 // Select Box Incident face for clipping based on contact normal
 //=================================================================
 void CollisionManifold::selectOOBBCollisionIncidentFace(
-    const Collider* collider, 
-    const Pose& pose, 
-    ColliderTransformCache& transformCache, 
-    const glm::vec3& normal, 
-    std::array<glm::vec3, 4>& outFace) 
+   const Collider* collider,
+   const Pose& pose,
+   ColliderTransformCache& transformCache,
+   const glm::vec3& normal,
+   std::array<glm::vec3, 4>& outFace)
 {
-    transformCache.ensureInvRotationMatrix(pose);
-    transformCache.ensureModelMatrix(pose);
+   transformCache.ensureInvRotationMatrix(pose);
+   transformCache.ensureModelMatrix(pose);
 
-    const Box& box = std::get<Box>(collider->shape);
+   const Box& box = std::get<Box>(collider->shape);
 
-    // rotate the contact normal into the box's local space
-    glm::vec3 rotated = transformCache.invRotationMatrix * normal;
-    glm::vec3 absN = glm::abs(rotated);
+   // rotate the contact normal into the box's local space
+   glm::vec3 rotated = transformCache.invRotationMatrix * normal;
+   glm::vec3 absN = glm::abs(rotated);
 
-    // choose the face whose normal is most aligned with 
-    // the contact normal (in local space)
-    std::array<glm::vec3, 4> localFace;
+   // choose the face whose normal is most aligned with 
+   // the contact normal (in local space)
+   std::array<glm::vec3, 4> localFace;
 
-    if (absN.x >= absN.y && absN.x >= absN.z) {
-        localFace = (rotated.x > 0) 
-            ? box.getLocalFace(FaceId::MaxX)
-            : box.getLocalFace(FaceId::MinX);
-    }
-    else if (absN.y >= absN.x && absN.y >= absN.z) {
-        localFace = (rotated.y > 0) 
-            ? box.getLocalFace(FaceId::MaxY)
-            : box.getLocalFace(FaceId::MinY);
-    }
-    else {
-        localFace = (rotated.z > 0) 
-            ? box.getLocalFace(FaceId::MaxZ)
-            : box.getLocalFace(FaceId::MinZ);
-    }
+   if (absN.x >= absN.y && absN.x >= absN.z) {
+      localFace = (rotated.x > 0)
+         ? box.getLocalFace(FaceId::MaxX)
+         : box.getLocalFace(FaceId::MinX);
+   }
+   else if (absN.y >= absN.x && absN.y >= absN.z) {
+      localFace = (rotated.y > 0)
+         ? box.getLocalFace(FaceId::MaxY)
+         : box.getLocalFace(FaceId::MinY);
+   }
+   else {
+      localFace = (rotated.z > 0)
+         ? box.getLocalFace(FaceId::MaxZ)
+         : box.getLocalFace(FaceId::MinZ);
+   }
 
-    // transform the four local face vertices to world space 
-    // using the box's model matrix (which includes rotation and scale)
-    glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
-    glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
+   // transform the four local face vertices to world space 
+   // using the box's model matrix (which includes rotation and scale)
+   glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
+   glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
 
-    for (int i = 0; i < localFace.size(); i++) {
-        outFace[i] = M3 * localFace[i] + T3;
-    }
+   for (int i = 0; i < localFace.size(); i++) {
+      outFace[i] = M3 * localFace[i] + T3;
+   }
 }
 
 //===================================================================
@@ -558,155 +558,155 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(
 // face's side planes
 //===================================================================
 void CollisionManifold::clipPoints(
-    const std::array<glm::vec3, 4>& referenceFace,
-    const std::array<glm::vec3, 4>& incidentFace,
-    int incidentCount,
-    const glm::vec3& referenceFaceNormal) 
+   const std::array<glm::vec3, 4>& referenceFace,
+   const std::array<glm::vec3, 4>& incidentFace,
+   int incidentCount,
+   const glm::vec3& referenceFaceNormal)
 {
-    createClippingPlanes(referenceFace, referenceFaceNormal);
+   createClippingPlanes(referenceFace, referenceFaceNormal);
 
-    clippedPointCount = 0;
+   clippedPointCount = 0;
 
-    for (int i = 0; i < incidentCount; i++) {
-        contactPoints[i] = incidentFace[i];
-    }
+   for (int i = 0; i < incidentCount; i++) {
+      contactPoints[i] = incidentFace[i];
+   }
 
-    int counter = incidentCount;
+   int counter = incidentCount;
 
-    for (const Plane& plane : clippingPlanes) {
-        for (int i = 0; i < counter; i++) {
-            clippingStatus[i] = isPointInsidePlane(
-                contactPoints[i],
-                plane.normal,
-                plane.point,
-                1e-2f
-            );
-        }
-
-        int oldCounter = counter;
-        counter = 0;
-
-        auto pushNext = [&](const glm::vec3& p) {
-            nextContactPoints[counter++] = p;
-            };
-
-        for (int i = 0; i < oldCounter; i++) {
-            int nextIndex = (i + 1) % oldCounter;
-
-            bool validClip = true;
-            glm::vec3 clippedPoint{};
-
-            if (!clippingStatus[i] && clippingStatus[nextIndex]) {
-                getIntersectionPoint(
-                    contactPoints[i],
-                    contactPoints[nextIndex],
-                    plane,
-                    clippedPoint,
-                    validClip
-                );
-
-                if (validClip)
-                    pushNext(clippedPoint);
-
-                pushNext(contactPoints[nextIndex]);
-            }
-            else if (clippingStatus[i] && clippingStatus[nextIndex]) {
-                pushNext(contactPoints[nextIndex]);
-            }
-            else if (clippingStatus[i] && !clippingStatus[nextIndex]) {
-                getIntersectionPoint(
-                    contactPoints[i],
-                    contactPoints[nextIndex],
-                    plane,
-                    clippedPoint,
-                    validClip
-                );
-
-                if (validClip)
-                    pushNext(clippedPoint);
-            }
-        }
-
-        std::swap(contactPoints, nextContactPoints);
-
-        if (counter == 0)
-            break;
-    }
-
-    for (int i = 0; i < counter; i++) {
-        if (isPointInsidePlane(
+   for (const Plane& plane : clippingPlanes) {
+      for (int i = 0; i < counter; i++) {
+         clippingStatus[i] = isPointInsidePlane(
             contactPoints[i],
-            referenceFaceNormal,
-            referenceFace[0],
-            1e-2f)) 
-        {
-            clippedPoints[clippedPointCount++] = contactPoints[i];
-        }
-    }
+            plane.normal,
+            plane.point,
+            1e-2f
+         );
+      }
+
+      int oldCounter = counter;
+      counter = 0;
+
+      auto pushNext = [&](const glm::vec3& p) {
+         nextContactPoints[counter++] = p;
+         };
+
+      for (int i = 0; i < oldCounter; i++) {
+         int nextIndex = (i + 1) % oldCounter;
+
+         bool validClip = true;
+         glm::vec3 clippedPoint{};
+
+         if (!clippingStatus[i] && clippingStatus[nextIndex]) {
+            getIntersectionPoint(
+               contactPoints[i],
+               contactPoints[nextIndex],
+               plane,
+               clippedPoint,
+               validClip
+            );
+
+            if (validClip)
+               pushNext(clippedPoint);
+
+            pushNext(contactPoints[nextIndex]);
+         }
+         else if (clippingStatus[i] && clippingStatus[nextIndex]) {
+            pushNext(contactPoints[nextIndex]);
+         }
+         else if (clippingStatus[i] && !clippingStatus[nextIndex]) {
+            getIntersectionPoint(
+               contactPoints[i],
+               contactPoints[nextIndex],
+               plane,
+               clippedPoint,
+               validClip
+            );
+
+            if (validClip)
+               pushNext(clippedPoint);
+         }
+      }
+
+      std::swap(contactPoints, nextContactPoints);
+
+      if (counter == 0)
+         break;
+   }
+
+   for (int i = 0; i < counter; i++) {
+      if (isPointInsidePlane(
+         contactPoints[i],
+         referenceFaceNormal,
+         referenceFace[0],
+         1e-2f))
+      {
+         clippedPoints[clippedPointCount++] = contactPoints[i];
+      }
+   }
 }
 
 //============================================================================
 // Sutherland-Hodgman clipping helper functions
 //============================================================================
 void CollisionManifold::createClippingPlanes(
-    const std::array<glm::vec3, 4>& face,
-    const glm::vec3& faceNormal)
+   const std::array<glm::vec3, 4>& face,
+   const glm::vec3& faceNormal)
 {
-    // #TODO: Använda FaceCenter för point on plane i stället för face[i]. 
-    // Pga precision.
-    // T.ex: float depth = dot(n, contactPoint - planePoint); 
-    // (depth per contact point)
-    // Face center är mer stabilt än ett hörn för det swappar inte 
-    // mellan frames.
-    // Face center kommer också vara on average närmare fler antal 
-    // contact points än ett hörn.
-    // Detta minskar risken för jitter vid kontaktpunkter nära plan.
+   // #TODO: Använda FaceCenter för point on plane i stället för face[i]. 
+   // Pga precision.
+   // T.ex: float depth = dot(n, contactPoint - planePoint); 
+   // (depth per contact point)
+   // Face center är mer stabilt än ett hörn för det swappar inte 
+   // mellan frames.
+   // Face center kommer också vara on average närmare fler antal 
+   // contact points än ett hörn.
+   // Detta minskar risken för jitter vid kontaktpunkter nära plan.
 
-    // create clipping planes
-    for (int i = 0; i < face.size(); i++) {
-        glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
-        glm::vec3 planeNormal = glm::cross(faceNormal, edge);
+   // create clipping planes
+   for (int i = 0; i < face.size(); i++) {
+      glm::vec3 edge = face[i] - face[(i + 1) % face.size()];
+      glm::vec3 planeNormal = glm::cross(faceNormal, edge);
 
-        this->clippingPlanes[i] = Plane(planeNormal, face[i]);
-    }
+      this->clippingPlanes[i] = Plane(planeNormal, face[i]);
+   }
 }
 
 void CollisionManifold::getIntersectionPoint(
-    const glm::vec3& v1, 
-    const glm::vec3& v2, 
-    const Plane& plane, 
-    glm::vec3& outPoint, 
-    bool& outBool) 
+   const glm::vec3& v1,
+   const glm::vec3& v2,
+   const Plane& plane,
+   glm::vec3& outPoint,
+   bool& outBool)
 {
-    glm::vec3 lineDir = v2 - v1;
-    float denominator = glm::dot(plane.normal, lineDir);
+   glm::vec3 lineDir = v2 - v1;
+   float denominator = glm::dot(plane.normal, lineDir);
 
-    if (std::abs(denominator) < 1e-6f) {
-        // the line is parallel to the plane, so we consider it 
-        // as no valid intersection for clipping purposes
-        outBool = false;
-        return;
-    }
+   if (std::abs(denominator) < 1e-6f) {
+      // the line is parallel to the plane, so we consider it 
+      // as no valid intersection for clipping purposes
+      outBool = false;
+      return;
+   }
 
-    float t = glm::dot(plane.normal, plane.point - v1) / denominator;
+   float t = glm::dot(plane.normal, plane.point - v1) / denominator;
 
-    float epsilon = 1e-6f;
-    if (t < -epsilon || t > 1.0f + epsilon) {
-        outBool = false;
-        return;
-    }
+   float epsilon = 1e-6f;
+   if (t < -epsilon || t > 1.0f + epsilon) {
+      outBool = false;
+      return;
+   }
 
-    outPoint = v1 + t * lineDir;
-    outBool = true;
+   outPoint = v1 + t * lineDir;
+   outBool = true;
 }
 
 bool CollisionManifold::isPointInsidePlane(
-    const glm::vec3& point, 
-    const glm::vec3& planeNormal, 
-    const glm::vec3& planePoint, 
-    const float tolerance) 
+   const glm::vec3& point,
+   const glm::vec3& planeNormal,
+   const glm::vec3& planePoint,
+   const float tolerance)
 {
-    return glm::dot(planeNormal, point - planePoint) <= tolerance;
+   return glm::dot(planeNormal, point - planePoint) <= tolerance;
 }
 
 //=================================================================
@@ -714,145 +714,145 @@ bool CollisionManifold::isPointInsidePlane(
 // with many clipped points
 //=================================================================
 void CollisionManifold::contactPointReduction(
-    Contact& contact,
-    const std::array<ContactPoint, MaxClippedPoints>& candidates,
-    uint32_t candidateCount) 
+   Contact& contact,
+   const std::array<ContactPoint, MaxClippedPoints>& candidates,
+   uint32_t candidateCount)
 {
-    glm::vec3 normal = contact.referenceFaceNormal;
+   glm::vec3 normal = contact.referenceFaceNormal;
 
-    std::array<int, MaxContactPoints> chosen{};
-    uint32_t chosenCount = 0;
+   std::array<int, MaxContactPoints> chosen{};
+   uint32_t chosenCount = 0;
 
-    auto alreadyChosen = [&](int idx) {
-        for (uint32_t i = 0; i < chosenCount; ++i) {
-            if (chosen[i] == idx)
-                return true;
-        }
-        return false;
-        };
+   auto alreadyChosen = [&](int idx) {
+      for (uint32_t i = 0; i < chosenCount; ++i) {
+         if (chosen[i] == idx)
+            return true;
+      }
+      return false;
+      };
 
-    auto addChosen = [&](int idx) {
-        if (idx < 0)
-            return;
+   auto addChosen = [&](int idx) {
+      if (idx < 0)
+         return;
 
-        if (alreadyChosen(idx))
-            return;
+      if (alreadyChosen(idx))
+         return;
 
-        chosen[chosenCount++] = idx;
-        };
+      chosen[chosenCount++] = idx;
+      };
 
-    auto pickFarthestUnusedFrom = [&](const glm::vec3& fromPoint) {
-        int bestIdx = -1;
-        float bestDist = std::numeric_limits<float>::lowest();
+   auto pickFarthestUnusedFrom = [&](const glm::vec3& fromPoint) {
+      int bestIdx = -1;
+      float bestDist = std::numeric_limits<float>::lowest();
 
-        for (uint32_t i = 0; i < candidateCount; ++i) {
-            if (alreadyChosen(static_cast<int>(i)))
-                continue;
-
-            float dist2 = glm::distance2(fromPoint, candidates[i].localPos);
-
-            if (dist2 > bestDist) {
-                bestDist = dist2;
-                bestIdx = static_cast<int>(i);
-            }
-        }
-
-        return bestIdx;
-        };
-
-    // 1. support point, deterministiskt i local X
-    const glm::vec3 direction(1.0f, 0.0f, 0.0f);
-
-    int supportPointIndex = 0;
-    float maxDot = std::numeric_limits<float>::lowest();
-
-    for (uint32_t i = 0; i < candidateCount; ++i) {
-        float dotValue = glm::dot(candidates[i].localPos, direction);
-
-        if (dotValue > maxDot) {
-            maxDot = dotValue;
-            supportPointIndex = static_cast<int>(i);
-        }
-    }
-
-    addChosen(supportPointIndex);
-
-    const glm::vec3 supportPoint = candidates[supportPointIndex].localPos;
-
-    // 2. längst från support point
-    int farthestPointIndex = pickFarthestUnusedFrom(supportPoint);
-    addChosen(farthestPointIndex);
-
-    const glm::vec3 farthestPoint = candidates[farthestPointIndex].localPos;
-
-    // 3. största positiva area
-    int positiveAreaIndex = -1;
-    float maxArea = std::numeric_limits<float>::lowest();
-
-    for (uint32_t i = 0; i < candidateCount; ++i) {
-        if (alreadyChosen(static_cast<int>(i)))
+      for (uint32_t i = 0; i < candidateCount; ++i) {
+         if (alreadyChosen(static_cast<int>(i)))
             continue;
 
-        const glm::vec3& point = candidates[i].localPos;
+         float dist2 = glm::distance2(fromPoint, candidates[i].localPos);
 
-        float area = 0.5f * glm::dot(
-            glm::cross(supportPoint - farthestPoint, supportPoint - point),
-            normal
-        );
+         if (dist2 > bestDist) {
+            bestDist = dist2;
+            bestIdx = static_cast<int>(i);
+         }
+      }
 
-        if (area > maxArea) {
-            maxArea = area;
-            positiveAreaIndex = static_cast<int>(i);
-        }
-    }
+      return bestIdx;
+      };
 
-    addChosen(positiveAreaIndex);
+   // 1. support point, deterministiskt i local X
+   const glm::vec3 direction(1.0f, 0.0f, 0.0f);
 
-    // 4. största negativa area
-    int negativeAreaIndex = -1;
-    float minArea = std::numeric_limits<float>::max();
+   int supportPointIndex = 0;
+   float maxDot = std::numeric_limits<float>::lowest();
 
-    for (uint32_t i = 0; i < candidateCount; ++i) {
-        if (alreadyChosen(static_cast<int>(i)))
-            continue;
+   for (uint32_t i = 0; i < candidateCount; ++i) {
+      float dotValue = glm::dot(candidates[i].localPos, direction);
 
-        const glm::vec3& point = candidates[i].localPos;
+      if (dotValue > maxDot) {
+         maxDot = dotValue;
+         supportPointIndex = static_cast<int>(i);
+      }
+   }
 
-        float area = 0.5f * glm::dot(
-            glm::cross(supportPoint - farthestPoint, supportPoint - point),
-            normal
-        );
+   addChosen(supportPointIndex);
 
-        if (area < minArea) {
-            minArea = area;
-            negativeAreaIndex = static_cast<int>(i);
-        }
-    }
+   const glm::vec3 supportPoint = candidates[supportPointIndex].localPos;
 
-    addChosen(negativeAreaIndex);
+   // 2. längst från support point
+   int farthestPointIndex = pickFarthestUnusedFrom(supportPoint);
+   addChosen(farthestPointIndex);
 
-    // fallback om något degenererat hände
-    while (chosenCount < MaxContactPoints) {
-        int fallbackIdx = pickFarthestUnusedFrom(supportPoint);
-        if (fallbackIdx < 0)
-            break;
+   const glm::vec3 farthestPoint = candidates[farthestPointIndex].localPos;
 
-        addChosen(fallbackIdx);
-    }
+   // 3. största positiva area
+   int positiveAreaIndex = -1;
+   float maxArea = std::numeric_limits<float>::lowest();
 
-    contact.clearPoints();
+   for (uint32_t i = 0; i < candidateCount; ++i) {
+      if (alreadyChosen(static_cast<int>(i)))
+         continue;
 
-    for (uint32_t i = 0; i < chosenCount; ++i) {
-        contact.addPoint(candidates[chosen[i]]);
-    }
+      const glm::vec3& point = candidates[i].localPos;
+
+      float area = 0.5f * glm::dot(
+         glm::cross(supportPoint - farthestPoint, supportPoint - point),
+         normal
+      );
+
+      if (area > maxArea) {
+         maxArea = area;
+         positiveAreaIndex = static_cast<int>(i);
+      }
+   }
+
+   addChosen(positiveAreaIndex);
+
+   // 4. största negativa area
+   int negativeAreaIndex = -1;
+   float minArea = std::numeric_limits<float>::max();
+
+   for (uint32_t i = 0; i < candidateCount; ++i) {
+      if (alreadyChosen(static_cast<int>(i)))
+         continue;
+
+      const glm::vec3& point = candidates[i].localPos;
+
+      float area = 0.5f * glm::dot(
+         glm::cross(supportPoint - farthestPoint, supportPoint - point),
+         normal
+      );
+
+      if (area < minArea) {
+         minArea = area;
+         negativeAreaIndex = static_cast<int>(i);
+      }
+   }
+
+   addChosen(negativeAreaIndex);
+
+   // fallback om något degenererat hände
+   while (chosenCount < MaxContactPoints) {
+      int fallbackIdx = pickFarthestUnusedFrom(supportPoint);
+      if (fallbackIdx < 0)
+         break;
+
+      addChosen(fallbackIdx);
+   }
+
+   contact.clearPoints();
+
+   for (uint32_t i = 0; i < chosenCount; ++i) {
+      contact.addPoint(candidates[chosen[i]]);
+   }
 }
 
 float CollisionManifold::computePenetrationDepth(
-    const glm::vec3& point,
-    const std::array<glm::vec3, 4>& refFace,
-    const glm::vec3& refFaceNormal) 
+   const glm::vec3& point,
+   const std::array<glm::vec3, 4>& refFace,
+   const glm::vec3& refFaceNormal)
 {
-    return -glm::dot(point - refFace[0], refFaceNormal);
+   return -glm::dot(point - refFace[0], refFaceNormal);
 }
 
 // #TODO: FaceCenter kan användas för att sortera contact points om:
@@ -866,213 +866,213 @@ float CollisionManifold::computePenetrationDepth(
 // warm starting and temporal coherence
 //=========================================================
 Contact* CollisionManifold::integrateContact(
-    std::unordered_map<size_t, Contact>& contactCache,
-    Contact& contact) 
+   std::unordered_map<size_t, Contact>& contactCache,
+   Contact& contact)
 {
-    contact.minY = std::numeric_limits<float>::max();
+   contact.minY = std::numeric_limits<float>::max();
 
-    for (uint32_t i = 0; i < contact.numPoints; ++i) {
-        const ContactPoint& cp = contact.points[i];
-        contact.minY = std::min(contact.minY, cp.worldPos.y);
-    }
+   for (uint32_t i = 0; i < contact.numPoints; ++i) {
+      const ContactPoint& cp = contact.points[i];
+      contact.minY = std::min(contact.minY, cp.worldPos.y);
+   }
 
-    auto it = contactCache.find(contact.hashKey);
+   auto it = contactCache.find(contact.hashKey);
 
-    contact.wasUsedThisFrame = true;
-    contact.framesSinceUsed = 0;
+   contact.wasUsedThisFrame = true;
+   contact.framesSinceUsed = 0;
 
-    glm::vec3 n = contact.normal;
-    glm::vec3 t1{};
+   glm::vec3 n = contact.normal;
+   glm::vec3 t1{};
 
-    if (it != contactCache.end()) {
-        t1 = it->second.t1 - n * glm::dot(it->second.t1, n);
+   if (it != contactCache.end()) {
+      t1 = it->second.t1 - n * glm::dot(it->second.t1, n);
 
-        if (glm::length2(t1) > 1e-8f) {
-            t1 = glm::normalize(t1);
-        }
-    }
+      if (glm::length2(t1) > 1e-8f) {
+         t1 = glm::normalize(t1);
+      }
+   }
 
-    if (it == contactCache.end() || glm::length2(t1) < 1e-8f) {
-        uint64_t h = contact.hashKey * 0x9E3779B97F4A7C15ull;
+   if (it == contactCache.end() || glm::length2(t1) < 1e-8f) {
+      uint64_t h = contact.hashKey * 0x9E3779B97F4A7C15ull;
 
-        float theta =
-            float((h >> 33) & 0x7fffffff) *
-            (2.0f * 3.1415926535f) /
-            float(0x80000000);
+      float theta =
+         float((h >> 33) & 0x7fffffff) *
+         (2.0f * 3.1415926535f) /
+         float(0x80000000);
 
-        glm::vec3 seed =
-            (std::abs(n.y) < 0.9f)
-            ? glm::vec3(0, 1, 0)
-            : glm::vec3(1, 0, 0);
+      glm::vec3 seed =
+         (std::abs(n.y) < 0.9f)
+         ? glm::vec3(0, 1, 0)
+         : glm::vec3(1, 0, 0);
 
-        glm::vec3 b = glm::normalize(glm::cross(seed, n));
-        glm::vec3 c = glm::normalize(glm::cross(n, b));
+      glm::vec3 b = glm::normalize(glm::cross(seed, n));
+      glm::vec3 c = glm::normalize(glm::cross(n, b));
 
-        t1 = glm::normalize(std::cos(theta) * b + std::sin(theta) * c);
-    }
+      t1 = glm::normalize(std::cos(theta) * b + std::sin(theta) * c);
+   }
 
-    glm::vec3 t2 = glm::normalize(glm::cross(n, t1));
+   glm::vec3 t2 = glm::normalize(glm::cross(n, t1));
 
-    if (it != contactCache.end() && glm::dot(t1, it->second.t1) < 0.0f) {
-        t1 = -t1;
-        t2 = -t2;
-        t2 = -t2;
-    }
+   if (it != contactCache.end() && glm::dot(t1, it->second.t1) < 0.0f) {
+      t1 = -t1;
+      t2 = -t2;
+      t2 = -t2;
+   }
 
-    contact.t1 = t1;
-    contact.t2 = t2;
+   contact.t1 = t1;
+   contact.t2 = t2;
 
-    if (it == contactCache.end()) {
-        for (uint32_t i = 0; i < contact.numPoints; ++i) {
-            contact.points[i].wasUsedThisFrame = true;
-        }
+   if (it == contactCache.end()) {
+      for (uint32_t i = 0; i < contact.numPoints; ++i) {
+         contact.points[i].wasUsedThisFrame = true;
+      }
 
-        size_t key = contact.hashKey;
+      size_t key = contact.hashKey;
 
-        auto [insertedIt, inserted] =
-            contactCache.emplace(key, std::move(contact));
+      auto [insertedIt, inserted] =
+         contactCache.emplace(key, std::move(contact));
 
-        return &insertedIt->second;
-    }
+      return &insertedIt->second;
+   }
 
-    Contact& cachedContact = it->second;
-    cachedContact.wasUsedThisFrame = true;
+   Contact& cachedContact = it->second;
+   cachedContact.wasUsedThisFrame = true;
 
-    std::array<bool, MaxContactPoints> matchedFinalPoints{ false };
-    std::array<bool, MaxContactPoints> matchedCachedPoints{ false };
+   std::array<bool, MaxContactPoints> matchedFinalPoints{ false };
+   std::array<bool, MaxContactPoints> matchedCachedPoints{ false };
 
-    ContactRuntime& rt = contact.runtimeData;
-    RigidBody* referenceBody =
-        cachedContact.objBisReference &&
-        contact.partnerTypeB == ContactPartnerType::RigidBody
-        ? rt.bodyB
-        : rt.bodyA;
+   ContactRuntime& rt = contact.runtimeData;
+   RigidBody* referenceBody =
+      cachedContact.objBisReference &&
+      contact.partnerTypeB == ContactPartnerType::RigidBody
+      ? rt.bodyB
+      : rt.bodyA;
 
-    std::array<glm::vec3, MaxContactPoints> cachedWorld{};
+   std::array<glm::vec3, MaxContactPoints> cachedWorld{};
 
-    for (uint32_t j = 0; j < cachedContact.numPoints; ++j) {
-        cachedWorld[j] = bodyLocalToWorldPoint(
-            *referenceBody,
-            cachedContact.points[j].localPos
-        );
-    }
+   for (uint32_t j = 0; j < cachedContact.numPoints; ++j) {
+      cachedWorld[j] = bodyLocalToWorldPoint(
+         *referenceBody,
+         cachedContact.points[j].localPos
+      );
+   }
 
-    struct MatchPair {
-        int newIdx = -1;
-        int cachedIdx = -1;
-        float dist2 = 0.0f;
-    };
+   struct MatchPair {
+      int newIdx = -1;
+      int cachedIdx = -1;
+      float dist2 = 0.0f;
+   };
 
-    std::array<MatchPair, MaxContactPoints* MaxContactPoints> pairs{};
-    uint32_t pairCount = 0;
+   std::array<MatchPair, MaxContactPoints* MaxContactPoints> pairs{};
+   uint32_t pairCount = 0;
 
-    float thresholdSq = 0.05f * 0.05f;
+   float thresholdSq = 0.05f * 0.05f;
 
-    for (uint32_t i = 0; i < contact.numPoints; ++i) {
-        for (uint32_t j = 0; j < cachedContact.numPoints; ++j) {
-            float dist2 = 
-                glm::distance2(contact.points[i].worldPos, cachedWorld[j]);
+   for (uint32_t i = 0; i < contact.numPoints; ++i) {
+      for (uint32_t j = 0; j < cachedContact.numPoints; ++j) {
+         float dist2 =
+            glm::distance2(contact.points[i].worldPos, cachedWorld[j]);
 
-            if (dist2 < thresholdSq) {
-                pairs[pairCount++] = {
-                    static_cast<int>(i),
-                    static_cast<int>(j),
-                    dist2
-                };
-            }
-        }
-    }
+         if (dist2 < thresholdSq) {
+            pairs[pairCount++] = {
+                static_cast<int>(i),
+                static_cast<int>(j),
+                dist2
+            };
+         }
+      }
+   }
 
-    std::sort(
-        pairs.begin(),
-        pairs.begin() + pairCount,
-        [](const MatchPair& a, const MatchPair& b) {
-            return a.dist2 < b.dist2;
-        }
-    );
+   std::sort(
+      pairs.begin(),
+      pairs.begin() + pairCount,
+      [](const MatchPair& a, const MatchPair& b) {
+         return a.dist2 < b.dist2;
+      }
+   );
 
-    for (uint32_t k = 0; k < pairCount; ++k) {
-        int i = pairs[k].newIdx;
-        int j = pairs[k].cachedIdx;
+   for (uint32_t k = 0; k < pairCount; ++k) {
+      int i = pairs[k].newIdx;
+      int j = pairs[k].cachedIdx;
 
-        if (matchedFinalPoints[i]) continue;
-        if (matchedCachedPoints[j]) continue;
+      if (matchedFinalPoints[i]) continue;
+      if (matchedCachedPoints[j]) continue;
 
-        ContactPoint& newPoint = contact.points[i];
-        ContactPoint& cachedPoint = cachedContact.points[j];
+      ContactPoint& newPoint = contact.points[i];
+      ContactPoint& cachedPoint = cachedContact.points[j];
 
-        glm::vec3 oldImpulseWorld =
-            cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
-            cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
-            cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
+      glm::vec3 oldImpulseWorld =
+         cachedPoint.accumulatedNormalImpulse * cachedContact.normal +
+         cachedPoint.accumulatedFrictionImpulse1 * cachedContact.t1 +
+         cachedPoint.accumulatedFrictionImpulse2 * cachedContact.t2;
 
-        newPoint.accumulatedNormalImpulse =
-            glm::max(glm::dot(oldImpulseWorld, contact.normal), 0.0f);
+      newPoint.accumulatedNormalImpulse =
+         glm::max(glm::dot(oldImpulseWorld, contact.normal), 0.0f);
 
-        newPoint.accumulatedFrictionImpulse1 =
-            glm::dot(oldImpulseWorld, contact.t1);
+      newPoint.accumulatedFrictionImpulse1 =
+         glm::dot(oldImpulseWorld, contact.t1);
 
-        newPoint.accumulatedFrictionImpulse2 =
-            glm::dot(oldImpulseWorld, contact.t2);
+      newPoint.accumulatedFrictionImpulse2 =
+         glm::dot(oldImpulseWorld, contact.t2);
 
-        float maxFriction = 0.6f * newPoint.accumulatedNormalImpulse;
+      float maxFriction = 0.6f * newPoint.accumulatedNormalImpulse;
 
-        float f1 = newPoint.accumulatedFrictionImpulse1;
-        float f2 = newPoint.accumulatedFrictionImpulse2;
+      float f1 = newPoint.accumulatedFrictionImpulse1;
+      float f2 = newPoint.accumulatedFrictionImpulse2;
 
-        float len2 = f1 * f1 + f2 * f2;
-        float max2 = maxFriction * maxFriction;
+      float len2 = f1 * f1 + f2 * f2;
+      float max2 = maxFriction * maxFriction;
 
-        if (len2 > max2) {
-            float len = std::sqrt(len2);
+      if (len2 > max2) {
+         float len = std::sqrt(len2);
 
-            if (len > 1e-6f) {
-                float s = maxFriction / len;
-                newPoint.accumulatedFrictionImpulse1 *= s;
-                newPoint.accumulatedFrictionImpulse2 *= s;
-            }
-        }
+         if (len > 1e-6f) {
+            float s = maxFriction / len;
+            newPoint.accumulatedFrictionImpulse1 *= s;
+            newPoint.accumulatedFrictionImpulse2 *= s;
+         }
+      }
 
-        newPoint.wasWarmStarted = true;
+      newPoint.wasWarmStarted = true;
 
-        matchedFinalPoints[i] = true;
-        matchedCachedPoints[j] = true;
-    }
+      matchedFinalPoints[i] = true;
+      matchedCachedPoints[j] = true;
+   }
 
-    for (uint32_t i = 0; i < contact.numPoints; ++i) {
-        ContactPoint& cp = contact.points[i];
+   for (uint32_t i = 0; i < contact.numPoints; ++i) {
+      ContactPoint& cp = contact.points[i];
 
-        contact.points[i].wasUsedThisFrame = true;
+      contact.points[i].wasUsedThisFrame = true;
 
-        if (!cp.wasWarmStarted) {
-            cp.accumulatedNormalImpulse = 0.0f;
-            cp.accumulatedFrictionImpulse1 = 0.0f;
-            cp.accumulatedFrictionImpulse2 = 0.0f;
-        }
-    }
+      if (!cp.wasWarmStarted) {
+         cp.accumulatedNormalImpulse = 0.0f;
+         cp.accumulatedFrictionImpulse1 = 0.0f;
+         cp.accumulatedFrictionImpulse2 = 0.0f;
+      }
+   }
 
-    it->second = std::move(contact);
+   it->second = std::move(contact);
 
-    return &it->second;
+   return &it->second;
 }
 
 //========================================
 // Contact caching key generation
 //========================================
 size_t CollisionManifold::generateKey(int idA, int idB) {
-    return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
+   return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
 
-    // #TODO: en terrain-kontakt ovanifrån kan i värsta fall:
-    // 1. hitta "fel" cached manifold
-    // 2. skriva över en box-box manifold
-    // 3. warm-starta med fel impulser
-    // 4. eller bara byta kontakt-cache-innehåll mellan 
-    // körningar beroende på vilken kontakt som råkade gå in sist
+   // #TODO: en terrain-kontakt ovanifrån kan i värsta fall:
+   // 1. hitta "fel" cached manifold
+   // 2. skriva över en box-box manifold
+   // 3. warm-starta med fel impulser
+   // 4. eller bara byta kontakt-cache-innehåll mellan 
+   // körningar beroende på vilken kontakt som råkade gå in sist
 
-    // #TODO: Nytt objekt med samma slot(id) i SlotMap som ett 
-    // gammalt objekt i contact cache kan orsaka hash-kollision.
-    // Varar endast i 5 frames men behöver fixas. Kan orsaka 
-    // jitter och/eller felaktiga kontaktpunkter.
+   // #TODO: Nytt objekt med samma slot(id) i SlotMap som ett 
+   // gammalt objekt i contact cache kan orsaka hash-kollision.
+   // Varar endast i 5 frames men behöver fixas. Kan orsaka 
+   // jitter och/eller felaktiga kontaktpunkter.
 }
 
 }

@@ -5,17 +5,17 @@
 
 class AABBRenderer {
 public:
-    static void init();
-    static void destroy();
+   static void init();
+   static void destroy();
 
-    void updateModel(const physics::AABB& box, const bool asleep);
-    void render(const glm::vec3& color, Shader& shader) const;
+   void updateModel(const physics::AABB& box, const bool asleep);
+   void render(const glm::vec3& color, Shader& shader) const;
 
-    glm::vec3 color{ 0.9f, 0.7f, 0.2f };
-    glm::mat4 model{ 1.0f };
+   glm::vec3 color{ 0.9f, 0.7f, 0.2f };
+   glm::mat4 model{ 1.0f };
 
-    static unsigned int sVAO, sVBO;
+   static unsigned int sVAO, sVBO;
 
 private:
-    static bool         sInitialized;
+   static bool         sInitialized;
 };

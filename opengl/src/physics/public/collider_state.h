@@ -13,20 +13,20 @@ namespace physics {
 // to retrieve the current state of a collider.
 //==================================================
 struct ColliderState {
-    BodyHandle body;
-    Pose localPose;
-    glm::vec3 localScale{ 1.0f };
-    Pose worldPose;
-    glm::vec3 worldScale{ 1.0f };
+   BodyHandle body;
+   Pose localPose;
+   glm::vec3 localScale{ 1.0f };
+   Pose worldPose;
+   glm::vec3 worldScale{ 1.0f };
 
-    ColliderType type = ColliderType::BOX;
-    std::variant<BoxGeometry, SphereGeometry> shape;
-    AABB bounds;
+   ColliderType type = ColliderType::BOX;
+   std::variant<BoxGeometry, SphereGeometry> shape;
+   AABB bounds;
 
-    bool enabled = true;
-    bool isTrigger = false;
+   bool enabled = true;
+   bool isTrigger = false;
 
-    uint32_t userTag = 0;
+   uint32_t userTag = 0;
 };
 
 }

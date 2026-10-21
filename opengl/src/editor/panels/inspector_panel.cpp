@@ -15,833 +15,834 @@
 #include "physics/public/engine.h"
 
 namespace {
-    physics::ColliderShapeDesc buildColliderShape(
-        physics::ColliderType type,
-        const Mesh& mesh)
-    {
-        if (type == physics::ColliderType::SPHERE) {
-            return physics::SphereShapeDesc{
-                glm::vec3(0.0f),
-                1.0f
-            };
-        }
+physics::ColliderShapeDesc buildColliderShape(
+   physics::ColliderType type,
+   const Mesh& mesh)
+{
+   if (type == physics::ColliderType::SPHERE) {
+      return physics::SphereShapeDesc{
+          glm::vec3(0.0f),
+          1.0f
+      };
+   }
 
-        glm::vec3 localCenter(0.0f);
-        glm::vec3 localHalfExtents(0.5f);
+   glm::vec3 localCenter(0.0f);
+   glm::vec3 localHalfExtents(0.5f);
 
-        if (!mesh.vertices.empty()) {
-            glm::vec3 minimum =
-                mesh.vertices.front().position;
-            glm::vec3 maximum = minimum;
+   if (!mesh.vertices.empty()) {
+      glm::vec3 minimum =
+         mesh.vertices.front().position;
+      glm::vec3 maximum = minimum;
 
-            for (const Vertex& vertex : mesh.vertices) {
-                minimum = glm::min(minimum, vertex.position);
-                maximum = glm::max(maximum, vertex.position);
-            }
+      for (const Vertex& vertex : mesh.vertices) {
+         minimum = glm::min(minimum, vertex.position);
+         maximum = glm::max(maximum, vertex.position);
+      }
 
-            localCenter = (minimum + maximum) * 0.5f;
-            localHalfExtents = (maximum - minimum) * 0.5f;
-        }
+      localCenter = (minimum + maximum) * 0.5f;
+      localHalfExtents = (maximum - minimum) * 0.5f;
+   }
 
-        return physics::BoxShapeDesc{
-            localCenter,
-            localHalfExtents
-        };
-    }
+   return physics::BoxShapeDesc{
+       localCenter,
+       localHalfExtents
+   };
+}
 }
 
 bool DrawSection(const char* title, ImVec2 innerSize = ImVec2(0, 0))
 {
-    ImGui::Spacing();
+   ImGui::Spacing();
 
-    ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.20f, 0.22f, 0.26f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.28f, 0.33f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.18f, 0.20f, 0.24f, 1.0f));
+   ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.20f, 0.22f, 0.26f, 1.0f));
+   ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.26f, 0.28f, 0.33f, 1.0f));
+   ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0.18f, 0.20f, 0.24f, 1.0f));
 
-    ImGuiTreeNodeFlags flags =
-        ImGuiTreeNodeFlags_Framed |
-        ImGuiTreeNodeFlags_SpanAvailWidth |
-        ImGuiTreeNodeFlags_NoTreePushOnOpen |
-        ImGuiTreeNodeFlags_DefaultOpen;
+   ImGuiTreeNodeFlags flags =
+      ImGuiTreeNodeFlags_Framed |
+      ImGuiTreeNodeFlags_SpanAvailWidth |
+      ImGuiTreeNodeFlags_NoTreePushOnOpen |
+      ImGuiTreeNodeFlags_DefaultOpen;
 
-    bool open = ImGui::TreeNodeEx(title, flags);
+   bool open = ImGui::TreeNodeEx(title, flags);
 
-    ImGui::PopStyleColor(3);
+   ImGui::PopStyleColor(3);
 
-    if (!open)
-        return false;
+   if (!open)
+      return false;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+   ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
 
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.07f, 0.08f, 0.10f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.18f, 0.20f, 0.24f, 1.0f));
+   ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.07f, 0.08f, 0.10f, 1.0f));
+   ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.18f, 0.20f, 0.24f, 1.0f));
 
-    ImGuiChildFlags child_flags = ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders;
-    std::string childId = std::string("##child_") + title;
-    ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), child_flags);
+   ImGuiChildFlags child_flags = ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders;
+   std::string childId = std::string("##child_") + title;
+   ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), child_flags);
 
-    return true;
+   return true;
 }
 
 void EndSection()
 {
-    ImGui::EndChild();
-    ImGui::PopStyleColor(2);
-    ImGui::PopStyleVar(3);
+   ImGui::EndChild();
+   ImGui::PopStyleColor(2);
+   ImGui::PopStyleVar(3);
 }
 
 void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 5.0f));
+   ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 
-    if (!ImGui::Begin("Inspector", nullptr))
-    {
-        ImGui::End();
-        ImGui::PopStyleVar(2);
-        return;
-    }
+   if (!ImGui::Begin("Inspector", nullptr))
+   {
+      ImGui::End();
+      ImGui::PopStyleVar(2);
+      return;
+   }
 
-    ImGui::Spacing();
-    ImGui::Spacing();
+   ImGui::Spacing();
+   ImGui::Spacing();
 
-    if (!ctx.objectIsSelected || !ctx.selectedObjectHandle.isValid())
-    {
-        ImGui::TextDisabled("No object selected");
-        ImGui::End();
-        ImGui::PopStyleVar(2);
-        return;
-    }
+   if (!ctx.objectIsSelected || !ctx.selectedObjectHandle.isValid())
+   {
+      ImGui::TextDisabled("No object selected");
+      ImGui::End();
+      ImGui::PopStyleVar(2);
+      return;
+   }
 
-    GameObject* obj = ctx.world->getGameObject(ctx.selectedObjectHandle);
-    const std::optional<physics::BodyState> rigidBodyState =
-        obj
-        ? ctx.physicsEngine->getRigidBodyState(obj->rigidBodyHandle)
-        : std::nullopt;
-    Transform* rootTransform =
-        obj
-        ? ctx.world->getTransform(obj->rootTransformHandle)
-        : nullptr;
+   GameObject* obj = ctx.world->getGameObject(ctx.selectedObjectHandle);
+   const std::optional<physics::BodyState> rigidBodyState =
+      obj
+      ? ctx.physicsEngine->getRigidBodyState(obj->rigidBodyHandle)
+      : std::nullopt;
+   Transform* rootTransform =
+      obj
+      ? ctx.world->getTransform(obj->rootTransformHandle)
+      : nullptr;
 
-    if (!obj || !rigidBodyState || !rootTransform)
-    {
-        ImGui::TextDisabled("Selected object is invalid");
-        ImGui::End();
-        ImGui::PopStyleVar(2);
-        return;
-    }
+   if (!obj || !rigidBodyState || !rootTransform)
+   {
+      ImGui::TextDisabled("Selected object is invalid");
+      ImGui::End();
+      ImGui::PopStyleVar(2);
+      return;
+   }
 
-    ImGui::Text("ID: %d | Name: %s", obj->id, obj->name.c_str());
-    ImGui::Spacing();
+   ImGui::Text("ID: %d | Name: %s", obj->id, obj->name.c_str());
+   ImGui::Spacing();
 
-    const ImGuiTableFlags tblFlags =
-        ImGuiTableFlags_SizingFixedFit;
+   const ImGuiTableFlags tblFlags =
+      ImGuiTableFlags_SizingFixedFit;
 
-    auto BeginPropertyTable = [&](const char* id) -> bool
-        {
-            if (!ImGui::BeginTable(id, 3, tblFlags))
-                return false;
+   auto BeginPropertyTable = [&](const char* id) -> bool
+      {
+         if (!ImGui::BeginTable(id, 3, tblFlags))
+            return false;
 
-            ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
-            return true;
-        };
+         ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, 90.0f);
+         ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthStretch);
+         return true;
+      };
 
-    auto RowLabelOnly = [&](const char* label)
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
-            ImGui::TableSetColumnIndex(1);
-        };
+   auto RowLabelOnly = [&](const char* label)
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
+         ImGui::TableSetColumnIndex(1);
+      };
 
-    auto RowText = [&](const char* label, const char* value)
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+   auto RowText = [&](const char* label, const char* value)
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
 
-            ImGui::TableSetColumnIndex(1);
-            ImGui::TextUnformatted(value);
-        };
+         ImGui::TableSetColumnIndex(1);
+         ImGui::TextUnformatted(value);
+      };
 
-    auto RowCheckbox = [&](const char* label, const char* id, bool& v) -> bool
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+   auto RowCheckbox = [&](const char* label, const char* id, bool& v) -> bool
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
 
-            ImGui::TableSetColumnIndex(1);
+         ImGui::TableSetColumnIndex(1);
+         ImGui::SetNextItemWidth(-FLT_MIN);
+         return ImGui::Checkbox(id, &v);
+      };
+
+   auto RowDragFloat = [&](const char* label, const char* id, float& v,
+      float speed, float vmin, float vmax) -> bool
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
+
+         ImGui::TableSetColumnIndex(1);
+         ImGui::SetNextItemWidth(-FLT_MIN);
+
+         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.16f, 0.17f, 0.20f, 1.0f));
+         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.21f, 0.24f, 1.0f));
+         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.22f, 0.23f, 0.26f, 1.0f));
+
+         bool changed = ImGui::DragFloat(id, &v, speed, vmin, vmax);
+
+         ImGui::PopStyleColor(3);
+         return changed;
+      };
+
+   auto RowDragFloat3 = [&](const char* label, const char* id, glm::vec3& v,
+      float speed, float vmin, float vmax, int amountDec) -> bool
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
+
+         ImGui::TableSetColumnIndex(1);
+         ImGui::SetNextItemWidth(-FLT_MIN);
+         std::string fmt = "%." + std::to_string(amountDec) + "f";
+         return ImGui::DragFloat3(id, &v.x, speed, vmin, vmax, fmt.c_str());
+      };
+
+   auto RowDragFloat3Colored = [&](const char* label,
+      const char* idX,
+      const char* idY,
+      const char* idZ,
+      glm::vec3& v,
+      float speed,
+      float vmin,
+      float vmax,
+      const char* fmt) -> bool
+      {
+         ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFrameHeight() + 8.0f);
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
+
+         ImGui::TableSetColumnIndex(1);
+
+         const float labelToFieldGap = 6.0f;   // mellan X och fältet
+         const float axisGroupGap = 16.0f;  // mellan X-gruppen, Y-gruppen, Z-gruppen
+
+         float fullWidth = ImGui::GetContentRegionAvail().x;
+         float labelW = ImGui::CalcTextSize("X").x;
+
+         float itemW =
+            (fullWidth
+               - 3.0f * labelW
+               - 3.0f * labelToFieldGap
+               - 2.0f * axisGroupGap) / 3.0f;
+
+         bool changed = false;
+
+         ImGui::PushItemWidth(itemW);
+
+         ImGui::TextColored(ImVec4(0.90f, 0.25f, 0.25f, 1.0f), "X");
+         ImGui::SameLine(0.0f, labelToFieldGap);
+         changed |= ImGui::DragFloat(idX, &v.x, speed, vmin, vmax, fmt);
+
+         ImGui::SameLine(0.0f, axisGroupGap);
+         ImGui::TextColored(ImVec4(0.25f, 0.85f, 0.35f, 1.0f), "Y");
+         ImGui::SameLine(0.0f, labelToFieldGap);
+         changed |= ImGui::DragFloat(idY, &v.y, speed, vmin, vmax, fmt);
+
+         ImGui::SameLine(0.0f, axisGroupGap);
+         ImGui::TextColored(ImVec4(0.25f, 0.55f, 0.95f, 1.0f), "Z");
+         ImGui::SameLine(0.0f, labelToFieldGap);
+         changed |= ImGui::DragFloat(idZ, &v.z, speed, vmin, vmax, fmt);
+
+         ImGui::PopItemWidth();
+
+         return changed;
+      };
+
+   auto RowColorEdit3 = [&](const char* label, const char* id, glm::vec3& color) -> bool
+      {
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted(label);
+
+         ImGui::TableSetColumnIndex(1);
+         return ImGui::ColorEdit3(id, &color.x, ImGuiColorEditFlags_DisplayRGB);
+      };
+
+   auto SyncAllCollidersFromRoot = [&]()
+      {
+         ctx.world->syncGameObjectTransformToPhysics(
+            ctx.selectedObjectHandle
+         );
+      };
+
+   auto SyncSingleSubPartCollider = [&](int subPartIndex)
+      {
+         if (subPartIndex < 0)
+            return;
+         if (subPartIndex >= (int)obj->parts.size())
+            return;
+
+         ctx.world->syncGameObjectTransformToPhysics(
+            ctx.selectedObjectHandle
+         );
+      };
+
+   auto RebuildObjectRenderBatches = [&]()
+      {
+         ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
+         ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
+      };
+
+   //----------------------------------------
+   // 1. Transform
+   //----------------------------------------
+   if (DrawSection("Transform"))
+   {
+      if (BeginPropertyTable("TransformTable"))
+      {
+         // Position
+         {
+            glm::vec3& pos = rootTransform->position;
+            if (RowDragFloat3Colored("Position",
+               "##posx", "##posy", "##posz",
+               pos, 0.1f, -1000.f, 1000.f, "%.2f"))
+            {
+               rootTransform->updateCache();
+               SyncAllCollidersFromRoot();
+            }
+         }
+
+         // Scale
+         {
+            glm::vec3& scale = rootTransform->scale;
+            if (RowDragFloat3Colored("Scale",
+               "##scalex", "##scaley", "##scalez",
+               scale, 0.1f, 0.1f, 1000.f, "%.2f"))
+            {
+               rootTransform->updateCache();
+               SyncAllCollidersFromRoot();
+            }
+         }
+
+         // Rotation
+         {
+            glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(rootTransform->orientation));
+            glm::vec3 lastUiDeg = uiDeg;
+
+            if (RowDragFloat3Colored("Rotation",
+               "##rotx", "##roty", "##rotz",
+               uiDeg, 0.5f, -720.f, 720.f, "%.2f"))
+            {
+               glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
+
+               glm::quat dq =
+                  glm::angleAxis(deltaRad.x, glm::vec3(1, 0, 0)) *
+                  glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
+                  glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
+
+               rootTransform->orientation = glm::normalize(rootTransform->orientation * dq);
+               rootTransform->updateCache();
+               SyncAllCollidersFromRoot();
+            }
+         }
+
+         ImGui::EndTable();
+      }
+
+      EndSection();
+   }
+
+   //----------------------------------------
+   // 2. Physics
+   //----------------------------------------
+   float physicsHeight = 150.0f;
+   if (rigidBodyState->type == physics::BodyType::Dynamic)
+      physicsHeight = 240.0f;
+   else if (rigidBodyState->type == physics::BodyType::Kinematic)
+      physicsHeight = 145.0f;
+
+   if (DrawSection("Physics"))
+   {
+      if (BeginPropertyTable("PhysicsTable"))
+      {
+         // Body type
+         {
+            const char* bodyTypeItems[] = { "Dynamic", "Kinematic", "Static" };
+
+            int currentType = 0;
+            switch (rigidBodyState->type)
+            {
+            case physics::BodyType::Dynamic:   currentType = 0; break;
+            case physics::BodyType::Kinematic: currentType = 1; break;
+            case physics::BodyType::Static:    currentType = 2; break;
+            }
+
+            RowLabelOnly("Body Type");
             ImGui::SetNextItemWidth(-FLT_MIN);
-            return ImGui::Checkbox(id, &v);
-        };
 
-    auto RowDragFloat = [&](const char* label, const char* id, float& v,
-        float speed, float vmin, float vmax) -> bool
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+            if (ImGui::Combo("##body_type", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems))) {
+               physics::BodyType selectedType = physics::BodyType::Dynamic;
 
-            ImGui::TableSetColumnIndex(1);
-            ImGui::SetNextItemWidth(-FLT_MIN);
+               switch (currentType) {
+               case 0:
+                  selectedType = physics::BodyType::Dynamic;
+                  break;
 
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.16f, 0.17f, 0.20f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.21f, 0.24f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.22f, 0.23f, 0.26f, 1.0f));
+               case 1:
+                  selectedType = physics::BodyType::Kinematic;
+                  break;
 
-            bool changed = ImGui::DragFloat(id, &v, speed, vmin, vmax);
+               case 2:
+                  selectedType = physics::BodyType::Static;
+                  break;
+               }
 
-            ImGui::PopStyleColor(3);
-            return changed;
-        };
+               ctx.physicsEngine->setRigidBodyType(obj->rigidBodyHandle, selectedType);
+            }
+         }
 
-    auto RowDragFloat3 = [&](const char* label, const char* id, glm::vec3& v,
-        float speed, float vmin, float vmax, int amountDec) -> bool
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+         if (rigidBodyState->type != physics::BodyType::Static)
+         {
+            glm::vec3 linVel = rigidBodyState->linearVelocity;
+            //if (RowDragFloat3Colored("Linear vel", "##lin_vel", linVel, 0.1f, -1000.f, 1000.f, 1))
+            if (RowDragFloat3Colored("Linear vel",
+               "##lin_velx", "##lin_vely", "##lin_velz",
+               linVel, 0.1f, -1000.f, 1000.f, "%.2f"))
+            {
+               ctx.physicsEngine->setLinearVelocity(
+                  obj->rigidBodyHandle,
+                  linVel
+               );
+            }
 
-            ImGui::TableSetColumnIndex(1);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            std::string fmt = "%." + std::to_string(amountDec) + "f";
-            return ImGui::DragFloat3(id, &v.x, speed, vmin, vmax, fmt.c_str());
-        };
+            glm::mat3 rotationMatrix = glm::mat3_cast(rootTransform->orientation);
+            glm::mat3 invRotationMatrix = glm::transpose(rotationMatrix);
+            glm::vec3 localAngVel =
+               invRotationMatrix *
+               rigidBodyState->angularVelocity;
+            if (RowDragFloat3Colored("Angular vel",
+               "##ang_velx", "##ang_vely", "##ang_velz",
+               localAngVel, 0.1f, -1000.f, 1000.f, "%.2f"))
+            {
+               // spara tillbaka i world space
+               ctx.physicsEngine->setAngularVelocity(
+                  obj->rigidBodyHandle,
+                  rotationMatrix * localAngVel
+               );
+            }
+         }
 
-    auto RowDragFloat3Colored = [&](const char* label,
-        const char* idX,
-        const char* idY,
-        const char* idZ,
-        glm::vec3& v,
-        float speed,
-        float vmin,
-        float vmax,
-        const char* fmt) -> bool
-        {
-            ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFrameHeight() + 8.0f);
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+         if (rigidBodyState->type == physics::BodyType::Dynamic)
+         {
+            float mass = rigidBodyState->mass;
+            if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.0f))
+            {
+               ctx.physicsEngine->setRigidBodyMass(
+                  obj->rigidBodyHandle,
+                  mass
+               );
+            }
 
-            ImGui::TableSetColumnIndex(1);
+            bool allowSleep = rigidBodyState->allowSleep;
+            if (RowCheckbox("Allow sleep", "##allow_sleep", allowSleep))
+            {
+               ctx.physicsEngine->setRigidBodyAllowSleep(
+                  obj->rigidBodyHandle,
+                  allowSleep
+               );
+               if (!allowSleep) {
+                  ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, false);
+               }
+            }
 
-            const float labelToFieldGap = 6.0f;   // mellan X och fältet
-            const float axisGroupGap = 16.0f;  // mellan X-gruppen, Y-gruppen, Z-gruppen
+            bool asleep = rigidBodyState->asleep;
+            ImGui::BeginDisabled(!rigidBodyState->allowSleep);
+            if (RowCheckbox("Asleep", "##asleep", asleep))
+            {
+               bool shouldSleep = false;
+               if (asleep) {
+                  shouldSleep = true;
+               }
+               else {
+                  shouldSleep = false;
+               }
+               ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, shouldSleep);
+            }
+            ImGui::EndDisabled();
 
-            float fullWidth = ImGui::GetContentRegionAvail().x;
-            float labelW = ImGui::CalcTextSize("X").x;
+            bool allowGravity = rigidBodyState->allowGravity;
+            if (RowCheckbox("Gravity", "##allow_gravity", allowGravity))
+            {
+               ctx.physicsEngine->setRigidBodyAllowGravity(
+                  obj->rigidBodyHandle,
+                  allowGravity
+               );
+            }
+         }
 
-            float itemW =
-                (fullWidth
-                    - 3.0f * labelW
-                    - 3.0f * labelToFieldGap
-                    - 2.0f * axisGroupGap) / 3.0f;
+         ImGui::EndTable();
+      }
 
-            bool changed = false;
+      EndSection();
+   }
 
-            ImGui::PushItemWidth(itemW);
+   //----------------------------------------
+   // 3. SubParts
+   //----------------------------------------
+   if (DrawSection("Parts"))
+   {
+      int comboIndex = ctx.editorMain->selectedSubPartIndex + 1; // +1 because combo has "None" as first item, then actual parts start from index 1
 
-            ImGui::TextColored(ImVec4(0.90f, 0.25f, 0.25f, 1.0f), "X");
-            ImGui::SameLine(0.0f, labelToFieldGap);
-            changed |= ImGui::DragFloat(idX, &v.x, speed, vmin, vmax, fmt);
+      int comboItemCount = (int)obj->parts.size() + 1; // +1 for "None"
+      if (comboIndex >= comboItemCount)
+         comboIndex = 0;
 
-            ImGui::SameLine(0.0f, axisGroupGap);
-            ImGui::TextColored(ImVec4(0.25f, 0.85f, 0.35f, 1.0f), "Y");
-            ImGui::SameLine(0.0f, labelToFieldGap);
-            changed |= ImGui::DragFloat(idY, &v.y, speed, vmin, vmax, fmt);
+      if (BeginPropertyTable("SubPartsTable"))
+      {
+         std::vector<std::string> subPartNames;
+         subPartNames.reserve(obj->parts.size());
+         for (const SubPart& part : obj->parts)
+            subPartNames.push_back(part.name);
 
-            ImGui::SameLine(0.0f, axisGroupGap);
-            ImGui::TextColored(ImVec4(0.25f, 0.55f, 0.95f, 1.0f), "Z");
-            ImGui::SameLine(0.0f, labelToFieldGap);
-            changed |= ImGui::DragFloat(idZ, &v.z, speed, vmin, vmax, fmt);
+         std::vector<const char*> itemPtrs;
+         std::string none = "None";
+         itemPtrs.reserve(obj->parts.size() + 1);
 
-            ImGui::PopItemWidth();
+         itemPtrs.push_back(none.c_str());
+         for (const std::string& name : subPartNames)
+            itemPtrs.push_back(name.c_str());
 
-            return changed;
-        };
+         ImGui::TableNextRow();
+         ImGui::TableSetColumnIndex(0);
+         ImGui::AlignTextToFramePadding();
+         ImGui::TextUnformatted("Selected");
 
-    auto RowColorEdit3 = [&](const char* label, const char* id, glm::vec3& color) -> bool
-        {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(label);
+         ImGui::TableSetColumnIndex(1);
+         ImGui::SetNextItemWidth(-FLT_MIN);
 
-            ImGui::TableSetColumnIndex(1);
-            return ImGui::ColorEdit3(id, &color.x, ImGuiColorEditFlags_DisplayRGB);
-        };
+         if (itemPtrs.empty())
+         {
+            ImGui::TextDisabled("No subparts");
+         }
+         else
+         {
+            if (ImGui::Combo("##selected_subpart", &comboIndex, itemPtrs.data(), (int)itemPtrs.size()))
+            {
+               ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
+            }
+         }
 
-    auto SyncAllCollidersFromRoot = [&]()
-        {
-            ctx.world->syncGameObjectTransformToPhysics(
-                ctx.selectedObjectHandle
+         // keep EditorMain in sync even when combo didn't change this frame
+         ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
+
+
+         // Add Part button
+         ImGui::TableSetColumnIndex(2);
+         if (ImGui::Button("Add Part", ImVec2(80, 0)))
+         {
+            SubPart part;
+            TransformHandle partTransformHandle = ctx.world->createTransform();
+            Transform* partTransform = ctx.world->getTransform(partTransformHandle);
+            part.name = "Part " + std::to_string(obj->parts.size() + 1);
+            part.localTransformHandle = partTransformHandle;
+            part.shader = obj->parts[0].shader;
+            part.mesh = obj->parts[0].mesh;
+            part.textureId = 999; // plain
+
+            std::vector<glm::vec3> verticesPositions;
+            for (const Vertex& vertex : part.mesh->vertices) {
+               verticesPositions.push_back(vertex.position);
+            }
+
+            glm::vec3 localCenter{ 0.0f };
+            glm::vec3 localHalfExtents{ 0.5f };
+            if (!verticesPositions.empty()) {
+               glm::vec3 minimum = verticesPositions.front();
+               glm::vec3 maximum = verticesPositions.front();
+               for (const glm::vec3& vertex : verticesPositions) {
+                  minimum = glm::min(minimum, vertex);
+                  maximum = glm::max(maximum, vertex);
+               }
+               localCenter = (minimum + maximum) * 0.5f;
+               localHalfExtents = (maximum - minimum) * 0.5f;
+            }
+
+            physics::ColliderDesc colliderDesc;
+            colliderDesc.localPose.position = partTransform->position;
+            colliderDesc.localPose.orientation = partTransform->orientation;
+            colliderDesc.localScale = partTransform->scale;
+            colliderDesc.shape = physics::BoxShapeDesc{ localCenter, localHalfExtents };
+
+            physics::ColliderHandle colliderHandle =
+               ctx.physicsEngine->createCollider(obj->rigidBodyHandle, colliderDesc);
+            if (colliderHandle.isValid()) {
+               part.colliderHandle = colliderHandle;
+               obj->parts.push_back(part);
+               ctx.world->syncGameObjectTransformToPhysics(
+                  ctx.selectedObjectHandle
+               );
+               RebuildObjectRenderBatches();
+            }
+         }
+
+         ImGui::EndTable();
+      }
+
+      //-------------------------------------------------
+      // If a subpart is selected, show its properties
+      //-------------------------------------------------
+      int subPartIndex = comboIndex - 1; // -1 = None, 0..N-1 = actual part index
+
+      if (subPartIndex >= 0 && subPartIndex < (int)obj->parts.size())
+      {
+         SubPart& selectedPart = obj->parts[subPartIndex];
+         Transform* localTransform = ctx.world->getTransform(selectedPart.localTransformHandle);
+         const std::optional<physics::ColliderState> colliderState =
+            ctx.physicsEngine->getColliderState(
+               selectedPart.colliderHandle
             );
-        };
 
-    auto SyncSingleSubPartCollider = [&](int subPartIndex)
-        {
-            if (subPartIndex < 0)
-                return;
-            if (subPartIndex >= (int)obj->parts.size())
-                return;
+         if (!localTransform || !colliderState) {
+            ImGui::TextDisabled("Selected part is invalid");
+            EndSection();
+            ImGui::End();
+            ImGui::PopStyleVar(2);
+            return;
+         }
 
-            ctx.world->syncGameObjectTransformToPhysics(
-                ctx.selectedObjectHandle
-            );
-        };
-
-    auto RebuildObjectRenderBatches = [&]()
-        {
-            ctx.renderer->removeObjectFromBatch(ctx.selectedObjectHandle);
-            ctx.renderer->addObjectToBatch(ctx.selectedObjectHandle);
-        };
-
-    //----------------------------------------
-    // 1. Transform
-    //----------------------------------------
-    if (DrawSection("Transform"))
-    {
-        if (BeginPropertyTable("TransformTable"))
-        {
-            // Position
+         //----------------------------------------
+         // 3.1 SubPart Transform (Local)
+         //----------------------------------------
+         if (BeginPropertyTable("SubPartLocalTransformTable"))
+         {
+            glm::vec3 localPos = localTransform->position;
+            if (RowDragFloat3Colored("Position",
+               "##sub_local_posx", "##sub_local_posy", "##sub_local_posz",
+               localPos, 0.1f, -1000.f, 1000.f, "%.2f"))
             {
-                glm::vec3& pos = rootTransform->position;
-                if (RowDragFloat3Colored("Position",
-                    "##posx", "##posy", "##posz",
-                    pos, 0.1f, -1000.f, 1000.f, "%.2f"))
-                {
-                    rootTransform->updateCache();
-                    SyncAllCollidersFromRoot();
-                }
+               localTransform->position = localPos;
+               localTransform->updateCache();
+               SyncSingleSubPartCollider(subPartIndex);
             }
 
-            // Scale
+            glm::vec3 localScale = localTransform->scale;
+            if (RowDragFloat3Colored("Scale",
+               "##sub_local_scalex", "##sub_local_scaley", "##sub_local_scalez",
+               localScale, 0.1f, 0.01f, 1000.f, "%.2f"))
             {
-                glm::vec3& scale = rootTransform->scale;
-                if (RowDragFloat3Colored("Scale",
-                    "##scalex", "##scaley", "##scalez",
-                    scale, 0.1f, 0.1f, 1000.f, "%.2f"))
-                {
-                    rootTransform->updateCache();
-                    SyncAllCollidersFromRoot();
-                }
+               localTransform->scale = localScale;
+               localTransform->updateCache();
+               SyncSingleSubPartCollider(subPartIndex);
             }
 
-            // Rotation
+            glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(localTransform->orientation));
+            glm::vec3 lastUiDeg = uiDeg;
+
+            if (RowDragFloat3Colored("Rotation",
+               "##sub_local_rotx", "##sub_local_roty", "##sub_local_rotz",
+               uiDeg, 0.5f, -720.f, 720.f, "%.2f"))
             {
-                glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(rootTransform->orientation));
-                glm::vec3 lastUiDeg = uiDeg;
+               glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
 
-                if (RowDragFloat3Colored("Rotation",
-                    "##rotx", "##roty", "##rotz",
-                    uiDeg, 0.5f, -720.f, 720.f, "%.2f"))
-                {
-                    glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
+               glm::quat dq =
+                  glm::angleAxis(deltaRad.x, glm::vec3(1, 0, 0)) *
+                  glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
+                  glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
 
-                    glm::quat dq =
-                        glm::angleAxis(deltaRad.x, glm::vec3(1, 0, 0)) *
-                        glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
-                        glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
-
-                    rootTransform->orientation = glm::normalize(rootTransform->orientation * dq);
-                    rootTransform->updateCache();
-                    SyncAllCollidersFromRoot();
-                }
+               localTransform->orientation = glm::normalize(localTransform->orientation * dq);
+               localTransform->updateCache();
+               SyncSingleSubPartCollider(subPartIndex);
             }
 
             ImGui::EndTable();
-        }
+         }
 
-        EndSection();
-    }
-
-    //----------------------------------------
-    // 2. Physics
-    //----------------------------------------
-    float physicsHeight = 150.0f;
-    if (rigidBodyState->type == physics::BodyType::Dynamic)
-        physicsHeight = 240.0f;
-    else if (rigidBodyState->type == physics::BodyType::Kinematic)
-        physicsHeight = 145.0f;
-
-    if (DrawSection("Physics"))
-    {
-        if (BeginPropertyTable("PhysicsTable"))
-        {
-            // Body type
+         //----------------------------------------
+         // 3.2 SubPart Collider
+         //----------------------------------------
+         if (BeginPropertyTable("SubPartColliderTable"))
+         {
+            // Collider type
             {
-                const char* bodyTypeItems[] = { "Dynamic", "Kinematic", "Static" };
+               int colliderChoice = 0;
+               const char* colliderItems[] = { "BOX", "Sphere" };
 
-                int currentType = 0;
-                switch (rigidBodyState->type)
-                {
-                case physics::BodyType::Dynamic:   currentType = 0; break;
-                case physics::BodyType::Kinematic: currentType = 1; break;
-                case physics::BodyType::Static:    currentType = 2; break;
-                }
+               if (colliderState->type == physics::ColliderType::BOX) {
+                  colliderChoice = 0;
+               }
+               else if (colliderState->type == physics::ColliderType::SPHERE) {
+                  colliderChoice = 1;
+               }
 
-                RowLabelOnly("Body Type");
-                ImGui::SetNextItemWidth(-FLT_MIN);
+               ImGui::TableNextRow();
+               ImGui::TableSetColumnIndex(0);
+               ImGui::AlignTextToFramePadding();
+               ImGui::TextUnformatted("Collider");
 
-                if (ImGui::Combo("##body_type", &currentType, bodyTypeItems, IM_ARRAYSIZE(bodyTypeItems))) {
-                    physics::BodyType selectedType = physics::BodyType::Dynamic;
+               ImGui::TableSetColumnIndex(1);
 
-                    switch (currentType) {
-                    case 0:
-                        selectedType = physics::BodyType::Dynamic;
-                        break;
+               float avail = ImGui::GetContentRegionAvail().x;
+               float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+               float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-                    case 1:
-                        selectedType = physics::BodyType::Kinematic;
-                        break;
+               ImGui::SetNextItemWidth(avail - btnW - spacing);
+               if (ImGui::Combo("##sub_collider", &colliderChoice, colliderItems, IM_ARRAYSIZE(colliderItems)))
+               {
+                  if (selectedPart.mesh)
+                  {
+                     const physics::ColliderType selectedType =
+                        colliderChoice == 0
+                        ? physics::ColliderType::BOX
+                        : physics::ColliderType::SPHERE;
 
-                    case 2:
-                        selectedType = physics::BodyType::Static;
-                        break;
-                    }
+                     ctx.physicsEngine->setColliderShape(
+                        selectedPart.colliderHandle,
+                        buildColliderShape(
+                           selectedType,
+                           *selectedPart.mesh
+                        )
+                     );
+                  }
+               }
+            }
+            ImGui::EndTable();
+         }
 
-                    ctx.physicsEngine->setRigidBodyType(obj->rigidBodyHandle, selectedType);
-                }
+         //----------------------------------------
+         // 3.3 SubPart Render
+         //----------------------------------------
+         if (BeginPropertyTable("SubPartRenderTable"))
+         {
+            // Mesh
+            {
+               int meshChoice = 0;
+               const char* meshItems[] = { "Cube", "Sphere", "Teapot", "Pylon", "Tank" };
+
+               if (selectedPart.mesh == ctx.meshManager->getMesh("cube"))          meshChoice = 0;
+               else if (selectedPart.mesh == ctx.meshManager->getMesh("sphere"))   meshChoice = 1;
+               else if (selectedPart.mesh == ctx.meshManager->getMesh("teapot"))   meshChoice = 2;
+               else if (selectedPart.mesh == ctx.meshManager->getMesh("pylon"))    meshChoice = 3;
+               else if (selectedPart.mesh == ctx.meshManager->getMesh("tank"))     meshChoice = 4;
+
+               ImGui::TableNextRow();
+               ImGui::TableSetColumnIndex(0);
+               ImGui::AlignTextToFramePadding();
+               ImGui::TextUnformatted("Mesh");
+
+               ImGui::TableSetColumnIndex(1);
+
+               float avail = ImGui::GetContentRegionAvail().x;
+               float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+               float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+               ImGui::SetNextItemWidth(avail - btnW - spacing);
+               if (ImGui::Combo("##sub_mesh", &meshChoice, meshItems, IM_ARRAYSIZE(meshItems)))
+               {
+                  Mesh* mesh = nullptr;
+                  switch (meshChoice)
+                  {
+                  case 0: mesh = ctx.meshManager->getMesh("cube");   break;
+                  case 1: mesh = ctx.meshManager->getMesh("sphere"); break;
+                  case 2: mesh = ctx.meshManager->getMesh("teapot"); break;
+                  case 3: mesh = ctx.meshManager->getMesh("pylon");  break;
+                  case 4: mesh = ctx.meshManager->getMesh("tank");   break;
+                  }
+
+                  if (mesh)
+                  {
+                     selectedPart.mesh = mesh;
+                     RebuildObjectRenderBatches();
+
+                     ctx.physicsEngine->setColliderShape(
+                        selectedPart.colliderHandle,
+                        buildColliderShape(
+                           colliderState->type,
+                           *mesh
+                        )
+                     );
+                  }
+               }
             }
 
-            if (rigidBodyState->type != physics::BodyType::Static)
+            // Texture
             {
-                glm::vec3 linVel = rigidBodyState->linearVelocity;
-                //if (RowDragFloat3Colored("Linear vel", "##lin_vel", linVel, 0.1f, -1000.f, 1000.f, 1))
-                if (RowDragFloat3Colored("Linear vel",
-                    "##lin_velx", "##lin_vely", "##lin_velz",
-                    linVel, 0.1f, -1000.f, 1000.f, "%.2f"))
-                {
-                    ctx.physicsEngine->setLinearVelocity(
-                        obj->rigidBodyHandle,
-                        linVel
-                    );
-                }
+               int textureChoice = 0;
+               const char* textureItems[] = { "Plain", "Crate", "UVmap", "Terrain" };
 
-                glm::mat3 rotationMatrix = glm::mat3_cast(rootTransform->orientation);
-                glm::mat3 invRotationMatrix = glm::transpose(rotationMatrix);
-                glm::vec3 localAngVel =
-                    invRotationMatrix *
-                    rigidBodyState->angularVelocity;
-                if (RowDragFloat3Colored("Angular vel",
-                    "##ang_velx", "##ang_vely", "##ang_velz",
-                    localAngVel, 0.1f, -1000.f, 1000.f, "%.2f"))
-                {
-                    // spara tillbaka i world space
-                    ctx.physicsEngine->setAngularVelocity(
-                        obj->rigidBodyHandle,
-                        rotationMatrix * localAngVel
-                    );
-                }
+               if (selectedPart.textureId == -1)                                               textureChoice = 0;
+               else if (selectedPart.textureId == ctx.textureManager->getTexture("crate"))     textureChoice = 1;
+               else if (selectedPart.textureId == ctx.textureManager->getTexture("uvmap"))     textureChoice = 2;
+               else if (selectedPart.textureId == ctx.textureManager->getTexture("terrain2"))  textureChoice = 3;
+
+               ImGui::TableNextRow();
+               ImGui::TableSetColumnIndex(0);
+               ImGui::AlignTextToFramePadding();
+               ImGui::TextUnformatted("Texture");
+
+               ImGui::TableSetColumnIndex(1);
+
+               float avail = ImGui::GetContentRegionAvail().x;
+               float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+               float spacing = ImGui::GetStyle().ItemSpacing.x;
+
+               ImGui::SetNextItemWidth(avail - btnW - spacing);
+               if (ImGui::Combo("##sub_texture", &textureChoice, textureItems, IM_ARRAYSIZE(textureItems)))
+               {
+                  int texId = -1;
+                  switch (textureChoice)
+                  {
+                  case 0: texId = 999; break;
+                  case 1: texId = ctx.textureManager->getTexture("crate");    break;
+                  case 2: texId = ctx.textureManager->getTexture("uvmap");    break;
+                  case 3: texId = ctx.textureManager->getTexture("terrain2"); break;
+                  }
+
+                  if (texId != -1)
+                  {
+                     selectedPart.textureId = texId;
+                     RebuildObjectRenderBatches();
+                  }
+               }
             }
 
-            if (rigidBodyState->type == physics::BodyType::Dynamic)
+            // Tint / color
             {
-                float mass = rigidBodyState->mass;
-                if (RowDragFloat("Mass", "##mass", mass, 1.0f, 0.1f, 1000000.0f))
-                {
-                    ctx.physicsEngine->setRigidBodyMass(
-                        obj->rigidBodyHandle,
-                        mass
-                    );
-                }
+               glm::vec3 color = selectedPart.color;
+               if (RowColorEdit3("Color", "##sub_color", color))
+               {
+                  selectedPart.color = color;
+                  RebuildObjectRenderBatches();
+               }
+            }
 
-                bool allowSleep = rigidBodyState->allowSleep;
-                if (RowCheckbox("Allow sleep", "##allow_sleep", allowSleep))
-                {
-                    ctx.physicsEngine->setRigidBodyAllowSleep(
-                        obj->rigidBodyHandle,
-                        allowSleep
-                    );
-                    if (!allowSleep) {
-                        ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, false);
-                    }
-                }
-
-                bool asleep = rigidBodyState->asleep;
-                ImGui::BeginDisabled(!rigidBodyState->allowSleep);
-                if (RowCheckbox("Asleep", "##asleep", asleep))
-                {
-                    bool shouldSleep = false;
-                    if (asleep) {
-                        shouldSleep = true;
-                    } else {
-                        shouldSleep = false;
-                    }
-                    ctx.physicsEngine->setRigidBodySleepState(obj->rigidBodyHandle, shouldSleep);
-                }
-                ImGui::EndDisabled();
-
-                bool allowGravity = rigidBodyState->allowGravity;
-                if (RowCheckbox("Gravity", "##allow_gravity", allowGravity))
-                {
-                    ctx.physicsEngine->setRigidBodyAllowGravity(
-                        obj->rigidBodyHandle,
-                        allowGravity
-                    );
-                }
+            // See-through
+            {
+               bool seeThrough = selectedPart.seeThrough;
+               if (RowCheckbox("See through", "##sub_see_through", seeThrough))
+               {
+                  selectedPart.seeThrough = seeThrough;
+                  RebuildObjectRenderBatches();
+               }
             }
 
             ImGui::EndTable();
-        }
+         }
+      }
 
-        EndSection();
-    }
+      EndSection();
+   }
 
-    //----------------------------------------
-    // 3. SubParts
-    //----------------------------------------
-    if (DrawSection("Parts"))
-    {
-        int comboIndex = ctx.editorMain->selectedSubPartIndex + 1; // +1 because combo has "None" as first item, then actual parts start from index 1
-
-        int comboItemCount = (int)obj->parts.size() + 1; // +1 for "None"
-        if (comboIndex >= comboItemCount)
-            comboIndex = 0;
-
-        if (BeginPropertyTable("SubPartsTable"))
-        {
-            std::vector<std::string> subPartNames;
-            subPartNames.reserve(obj->parts.size());
-            for (const SubPart& part : obj->parts)
-                subPartNames.push_back(part.name);
-
-            std::vector<const char*> itemPtrs;
-            std::string none = "None";
-            itemPtrs.reserve(obj->parts.size() + 1);
-
-            itemPtrs.push_back(none.c_str());
-            for (const std::string& name : subPartNames)
-                itemPtrs.push_back(name.c_str());
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted("Selected");
-
-            ImGui::TableSetColumnIndex(1);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-
-            if (itemPtrs.empty())
-            {
-                ImGui::TextDisabled("No subparts");
-            }
-            else
-            {
-                if (ImGui::Combo("##selected_subpart", &comboIndex, itemPtrs.data(), (int)itemPtrs.size()))
-                {
-                    ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
-                }
-            }
-
-            // keep EditorMain in sync even when combo didn't change this frame
-            ctx.editorMain->selectedSubPartIndex = comboIndex - 1;
-
-
-            // Add Part button
-            ImGui::TableSetColumnIndex(2);
-            if (ImGui::Button("Add Part", ImVec2(80, 0))) 
-            {
-                SubPart part;
-                TransformHandle partTransformHandle = ctx.world->createTransform();
-                Transform* partTransform = ctx.world->getTransform(partTransformHandle);
-                part.name = "Part " + std::to_string(obj->parts.size() + 1);
-                part.localTransformHandle = partTransformHandle;
-                part.shader = obj->parts[0].shader;
-                part.mesh = obj->parts[0].mesh;
-                part.textureId = 999; // plain
-
-                std::vector<glm::vec3> verticesPositions;
-                for (const Vertex& vertex : part.mesh->vertices) {
-                    verticesPositions.push_back(vertex.position);
-                }
-
-                glm::vec3 localCenter{ 0.0f };
-                glm::vec3 localHalfExtents{ 0.5f };
-                if (!verticesPositions.empty()) {
-                    glm::vec3 minimum = verticesPositions.front();
-                    glm::vec3 maximum = verticesPositions.front();
-                    for (const glm::vec3& vertex : verticesPositions) {
-                        minimum = glm::min(minimum, vertex);
-                        maximum = glm::max(maximum, vertex);
-                    }
-                    localCenter = (minimum + maximum) * 0.5f;
-                    localHalfExtents = (maximum - minimum) * 0.5f;
-                }
-
-                physics::ColliderDesc colliderDesc;
-                colliderDesc.localPose.position = partTransform->position;
-                colliderDesc.localPose.orientation = partTransform->orientation;
-                colliderDesc.localScale = partTransform->scale;
-                colliderDesc.shape = physics::BoxShapeDesc{ localCenter, localHalfExtents };
-
-                physics::ColliderHandle colliderHandle =
-                    ctx.physicsEngine->createCollider(obj->rigidBodyHandle, colliderDesc);
-                if (colliderHandle.isValid()) {
-                    part.colliderHandle = colliderHandle;
-                    obj->parts.push_back(part);
-                    ctx.world->syncGameObjectTransformToPhysics(
-                        ctx.selectedObjectHandle
-                    );
-                    RebuildObjectRenderBatches();
-                }
-            }
-
-            ImGui::EndTable();
-        }
-
-        //-------------------------------------------------
-        // If a subpart is selected, show its properties
-        //-------------------------------------------------
-        int subPartIndex = comboIndex - 1; // -1 = None, 0..N-1 = actual part index
-
-        if (subPartIndex >= 0 && subPartIndex < (int)obj->parts.size())
-        {
-            SubPart& selectedPart = obj->parts[subPartIndex];
-            Transform* localTransform = ctx.world->getTransform(selectedPart.localTransformHandle);
-            const std::optional<physics::ColliderState> colliderState =
-                ctx.physicsEngine->getColliderState(
-                    selectedPart.colliderHandle
-                );
-
-            if (!localTransform || !colliderState) {
-                ImGui::TextDisabled("Selected part is invalid");
-                EndSection();
-                ImGui::End();
-                ImGui::PopStyleVar(2);
-                return;
-            }
-
-            //----------------------------------------
-            // 3.1 SubPart Transform (Local)
-            //----------------------------------------
-            if (BeginPropertyTable("SubPartLocalTransformTable"))
-            {
-                glm::vec3 localPos = localTransform->position;
-                if (RowDragFloat3Colored("Position",
-                    "##sub_local_posx", "##sub_local_posy", "##sub_local_posz",
-                    localPos, 0.1f, -1000.f, 1000.f, "%.2f"))
-                {
-                    localTransform->position = localPos;
-                    localTransform->updateCache();
-                    SyncSingleSubPartCollider(subPartIndex);
-                }
-
-                glm::vec3 localScale = localTransform->scale;
-                if (RowDragFloat3Colored("Scale",
-                    "##sub_local_scalex", "##sub_local_scaley", "##sub_local_scalez",
-                    localScale, 0.1f, 0.01f, 1000.f, "%.2f"))
-                {
-                    localTransform->scale = localScale;
-                    localTransform->updateCache();
-                    SyncSingleSubPartCollider(subPartIndex);
-                }
-
-                glm::vec3 uiDeg = glm::degrees(glm::eulerAngles(localTransform->orientation));
-                glm::vec3 lastUiDeg = uiDeg;
-
-                if (RowDragFloat3Colored("Rotation",
-                    "##sub_local_rotx", "##sub_local_roty", "##sub_local_rotz",
-                    uiDeg, 0.5f, -720.f, 720.f, "%.2f"))
-                {
-                    glm::vec3 deltaRad = glm::radians(uiDeg - lastUiDeg);
-
-                    glm::quat dq =
-                        glm::angleAxis(deltaRad.x, glm::vec3(1, 0, 0)) *
-                        glm::angleAxis(deltaRad.y, glm::vec3(0, 1, 0)) *
-                        glm::angleAxis(deltaRad.z, glm::vec3(0, 0, 1));
-
-                    localTransform->orientation = glm::normalize(localTransform->orientation * dq);
-                    localTransform->updateCache();
-                    SyncSingleSubPartCollider(subPartIndex);
-                }
-
-                ImGui::EndTable();
-            }
-
-            //----------------------------------------
-            // 3.2 SubPart Collider
-            //----------------------------------------
-            if (BeginPropertyTable("SubPartColliderTable"))
-            {
-                // Collider type
-                {
-                    int colliderChoice = 0;
-                    const char* colliderItems[] = { "BOX", "Sphere" };
-
-                    if (colliderState->type == physics::ColliderType::BOX) {
-                        colliderChoice = 0;
-                    }
-                    else if (colliderState->type == physics::ColliderType::SPHERE) {
-                        colliderChoice = 1;
-                    }
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted("Collider");
-
-                    ImGui::TableSetColumnIndex(1);
-
-                    float avail = ImGui::GetContentRegionAvail().x;
-                    float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-                    float spacing = ImGui::GetStyle().ItemSpacing.x;
-
-                    ImGui::SetNextItemWidth(avail - btnW - spacing);
-                    if (ImGui::Combo("##sub_collider", &colliderChoice, colliderItems, IM_ARRAYSIZE(colliderItems)))
-                    {
-                        if (selectedPart.mesh)
-                        {
-                            const physics::ColliderType selectedType =
-                                colliderChoice == 0
-                                ? physics::ColliderType::BOX
-                                : physics::ColliderType::SPHERE;
-
-                            ctx.physicsEngine->setColliderShape(
-                                selectedPart.colliderHandle,
-                                buildColliderShape(
-                                    selectedType,
-                                    *selectedPart.mesh
-                                )
-                            );
-                        }
-                    }
-                }
-                ImGui::EndTable();
-            }
-
-            //----------------------------------------
-            // 3.3 SubPart Render
-            //----------------------------------------
-            if (BeginPropertyTable("SubPartRenderTable"))
-            {
-                // Mesh
-                {
-                    int meshChoice = 0;
-                    const char* meshItems[] = { "Cube", "Sphere", "Teapot", "Pylon", "Tank" };
-
-                    if (selectedPart.mesh == ctx.meshManager->getMesh("cube"))          meshChoice = 0;
-                    else if (selectedPart.mesh == ctx.meshManager->getMesh("sphere"))   meshChoice = 1;
-                    else if (selectedPart.mesh == ctx.meshManager->getMesh("teapot"))   meshChoice = 2;
-                    else if (selectedPart.mesh == ctx.meshManager->getMesh("pylon"))    meshChoice = 3;
-                    else if (selectedPart.mesh == ctx.meshManager->getMesh("tank"))     meshChoice = 4;
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted("Mesh");
-
-                    ImGui::TableSetColumnIndex(1);
-
-                    float avail = ImGui::GetContentRegionAvail().x;
-                    float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-                    float spacing = ImGui::GetStyle().ItemSpacing.x;
-
-                    ImGui::SetNextItemWidth(avail - btnW - spacing);
-                    if (ImGui::Combo("##sub_mesh", &meshChoice, meshItems, IM_ARRAYSIZE(meshItems)))
-                    {
-                        Mesh* mesh = nullptr;
-                        switch (meshChoice)
-                        {
-                        case 0: mesh = ctx.meshManager->getMesh("cube");   break;
-                        case 1: mesh = ctx.meshManager->getMesh("sphere"); break;
-                        case 2: mesh = ctx.meshManager->getMesh("teapot"); break;
-                        case 3: mesh = ctx.meshManager->getMesh("pylon");  break;
-                        case 4: mesh = ctx.meshManager->getMesh("tank");   break;
-                        }
-
-                        if (mesh)
-                        {
-                            selectedPart.mesh = mesh;
-                            RebuildObjectRenderBatches();
-
-                            ctx.physicsEngine->setColliderShape(
-                                selectedPart.colliderHandle,
-                                buildColliderShape(
-                                    colliderState->type,
-                                    *mesh
-                                )
-                            );
-                        }
-                    }
-                }
-
-                // Texture
-                {
-                    int textureChoice = 0;
-                    const char* textureItems[] = { "Plain", "Crate", "UVmap", "Terrain" };
-
-                    if (selectedPart.textureId == -1)                                               textureChoice = 0;
-                    else if (selectedPart.textureId == ctx.textureManager->getTexture("crate"))     textureChoice = 1;
-                    else if (selectedPart.textureId == ctx.textureManager->getTexture("uvmap"))     textureChoice = 2;
-                    else if (selectedPart.textureId == ctx.textureManager->getTexture("terrain2"))  textureChoice = 3;
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted("Texture");
-
-                    ImGui::TableSetColumnIndex(1);
-
-                    float avail = ImGui::GetContentRegionAvail().x;
-                    float btnW = ImGui::CalcTextSize("Load").x + ImGui::GetStyle().FramePadding.x * 2.0f;
-                    float spacing = ImGui::GetStyle().ItemSpacing.x;
-
-                    ImGui::SetNextItemWidth(avail - btnW - spacing);
-                    if (ImGui::Combo("##sub_texture", &textureChoice, textureItems, IM_ARRAYSIZE(textureItems)))
-                    {
-                        int texId = -1;
-                        switch (textureChoice)
-                        {
-                        case 0: texId = 999; break;
-                        case 1: texId = ctx.textureManager->getTexture("crate");    break;
-                        case 2: texId = ctx.textureManager->getTexture("uvmap");    break;
-                        case 3: texId = ctx.textureManager->getTexture("terrain2"); break;
-                        }
-
-                        if (texId != -1)
-                        {
-                            selectedPart.textureId = texId;
-                            RebuildObjectRenderBatches();
-                        }
-                    }
-                }
-
-                // Tint / color
-                {
-                    glm::vec3 color = selectedPart.color;
-                    if (RowColorEdit3("Color", "##sub_color", color))
-                    {
-                        selectedPart.color = color;
-                        RebuildObjectRenderBatches();
-                    }
-                }
-
-                // See-through
-                {
-                    bool seeThrough = selectedPart.seeThrough;
-                    if (RowCheckbox("See through", "##sub_see_through", seeThrough))
-                    {
-                        selectedPart.seeThrough = seeThrough;
-                        RebuildObjectRenderBatches();
-                    }
-                }
-
-                ImGui::EndTable();
-            }
-        }
-
-        EndSection();
-    }
-
-    ImGui::End();
-    ImGui::PopStyleVar(2);
+   ImGui::End();
+   ImGui::PopStyleVar(2);
 }

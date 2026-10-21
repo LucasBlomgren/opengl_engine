@@ -4,8 +4,9 @@
 #include "broadphase_manager.h"
 
 #include "physics/bodies/rigidbody.h"
+#include "physics/collider/body_collider_utils.h"
 #include "physics/collider/geometry/tri.h"
-#include "physics/bvh/query_treetree.h"
+#include "physics/bvh/query_othertree.h"
 #include "physics/bvh/query_sametree.h"
 
 namespace physics::internal {
@@ -14,68 +15,96 @@ namespace physics::internal {
 //    Init & Clear
 //=======================================
 void BroadphaseManager::init(
-    PhysicsStorage* physicsStorage, 
-    std::vector<Tri>* terrainTris) 
+   PhysicsStorage* physicsStorage,
+   std::vector<Tri>* terrainTris)
 {
-    this->physicsStorage = physicsStorage;
-    this->terrainTriangles = terrainTris;
+   this->storage = physicsStorage;
+   this->terrainTriangles = terrainTris;
 
-    SlotMap<RigidBody, BodyHandle>& bMap = physicsStorage->bodyStorage();
-    size_t slotCap = bMap.dense().capacity();
+   SlotMap<RigidBody, BodyHandle>& bMap = physicsStorage->bodyStorage();
+   size_t slotCap = bMap.dense().capacity();
 
-    awakeBvh.init(physicsStorage, slotCap, true);
-    asleepBvh.init(physicsStorage, slotCap, true);
-    staticBvh.init(physicsStorage, slotCap, true);
+   awakeBvh.init(physicsStorage, slotCap, true);
+   asleepBvh.init(physicsStorage, slotCap, true);
+   staticBvh.init(physicsStorage, slotCap, true);
 
-    // false = speculative pairs don't need to write leaf indices
-    speculativeBvh.init(physicsStorage, slotCap, false);
+   // false = speculative pairs don't need to write leaf indices
+   speculativeBvh.init(physicsStorage, slotCap, false);
 
-    awakeHandles.reserve(slotCap * 2);
-    asleepHandles.reserve(slotCap * 2);
-    staticHandles.reserve(slotCap * 2);
+   awakeHandles.reserve(slotCap * 2);
+   asleepHandles.reserve(slotCap * 2);
+   staticHandles.reserve(slotCap * 2);
 
-    terrainBvh.build(*terrainTriangles);
+
+   constructBvh(awakeBvh, awakeHandles);
+   constructBvh(asleepBvh, asleepHandles);
+   constructBvh(staticBvh, staticHandles);
+   terrainBvh.build(*terrainTriangles);
+}
+
+void BroadphaseManager::constructBvh(
+   BVHTree& tree,
+   std::vector<BodyHandle>& handles)
+{
+   std::vector<ColliderHandle> colliderHandles;
+
+   for (BodyHandle bodyH : handles) {
+      RigidBody& body = storage->getBody(bodyH);
+
+      if (body.colliderRef.isCompound()) {
+         Compound& compound =
+            storage->getCompound(body.colliderRef.compound);
+
+         for (ColliderHandle colH : compound.colliders)
+            colliderHandles.push_back(colH);
+      }
+      else {
+         colliderHandles.push_back(body.colliderRef.single);
+      }
+   }
+
+   tree.buildFromColliders(colliderHandles);
 }
 
 void BroadphaseManager::clear() {
-    awakeHandles.clear();
-    asleepHandles.clear();
-    staticHandles.clear();
+   awakeHandles.clear();
+   asleepHandles.clear();
+   staticHandles.clear();
 
-    awakeBvh.clear();
-    asleepBvh.clear();
-    staticBvh.clear();
-    speculativeBvh.clear();
+   awakeBvh.clear();
+   asleepBvh.clear();
+   staticBvh.clear();
+   speculativeBvh.clear();
 
-    pairsBufDynamic.clear();
-    pairsBufTerrain.clear();
+   pairsBufDynamic.clear();
+   pairsBufTerrain.clear();
 }
 
 //=======================================
 //    Set BVH render data flag
 //=======================================
 void BroadphaseManager::updateBVHRenderData(const physics::debug::BvhType& type, bool update) {
-    switch (type) {
-    case physics::debug::BvhType::Awake:
-        awakeBvh.shouldUpdateRenderData = update;
-        break;
-    case physics::debug::BvhType::Asleep:
-        asleepBvh.shouldUpdateRenderData = update;
-        break;
-    case physics::debug::BvhType::Static:
-        staticBvh.shouldUpdateRenderData = update;
-        break;
-    }
+   switch (type) {
+   case physics::debug::BvhType::Awake:
+      awakeBvh.shouldUpdateRenderData = update;
+      break;
+   case physics::debug::BvhType::Asleep:
+      asleepBvh.shouldUpdateRenderData = update;
+      break;
+   case physics::debug::BvhType::Static:
+      staticBvh.shouldUpdateRenderData = update;
+      break;
+   }
 }
 
 //==================================================
 //      Update BVHs
 //==================================================
 void BroadphaseManager::updateBVHs() {
-    awakeBvh.update(awakeHandles);
+   awakeBvh.update();
 
-    if (asleepBvh.dirty) asleepBvh.update(asleepHandles);
-    if (staticBvh.dirty) staticBvh.build(staticHandles);
+   if (asleepBvh.dirty) asleepBvh.update();
+   if (staticBvh.dirty) constructBvh(staticBvh, staticHandles);
 }
 
 //==================================================
@@ -83,507 +112,556 @@ void BroadphaseManager::updateBVHs() {
 //==================================================
 void BroadphaseManager::buildPairs(PairBatch& batch)
 {
-    batch.dynamicPairs.reserve(BVHTree::MaxCollisionBuf);
-    batch.terrainPairs.reserve(BVHTree::MaxCollisionBuf);
+   batch.dynamicPairs.reserve(BVHTree::MaxCollisionBuf);
+   batch.terrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
-    // dynamic vs terrain
-    if (terrainBvh.rootIdx != -1) {
-        pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
-        pairsBufTerrain.clear();
-        treeVsTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
+   // Dynamic vs terrain
+   if (terrainBvh.rootIdx != -1) {
+      pairsBufTerrain.clear();
+      pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
 
-        // Sort terrain pairs by RigidBody to avoid duplicates 
-        std::unordered_map<BodyHandle, std::vector<Tri*>> temp;
-        temp.reserve(pairsBufTerrain.size());
-        if (temp.bucket_count() < pairsBufTerrain.size())
-            temp.reserve(pairsBufTerrain.size());
+      treeVsOtherTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
-        for (int i = 0; i < pairsBufTerrain.size(); i++) {
-            auto [rigidBody, tri] = pairsBufTerrain[i];
-            temp[rigidBody].push_back(tri);
-        }
+      // Group terrain triangles by collider
+      std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
+      temp.reserve(pairsBufTerrain.size());
 
-        // Finalize terrain pairs
-        batch.terrainPairs.clear();
-        int cap = static_cast<int>(temp.size());
-        batch.terrainPairs.resize(cap);
-        int sp = 0;
+      for (const auto& [leafRef, tri] : pairsBufTerrain) {
+         temp[leafRef.collider].push_back(tri);
+      }
 
-        for (auto& [bodyHandle, trisVec] : temp) {
-            batch.terrainPairs[sp++] = TerrainPair{ bodyHandle, std::move(trisVec) };
-        }
-        batch.terrainPairs.resize(sp);
-    }
+      // Finalize terrain pairs
+      batch.terrainPairs.clear();
+      batch.terrainPairs.reserve(temp.size());
 
-    batch.dynamicPairs.clear();
+      for (auto& [colH, trisVec] : temp) {
+         const Collider& collider = storage->getCollider(colH);
 
-    // dynamic vs dynamic
-    if (awakeBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsSameTreeQuery(awakeBvh, pairsBufDynamic);
+         batch.terrainPairs.push_back(TerrainPair{
+            collider.bodyHandle,
+            colH,
+            std::move(trisVec)
+            });
+      }
+   }
 
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.dynamicPairs.resize(cap);
-        int sp = 0;
+   batch.dynamicPairs.clear();
 
-        for (auto& hp : pairsBufDynamic) {
-            batch.dynamicPairs[sp++] = DynamicPair{ hp.first, hp.second };
-        }
-        batch.dynamicPairs.resize(sp);
-    }
+   // dynamic vs dynamic
+   if (awakeBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsSameTreeQuery(awakeBvh, pairsBufDynamic);
 
-    // dynamic vs asleep
-    if (asleepBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsTreeQuery(awakeBvh, asleepBvh, pairsBufDynamic);
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.dynamicPairs.resize(cap);
+      int sp = 0;
 
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
-        int sp = 0;
+      for (auto& hp : pairsBufDynamic) {
+         batch.dynamicPairs[sp++] =
+            DynamicPair{
+               hp.first.body,
+               hp.second.body,
+               hp.first.collider,
+               hp.second.collider
+         };
+      }
+      batch.dynamicPairs.resize(sp);
+   }
 
-        for (auto& hp : pairsBufDynamic) {
-            batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
-        }
-    }
+   // dynamic vs asleep
+   if (asleepBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsOtherTreeQuery(awakeBvh, asleepBvh, pairsBufDynamic);
 
-    // dynamic vs static
-    if (staticBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsTreeQuery(awakeBvh, staticBvh, pairsBufDynamic);
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
+      int sp = 0;
 
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
-        int sp = 0;
+      for (auto& hp : pairsBufDynamic) {
+         batch.dynamicPairs.emplace_back(
+            DynamicPair{
+               hp.first.body,
+               hp.second.body,
+               hp.first.collider,
+               hp.second.collider
+            }
+         );
+      }
+   }
 
-        for (auto& hp : pairsBufDynamic) {
-            batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
-        }
-    }
+   // dynamic vs static
+   if (staticBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsOtherTreeQuery(awakeBvh, staticBvh, pairsBufDynamic);
+
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
+      int sp = 0;
+
+      for (auto& hp : pairsBufDynamic) {
+         batch.dynamicPairs.emplace_back(
+            DynamicPair{
+               hp.first.body,
+               hp.second.body,
+               hp.first.collider,
+               hp.second.collider
+            }
+         );
+      }
+   }
 }
 
 //==================================================
 //     Speculative pair building for narrowphase
 //==================================================
 void BroadphaseManager::buildSpeculativePairs(
-    float dt, 
-    PairBatch& batch, 
-    std::vector<AABB>& debugSweeps)
+   float dt,
+   PairBatch& batch,
+   std::vector<AABB>& debugSweeps)
 {
-    batch.speculativeDynamicPairs.clear();
-    batch.speculativeTerrainPairs.clear();
-    batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
-    batch.speculativeTerrainPairs.reserve(BVHTree::MaxCollisionBuf);
+   batch.speculativeDynamicPairs.clear();
+   batch.speculativeTerrainPairs.clear();
+   batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
+   batch.speculativeTerrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
-    static std::vector<BodyHandle> speculativeBodies;
-    static std::vector<AABB> speculativeAABBs;
-    speculativeBodies.reserve(awakeHandles.size());
-    speculativeAABBs.reserve(awakeHandles.size());
-    speculativeBodies.clear();
-    speculativeAABBs.clear();
-    determineSpeculativeBodies(dt, speculativeBodies, speculativeAABBs);
+   static std::vector<ColliderHandle> colliders;
+   static std::vector<AABB> AABBs;
 
-    speculativeBvh.clear();
-    speculativeBvh.build(speculativeBodies, speculativeAABBs);
+   colliders.reserve(awakeHandles.size());
+   colliders.clear();
 
-    struct SpecKey {
-        uint64_t owner;
-        uint64_t a;
-        uint64_t b;
+   AABBs.reserve(awakeHandles.size());
+   AABBs.clear();
 
-        bool operator==(const SpecKey& other) const {
-            return owner == other.owner &&
-                a == other.a &&
-                b == other.b;
-        }
-    };
+   determineSpeculativeBodies(dt, colliders, AABBs);
 
-    struct SpecKeyHash {
-        size_t operator()(const SpecKey& k) const {
-            size_t h = std::hash<uint64_t>{}(k.owner);
-            h ^= std::hash<uint64_t>{}(k.a + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
-            h ^= std::hash<uint64_t>{}(k.b + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
-            return h;
-        }
-    };
+   speculativeBvh.clear();
+   speculativeBvh.buildFromExternalAABBs(colliders, AABBs);
 
-    static std::unordered_set<SpecKey, SpecKeyHash> seenSpecPairs;
-    seenSpecPairs.clear();
+   struct SpecKey {
+      uint64_t owner;
+      uint64_t a;
+      uint64_t b;
 
-    auto packHandle = [](BodyHandle h) -> uint64_t {
-        return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
-        };
+      bool operator==(const SpecKey& other) const {
+         return owner == other.owner &&
+            a == other.a &&
+            b == other.b;
+      }
+   };
 
-    auto addSpecPair = [&](
-        BodyHandle a,
-        BodyHandle b,
-        BodyHandle owner)
-        {
-            if (a == b) {
-                return;
+   struct SpecKeyHash {
+      size_t operator()(const SpecKey& k) const {
+         size_t h = std::hash<uint64_t>{}(k.owner);
+         h ^= std::hash<uint64_t>{}(k.a + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
+         h ^= std::hash<uint64_t>{}(k.b + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2));
+         return h;
+      }
+   };
+
+   static std::unordered_set<SpecKey, SpecKeyHash> seenSpecPairs;
+   seenSpecPairs.clear();
+
+   auto packHandle = [](auto h) -> uint64_t {
+      return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+      };
+
+   auto addSpecPair = [&](
+      BodyHandle bodyA,
+      BodyHandle bodyB,
+      ColliderHandle colA,
+      ColliderHandle colB,
+      BodyHandle owner)
+      {
+         if (bodyA == bodyB) {
+            return;
+         }
+
+         uint64_t ak = packHandle(colA);
+         uint64_t bk = packHandle(colB);
+         uint64_t ok = packHandle(owner);
+
+         if (bk < ak) {
+            std::swap(ak, bk);
+         }
+
+         SpecKey key{};
+         key.owner = ok;
+         key.a = ak;
+         key.b = bk;
+
+         if (!seenSpecPairs.insert(key).second) {
+            return;
+         }
+
+         batch.speculativeDynamicPairs.emplace_back(
+            SpeculativeDynamicPair{ bodyA, bodyB, colA, colB, owner }
+         );
+      };
+
+   // ----- Dynamic vs terrain -----
+   if (terrainBvh.rootIdx != -1) {
+      pairsBufTerrain.clear();
+      pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
+
+      treeVsOtherTreeQuery(speculativeBvh, terrainBvh, pairsBufTerrain);
+
+      // Group terrain triangles by collider
+      std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
+      temp.reserve(pairsBufTerrain.size());
+
+      for (const auto& [leafRef, tri] : pairsBufTerrain) {
+         temp[leafRef.collider].push_back(tri);
+      }
+
+      // Finalize terrain pairs
+      batch.speculativeTerrainPairs.clear();
+      batch.speculativeTerrainPairs.reserve(temp.size());
+
+      for (auto& [colH, trisVec] : temp) {
+         const Collider& collider = storage->getCollider(colH);
+
+         batch.speculativeTerrainPairs.push_back(
+            SpeculativeTerrainPair{
+               collider.bodyHandle,
+               colH,
+               std::move(trisVec)
             }
+         );
+      }
+   }
 
-            uint64_t ak = packHandle(a);
-            uint64_t bk = packHandle(b);
-            uint64_t ok = packHandle(owner);
+   // ----- speculative vs speculative -----
+   if (speculativeBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsSameTreeQuery(speculativeBvh, pairsBufDynamic);
 
-            if (bk < ak) {
-                std::swap(ak, bk);
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+
+      for (auto& hp : pairsBufDynamic) {
+         BodyHandle& bodyA = hp.first.body;
+         BodyHandle& bodyB = hp.second.body;
+         ColliderHandle& colA = hp.first.collider;
+         ColliderHandle& colB = hp.second.collider;
+
+         addSpecPair(bodyA, bodyB, colA, colB, bodyA); // A's owner
+         addSpecPair(bodyA, bodyB, colA, colB, bodyB); // B's owner
+      }
+   }
+
+   // ----- speculative vs awake -----
+   if (awakeBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsOtherTreeQuery(speculativeBvh, awakeBvh, pairsBufDynamic);
+
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+
+      for (auto& hp : pairsBufDynamic) {
+         BodyHandle& bodyA = hp.first.body;
+         BodyHandle& bodyB = hp.second.body;
+         ColliderHandle& colA = hp.first.collider;
+         ColliderHandle& colB = hp.second.collider;
+
+         addSpecPair(bodyA, bodyB, colA, colB, bodyA); // A's owner
+      }
+   }
+
+   // ----- speculative vs asleep -----
+   if (asleepBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsOtherTreeQuery(speculativeBvh, asleepBvh, pairsBufDynamic);
+
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+
+      for (auto& hp : pairsBufDynamic) {
+         batch.speculativeDynamicPairs.emplace_back(
+            SpeculativeDynamicPair{ 
+               hp.first.body, 
+               hp.second.body, 
+               hp.first.collider,
+               hp.second.collider,
+               hp.first.body 
             }
+         );
+      }
+   }
 
-            SpecKey key{};
-            key.owner = ok;
-            key.a = ak;
-            key.b = bk;
+   // ----- speculative vs static -----
+   if (staticBvh.rootIdx != -1) {
+      pairsBufDynamic.clear();
+      treeVsOtherTreeQuery(speculativeBvh, staticBvh, pairsBufDynamic);
 
-            if (!seenSpecPairs.insert(key).second) {
-                return;
+      int cap = static_cast<int>(pairsBufDynamic.size());
+      batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
+
+      for (auto& hp : pairsBufDynamic) {
+         batch.speculativeDynamicPairs.emplace_back(
+            SpeculativeDynamicPair{
+               hp.first.body,
+               hp.second.body,
+               hp.first.collider,
+               hp.second.collider,
+               hp.first.body
             }
-
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ a, b, owner }
-            );
-        };
-
-    // ----- dynamic vs terrain -----
-    if (terrainBvh.rootIdx != -1) {
-        pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
-        pairsBufTerrain.clear();
-        treeVsTreeQuery(speculativeBvh, terrainBvh, pairsBufTerrain);
-
-        // Sort terrain pairs by RigidBody to avoid duplicates 
-        std::unordered_map<BodyHandle, std::vector<Tri*>> temp;
-        temp.reserve(pairsBufTerrain.size());
-        if (temp.bucket_count() < pairsBufTerrain.size())
-            temp.reserve(pairsBufTerrain.size());
-
-        for (int i = 0; i < pairsBufTerrain.size(); i++) {
-            auto [rigidBody, tri] = pairsBufTerrain[i];
-            temp[rigidBody].push_back(tri);
-        }
-
-        // Finalize terrain pairs
-        batch.speculativeTerrainPairs.clear();
-        int cap = static_cast<int>(temp.size());
-        batch.speculativeTerrainPairs.resize(cap);
-        int sp = 0;
-
-        for (auto& [bodyHandle, trisVec] : temp) {
-            batch.speculativeTerrainPairs[sp++] = 
-                SpeculativeTerrainPair{ bodyHandle, std::move(trisVec) };
-        }
-        batch.speculativeTerrainPairs.resize(sp);
-    }
-
-    // ----- speculative vs speculative -----
-    if (speculativeBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsSameTreeQuery(speculativeBvh, pairsBufDynamic);
-
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-
-        for (auto& hp : pairsBufDynamic) {
-            BodyHandle a = hp.first;
-            BodyHandle b = hp.second;
-
-            addSpecPair(a, b, a); // A's owner
-            addSpecPair(a, b, b); // B's owner
-        }
-    }
-
-    // ----- speculative vs awake -----
-    if (awakeBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsTreeQuery(speculativeBvh, awakeBvh, pairsBufDynamic);
-
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-
-        for (auto& hp : pairsBufDynamic) {
-            addSpecPair(hp.first, hp.second, hp.first);
-        }
-    }
-
-    // ----- speculative vs asleep -----
-    if (asleepBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsTreeQuery(speculativeBvh, asleepBvh, pairsBufDynamic);
-
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-
-        for (auto& hp : pairsBufDynamic) {
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
-            );
-        }
-    }
-
-    // ----- speculative vs static -----
-    if (staticBvh.rootIdx != -1) {
-        pairsBufDynamic.clear();
-        treeVsTreeQuery(speculativeBvh, staticBvh, pairsBufDynamic);
-
-        int cap = static_cast<int>(pairsBufDynamic.size());
-        batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
-
-        for (auto& hp : pairsBufDynamic) {
-            batch.speculativeDynamicPairs.emplace_back(
-                SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
-            );
-        }
-    }
+         );
+      }
+   }
 }
 
 void BroadphaseManager::determineSpeculativeBodies(
-    float dt, 
-    std::vector<BodyHandle>& outBodies, 
-    std::vector<AABB>& outAABBs) 
+   float dt,
+   std::vector<ColliderHandle>& outColliders,
+   std::vector<AABB>& outAABBs)
 {
-    for (const BodyHandle& handle : awakeHandles) {
-        RigidBody& body = physicsStorage->getBody(handle);
+   for (const BodyHandle& handle : awakeHandles) {
+      RigidBody& body = storage->getBody(handle);
 
-        if (body.colliderHandles.empty()) {
-            continue;
-        }
+      if (body.type != BodyType::Dynamic) {
+         continue;
+      }
 
-        Collider& mainCollider = physicsStorage->getCollider(body.colliderHandles[0]);
+      if (!body.colliderRef.isValid()) {
+         continue;
+      }
 
-        if (body.type != BodyType::Dynamic) {
-            continue;
-        }
+      constexpr float safeFraction = 0.50f;
+      constexpr float minSafeDistance = 0.02f;
 
-        constexpr float safeFraction = 0.50f;
-        constexpr float minSafeDistance = 0.02f;
+      const glm::vec3& scale = body.scale;
 
-        const glm::vec3& scale = body.scale;
+      float minExtent =
+         std::min(scale.x, std::min(scale.y, scale.z));
 
-        float minExtent =
-            std::min(scale.x, std::min(scale.y, scale.z));
+      float safeDistance =
+         std::max(minExtent * safeFraction, minSafeDistance);
 
-        float safeDistance =
-            std::max(minExtent * safeFraction, minSafeDistance);
+      float scale2 = glm::dot(scale, scale);
+      float dt2 = dt * dt;
 
-        float scale2 = glm::dot(scale, scale);
-        float dt2 = dt * dt;
+      float linearMotion2 =
+         glm::dot(body.linearVelocity, body.linearVelocity) * dt2;
 
-        float linearMotion2 =
-            glm::dot(body.linearVelocity, body.linearVelocity) * dt2;
+      float angularMotion2 =
+         glm::dot(body.angularVelocity, body.angularVelocity) *
+         (0.25f * scale2) *
+         dt2;
 
-        float angularMotion2 =
-            glm::dot(body.angularVelocity, body.angularVelocity) *
-            (0.25f * scale2) *
-            dt2;
+      float safeDistance2 = safeDistance * safeDistance;
 
-        float safeDistance2 = safeDistance * safeDistance;
+      if (linearMotion2 + angularMotion2 <= 0.5f * safeDistance2) {
+         continue;
+      }
 
-        if (linearMotion2 + angularMotion2 <= 0.5f * safeDistance2) {
-            continue;
-        }
+      forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
+         Collider& collider = storage->getCollider(colH);
 
-        outBodies.push_back(handle);
+         if (!collider.enabled)
+            return;
 
-        // Build swept AABB
-        AABB& currentAABB = body.aabb;
+         outColliders.push_back(colH);
+         outAABBs.emplace_back(computeSweptAABB(body, collider, dt));
+      });
+   }
+}
 
-        glm::vec3 delta = body.linearVelocity * dt;
+AABB BroadphaseManager::computeSweptAABB(
+   const RigidBody& body,
+   Collider& collider,
+   float dt)
+{
+   AABB swept = collider.getAABB();
 
-        AABB endAABB = currentAABB;
-        endAABB.worldMin += delta;
-        endAABB.worldMax += delta;
+   // Linear motion
+   glm::vec3 delta = body.linearVelocity * dt;
 
-        outAABBs.emplace_back();
-        AABB& sweptAABB = outAABBs.back();
-        sweptAABB.worldMin = glm::min(currentAABB.worldMin, endAABB.worldMin);
-        sweptAABB.worldMax = glm::max(currentAABB.worldMax, endAABB.worldMax);
+   swept.worldMin += glm::min(delta, glm::vec3(0.0f));
+   swept.worldMax += glm::max(delta, glm::vec3(0.0f));
 
-        // Expand for rotation
-        if (mainCollider.type != ColliderType::SPHERE || body.isCompound()) {
-            float omega = glm::length(body.angularVelocity);
-            if (omega > 1e-6f) {
-                glm::vec3 axis = body.angularVelocity / omega;
+   // Angular motion
+   const AABB& aabb = collider.getAABB();
 
-                float boundingRadius =
-                    0.5f * std::sqrt(scale2);
+   glm::vec3 center =
+      (aabb.worldMin + aabb.worldMax) * 0.5f;
 
-                // Use the box's OWN oriented axes + local half-extents.
-                // The physicsStorage AABB is sign-agnostic: currentHalf is always the
-                // all-positive corner, a phantom point that sits far from the
-                // axis when the body's long dimension points "against" it.
-                // Measuring that corner's distance to the axis is the bug.
-                glm::mat3 R = glm::mat3_cast(body.pose.orientation);
-                glm::vec3 h = 0.5f * body.scale; // local half-extents
+   glm::vec3 halfExtents =
+      (aabb.worldMax - aabb.worldMin) * 0.5f;
 
-                // Max perpendicular distance of any box point to the spin axis
-                // (conservative). A box axis PARALLEL to the spin axis contributes
-                // 0 (that extent doesn't sweep); perpendicular contributes fully.
-                float sweepRadius =
-                    h.x * glm::length(glm::cross(R[0], axis)) +
-                    h.y * glm::length(glm::cross(R[1], axis)) +
-                    h.z * glm::length(glm::cross(R[2], axis));
+   float rotationRadius =
+      glm::length(center - body.pose.position) +
+      glm::length(halfExtents);
 
-                float theta = omega * dt;
-                float arcExpansion = theta * sweepRadius;
+   float angularExpansion =
+      glm::length(body.angularVelocity) * dt * rotationRadius;
 
-                glm::vec3 currentHalf =
-                    (currentAABB.worldMax - currentAABB.worldMin) * 0.5f;
+   constexpr float sweptSkin = 0.01f;
 
-                glm::vec3 maxRotExpansion =
-                    glm::max(glm::vec3(0.0f),
-                        glm::vec3(boundingRadius) - currentHalf);
+   float expansion = angularExpansion + sweptSkin;
 
-                glm::vec3 angularExpansion =
-                    glm::min(glm::vec3(arcExpansion), maxRotExpansion);
+   swept.worldMin -= glm::vec3(expansion);
+   swept.worldMax += glm::vec3(expansion);
 
-                sweptAABB.worldMin -= angularExpansion;
-                sweptAABB.worldMax += angularExpansion;
-            }
-        }
+   swept.worldCenter =
+      (swept.worldMin + swept.worldMax) * 0.5f;
 
-        // Optional small skin
-        constexpr float sweptSkin = 0.01f;
-        sweptAABB.worldMin -= glm::vec3(sweptSkin);
-        sweptAABB.worldMax += glm::vec3(sweptSkin);
-    }
+   swept.worldHalfExtents =
+      (swept.worldMax - swept.worldMin) * 0.5f;
+
+   return swept;
 }
 
 //==================================================
 //    List management
 //==================================================
 void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
-    RigidBody& rigidBody = physicsStorage->getBody(handle);
-    if (dst == BroadphaseBucket::None) {
-        return;
-    }
+   RigidBody& body = storage->getBody(handle);
+   if (dst == BroadphaseBucket::None) {
+      return;
+   }
 
-    auto& h = rigidBody.broadphaseHandle;
-    if (h.bucket != BroadphaseBucket::None) {
-        return;
-    }
+   auto& h = body.broadphaseHandle;
+   if (h.bucket != BroadphaseBucket::None) return;
 
-    auto& list = listFor(dst);
-    list.push_back(handle);
-    h.listIdx = (int)list.size() - 1;
+   auto& list = listFor(dst);
+   list.push_back(handle);
+   h.listIdx = (int)list.size() - 1;
 
-    auto& bvh = bvhFor(dst);
-    h.leafIdx = bvh.insertLeaf(handle);
-    bvh.dirty = true;
+   auto& bvh = bvhFor(dst);
 
-    h.bucket = dst;
+   forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
+      Collider& col = storage->getCollider(colH);
+
+      if (col.enabled)
+         bvh.insertLeaf(handle, colH);
+   });
+
+   h.bucket = dst;
+
+   bvh.dirty = true;
 }
 
 // Remove from current list
 void BroadphaseManager::remove(const BodyHandle& handle) {
-    RigidBody& rigidBody = physicsStorage->getBody(handle);
+   RigidBody& body = storage->getBody(handle);
 
-    auto& h = rigidBody.broadphaseHandle;
-    if (h.bucket == BroadphaseBucket::None) return;
+   auto& h = body.broadphaseHandle;
+   if (h.bucket == BroadphaseBucket::None) return;
 
-    // remove from list
-    swapAndPop(handle, listFor(h.bucket));
+   // remove from list
+   swapAndPop(handle, listFor(h.bucket));
 
-    // remove from BVH
-    auto& bvh = bvhFor(h.bucket);
-    bvh.removeLeaf(h.leafIdx);
-    bvh.dirty = true;
+   // remove from BVH
+   auto& bvh = bvhFor(h.bucket);
+   forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
+      Collider& col = storage->getCollider(colH);
 
-    h.leafIdx = -1;
-    h.bucket = BroadphaseBucket::None;
+      if (col.enabled) {
+         bvh.removeLeaf(col.BVHleafIdx);
+         col.BVHleafIdx = -1;
+      }
+
+   });
+
+   h.bucket = BroadphaseBucket::None;
+
+   bvh.dirty = true;
 }
 
 // Move to awake
 void BroadphaseManager::moveToAwake(const BodyHandle& handle) {
-    RigidBody& body = physicsStorage->getBody(handle);
+   RigidBody& body = storage->getBody(handle);
 
-    if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
-        return;
-    }
+   if (body.broadphaseHandle.bucket == BroadphaseBucket::Awake) {
+      return;
+   }
 
-    remove(handle);
-    add(handle, BroadphaseBucket::Awake);
-    awakeBvh.dirty = true;
+   remove(handle);
+   add(handle, BroadphaseBucket::Awake);
+   awakeBvh.dirty = true;
 }
 // Move to asleep
 void BroadphaseManager::moveToAsleep(const BodyHandle& handle) {
-    RigidBody& body = physicsStorage->getBody(handle);
+   RigidBody& body = storage->getBody(handle);
 
-    if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
-        return;
-    }
+   if (body.broadphaseHandle.bucket == BroadphaseBucket::Asleep) {
+      return;
+   }
 
-    remove(handle);
-    add(handle, BroadphaseBucket::Asleep);
-    asleepBvh.dirty = true;
+   remove(handle);
+   add(handle, BroadphaseBucket::Asleep);
+   asleepBvh.dirty = true;
 }
 // Move to static
 void BroadphaseManager::moveToStatic(const BodyHandle& handle) {
-    RigidBody& body = physicsStorage->getBody(handle);
-    if (body.broadphaseHandle.bucket == BroadphaseBucket::Static) {
-        return;
-    }
+   RigidBody& body = storage->getBody(handle);
+   if (body.broadphaseHandle.bucket == BroadphaseBucket::Static) {
+      return;
+   }
 
-    remove(handle);
-    add(handle, BroadphaseBucket::Static);
-    staticBvh.dirty = true;
+   remove(handle);
+   add(handle, BroadphaseBucket::Static);
+   staticBvh.dirty = true;
 }
 
 void BroadphaseManager::setBVHDirty(const BodyHandle& handle) {
-    RigidBody& rigidBody = physicsStorage->getBody(handle);
-    auto& h = rigidBody.broadphaseHandle;
-    if (h.bucket == BroadphaseBucket::None) return;
-    bvhFor(h.bucket).dirty = true;
+   RigidBody& rigidBody = storage->getBody(handle);
+   auto& h = rigidBody.broadphaseHandle;
+   if (h.bucket == BroadphaseBucket::None) return;
+   bvhFor(h.bucket).dirty = true;
 }
 
 //==================================================
 //     Helpers
 //==================================================
 void BroadphaseManager::swapAndPop(
-    const BodyHandle& handle,
-    std::vector<BodyHandle>& list)
+   const BodyHandle& handle,
+   std::vector<BodyHandle>& list)
 {
-    RigidBody& rigidBody = physicsStorage->getBody(handle);
+   RigidBody& rigidBody = storage->getBody(handle);
 
-    int i = rigidBody.broadphaseHandle.listIdx;
-    if (i == -1) return;
+   int i = rigidBody.broadphaseHandle.listIdx;
+   if (i == -1) return;
 
-    if (i < 0 ||
-        i >= static_cast<int>(list.size()) ||
-        !(list[static_cast<size_t>(i)] == handle)) {
-        auto position = std::find(list.begin(), list.end(), handle);
-        if (position == list.end()) {
-            rigidBody.broadphaseHandle.listIdx = -1;
-            return;
-        }
+   if (i < 0 ||
+      i >= static_cast<int>(list.size()) ||
+      !(list[static_cast<size_t>(i)] == handle)) {
+      auto position = std::find(list.begin(), list.end(), handle);
+      if (position == list.end()) {
+         rigidBody.broadphaseHandle.listIdx = -1;
+         return;
+      }
 
-        i = static_cast<int>(std::distance(list.begin(), position));
-        rigidBody.broadphaseHandle.listIdx = i;
-    }
+      i = static_cast<int>(std::distance(list.begin(), position));
+      rigidBody.broadphaseHandle.listIdx = i;
+   }
 
-    int lastPos = (int)list.size() - 1;
-    if (i != lastPos) {
-        BodyHandle movedHandle = list[lastPos];
-        list[i] = movedHandle;
+   int lastPos = (int)list.size() - 1;
+   if (i != lastPos) {
+      BodyHandle movedHandle = list[lastPos];
+      list[i] = movedHandle;
 
-        RigidBody& moved = physicsStorage->getBody(movedHandle);
-        moved.broadphaseHandle.listIdx = i;
-    }
+      RigidBody& moved = storage->getBody(movedHandle);
+      moved.broadphaseHandle.listIdx = i;
+   }
 
-    list.pop_back();
-    rigidBody.broadphaseHandle.listIdx = -1;
+   list.pop_back();
+   rigidBody.broadphaseHandle.listIdx = -1;
 }
 
 // Get BVH for bucket
 BVHTree& BroadphaseManager::bvhFor(BroadphaseBucket b) {
-    if (b == BroadphaseBucket::Awake)  return awakeBvh;
-    if (b == BroadphaseBucket::Asleep) return asleepBvh;
-    return staticBvh;
+   if (b == BroadphaseBucket::Awake)  return awakeBvh;
+   if (b == BroadphaseBucket::Asleep) return asleepBvh;
+   return staticBvh;
 }
 
 // Get list for bucket
 std::vector<BodyHandle>& BroadphaseManager::listFor(BroadphaseBucket b) {
-    if (b == BroadphaseBucket::Awake)  return awakeHandles;
-    if (b == BroadphaseBucket::Asleep) return asleepHandles;
-    return staticHandles;
+   if (b == BroadphaseBucket::Awake)  return awakeHandles;
+   if (b == BroadphaseBucket::Asleep) return asleepHandles;
+   return staticHandles;
 }
 
 }

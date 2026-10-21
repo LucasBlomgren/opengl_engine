@@ -13,45 +13,45 @@ using namespace internal;
 namespace {
 
 const RigidBody* resolveBody(
-    const cmd::Buffer& commandBuffer,
-    const PhysicsStorage& physicsStorage,
-    BodyHandle handle)
+   const cmd::Buffer& commandBuffer,
+   const PhysicsStorage& physicsStorage,
+   BodyHandle handle)
 {
-    if (commandBuffer.isBodyPendingDestroy(handle)) {
-        return nullptr;
-    }
+   if (commandBuffer.isBodyPendingDestroy(handle)) {
+      return nullptr;
+   }
 
-    if (const RigidBody* body =
-        commandBuffer.tryGetPendingBodyCreate(handle)) {
-        return body;
-    }
+   if (const RigidBody* body =
+      commandBuffer.tryGetPendingBodyCreate(handle)) {
+      return body;
+   }
 
-    return physicsStorage.tryGetBody(handle);
+   return physicsStorage.tryGetBody(handle);
 }
 
 const Collider* resolveCollider(
-    const cmd::Buffer& commandBuffer,
-    const PhysicsStorage& physicsStorage,
-    ColliderHandle handle)
+   const cmd::Buffer& commandBuffer,
+   const PhysicsStorage& physicsStorage,
+   ColliderHandle handle)
 {
-    if (commandBuffer.isColliderPendingDestroy(handle)) {
-        return nullptr;
-    }
+   if (commandBuffer.isColliderPendingDestroy(handle)) {
+      return nullptr;
+   }
 
-    const Collider* collider =
-        commandBuffer.tryGetPendingColliderCreate(handle);
+   const Collider* collider =
+      commandBuffer.tryGetPendingColliderCreate(handle);
 
-    if (!collider) {
-        collider = physicsStorage.tryGetCollider(handle);
-    }
+   if (!collider) {
+      collider = physicsStorage.tryGetCollider(handle);
+   }
 
-    if (!collider ||
-        commandBuffer.isBodyPendingDestroy(
-            collider->rigidBodyHandle)) {
-        return nullptr;
-    }
+   if (!collider ||
+      commandBuffer.isBodyPendingDestroy(
+         collider->bodyHandle)) {
+      return nullptr;
+   }
 
-    return collider;
+   return collider;
 }
 
 }
@@ -60,176 +60,176 @@ const Collider* resolveCollider(
 // Collider creation and destruction
 //=========================================
 ColliderHandle Engine::createCollider(
-    BodyHandle bodyHandle,
-    const ColliderDesc& desc)
+   BodyHandle bodyHandle,
+   const ColliderDesc& desc)
 {
-    const RigidBody* body = resolveBody(
-        commandBuffer,
-        physicsStorage,
-        bodyHandle
-    );
+   const RigidBody* body = resolveBody(
+      commandBuffer,
+      physicsStorage,
+      bodyHandle
+   );
 
-    if (!body) {
-        return {};
-    }
+   if (!body) {
+      return {};
+   }
 
-    ColliderHandle colliderHandle =
-        physicsStorage.reserveColliderHandle();
+   ColliderHandle colliderHandle =
+      physicsStorage.reserveColliderHandle();
 
-    Collider collider;
-    collider.rigidBodyHandle = bodyHandle;
-    collider.localPose = desc.localPose;
-    collider.localScale = desc.localScale;
-    collider.enabled = desc.enabled;
-    collider.isTrigger = desc.isTrigger;
-    collider.userTag = desc.userTag;
+   Collider collider;
+   collider.bodyHandle = bodyHandle;
+   collider.localPose = desc.localPose;
+   collider.localScale = desc.localScale;
+   collider.enabled = desc.enabled;
+   collider.isTrigger = desc.isTrigger;
+   collider.userTag = desc.userTag;
 
-    bool validShape = true;
+   bool validShape = true;
 
-    std::visit([&](const auto& shapeDesc) {
-        using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
+   std::visit([&](const auto& shapeDesc) {
+      using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
 
-        if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-            collider.type = ColliderType::BOX;
-            collider.shape = Box(shapeDesc.halfExtents, shapeDesc.center);
-        }
-        else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
-            collider.type = ColliderType::SPHERE;
-            collider.shape = Sphere(shapeDesc.radius, shapeDesc.center);
-        }
-        else {
-            validShape = false;
-        }
-    }, desc.shape);
+      if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
+         collider.type = ColliderType::BOX;
+         collider.shape = Box(shapeDesc.halfExtents, shapeDesc.center);
+      }
+      else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
+         collider.type = ColliderType::SPHERE;
+         collider.shape = Sphere(shapeDesc.radius, shapeDesc.center);
+      }
+      else {
+         validShape = false;
+      }
+      }, desc.shape);
 
-    if (!validShape) {
-        physicsStorage.releaseColliderReservation(colliderHandle);
-        return {};
-    }
+   if (!validShape) {
+      physicsStorage.releaseColliderReservation(colliderHandle);
+      return {};
+   }
 
-    collider.updateWorldPose(body->pose, body->scale);
-    collider.updateShape();
-    collider.updateAABB();
+   collider.updateWorldPose(body->pose, body->scale);
+   collider.updateShape();
+   collider.updateAABB();
 
-    commandBuffer.recordColliderCreate(
-        colliderHandle,
-        std::move(collider)
-    );
+   commandBuffer.recordColliderCreate(
+      colliderHandle,
+      std::move(collider)
+   );
 
-    return colliderHandle;
+   return colliderHandle;
 }
 
 bool Engine::destroyCollider(
-    ColliderHandle colliderHandle) {
-    if (!resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        colliderHandle)) {
-        return false;
-    }
+   ColliderHandle colliderHandle) {
+   if (!resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      colliderHandle)) {
+      return false;
+   }
 
-    return commandBuffer.recordColliderDestroy(
-        colliderHandle,
-        physicsStorage
-    );
+   return commandBuffer.recordColliderDestroy(
+      colliderHandle,
+      physicsStorage
+   );
 }
 
 //=========================================
 // Collider commands
 //=========================================
 bool Engine::setColliderLocalPose(
-    ColliderHandle handle,
-    const Pose& localPose)
+   ColliderHandle handle,
+   const Pose& localPose)
 {
-    const Collider* collider = resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        handle
-    );
+   const Collider* collider = resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      handle
+   );
 
-    if (!collider) {
-        return false;
-    }
+   if (!collider) {
+      return false;
+   }
 
-    commandBuffer.recordSetColliderLocalPose(handle, localPose);
-    return true;
+   commandBuffer.recordSetColliderLocalPose(handle, localPose);
+   return true;
 }
 
 bool Engine::setColliderLocalTransform(
-    ColliderHandle handle,
-    const Pose& localPose,
-    const glm::vec3& localScale)
+   ColliderHandle handle,
+   const Pose& localPose,
+   const glm::vec3& localScale)
 {
-    const Collider* collider = resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        handle
-    );
+   const Collider* collider = resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      handle
+   );
 
-    if (!collider) {
-        return false;
-    }
+   if (!collider) {
+      return false;
+   }
 
-    commandBuffer.recordSetColliderLocalTransform(
-        handle,
-        localPose,
-        localScale
-    );
-    return true;
+   commandBuffer.recordSetColliderLocalTransform(
+      handle,
+      localPose,
+      localScale
+   );
+   return true;
 }
 
 bool Engine::setColliderShape(
-    ColliderHandle handle,
-    const ColliderShapeDesc& shape)
+   ColliderHandle handle,
+   const ColliderShapeDesc& shape)
 {
-    const Collider* collider = resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        handle
-    );
+   const Collider* collider = resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      handle
+   );
 
-    if (!collider) {
-        return false;
-    }
+   if (!collider) {
+      return false;
+   }
 
-    commandBuffer.recordSetColliderShape(handle, shape);
-    return true;
+   commandBuffer.recordSetColliderShape(handle, shape);
+   return true;
 }
 
 bool Engine::setColliderEnabled(
-    ColliderHandle handle,
-    bool enabled)
+   ColliderHandle handle,
+   bool enabled)
 {
-    const Collider* collider = resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        handle
-    );
+   const Collider* collider = resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      handle
+   );
 
-    if (!collider) {
-        return false;
-    }
+   if (!collider) {
+      return false;
+   }
 
-    commandBuffer.recordSetColliderEnabled(handle, enabled);
-    return true;
+   commandBuffer.recordSetColliderEnabled(handle, enabled);
+   return true;
 }
 
 bool Engine::setColliderTrigger(
-    ColliderHandle handle,
-    bool isTrigger)
+   ColliderHandle handle,
+   bool isTrigger)
 {
-    const Collider* collider = resolveCollider(
-        commandBuffer,
-        physicsStorage,
-        handle
-    );
+   const Collider* collider = resolveCollider(
+      commandBuffer,
+      physicsStorage,
+      handle
+   );
 
-    if (!collider) {
-        return false;
-    }
+   if (!collider) {
+      return false;
+   }
 
-    commandBuffer.recordSetColliderTrigger(handle, isTrigger);
-    return true;
+   commandBuffer.recordSetColliderTrigger(handle, isTrigger);
+   return true;
 }
 
 }

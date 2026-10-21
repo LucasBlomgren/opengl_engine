@@ -17,78 +17,87 @@ class Tri;
 
 class BroadphaseManager {
 public:
-    void init(
-        PhysicsStorage* physicsStorage,
-        std::vector<Tri>* terrainTris
-    );
-    void clear();
+   void init(
+      PhysicsStorage* physicsStorage,
+      std::vector<Tri>* terrainTris
+   );
+   void clear();
 
-    // update BVHs if dirty
-    void updateBVHs();
+   void constructBvh(BVHTree& tree, std::vector<BodyHandle>& handles);
 
-    //   Build pairs for narrowphase
-    void buildPairs(PairBatch& batch);
+   // update BVHs if dirty
+   void updateBVHs();
 
-    void buildSpeculativePairs(
-        float dt,
-        PairBatch& batch,
-        std::vector<AABB>& debugSweeps
-    );
-    void determineSpeculativeBodies(
-        float dt,
-        std::vector<BodyHandle>& outBodies,
-        std::vector<AABB>& outAABBs
-    );
+   //   Build pairs for narrowphase
+   void buildPairs(PairBatch& batch);
 
-    // add/remove from current list
-    void add(const BodyHandle& handle, BroadphaseBucket dst);
-    void remove(const BodyHandle& handle);
+   void buildSpeculativePairs(
+      float dt,
+      PairBatch& batch,
+      std::vector<AABB>& debugSweeps
+   );
+   void determineSpeculativeBodies(
+      float dt,
+      std::vector<ColliderHandle>& outColliders,
+      std::vector<AABB>& outAABBs
+   );
 
-    // move between lists
-    void moveToAwake(const BodyHandle& handle);
-    void moveToAsleep(const BodyHandle& handle);
-    void moveToStatic(const BodyHandle& handle);
+   // add/remove from current list
+   void add(const BodyHandle& handle, BroadphaseBucket dst);
+   void remove(const BodyHandle& handle);
 
-    void setBVHDirty(const BodyHandle& handle);
+   // move between lists
+   void moveToAwake(const BodyHandle& handle);
+   void moveToAsleep(const BodyHandle& handle);
+   void moveToStatic(const BodyHandle& handle);
 
-    // get lists of indices
-    const std::vector<BodyHandle>& getAwakeList()  const { return awakeHandles; }
-    const std::vector<BodyHandle>& getAsleepList() const { return asleepHandles; }
-    const std::vector<BodyHandle>& getStaticList() const { return staticHandles; }
+   void setBVHDirty(const BodyHandle& handle);
 
-    // get bvhs
-    const BVHTree& getAwakeBVH()  const { return awakeBvh; }
-    const BVHTree& getAsleepBVH() const { return asleepBvh; }
-    const BVHTree& getStaticBVH() const { return staticBvh; }
-    const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
+   // get lists of indices
+   const std::vector<BodyHandle>& getAwakeList()  const { return awakeHandles; }
+   const std::vector<BodyHandle>& getAsleepList() const { return asleepHandles; }
+   const std::vector<BodyHandle>& getStaticList() const { return staticHandles; }
 
-    void updateBVHRenderData(const physics::debug::BvhType& type, bool update);
+   // get bvhs
+   const BVHTree& getAwakeBVH()  const { return awakeBvh; }
+   const BVHTree& getAsleepBVH() const { return asleepBvh; }
+   const BVHTree& getStaticBVH() const { return staticBvh; }
+   const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
+
+   void updateBVHRenderData(const physics::debug::BvhType& type, bool update);
 
 private:
-    // references to world and terrain
-    PhysicsStorage* physicsStorage = nullptr;
-    std::vector<Tri>* terrainTriangles = nullptr;
+   // references to world and terrain
+   PhysicsStorage* storage = nullptr;
+   std::vector<Tri>* terrainTriangles = nullptr;
 
-    // lists of handles
-    std::vector<BodyHandle> awakeHandles;
-    std::vector<BodyHandle> asleepHandles;
-    std::vector<BodyHandle> staticHandles;
+   // lists of handles
+   std::vector<BodyHandle> awakeHandles;
+   std::vector<BodyHandle> asleepHandles;
+   std::vector<BodyHandle> staticHandles;
 
-    // trees
-    BVHTree awakeBvh;
-    BVHTree asleepBvh;
-    BVHTree staticBvh;
-    BVHTree speculativeBvh;
-    TerrainBVH terrainBvh;
+   // trees
+   BVHTree awakeBvh;
+   BVHTree asleepBvh;
+   BVHTree staticBvh;
+   BVHTree speculativeBvh;
+   TerrainBVH terrainBvh;
 
-    // pairs buffers
-    std::vector<std::pair<BodyHandle, Tri*>> pairsBufTerrain;
-    std::vector<std::pair<BodyHandle, BodyHandle>> pairsBufDynamic;
+   // pairs buffers
+   std::vector<std::pair<BVHLeafRef, Tri*>> pairsBufTerrain;
+   std::vector<std::pair<BVHLeafRef, BVHLeafRef>> pairsBufDynamic;
 
-    // helpers
-    void swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list);
-    BVHTree& bvhFor(BroadphaseBucket b);
-    std::vector<BodyHandle>& listFor(BroadphaseBucket b);
+   // helpers
+   void swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list);
+   BVHTree& bvhFor(BroadphaseBucket b);
+   std::vector<BodyHandle>& listFor(BroadphaseBucket b);
+
+   AABB computeSweptAABB(
+      const RigidBody& body,
+      Collider& collider,
+      float dt
+   );
+
 };
 
 }

@@ -6,27 +6,27 @@
 
 class Light {
 public:
-    glm::vec3 position;
-    glm::vec3 scale;
-    glm::vec3 color;
-    float intensity;
+   glm::vec3 position;
+   glm::vec3 scale;
+   glm::vec3 color;
+   float intensity;
 
-    glm::vec3 ambient = glm::vec3(0.05f);
-    glm::vec3 diffuse = glm::vec3(0.8f);
-    glm::vec3 specular = glm::vec3(0.05f);
+   glm::vec3 ambient = glm::vec3(0.05f);
+   glm::vec3 diffuse = glm::vec3(0.8f);
+   glm::vec3 specular = glm::vec3(0.05f);
 
-    float constant = 1.0f;
-    float linear = 0.0145f;
-    float quadratic = 0.0175f;
+   float constant = 1.0f;
+   float linear = 0.0145f;
+   float quadratic = 0.0175f;
 
-    Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity);
+   Light(const glm::vec3& pos, const glm::vec3& scale, const glm::vec3& col, float intensity);
 
-    void render(Shader& shader) const;
-    void setPosition(const glm::vec3& pos);
-    const glm::vec3& getPosition() const;
+   void render(Shader& shader) const;
+   void setPosition(const glm::vec3& pos);
+   const glm::vec3& getPosition() const;
 
 private:
-    GLuint VAO, VBO, EBO;
+   GLuint VAO, VBO, EBO;
 
-    void setupMesh();
+   void setupMesh();
 };

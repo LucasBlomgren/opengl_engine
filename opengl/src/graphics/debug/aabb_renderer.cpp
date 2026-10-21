@@ -6,68 +6,68 @@ unsigned int AABBRenderer::sVBO = 0;
 bool         AABBRenderer::sInitialized = false;
 
 void AABBRenderer::init() {
-    if (sInitialized) return;
-    sInitialized = true;
+   if (sInitialized) return;
+   sInitialized = true;
 
-    float cubeWire[72] = {
-        // bottom
-        -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
-        // top 
-        -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f,
-        -0.5f, 0.5f,  0.5f,  0.5f, 0.5f,  0.5f,
-         0.5f, 0.5f,  0.5f,  0.5f, 0.5f, -0.5f,
-         0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
+   float cubeWire[72] = {
+      // bottom
+      -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,  0.5f,
+      -0.5f, -0.5f,  0.5f,  0.5f, -0.5f,  0.5f,
+       0.5f, -0.5f,  0.5f,  0.5f, -0.5f, -0.5f,
+       0.5f, -0.5f, -0.5f, -0.5f, -0.5f, -0.5f,
+       // top 
+       -0.5f, 0.5f, -0.5f, -0.5f, 0.5f,  0.5f,
+       -0.5f, 0.5f,  0.5f,  0.5f, 0.5f,  0.5f,
+        0.5f, 0.5f,  0.5f,  0.5f, 0.5f, -0.5f,
+        0.5f, 0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
         // vertical
         -0.5f, -0.5f, -0.5f, -0.5f, 0.5f, -0.5f,
          0.5f, -0.5f, -0.5f,  0.5f, 0.5f, -0.5f,
          0.5f, -0.5f,  0.5f,  0.5f, 0.5f,  0.5f,
         -0.5f, -0.5f,  0.5f, -0.5f, 0.5f,  0.5f
-    };
+   };
 
-    glGenVertexArrays(1, &sVAO); glcount::incVAO();
-    glGenBuffers(1, &sVBO); glcount::incVBO();
+   glGenVertexArrays(1, &sVAO); glcount::incVAO();
+   glGenBuffers(1, &sVBO); glcount::incVBO();
 
-    glBindVertexArray(sVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, sVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeWire), cubeWire, GL_STATIC_DRAW);
+   glBindVertexArray(sVAO);
+   glBindBuffer(GL_ARRAY_BUFFER, sVBO);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeWire), cubeWire, GL_STATIC_DRAW);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+   glEnableVertexAttribArray(0);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+   glBindBuffer(GL_ARRAY_BUFFER, 0);
+   glBindVertexArray(0);
 }
 
 void AABBRenderer::render(const glm::vec3& color, Shader& shader) const {
-    shader.setMat4("model", model);
-    shader.setInt("debug.objectType", 0);
-    shader.setVec3("debug.uColor", color);
+   shader.setMat4("model", model);
+   shader.setInt("debug.objectType", 0);
+   shader.setVec3("debug.uColor", color);
 
-    glDrawArrays(GL_LINES, 0, 24);
+   glDrawArrays(GL_LINES, 0, 24);
 }
 
 void AABBRenderer::updateModel(
-    const physics::AABB& box,
-    const bool asleep) {
-    if (asleep) return;
+   const physics::AABB& box,
+   const bool asleep) {
+   if (asleep) return;
 
-    model =
-        glm::translate(glm::mat4(1.0f), box.worldCenter) * 
-        glm::scale(glm::mat4(1.0f), box.worldHalfExtents * 2.0f);
+   model =
+      glm::translate(glm::mat4(1.0f), box.worldCenter) *
+      glm::scale(glm::mat4(1.0f), box.worldHalfExtents * 2.0f);
 }
 
 void AABBRenderer::destroy() {
-    if (sVBO) { 
-        glDeleteBuffers(1, &sVBO); 
-        sVBO = 0; 
-        glcount::decVBO();
-    }
-    if (sVAO) { 
-        glDeleteVertexArrays(1, &sVAO); 
-        sVAO = 0; 
-        glcount::decVAO();
-    }
+   if (sVBO) {
+      glDeleteBuffers(1, &sVBO);
+      sVBO = 0;
+      glcount::decVBO();
+   }
+   if (sVAO) {
+      glDeleteVertexArrays(1, &sVAO);
+      sVAO = 0;
+      glcount::decVAO();
+   }
 }

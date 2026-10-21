@@ -4,12 +4,12 @@
 std::unordered_map<std::string, Shader> ShaderManager::shaders;
 
 Shader* ShaderManager::getShader(const std::string& name) const {
-    auto it = shaders.find(name);
+   auto it = shaders.find(name);
 
-    if (it == shaders.end()) {
-        std::cerr << "[ShaderManager] No shader called \"" << name << "\"\n";
-        return nullptr; // eller assert, eller fallback-shader-id
-    }
+   if (it == shaders.end()) {
+      std::cerr << "[ShaderManager] No shader called \"" << name << "\"\n";
+      return nullptr; // eller assert, eller fallback-shader-id
+   }
 
-    return &it->second;
+   return &it->second;
 }

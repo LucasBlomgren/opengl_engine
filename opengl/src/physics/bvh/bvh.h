@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bvh_leaf_ref.h"
 #include "physics/storage/physics_storage.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/collider/aabb.h"
@@ -26,110 +27,119 @@ namespace physics::internal {
 
 class BVHTree {
 public:
-    BVHTree() = default;
+   BVHTree() = default;
 
-    using Element = BodyHandle;
+   using Element = BVHLeafRef;
 
-    void init(
-        PhysicsStorage* storage, 
-        size_t allocSize, 
-        bool writeBodyLeafIndices
-    );
-    void clear();
+   void init(
+      PhysicsStorage* storage,
+      size_t allocSize,
+      bool writeBodyLeafIndices
+   );
+   void clear();
 
-    bool dirty = false;
-    int rootIdx = -1;
-    bool shouldUpdateRenderData = false;
+   bool dirty = false;
+   int rootIdx = -1;
+   bool shouldUpdateRenderData = false;
 
-    // public för att rendera AABBs
-    struct Node {
-        bool alive = true;
-        bool isLeaf = false;
+   // public för att rendera AABBs
+   struct Node {
+      bool alive = true;
+      bool isLeaf = false;
 
-        int selfIdx = -1;
-        int parentIdx = -1;
-        int childAIdx = -1;
-        int childBIdx = -1;
+      int selfIdx = -1;
+      int parentIdx = -1;
+      int childAIdx = -1;
+      int childBIdx = -1;
 
-        int   start = -1;
-        int   count = -1;
-        bool  dirty = false;
+      int   start = -1;
+      int   count = -1;
+      bool  dirty = false;
 
-        Element element;
-        AABB  tightBox;     // only for leaf nodes
-        AABB  fatBox;       // for all nodes
-    };
-    std::vector<Node> nodes;
+      Element element;
 
-    // tree vs tree query
-    static constexpr int MaxStackSize = 512;
-    static constexpr int MaxCollisionBuf = 25000;
+      // #TODO: probably better with physicsStorage.getCollider().getAABB() instead
+      // and remove tightBox
+      AABB  tightBox;     // only for leaf nodes
 
-    void build(const std::vector<BodyHandle>& objects);
+      AABB  fatBox;       // for all nodes
+   };
+   std::vector<Node> nodes;
 
-    // for speculative pairs, using speculative AABBs
-    void build(
-        const std::vector<BodyHandle>& handles,
-        const std::vector<AABB>& boxes
-    );
+   // tree vs tree query
+   static constexpr int MaxStackSize = 512;
+   static constexpr int MaxCollisionBuf = 25000;
 
-    void createPrimitivesFromBodyAABBs(const std::vector<BodyHandle>& handles);
-    void createPrimitivesFromExternalAABBs(
-        const std::vector<BodyHandle>& handles, 
-        const std::vector<AABB>& boxes
-    );
-    void buildFromPrimitives();
+   void buildFromColliders(const std::vector<ColliderHandle>& objects);
 
-    void update(std::vector<BodyHandle>& objects);
-    void singleQuery(const AABB& qBox, std::vector<BodyHandle>& out) const;
-    bool queryAny(const AABB& qBox, BodyHandle ignoreBody) const;
+   // for speculative pairs, using speculative AABBs
+   void buildFromExternalAABBs(
+      const std::vector<ColliderHandle>& handles,
+      const std::vector<AABB>& boxes
+   );
 
-    int insertLeaf(BodyHandle handle);
-    int findBestSibling(AABB& box);
-    int createLeaf(BodyHandle handle, RigidBody& body);
+   void update();
+   void singleQuery(const AABB& qBox, std::vector<BVHLeafRef>& out) const;
+   bool queryAny(const AABB& qBox, BodyHandle ignoreBody) const;
 
-    void removeLeaf(int leafIdx);
-    void refitParents(int leafIdx);
+   int insertLeaf(BodyHandle bodyH, ColliderHandle colliderH);
 
-    template<class Func>
-    void forEachLeafElement(const Node& leaf, Func&& fn) const {
-        fn(leaf.element, leaf.tightBox);
-    }
+   void removeLeaf(int leafIdx);
+
+   template<class Func>
+   void forEachLeafElement(const Node& leaf, Func&& fn) const {
+      fn(leaf.element, leaf.tightBox);
+   }
 
 private:
-    PhysicsStorage* physicsStorage = nullptr;
+   PhysicsStorage* physicsStorage = nullptr;
 
-    bool writeBodyLeafIndices = true;
+   bool writeBodyLeafIndices = true;
 
-    int rebuildCooldown = 5;
-    int rebuildCooldownCounter = 0;
-    int numRefits = 0;
-    int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
+   int rebuildCooldown = 5;
+   int rebuildCooldownCounter = 0;
+   int numRefits = 0;
+   int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
 
-    // settings
-    const int   leafThreshold = 1;
+   // min refits before rebuild, to avoid rebuilding too early when n is small
+   const int   minRebuildThreshold = 5;
 
-    // min refits before rebuild, to avoid rebuilding too early when n is small
-    const int   minRebuildThreshold = 5;
+   const float rebuildRatio = 0.40f; // % of leaf corrections before rebuild
+   const glm::vec3 fatBoxMargin{ 0.2f };
 
-    const float rebuildRatio = 0.40f; // % of leaf corrections before rebuild
-    const glm::vec3 fatBoxMargin{ 0.2f };
+   struct BVHPrimitive {
+      glm::vec3 min{ 0.0f };
+      glm::vec3 max{ 0.0f };
+      glm::vec3 centroid{ 0.0f };
+      Element element;
+   };
+   std::vector<BVHPrimitive> prims;
 
-    struct BVHPrimitive {
-        glm::vec3 min{ 0.0f };
-        glm::vec3 max{ 0.0f };
-        glm::vec3 centroid{ 0.0f };
-        Element element;
-    };
-    std::vector<BVHPrimitive> prims;
+   void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
+   void createPrimitives(std::vector<ColliderHandle>& handles);
+   void finalizeLeaf(int leafIdx);
+   void splitNode(int parentIdx, int depth);
+   void updateLeaves();
+   void refitDirtySubtree(int nodeIdx);
+   void refitAncestors(int leafIdx);
+   void updateRenderData(Node& n);
 
-    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
-    void createPrimitives(std::vector<BodyHandle>& objectHandles);
-    void makeLeaf(int leafIdx);
-    void split(int parentIdx, int depth);
-    void updateLeaves();
-    void refitNode(int nodeIdx);
-    void updateRenderData(Node& n);
+   void collectPrimitivesFromColliders(const std::vector<ColliderHandle>& handles);
+   void createPrimitivesFromExternalAABBs(
+      const std::vector<ColliderHandle>& handles,
+      const std::vector<AABB>& boxes
+   );
+
+   void constructTree();
+   void rebuildFromLeaves();
+
+   int findBestSibling(AABB& box);
+
+   int createLeaf(
+      BodyHandle bodyH,
+      ColliderHandle colliderH,
+      Collider& collider
+   );
 };
 
 

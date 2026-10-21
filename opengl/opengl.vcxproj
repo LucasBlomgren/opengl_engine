@@ -323,9 +323,11 @@
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\game\game_handles.h" />
     <ClInclude Include="src\physics\bodies\motion_state.h" />
+    <ClInclude Include="src\physics\bvh\bvh_leaf_ref.h" />
+    <ClInclude Include="src\physics\collider\body_collider_utils.h" />
     <ClInclude Include="src\physics\collider\collider_ref.h" />
+    <ClInclude Include="src\physics\collider\compound_collider.h" />
     <ClInclude Include="src\physics\sleep\sleep_state.h" />
-    <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\narrowphase\SAT\sat_types.h" />
@@ -448,7 +450,7 @@
     <ClInclude Include="src\physics\raycast\raycast.h" />
     <ClInclude Include="src\physics\bodies\rigidbody.h" />
     <ClInclude Include="src\physics\sat.h" />
-    <ClInclude Include="src\physics\bvh\query_treetree.h" />
+    <ClInclude Include="src\physics\bvh\query_othertree.h" />
     <ClInclude Include="src\physics\solver\pgs_solver.h" />
     <ClInclude Include="src\physics\solver\solver_types.h" />
   </ItemGroup>

@@ -31,19 +31,19 @@
 
 
 namespace glcount {
-    inline std::atomic<int> vaos{ 0 }, vbos{ 0 }, ebos{ 0 }, ibos{ 0 };
+inline std::atomic<int> vaos{ 0 }, vbos{ 0 }, ebos{ 0 }, ibos{ 0 };
 
-    inline void incVAO(int n = 1) { vaos += n; }
-    inline void decVAO(int n = 1) { vaos -= n; }
-    inline void incVBO(int n = 1) { vbos += n; }
-    inline void decVBO(int n = 1) { vbos -= n; }
-    inline void incEBO(int n = 1) { ebos += n; }
-    inline void decEBO(int n = 1) { ebos -= n; }
-    inline void incIBO(int n = 1) { ibos += n; }
-    inline void decIBO(int n = 1) { ibos -= n; }
+inline void incVAO(int n = 1) { vaos += n; }
+inline void decVAO(int n = 1) { vaos -= n; }
+inline void incVBO(int n = 1) { vbos += n; }
+inline void decVBO(int n = 1) { vbos -= n; }
+inline void incEBO(int n = 1) { ebos += n; }
+inline void decEBO(int n = 1) { ebos -= n; }
+inline void incIBO(int n = 1) { ibos += n; }
+inline void decIBO(int n = 1) { ibos -= n; }
 
-    inline void print() {
-        printf("[GL] live VAO=%d VBO=%d EBO=%d IBO=%d\n",
-            (int)vaos.load(), (int)vbos.load(), (int)ebos.load(), (int)ibos.load());
-    }
+inline void print() {
+   printf("[GL] live VAO=%d VBO=%d EBO=%d IBO=%d\n",
+      (int)vaos.load(), (int)vbos.load(), (int)ebos.load(), (int)ibos.load());
+}
 }

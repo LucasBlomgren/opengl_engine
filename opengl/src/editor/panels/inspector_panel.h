@@ -13,10 +13,10 @@ struct GpuTimers;
 
 namespace Editor
 {
-    // Settings panel
-    class InspectorPanel : public IPanel {
-    public:
-        virtual const char* GetName() const override { return "Settings"; }
-        virtual void OnImGuiRender(const PanelContext& ctx) override;
-    };
+// Settings panel
+class InspectorPanel : public IPanel {
+public:
+   virtual const char* GetName() const override { return "Settings"; }
+   virtual void OnImGuiRender(const PanelContext& ctx) override;
+};
 }

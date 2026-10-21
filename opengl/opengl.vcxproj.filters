@@ -167,7 +167,7 @@
     <ClInclude Include="src\game\world.h" />
     <ClInclude Include="src\physics\storage\slot_map.h" />
     <ClInclude Include="src\physics\bvh\bvh_terrain.h" />
-    <ClInclude Include="src\physics\bvh\query_treetree.h" />
+    <ClInclude Include="src\physics\bvh\query_othertree.h" />
     <ClInclude Include="src\editor\panels\inspector_panel.h" />
     <ClInclude Include="src\editor\panels\performance_panel.h" />
     <ClInclude Include="src\editor\panels\settings_panel.h" />
@@ -209,13 +209,15 @@
     <ClInclude Include="src\ecs\ECSWorld.h" />
     <ClInclude Include="src\ecs\entity_pool.h" />
     <ClInclude Include="src\ecs\entity.h" />
-    <ClInclude Include="src\physics\engine\runtime\body_spatial_update.h" />
     <ClInclude Include="src\physics\engine\cmd\buffer.h" />
     <ClInclude Include="src\physics\engine\cmd\processor.h" />
     <ClInclude Include="src\physics\bodies\motion_state.h" />
     <ClInclude Include="src\physics\sleep\sleep_state.h" />
     <ClInclude Include="src\physics\sleep\sleep_manager.h" />
     <ClInclude Include="src\physics\collider\collider_ref.h" />
+    <ClInclude Include="src\physics\collider\compound_collider.h" />
+    <ClInclude Include="src\physics\bvh\bvh_leaf_ref.h" />
+    <ClInclude Include="src\physics\collider\body_collider_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

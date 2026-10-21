@@ -8,11 +8,11 @@ namespace physics {
 // Scene-wide command submission
 //====================================
 void Engine::sleepAllObjects() {
-    commandBuffer.recordSleepAllObjects();
+   commandBuffer.recordSleepAllObjects();
 }
 
 void Engine::awakenAllObjects() {
-    commandBuffer.recordAwakenAllObjects();
+   commandBuffer.recordAwakenAllObjects();
 }
 
 }

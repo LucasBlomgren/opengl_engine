@@ -5,56 +5,57 @@
 
 // Structure to hold GPU timing results
 struct GpuTimers {
-    double shadowMs = 0.0;
-    double mainMs = 0.0;
-    double debugMs = 0.0;
+   double shadowMs = 0.0;
+   double mainMs = 0.0;
+   double debugMs = 0.0;
 
-    double totalMs() const { return shadowMs + mainMs + debugMs; }
+   double totalMs() const { return shadowMs + mainMs + debugMs; }
 };
 
 // Structure to hold CPU timing statistics
 class TimerStats {
 public:
-    float lastMs = 0.0f;
-    float smoothedMs = 0.0f;
+   float lastMs = 0.0f;
+   float smoothedMs = 0.0f;
 
-    void update(float ms, float alpha = 0.2f) {
-        lastMs = ms;
-        if (smoothedMs == 0.0f) {
-            smoothedMs = ms;
-        } else {
-            smoothedMs = smoothedMs + alpha * (ms - smoothedMs);
-        }
-    }
+   void update(float ms, float alpha = 0.2f) {
+      lastMs = ms;
+      if (smoothedMs == 0.0f) {
+         smoothedMs = ms;
+      }
+      else {
+         smoothedMs = smoothedMs + alpha * (ms - smoothedMs);
+      }
+   }
 };
 
 // Class to manage frame-based timing measurements
 class FrameTimers {
 public:
-    void beginFrame();
-    void endFrame();
+   void beginFrame();
+   void endFrame();
 
-    void reset(const std::string& name);
-    void submit(const std::string& name, float ms);
+   void reset(const std::string& name);
+   void submit(const std::string& name, float ms);
 
-    float get(const std::string& name) const;
-    float getSmooth(const std::string& name) const;
+   float get(const std::string& name) const;
+   float getSmooth(const std::string& name) const;
 
 private:
-    using Clock = std::chrono::high_resolution_clock;
-    Clock::time_point frameStart;
+   using Clock = std::chrono::high_resolution_clock;
+   Clock::time_point frameStart;
 
-    std::unordered_map<std::string, TimerStats> timers;
+   std::unordered_map<std::string, TimerStats> timers;
 };
 
 // RAII class for scoped timing measurements 
 class ScopedTimer {
 public:
-    ScopedTimer(FrameTimers& ft, const char* name);
-    ~ScopedTimer();
+   ScopedTimer(FrameTimers& ft, const char* name);
+   ~ScopedTimer();
 
 private:
-    FrameTimers& timers;
-    const char* name;
-    std::chrono::high_resolution_clock::time_point start;
+   FrameTimers& timers;
+   const char* name;
+   std::chrono::high_resolution_clock::time_point start;
 };

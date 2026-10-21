@@ -12,220 +12,220 @@ using namespace internal;
 // Initialization
 //==============================
 void Engine::init(FrameTimers* frameTimers) {
-    this->frameTimers = frameTimers;
-    commandBuffer.reserve(1024, 4096, 4096);
+   this->frameTimers = frameTimers;
+   commandBuffer.reserve(1024, 4096, 4096);
 }
 
 //==============================
 // Step-loop preparation
 //==============================
-void Engine::prepareStepLoop() 
+void Engine::prepareStepLoop()
 {
-    frameTimers->reset("Physics");
-    frameTimers->reset("Pre step");
-    frameTimers->reset("Sync");
-    frameTimers->reset("BVH update");
-    frameTimers->reset("Broadphase");
-    frameTimers->reset("Narrowphase");
-    frameTimers->reset("Contact collection");
-    frameTimers->reset("Collision resolution");
-    frameTimers->reset("Post step");
+   frameTimers->reset("Physics");
+   frameTimers->reset("Pre step");
+   frameTimers->reset("Sync");
+   frameTimers->reset("BVH update");
+   frameTimers->reset("Broadphase");
+   frameTimers->reset("Narrowphase");
+   frameTimers->reset("Contact collection");
+   frameTimers->reset("Collision resolution");
+   frameTimers->reset("Post step");
 }
 
 //==============================
 // Solver configuration
 //==============================
 int Engine::getPgsIterations() const {
-    return pgsIterations;
+   return pgsIterations;
 }
 
 void Engine::setPgsIterations(
-    int iterations) {
-    pgsIterations = (std::max)(1, iterations);
+   int iterations) {
+   pgsIterations = (std::max)(1, iterations);
 }
 
 //==============================
 // Simulation
 //==============================
 void Engine::step(float dt, EngineState& engine) {
-    if (engine.isPaused() && !engine.getAdvanceStep()) {
-        return;
-    }
+   if (engine.isPaused() && !engine.getAdvanceStep()) {
+      return;
+   }
 
-    double physicsStart = glfwGetTime() * 1000.0;
-    const std::vector<BodyHandle>& awake = broadphaseManager.getAwakeList();
+   double physicsStart = glfwGetTime() * 1000.0;
+   const std::vector<BodyHandle>& awake = broadphaseManager.getAwakeList();
 
-    // Resume a step paused after collision resolution
-    if (debugPhase == physics::debug::StepPhase::PausedBeforePositionIntegration) {
-        integratePositionsAndColliders(awake, dt);
-        endPhysicsStep(dt);
-        debugPhase = physics::debug::StepPhase::Ready;
-        frameTimers->submit(
-            "Physics", 
-            frameTimers->get("Physics") + 
-            glfwGetTime() * 1000.0 - physicsStart + 
-            savedPhysicsSurpassedTime
-        );
-    }
+   // Resume a step paused after collision resolution
+   if (debugPhase == physics::debug::StepPhase::PausedBeforePositionIntegration) {
+      integratePositionsAndColliders(awake, dt);
+      endPhysicsStep(dt);
+      debugPhase = physics::debug::StepPhase::Ready;
+      frameTimers->submit(
+         "Physics",
+         frameTimers->get("Physics") +
+         glfwGetTime() * 1000.0 - physicsStart +
+         savedPhysicsSurpassedTime
+      );
+   }
 
-    // Step initialization
-    beginPhysicsStep(dt);
+   // Step initialization
+   beginPhysicsStep(dt);
 
-    // Force and velocity integration
-    double start = glfwGetTime() * 1000.0;
-    integrateForcesAndVelocities(awake, dt);
-    frameTimers->submit(
-        "Sync", 
-        frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
-    );
+   // Force and velocity integration
+   double start = glfwGetTime() * 1000.0;
+   integrateForcesAndVelocities(awake, dt);
+   frameTimers->submit(
+      "Sync",
+      frameTimers->get("Sync") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Broadphase
-    start = glfwGetTime() * 1000.0;
-    pairBatch.clear();
-    broadphaseManager.buildPairs(pairBatch);
-    broadphaseManager.buildSpeculativePairs(dt, pairBatch, debugSweeps);
-    frameTimers->submit(
-        "Broadphase", 
-        frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
-    );
+   // Broadphase
+   start = glfwGetTime() * 1000.0;
+   pairBatch.clear();
+   broadphaseManager.buildPairs(pairBatch);
+   broadphaseManager.buildSpeculativePairs(dt, pairBatch, debugSweeps);
+   frameTimers->submit(
+      "Broadphase",
+      frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Narrowphase
-    start = glfwGetTime() * 1000.0;
-    contactBatch.clear();
+   // Narrowphase
+   start = glfwGetTime() * 1000.0;
+   contactBatch.clear();
 
-    contactBatch.contacts.reserve(
-        pairBatch.dynamicPairs.size() + 
-        pairBatch.terrainPairs.size()
-    );
-    contactBatch.speculativeContacts.reserve(
-        pairBatch.dynamicPairs.size() + 
-        pairBatch.terrainPairs.size()
-    );
-    narrowphaseManager.narrowPhase(pairBatch, contactBatch, dt);
+   contactBatch.contacts.reserve(
+      pairBatch.dynamicPairs.size() +
+      pairBatch.terrainPairs.size()
+   );
+   contactBatch.speculativeContacts.reserve(
+      pairBatch.dynamicPairs.size() +
+      pairBatch.terrainPairs.size()
+   );
+   narrowphaseManager.narrowPhase(pairBatch, contactBatch, dt);
 
-    contactsThisFrame +=
-        static_cast<uint32_t>(contactBatch.contacts.size());
+   contactsThisFrame +=
+      static_cast<uint32_t>(contactBatch.contacts.size());
 
-    speculativeContactsThisFrame += 
-        static_cast<uint32_t>(contactBatch.speculativeContacts.size());
+   speculativeContactsThisFrame +=
+      static_cast<uint32_t>(contactBatch.speculativeContacts.size());
 
-    frameTimers->submit(
-        "Narrowphase", 
-        frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
-    );
+   frameTimers->submit(
+      "Narrowphase",
+      frameTimers->get("Narrowphase") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Contact sort & sleep processing 
-    start = glfwGetTime() * 1000.0;
-    contactBatch.sortByMinY();
-    sleepManager.processContactWakeUps(contactBatch);
-    frameTimers->submit(
-        "Contact collection",
-        frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
-    );
+   // Contact sort & sleep processing 
+   start = glfwGetTime() * 1000.0;
+   contactBatch.sortByMinY();
+   sleepManager.processContactWakeUps(contactBatch);
+   frameTimers->submit(
+      "Contact collection",
+      frameTimers->get("Contact collection") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Solver
-    start = glfwGetTime() * 1000.0;
-    pgsSolver.solve(contactBatch, pgsIterations, dt);
-    frameTimers->submit(
-        "Collision resolution", 
-        frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
-    );
+   // Solver
+   start = glfwGetTime() * 1000.0;
+   pgsSolver.solve(contactBatch, pgsIterations, dt);
+   frameTimers->submit(
+      "Collision resolution",
+      frameTimers->get("Collision resolution") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Debug pause before position integration
-    if (engine.isPaused()) {
-        start = glfwGetTime() * 1000.0;
+   // Debug pause before position integration
+   if (engine.isPaused()) {
+      start = glfwGetTime() * 1000.0;
 
-        broadphaseManager.updateBVHs();
+      broadphaseManager.updateBVHs();
 
-        frameTimers->submit(
-            "BVH update",
-            frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-        );
+      frameTimers->submit(
+         "BVH update",
+         frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+      );
 
-        debugPhase = physics::debug::StepPhase::PausedBeforePositionIntegration;
-        savedPhysicsSurpassedTime = glfwGetTime() * 1000.0 - physicsStart;
+      debugPhase = physics::debug::StepPhase::PausedBeforePositionIntegration;
+      savedPhysicsSurpassedTime = glfwGetTime() * 1000.0 - physicsStart;
 
-        return;
-    }
+      return;
+   }
 
-    // Position integration
-    integratePositionsAndColliders(awake, dt);
+   // Position integration
+   integratePositionsAndColliders(awake, dt);
 
-    // BVH update
-    start = glfwGetTime() * 1000.0;
-    broadphaseManager.updateBVHs();
-    frameTimers->submit(
-        "BVH update",
-        frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
-    );
+   // BVH update
+   start = glfwGetTime() * 1000.0;
+   broadphaseManager.updateBVHs();
+   frameTimers->submit(
+      "BVH update",
+      frameTimers->get("BVH update") + glfwGetTime() * 1000.0 - start
+   );
 
-    // Step finalization
-    endPhysicsStep(dt);
+   // Step finalization
+   endPhysicsStep(dt);
 
-    frameTimers->submit(
-        "Physics", 
-        frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
-    );
+   frameTimers->submit(
+      "Physics",
+      frameTimers->get("Physics") + glfwGetTime() * 1000.0 - physicsStart
+   );
 }
 
 //==============================
 // Step initialization
 //==============================
 void Engine::processPendingCommands() {
-    internal::cmd::Buffer::Batch batch = commandBuffer.take();
+   internal::cmd::Buffer::Batch batch = commandBuffer.take();
 
-    if (batch.empty()) {
-        return;
-    }
+   if (batch.empty()) {
+      return;
+   }
 
-    commandProcessor.process(batch, dt);
+   commandProcessor.process(batch, dt);
 }
 
 void Engine::beginPhysicsStep(float outerDt) {
-    double start = glfwGetTime() * 1000.0;
+   double start = glfwGetTime() * 1000.0;
 
-    dt = outerDt;
-    processPendingCommands();
+   dt = outerDt;
+   processPendingCommands();
 
-    uint32_t bodySlotCapacity =
-        physicsStorage.bodyStorage().slot_capacity();
+   uint32_t bodySlotCapacity =
+      physicsStorage.bodyStorage().slot_capacity();
 
-    debugSweeps.clear();
-    debugSpeculativeContacts.clear();
+   debugSweeps.clear();
+   debugSpeculativeContacts.clear();
 
-    contactsThisFrame = 0;
-    speculativeContactsThisFrame = 0;
+   contactsThisFrame = 0;
+   speculativeContactsThisFrame = 0;
 
-    for (auto& [key, contact] : contactCache) {
-        contact.wasUsedThisFrame = false;
+   for (auto& [key, contact] : contactCache) {
+      contact.wasUsedThisFrame = false;
 
-        for (size_t i = 0; i < contact.numPoints; ++i) {
-            ContactPoint& contactPoint = contact.points[i];
-            contactPoint.wasUsedThisFrame = false;
-            contactPoint.wasWarmStarted = false;
-        }
-    }
+      for (size_t i = 0; i < contact.numPoints; ++i) {
+         ContactPoint& contactPoint = contact.points[i];
+         contactPoint.wasUsedThisFrame = false;
+         contactPoint.wasWarmStarted = false;
+      }
+   }
 
-    frameTimers->submit(
-        "Pre step",
-        frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start
-    );
+   frameTimers->submit(
+      "Pre step",
+      frameTimers->get("Pre step") + glfwGetTime() * 1000.0 - start
+   );
 }
 
 //==============================
 // Step finalization
 //==============================
 void Engine::endPhysicsStep(float outerDt) {
-    double start = glfwGetTime() * 1000.0;
+   double start = glfwGetTime() * 1000.0;
 
-    sleepManager.applySleepDamping(broadphaseManager.getAwakeList(), dt);
-    sleepManager.processSleepCandidates(broadphaseManager.getAwakeList(), dt);
-    updateContactCache();
+   sleepManager.applySleepDamping(broadphaseManager.getAwakeList(), dt);
+   sleepManager.processSleepCandidates(broadphaseManager.getAwakeList(), dt);
+   updateContactCache();
 
-    frameTimers->submit(
-        "Post step",
-        frameTimers->get("Post step") + glfwGetTime() * 1000.0 - start
-    );
+   frameTimers->submit(
+      "Post step",
+      frameTimers->get("Post step") + glfwGetTime() * 1000.0 - start
+   );
 }
 
 }

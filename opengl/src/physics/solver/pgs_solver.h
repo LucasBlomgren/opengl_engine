@@ -9,102 +9,102 @@ namespace physics::internal {
 
 class PGSSolver {
 public:
-    void init(PhysicsStorage& storage);
-    void clear();
+   void init(PhysicsStorage& storage);
+   void clear();
 
-    void solve(
-        ContactBatch& batch,
-        const int PGSiterations,
-        const float dt
-    );
+   void solve(
+      ContactBatch& batch,
+      const int PGSiterations,
+      const float dt
+   );
 
 private:
-    PhysicsStorage* physicsStorage = nullptr;
+   PhysicsStorage* physicsStorage = nullptr;
 
-    // Solver data structures
-    std::vector<SolverBody> solverBodies;
-    std::vector<ContactConstraint> contactConstraints;
-    std::vector<ContactConstraintPoint> contactPoints;
-    std::vector<SpeculativeConstraint> speculativeConstraints;
+   // Solver data structures
+   std::vector<SolverBody> solverBodies;
+   std::vector<ContactConstraint> contactConstraints;
+   std::vector<ContactConstraintPoint> contactPoints;
+   std::vector<SpeculativeConstraint> speculativeConstraints;
 
-    // Build and write-back
-    std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
-    std::vector<RigidBody*> solverBodySources;
-    std::vector<uint8_t> solverBodyWriteBack; // yes/no
-    std::vector<Contact*> constraintSources;
-    std::vector<ContactPoint*> pointSources;
+   // Build and write-back
+   std::vector<uint32_t> solverBodyIndexBySlot; // maps RigidBody slot index to solverBodies index
+   std::vector<RigidBody*> solverBodySources;
+   std::vector<uint8_t> solverBodyWriteBack; // yes/no
+   std::vector<Contact*> constraintSources;
+   std::vector<ContactPoint*> pointSources;
 
-    // solver_builder.cpp
-    // Builds the solver data structures from the contact batch and runtime caches.
-    void buildSolverData(
-        ContactBatch& batch, 
-        float dt
-    );
+   // solver_builder.cpp
+   // Builds the solver data structures from the contact batch and runtime caches.
+   void buildSolverData(
+      ContactBatch& batch,
+      float dt
+   );
 
-    bool computeContributesMotion(
-        ContactPartnerType partnerType,
-        const RigidBody& body) const;
-    bool computeNoSolverResponse(
-        const RigidBody& body) const;
+   bool computeContributesMotion(
+      ContactPartnerType partnerType,
+      const RigidBody& body) const;
+   bool computeNoSolverResponse(
+      const RigidBody& body) const;
 
-    uint32_t getOrCreateSolverBody(BodyHandle bodyHandle, RigidBody* body);
-    void makeSolverBody(RigidBody* body);
-    static void packInvInertia(const glm::mat3& m, float out[6]);
+   uint32_t getOrCreateSolverBody(BodyHandle bodyHandle, RigidBody* body);
+   void makeSolverBody(RigidBody* body);
+   static void packInvInertia(const glm::mat3& m, float out[6]);
 
-    void precomputePointData(
-        RigidBody* bodyA,
-        RigidBody* bodyB,
-        ContactConstraintPoint& cp,
-        bool warmStarted,
-        glm::vec3& worldPos,
-        ContactConstraint& contact,
-        int framesSinceUsed);
+   void precomputePointData(
+      RigidBody* bodyA,
+      RigidBody* bodyB,
+      ContactConstraintPoint& cp,
+      bool warmStarted,
+      glm::vec3& worldPos,
+      ContactConstraint& contact,
+      int framesSinceUsed);
 
-    bool prepareContactPointBaumgarte(
-        const ContactConstraint& contact,
-        ContactPoint& src,
-        ContactConstraintPoint& dst,
-        float dt
-    );
+   bool prepareContactPointBaumgarte(
+      const ContactConstraint& contact,
+      ContactPoint& src,
+      ContactConstraintPoint& dst,
+      float dt
+   );
 
-    void warmStartContactPoint(
-        const ContactConstraint& contact,
-        const ContactConstraintPoint& cp
-    );
+   void warmStartContactPoint(
+      const ContactConstraint& contact,
+      const ContactConstraintPoint& cp
+   );
 
-    void applyImpulseToSolverBody(
-        SolverBody* body,
-        const glm::vec3& linearImpulse,
-        const glm::vec3& angularImpulse
-    );
+   void applyImpulseToSolverBody(
+      SolverBody* body,
+      const glm::vec3& linearImpulse,
+      const glm::vec3& angularImpulse
+   );
 
-    void applyBiasImpulseToSolverBody(
-        SolverBody* body,
-        const glm::vec3& linearImpulse,
-        const glm::vec3& angularImpulse
-    );
+   void applyBiasImpulseToSolverBody(
+      SolverBody* body,
+      const glm::vec3& linearImpulse,
+      const glm::vec3& angularImpulse
+   );
 
-    glm::vec3 multiplyInvInertia(
-        const SolverBody* body,
-        const glm::vec3& v
-    );
+   glm::vec3 multiplyInvInertia(
+      const SolverBody* body,
+      const glm::vec3& v
+   );
 
-    SolverBody* getSolverBodyOrNull(uint32_t idx);
-    static bool hasFlag(uint8_t flags, uint8_t flag);
+   SolverBody* getSolverBodyOrNull(uint32_t idx);
+   static bool hasFlag(uint8_t flags, uint8_t flag);
 
-    // solve constraints using Projected Gauss-Seidel (PGS) method
-    void resolveContacts(
-        const int PGSiterations,
-        const float dt
-    );
+   // solve constraints using Projected Gauss-Seidel (PGS) method
+   void resolveContacts(
+      const int PGSiterations,
+      const float dt
+   );
 
-    std::pair<float, float> solveNormalContactsOneIteration(int i);
-    float solveSpeculativeContactsOneIteration(float dt);
+   std::pair<float, float> solveNormalContactsOneIteration(int i);
+   float solveSpeculativeContactsOneIteration(float dt);
 
-    // post-solve: update RigidBody velocities and bias velocities based on solver results
-    void postSolve(
-        const float dt
-    );
+   // post-solve: update RigidBody velocities and bias velocities based on solver results
+   void postSolve(
+      const float dt
+   );
 };
 
 }

@@ -15,81 +15,81 @@ class MeshManager;
 class Renderer;
 
 struct SubPartDesc {
-    std::string name = "SubPart";
-    TransformHandle localTransformHandle;
-    physics::ColliderType colliderType = physics::ColliderType::BOX;
+   std::string name = "SubPart";
+   TransformHandle localTransformHandle;
+   physics::ColliderType colliderType = physics::ColliderType::BOX;
 
-    // render
-    std::string shaderName = "default";
-    std::string textureName = "plain";
-    std::string meshName = "cube";
-    glm::vec3 color = glm::vec3(1.0f); // white by default
-    bool seeThrough = false;
+   // render
+   std::string shaderName = "default";
+   std::string textureName = "plain";
+   std::string meshName = "cube";
+   glm::vec3 color = glm::vec3(1.0f); // white by default
+   bool seeThrough = false;
 };
 
 struct GameObjectDesc {
-    std::string name = "GameObject";
-    std::vector<SubPartDesc> parts;
-    TransformHandle rootTransformHandle;
+   std::string name = "GameObject";
+   std::vector<SubPartDesc> parts;
+   TransformHandle rootTransformHandle;
 
-    // rigid body
-    physics::BodyType bodyType = physics::BodyType::Dynamic;
-    bool reportContacts = false;
-    float mass = 1.0f;
-    bool asleep = false;
-    bool allowSleep = true;
-    bool allowGravity = true;
+   // rigid body
+   physics::BodyType bodyType = physics::BodyType::Dynamic;
+   bool reportContacts = false;
+   float mass = 1.0f;
+   bool asleep = false;
+   bool allowSleep = true;
+   bool allowGravity = true;
 };
 
 class World {
 public:
-    World(
-        physics::Engine& pe, 
-        Renderer& re, 
-        TextureManager& tm, 
-        MeshManager& mm, 
-        ShaderManager& sm)
-        : physicsEngine(pe)
-        , renderer(re)
-        , textureManager(tm)
-        , meshManager(mm)
-        , shaderManager(sm)
-    {}
+   World(
+      physics::Engine& pe,
+      Renderer& re,
+      TextureManager& tm,
+      MeshManager& mm,
+      ShaderManager& sm)
+      : physicsEngine(pe)
+      , renderer(re)
+      , textureManager(tm)
+      , meshManager(mm)
+      , shaderManager(sm)
+   {}
 
-    void clear();
+   void clear();
 
-    SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() { 
-        return gameObjects; 
-    }
-    SlotMap<Transform, TransformHandle>& getTransformsMap() { 
-        return transforms; 
-    }
-    GameObject* getGameObject(const GameObjectHandle& handle);
-    Transform* getTransform(const TransformHandle& handle); 
-    GameObjectHandle getGameObjectHandle(physics::BodyHandle body) const;
+   SlotMap<GameObject, GameObjectHandle>& getGameObjectsMap() {
+      return gameObjects;
+   }
+   SlotMap<Transform, TransformHandle>& getTransformsMap() {
+      return transforms;
+   }
+   GameObject* getGameObject(const GameObjectHandle& handle);
+   Transform* getTransform(const TransformHandle& handle);
+   GameObjectHandle getGameObjectHandle(physics::BodyHandle body) const;
 
-    GameObjectHandle createGameObject(GameObjectDesc& obj);
-    TransformHandle createTransform(
-        const glm::vec3& position = glm::vec3{ 0.0f },
-        const glm::quat& orientation = glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f },
-        const glm::vec3& scale = glm::vec3{ 1.0f }
-    );
+   GameObjectHandle createGameObject(GameObjectDesc& obj);
+   TransformHandle createTransform(
+      const glm::vec3& position = glm::vec3{ 0.0f },
+      const glm::quat& orientation = glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f },
+      const glm::vec3& scale = glm::vec3{ 1.0f }
+   );
 
-    void deleteGameObject(GameObjectHandle handle);
-    void deleteSubPart(GameObjectHandle handle, int partIndex);
-    void syncTransformsToPhysics();
-    void syncPhysicsToTransforms();
-    void syncGameObjectTransformToPhysics(GameObjectHandle handle);
+   void deleteGameObject(GameObjectHandle handle);
+   void deleteSubPart(GameObjectHandle handle, int partIndex);
+   void syncTransformsToPhysics();
+   void syncPhysicsToTransforms();
+   void syncGameObjectTransformToPhysics(GameObjectHandle handle);
 
 private:
-    int objectId = 0;
-    SlotMap<GameObject, GameObjectHandle> gameObjects{"GameObject"};
-    SlotMap<Transform, TransformHandle> transforms{"Transform"};
-    std::unordered_map<physics::BodyHandle, GameObjectHandle> bodyToGameObject;
+   int objectId = 0;
+   SlotMap<GameObject, GameObjectHandle> gameObjects{ "GameObject" };
+   SlotMap<Transform, TransformHandle> transforms{ "Transform" };
+   std::unordered_map<physics::BodyHandle, GameObjectHandle> bodyToGameObject;
 
-    physics::Engine& physicsEngine;
-    Renderer& renderer;
-    TextureManager& textureManager;
-    MeshManager& meshManager;
-    ShaderManager& shaderManager;
+   physics::Engine& physicsEngine;
+   Renderer& renderer;
+   TextureManager& textureManager;
+   MeshManager& meshManager;
+   ShaderManager& shaderManager;
 };

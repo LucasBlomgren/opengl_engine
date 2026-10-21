@@ -4,42 +4,42 @@
 
 template<typename T, typename Handle>
 struct PointerCache {
-    std::vector<T*> cache;
-    SlotMap<T, Handle>* sm = nullptr;
-    const char* name = "Unknown";
+   std::vector<T*> cache;
+   SlotMap<T, Handle>* sm = nullptr;
+   const char* name = "Unknown";
 
-    void init(SlotMap<T, Handle>& slotMap, const char* name) {
-        sm = &slotMap; 
-        this->name = name;
-        cache.assign(sm->slot_capacity(), nullptr);
-    }
-    void clear() { 
-        if (!sm) {
-            cache.clear();
-            return;
-        }
-        cache.assign(sm->slot_capacity(), nullptr); 
-    }
+   void init(SlotMap<T, Handle>& slotMap, const char* name) {
+      sm = &slotMap;
+      this->name = name;
+      cache.assign(sm->slot_capacity(), nullptr);
+   }
+   void clear() {
+      if (!sm) {
+         cache.clear();
+         return;
+      }
+      cache.assign(sm->slot_capacity(), nullptr);
+   }
 
-    T* get(Handle h, const char* func) {
-        if (h.slot >= cache.size()) {
-            cache.resize(sm->slot_capacity(), nullptr);
-            if (h.slot >= cache.size()) {
-                std::cout << "[" << func << "] Error: Invalid " << name << " handle.\n";
-                return nullptr;
-            }
-        }
+   T* get(Handle h, const char* func) {
+      if (h.slot >= cache.size()) {
+         cache.resize(sm->slot_capacity(), nullptr);
+         if (h.slot >= cache.size()) {
+            std::cout << "[" << func << "] Error: Invalid " << name << " handle.\n";
+            return nullptr;
+         }
+      }
 
-        T*& slot = cache[h.slot];
-        if (slot) {
-            return slot;
-        }
+      T*& slot = cache[h.slot];
+      if (slot) {
+         return slot;
+      }
 
-        slot = sm->try_get(h, func);
-        if (!slot) {
-            std::cout << "[" << func << "] Error: Dead or missing " << name << " for valid-looking handle.\n";
-        }
+      slot = sm->try_get(h, func);
+      if (!slot) {
+         std::cout << "[" << func << "] Error: Dead or missing " << name << " for valid-looking handle.\n";
+      }
 
-        return slot;
-    }
+      return slot;
+   }
 };

@@ -6,49 +6,49 @@ namespace physics::internal {
 
 class Tri {
 public:
-    int id = -1;
-    std::vector<glm::vec3> vertices{};
-    std::vector<glm::vec3> edgeDirs{};
-    std::vector<glm::vec3> edgePoints{};
-    std::vector<glm::vec3> axes{}; // For SAT
-    glm::vec3 normal{ 0.0f };
-    glm::vec3 centroid{ 0.0f };
+   int id = -1;
+   std::vector<glm::vec3> vertices{};
+   std::vector<glm::vec3> edgeDirs{};
+   std::vector<glm::vec3> edgePoints{};
+   std::vector<glm::vec3> axes{}; // For SAT
+   glm::vec3 normal{ 0.0f };
+   glm::vec3 centroid{ 0.0f };
 
-    Tri(const int id_, 
-        const glm::vec3& v0, 
-        const glm::vec3& v1, 
-        const glm::vec3& v2)
-        : id(id_)
-    {
-        vertices = { v0, v1, v2 };
-        centroid = (v0 + v1 + v2) / 3.0f;
+   Tri(const int id_,
+      const glm::vec3& v0,
+      const glm::vec3& v1,
+      const glm::vec3& v2)
+      : id(id_)
+   {
+      vertices = { v0, v1, v2 };
+      centroid = (v0 + v1 + v2) / 3.0f;
 
-        glm::vec3 edgeA = v1 - v0;
-        glm::vec3 edgeB = v2 - v1;
-        glm::vec3 edgeC = v0 - v2; 
-        edgeDirs = { edgeA, edgeB, edgeC };
+      glm::vec3 edgeA = v1 - v0;
+      glm::vec3 edgeB = v2 - v1;
+      glm::vec3 edgeC = v0 - v2;
+      edgeDirs = { edgeA, edgeB, edgeC };
 
-        edgePoints = { 
-            v0, v1, 
-            v1, v2, 
-            v2, v0 
-        }; 
+      edgePoints = {
+          v0, v1,
+          v1, v2,
+          v2, v0
+      };
 
-        normal = glm::normalize(glm::cross(edgeA, edgeB)); 
-        axes = { normal, edgeA, edgeB, edgeC };
-    }
+      normal = glm::normalize(glm::cross(edgeA, edgeB));
+      axes = { normal, edgeA, edgeB, edgeC };
+   }
 
-    Tri(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
-        vertices = { v0, v1, v2 };
-    }
+   Tri(const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2) {
+      vertices = { v0, v1, v2 };
+   }
 
-    AABB getAABB() {
-        AABB b;
-        b.worldMin = glm::min(glm::min(vertices[0], vertices[1]), vertices[2]);
-        b.worldMax = glm::max(glm::max(vertices[0], vertices[1]), vertices[2]);
-        b.worldCenter = (b.worldMin + b.worldMax) * 0.5f;
-        return b;
-    }
+   AABB getAABB() {
+      AABB b;
+      b.worldMin = glm::min(glm::min(vertices[0], vertices[1]), vertices[2]);
+      b.worldMax = glm::max(glm::max(vertices[0], vertices[1]), vertices[2]);
+      b.worldCenter = (b.worldMin + b.worldMax) * 0.5f;
+      return b;
+   }
 };
 
 }

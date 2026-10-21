@@ -10,140 +10,140 @@ unsigned int OOBBRenderer::sVBO_normals = 0;
 bool         OOBBRenderer::sInitialized_normals = false;
 
 void OOBBRenderer::init() {
-    setupWireframeBox();
-    setupNormals();
+   setupWireframeBox();
+   setupNormals();
 }
 
 void OOBBRenderer::renderBox(
-    Shader& shader,
-    const physics::Pose& pose,
-    const physics::BoxGeometry& box,
-    const glm::vec3& color) {
-    glm::mat4 model(1.0f);
-    makeOOBBModelMatrix(model, box, pose);
+   Shader& shader,
+   const physics::Pose& pose,
+   const physics::BoxGeometry& box,
+   const glm::vec3& color) {
+   glm::mat4 model(1.0f);
+   makeOOBBModelMatrix(model, box, pose);
 
-    shader.setMat4("model", model);
-    shader.setInt("debug.objectType", 0);
-    shader.setVec3("debug.uColor", color);
+   shader.setMat4("model", model);
+   shader.setInt("debug.objectType", 0);
+   shader.setVec3("debug.uColor", color);
 
-    glBindVertexArray(sVAO_box);
-    glDrawArrays(GL_LINES, 0, 24);
+   glBindVertexArray(sVAO_box);
+   glDrawArrays(GL_LINES, 0, 24);
 }
 
 void OOBBRenderer::renderNormals(Shader& shader, const glm::mat4& model) {
-    shader.setMat4("model", model);
-    glDrawArrays(GL_LINES, 0, 18);
+   shader.setMat4("model", model);
+   glDrawArrays(GL_LINES, 0, 18);
 }
 
 void OOBBRenderer::makeOOBBModelMatrix(
-    glm::mat4& model,
-    const physics::BoxGeometry& box,
-    const physics::Pose& worldPose)
+   glm::mat4& model,
+   const physics::BoxGeometry& box,
+   const physics::Pose& worldPose)
 {
-    const glm::vec3 size =
-        2.0f * box.localHalfExtents * box.scale;
+   const glm::vec3 size =
+      2.0f * box.localHalfExtents * box.scale;
 
-    const glm::mat3 rotation =
-        glm::mat3_cast(worldPose.orientation);
+   const glm::mat3 rotation =
+      glm::mat3_cast(worldPose.orientation);
 
-    model = glm::mat4(1.0f);
+   model = glm::mat4(1.0f);
 
-    model[0] = glm::vec4(rotation[0] * size.x, 0.0f);
-    model[1] = glm::vec4(rotation[1] * size.y, 0.0f);
-    model[2] = glm::vec4(rotation[2] * size.z, 0.0f);
-    model[3] = glm::vec4(box.worldCenter, 1.0f);
+   model[0] = glm::vec4(rotation[0] * size.x, 0.0f);
+   model[1] = glm::vec4(rotation[1] * size.y, 0.0f);
+   model[2] = glm::vec4(rotation[2] * size.z, 0.0f);
+   model[3] = glm::vec4(box.worldCenter, 1.0f);
 }
 
 void OOBBRenderer::setupWireframeBox() {
-    if (sInitialized_box) return;
-    sInitialized_box = true;
+   if (sInitialized_box) return;
+   sInitialized_box = true;
 
-    // lines
-    float cubeWire[72] = {
-        // bottom
-       -0.5f, -0.5f, -0.5f,  -0.5f, -0.5f,  0.5f,
-       -0.5f, -0.5f,  0.5f,   0.5f, -0.5f,  0.5f,
-        0.5f, -0.5f,  0.5f,   0.5f, -0.5f, -0.5f,
-        0.5f, -0.5f, -0.5f,  -0.5f, -0.5f, -0.5f,
-        // top
-       -0.5f, 0.5f, -0.5f,   -0.5f, 0.5f,  0.5f,
-       -0.5f, 0.5f,  0.5f,    0.5f, 0.5f,  0.5f,
-        0.5f, 0.5f,  0.5f,    0.5f, 0.5f, -0.5f,
-        0.5f, 0.5f, -0.5f,   -0.5f, 0.5f, -0.5f,
-        // vertical
-       -0.5f, -0.5f, -0.5f,  -0.5f, 0.5f, -0.5f,
-        0.5f, -0.5f, -0.5f,   0.5f, 0.5f, -0.5f,
-        0.5f, -0.5f,  0.5f,   0.5f, 0.5f,  0.5f,
-       -0.5f, -0.5f,  0.5f,  -0.5f, 0.5f,  0.5f
-    };
+   // lines
+   float cubeWire[72] = {
+      // bottom
+     -0.5f, -0.5f, -0.5f,  -0.5f, -0.5f,  0.5f,
+     -0.5f, -0.5f,  0.5f,   0.5f, -0.5f,  0.5f,
+      0.5f, -0.5f,  0.5f,   0.5f, -0.5f, -0.5f,
+      0.5f, -0.5f, -0.5f,  -0.5f, -0.5f, -0.5f,
+      // top
+     -0.5f, 0.5f, -0.5f,   -0.5f, 0.5f,  0.5f,
+     -0.5f, 0.5f,  0.5f,    0.5f, 0.5f,  0.5f,
+      0.5f, 0.5f,  0.5f,    0.5f, 0.5f, -0.5f,
+      0.5f, 0.5f, -0.5f,   -0.5f, 0.5f, -0.5f,
+      // vertical
+     -0.5f, -0.5f, -0.5f,  -0.5f, 0.5f, -0.5f,
+      0.5f, -0.5f, -0.5f,   0.5f, 0.5f, -0.5f,
+      0.5f, -0.5f,  0.5f,   0.5f, 0.5f,  0.5f,
+     -0.5f, -0.5f,  0.5f,  -0.5f, 0.5f,  0.5f
+   };
 
-    glGenVertexArrays(1, &sVAO_box); glcount::incVAO();
-    glGenBuffers(1, &sVBO_box); glcount::incVBO();
+   glGenVertexArrays(1, &sVAO_box); glcount::incVAO();
+   glGenBuffers(1, &sVBO_box); glcount::incVBO();
 
-    glBindVertexArray(sVAO_box);
-    glBindBuffer(GL_ARRAY_BUFFER, sVBO_box);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeWire), cubeWire, GL_STATIC_DRAW);
+   glBindVertexArray(sVAO_box);
+   glBindBuffer(GL_ARRAY_BUFFER, sVBO_box);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(cubeWire), cubeWire, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glBindVertexArray(0);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+   glEnableVertexAttribArray(0);
+   glBindVertexArray(0);
 }
 
 void OOBBRenderer::setupNormals() {
-    if (sInitialized_normals) return;
-    sInitialized_normals = true;
+   if (sInitialized_normals) return;
+   sInitialized_normals = true;
 
-    float L = 1.5f;
+   float L = 1.5f;
 
-    float normals[36] = {
-        // pos                // color
-        0.0f,  0.0f,  0.0f,   1.0f, 0.0f, 0.0f,
-        L,     0.0f,  0.0f,   1.0f, 0.0f, 0.0f,
-        0.0f,  0.0f,  0.0f,   0.0f, 1.0f, 0.0f,
-        0.0f,  L,     0.0f,   0.0f, 1.0f, 0.0f,
-        0.0f,  0.0f,  0.0f,   0.0f, 0.0f, 1.0f,
-        0.0f,  0.0f,  L,      0.0f, 0.0f, 1.0f,
-    };
+   float normals[36] = {
+      // pos                // color
+      0.0f,  0.0f,  0.0f,   1.0f, 0.0f, 0.0f,
+      L,     0.0f,  0.0f,   1.0f, 0.0f, 0.0f,
+      0.0f,  0.0f,  0.0f,   0.0f, 1.0f, 0.0f,
+      0.0f,  L,     0.0f,   0.0f, 1.0f, 0.0f,
+      0.0f,  0.0f,  0.0f,   0.0f, 0.0f, 1.0f,
+      0.0f,  0.0f,  L,      0.0f, 0.0f, 1.0f,
+   };
 
-    glGenVertexArrays(1, &sVAO_normals); glcount::incVAO();
-    glGenBuffers(1, &sVBO_normals); glcount::incVBO();
+   glGenVertexArrays(1, &sVAO_normals); glcount::incVAO();
+   glGenBuffers(1, &sVBO_normals); glcount::incVBO();
 
-    glBindVertexArray(sVAO_normals);
-    glBindBuffer(GL_ARRAY_BUFFER, sVBO_normals);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(normals), normals, GL_STATIC_DRAW);
+   glBindVertexArray(sVAO_normals);
+   glBindBuffer(GL_ARRAY_BUFFER, sVBO_normals);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(normals), normals, GL_STATIC_DRAW);
 
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+   // position attribute
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+   glEnableVertexAttribArray(0);
+   // color attribute
+   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+   glEnableVertexAttribArray(1);
 
-    glBindVertexArray(0);
+   glBindVertexArray(0);
 }
 
 
 void OOBBRenderer::destroy() {
-    if (sVBO_box) {
-        glDeleteBuffers(1, &sVBO_box);
-        sVBO_box = 0;
-        glcount::decVBO();
-    }
-    if (sVAO_box) {
-        glDeleteVertexArrays(1, &sVAO_box);
-        sVAO_box = 0;
-        glcount::decVAO();
-    }
+   if (sVBO_box) {
+      glDeleteBuffers(1, &sVBO_box);
+      sVBO_box = 0;
+      glcount::decVBO();
+   }
+   if (sVAO_box) {
+      glDeleteVertexArrays(1, &sVAO_box);
+      sVAO_box = 0;
+      glcount::decVAO();
+   }
 
-    if (sVBO_normals) {
-        glDeleteBuffers(1, &sVBO_normals);
-        sVBO_normals = 0;
-        glcount::decVBO();
-    }
-    if (sVAO_normals) {
-        glDeleteVertexArrays(1, &sVAO_normals);
-        sVAO_normals = 0;
-        glcount::decVAO();
-    }
+   if (sVBO_normals) {
+      glDeleteBuffers(1, &sVBO_normals);
+      sVBO_normals = 0;
+      glcount::decVBO();
+   }
+   if (sVAO_normals) {
+      glDeleteVertexArrays(1, &sVAO_normals);
+      sVAO_normals = 0;
+      glcount::decVAO();
+   }
 }
 

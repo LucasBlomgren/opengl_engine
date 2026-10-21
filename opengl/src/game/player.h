@@ -7,80 +7,80 @@
 
 class Player : public IInputReceiver {
 public:
-    GameObjectHandle playerHandle;
+   GameObjectHandle playerHandle;
 
-    physics::BodyHandle getPlayerRigidBodyHandle();
+   physics::BodyHandle getPlayerRigidBodyHandle();
 
-    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
-    void setPointers(World* world, physics::Engine* physicsEngine, Renderer* renderer, Camera* camera);
+   void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
+   void setPointers(World* world, physics::Engine* physicsEngine, Renderer* renderer, Camera* camera);
 
-    // activate/deactivate player mode
-    void activate();
-    void deactivate();
-    void resetState();
+   // activate/deactivate player mode
+   void activate();
+   void deactivate();
+   void resetState();
 
-    // create/destroy player object
-    void createPlayerObject();
-    void destroyPlayerObject();
+   // create/destroy player object
+   void createPlayerObject();
+   void destroyPlayerObject();
 
-    // update
-    void updateObjectSelection(Shader& shader);
-    void updateMovement(float dt);
-    void updateBody(float fixedTimeStep);
-    void resolveExternalContact();
-    void headBob(float dt);
+   // update
+   void updateObjectSelection(Shader& shader);
+   void updateMovement(float dt);
+   void updateBody(float fixedTimeStep);
+   void resolveExternalContact();
+   void headBob(float dt);
 
-    // select object
-    GameObjectHandle selectedObjectHandle;
-    GameObjectHandle hoveredObjectHandle;
-    glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
-    void selectObject();
-    void dropObject();
-    void moveSelectedObject(float dt);
+   // select object
+   GameObjectHandle selectedObjectHandle;
+   GameObjectHandle hoveredObjectHandle;
+   glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
+   void selectObject();
+   void dropObject();
+   void moveSelectedObject(float dt);
 
-    // raycast for placement/selection/etc
-    physics::RaycastHit raycast(float length);
-    physics::AABB aabbToPlace;
-    bool placementObstructed = true;
-    void placeObject();
-    void createPlaceObjectAABB(Shader& shader);
+   // raycast for placement/selection/etc
+   physics::RaycastHit raycast(float length);
+   physics::AABB aabbToPlace;
+   bool placementObstructed = true;
+   void placeObject();
+   void createPlaceObjectAABB(Shader& shader);
 
 private:
-    World* world = nullptr;
-    physics::Engine* physics = nullptr;
-    Camera* camera = nullptr;
-    Renderer* renderer = nullptr;
+   World* world = nullptr;
+   physics::Engine* physics = nullptr;
+   Camera* camera = nullptr;
+   Renderer* renderer = nullptr;
 
-    // movement
-    bool onGround = false;
-    bool hasJumped = false;
-    glm::vec3 moveInput{ 0.0f, 0.0f, 0.0f };
-    glm::vec3 moveImpulse{ 0.0f, 0.0f, 0.0f };
-    float jumpImpulse = 0.0f;
+   // movement
+   bool onGround = false;
+   bool hasJumped = false;
+   glm::vec3 moveInput{ 0.0f, 0.0f, 0.0f };
+   glm::vec3 moveImpulse{ 0.0f, 0.0f, 0.0f };
+   float jumpImpulse = 0.0f;
 
-    // player eyelevel & headbob animation
-    float eyeHeight = 0.76f;
-    float bobTimer = 0.0f;
-    float bobAmount = eyeHeight * 0.04f;
-    float sideBobAmount = eyeHeight * 0.008f;
-    float bobFrequency = 12.0f;
+   // player eyelevel & headbob animation
+   float eyeHeight = 0.76f;
+   float bobTimer = 0.0f;
+   float bobAmount = eyeHeight * 0.04f;
+   float sideBobAmount = eyeHeight * 0.008f;
+   float bobFrequency = 12.0f;
 
-    constexpr static float MOVE_ACCELERATION = 15.0f; // meters per second
-    constexpr static float MAX_MOVE_SPEED = 15.0f;
-    constexpr static float JUMP_HEIGHT = 10.5f;
-    constexpr static float SHOOT_VELOCITY = 300.0f;
-    constexpr static glm::vec3 SHOOT_SIZE{ 0.5f, 0.5f, 0.5f };
-    constexpr static float SHOOT_MASS = 10.0f;
-    constexpr static float ON_GROUND_ANGLE_THRESHOLD = 0.7f; // cos(45 degrees)
-    constexpr static float GRAVITY = -9.81f;    
-    constexpr static float GRAVITY_MULTIPLIER = 3.0f;
-    constexpr static float AIR_FRICTION = 0.02f;
+   constexpr static float MOVE_ACCELERATION = 15.0f; // meters per second
+   constexpr static float MAX_MOVE_SPEED = 15.0f;
+   constexpr static float JUMP_HEIGHT = 10.5f;
+   constexpr static float SHOOT_VELOCITY = 300.0f;
+   constexpr static glm::vec3 SHOOT_SIZE{ 0.5f, 0.5f, 0.5f };
+   constexpr static float SHOOT_MASS = 10.0f;
+   constexpr static float ON_GROUND_ANGLE_THRESHOLD = 0.7f; // cos(45 degrees)
+   constexpr static float GRAVITY = -9.81f;
+   constexpr static float GRAVITY_MULTIPLIER = 3.0f;
+   constexpr static float AIR_FRICTION = 0.02f;
 
-    // selection and placement
-    bool dragging = false;
-    bool pendingDrop = false;
-    bool drawPlacementAABB = false;
-    constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
-    constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
-    constexpr static float SELECT_RANGE = 100.0f;
+   // selection and placement
+   bool dragging = false;
+   bool pendingDrop = false;
+   bool drawPlacementAABB = false;
+   constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
+   constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
+   constexpr static float SELECT_RANGE = 100.0f;
 };

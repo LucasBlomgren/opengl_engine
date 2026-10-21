@@ -10,56 +10,56 @@ using namespace internal;
 // Internal scene setup
 //====================================
 void Engine::activateScene(
-    const std::vector<Triangle>& terrainInput) 
+   const std::vector<Triangle>& terrainInput)
 {
-    terrainTriangles.clear();
-    terrainTriangles.reserve(terrainInput.size());
+   terrainTriangles.clear();
+   terrainTriangles.reserve(terrainInput.size());
 
-    for (const Triangle& triangle : terrainInput) {
-        terrainTriangles.emplace_back(
-            triangle.id,
-            triangle.vertices[0],
-            triangle.vertices[1],
-            triangle.vertices[2]
-        );
-    }
+   for (const Triangle& triangle : terrainInput) {
+      terrainTriangles.emplace_back(
+         triangle.id,
+         triangle.vertices[0],
+         triangle.vertices[1],
+         triangle.vertices[2]
+      );
+   }
 
-    uint32_t colliderSlotCapacity = 
-        physicsStorage.colliderStorage().slot_capacity();
+   uint32_t colliderSlotCapacity =
+      physicsStorage.colliderStorage().slot_capacity();
 
-    broadphaseManager.init(
-        &physicsStorage,
-        &terrainTriangles
-    );
+   broadphaseManager.init(
+      &physicsStorage,
+      &terrainTriangles
+   );
 
-    narrowphaseManager.init(
-        &physicsStorage,
-        &collisionManifold,
-        &debugSpeculativeContacts, 
-        &contactCache
-    );
+   narrowphaseManager.init(
+      &physicsStorage,
+      &collisionManifold,
+      &debugSpeculativeContacts,
+      &contactCache
+   );
 
-    pgsSolver.init(physicsStorage);
+   pgsSolver.init(physicsStorage);
 
-    processPendingCommands();
+   processPendingCommands();
 }
 
 //====================================
 // Scene cleanup
 //====================================
 void Engine::clear() {
-    commandBuffer.clear(physicsStorage);
+   commandBuffer.clear(physicsStorage);
 
-    contactCache.clear();
-    debugSweeps.clear();
-    debugSpeculativeContacts.clear();
+   contactCache.clear();
+   debugSweeps.clear();
+   debugSpeculativeContacts.clear();
 
-    broadphaseManager.clear();
-    narrowphaseManager.clear();
-    pgsSolver.clear();
+   broadphaseManager.clear();
+   narrowphaseManager.clear();
+   pgsSolver.clear();
 
-    physicsStorage.clear();
-    terrainTriangles.clear();
+   physicsStorage.clear();
+   terrainTriangles.clear();
 }
 
 }

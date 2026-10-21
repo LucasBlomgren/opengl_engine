@@ -16,37 +16,39 @@ namespace physics::internal {
 using ColliderShape = std::variant<Box, Sphere>;
 
 struct Collider {
-    int id = -1;
+   int id = -1;
 
-    ColliderType type = ColliderType::BOX;
-    ColliderShape shape;
+   ColliderType type = ColliderType::BOX;
+   ColliderShape shape;
 
-    BodyHandle rigidBodyHandle;
+   BodyHandle bodyHandle;
 
-    Pose localPose;
-    glm::vec3 localScale{ 1.0f };
+   Pose localPose;
+   glm::vec3 localScale{ 1.0f };
 
-    Pose worldPose;
-    glm::vec3 worldScale{ 1.0f };
+   Pose worldPose;
+   glm::vec3 worldScale{ 1.0f };
 
-    ColliderTransformCache transformCache;
+   ColliderTransformCache transformCache;
 
-    AABB aabb;
-    bool aabbDirty = true;
+   int BVHleafIdx = -1;
 
-    bool enabled = true;
-    bool isTrigger = false;
+   AABB aabb;
+   bool aabbDirty = true;
 
-    uint32_t userTag = 0;
+   bool enabled = true;
+   bool isTrigger = false;
 
-    void updateWorldPose(const Pose& bodyPose, const glm::vec3& bodyScale);
-    void updateShape();
-    void updateAABB();
+   uint32_t userTag = 0;
 
-    AABB& getAABB();
+   void updateWorldPose(const Pose& bodyPose, const glm::vec3& bodyScale);
+   void updateShape();
+   void updateAABB();
+
+   AABB& getAABB();
 
 private:
-    void rebuildAABB();
+   void rebuildAABB();
 };
 
 }

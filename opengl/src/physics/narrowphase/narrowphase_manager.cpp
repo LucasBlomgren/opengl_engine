@@ -6,36 +6,36 @@ namespace physics::internal {
 namespace {
 
 std::optional<ShapePairKind> classifyShapePair(
-    const Collider& colliderA,
-    const Collider& colliderB)
+   const Collider& colliderA,
+   const Collider& colliderB)
 {
-    const bool boxBox =
-        colliderA.type == ColliderType::BOX &&
-        colliderB.type == ColliderType::BOX;
+   const bool boxBox =
+      colliderA.type == ColliderType::BOX &&
+      colliderB.type == ColliderType::BOX;
 
-    if (boxBox) {
-        return ShapePairKind::BoxBox;
-    }
+   if (boxBox) {
+      return ShapePairKind::BoxBox;
+   }
 
-    const bool boxSphere =
-        (colliderA.type == ColliderType::BOX &&
-            colliderB.type == ColliderType::SPHERE) ||
-        (colliderA.type == ColliderType::SPHERE &&
-            colliderB.type == ColliderType::BOX);
+   const bool boxSphere =
+      (colliderA.type == ColliderType::BOX &&
+         colliderB.type == ColliderType::SPHERE) ||
+      (colliderA.type == ColliderType::SPHERE &&
+         colliderB.type == ColliderType::BOX);
 
-    if (boxSphere) {
-        return ShapePairKind::BoxSphere;
-    }
+   if (boxSphere) {
+      return ShapePairKind::BoxSphere;
+   }
 
-    const bool sphereSphere =
-        colliderA.type == ColliderType::SPHERE &&
-        colliderB.type == ColliderType::SPHERE;
+   const bool sphereSphere =
+      colliderA.type == ColliderType::SPHERE &&
+      colliderB.type == ColliderType::SPHERE;
 
-    if (sphereSphere) {
-        return ShapePairKind::SphereSphere;
-    }
+   if (sphereSphere) {
+      return ShapePairKind::SphereSphere;
+   }
 
-    return std::nullopt;
+   return std::nullopt;
 }
 
 }
@@ -45,426 +45,325 @@ std::optional<ShapePairKind> classifyShapePair(
 //              Initialization
 //=======================================================
 void NarrowphaseManager::init(
-    PhysicsStorage* storage,
-    CollisionManifold* collisionManifold,
-    std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
-    std::unordered_map<size_t, Contact>* contactCache)
+   PhysicsStorage* storage,
+   CollisionManifold* collisionManifold,
+   std::vector<DebugSpeculativeContact>* debugSpeculativeContacts,
+   std::unordered_map<size_t, Contact>* contactCache)
 {
-    this->physicsStorage = storage;
-    this->collisionManifold = collisionManifold;
-    this->debugSpeculativeContacts = debugSpeculativeContacts;
-    this->contactCache = contactCache;
+   this->physicsStorage = storage;
+   this->collisionManifold = collisionManifold;
+   this->debugSpeculativeContacts = debugSpeculativeContacts;
+   this->contactCache = contactCache;
 }
 
 void NarrowphaseManager::clear() {
-    externalContacts.clear();
-    terrainTriCandidates.clear();
-    SAT_resultsList.clear();
+   externalContacts.clear();
+   terrainTriCandidates.clear();
+   SAT_resultsList.clear();
 }
 
 //=======================================================
-//               Narrow phase
+//    Narrow phase
 //=======================================================
 void NarrowphaseManager::narrowPhase(
-    const PairBatch& pairs,
-    ContactBatch& batch,
-    float dt)
+   const PairBatch& pairs,
+   ContactBatch& batch,
+   float dt)
 {
-    externalContacts.clear();
-    normalHitPairs.clear();
-    pendingSweepHits.clear();
+   externalContacts.clear();
+   normalHitPairs.clear();
+   pendingSweepHits.clear();
 
-    // Normal terrain
-    for (const TerrainPair& pair : pairs.terrainPairs) {
-        processTerrainPairs(pair, batch, dt);
-    }
+   // Terrain
+   for (const TerrainPair& pair : pairs.terrainPairs) {
+      processTerrainPair(pair, batch);
+   }
 
-    // Normal dynamic
-    double start = glfwGetTime();
-    for (const DynamicPair& pair : pairs.dynamicPairs) {
-        processDynamicPairs(pair, batch, dt);
-    }
+   // Dynamic
+   double start = glfwGetTime();
+   for (const DynamicPair& pair : pairs.dynamicPairs) {
+      processDynamicPair(pair, batch);
+   }
 
-    // Speculative terrain
-    for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
-        processSpeculativeTerrainPairs(pair, dt);
-    }
+   // Speculative terrain
+   for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
+      processSpeculativeTerrainPair(pair, dt);
+   }
 
-    // Speculative dynamic
-    start = glfwGetTime();
-    for (const SpeculativeDynamicPair& pair : pairs.speculativeDynamicPairs) {
-        processSpeculativeDynamicPairs(pair, dt);
-    }
+   // Speculative dynamic
+   start = glfwGetTime();
+   for (const SpeculativeDynamicPair& pair : pairs.speculativeDynamicPairs) {
+      processSpeculativePair(pair, dt);
+   }
 
-    flushPendingSweepHits(batch);
+   flushPendingSweepHits(batch);
 }
 
 //=======================================================
-//     Normal Dynamic pair processing
+//    Dynamic Pair     
 //=======================================================
-void NarrowphaseManager::processDynamicPairs(
-    const DynamicPair& pair,
-    ContactBatch& batch,
-    float dt)
+void NarrowphaseManager::processDynamicPair(
+   const DynamicPair& pair,
+   ContactBatch& batch)
 {
-    RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
-    RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
+   RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
+   RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
 
-    for (const ColliderHandle& colAH : bodyA.colliderHandles) {
-        for (const ColliderHandle& colBH : bodyB.colliderHandles) {
-            Collider& colliderA = physicsStorage->getCollider(colAH);
-            Collider& colliderB = physicsStorage->getCollider(colBH);
+   Collider& colliderA = physicsStorage->getCollider(pair.colliderA);
+   Collider& colliderB = physicsStorage->getCollider(pair.colliderB);
 
-            // If either body is compound, check if the colliders' AABBs intersect
-            if (bodyA.isCompound() || bodyB.isCompound()) {
-                if (!colliderA.aabb.intersects(colliderB.aabb)) {
-                    continue;
-                }
-            }
+   const auto shapePair = classifyShapePair(colliderA, colliderB);
+   if (!shapePair) return;
 
-            const std::optional<ShapePairKind> shapePair =
-                classifyShapePair(colliderA, colliderB);
+   ResolvedColliderPair resolved{
+      ColliderEndpointRef{
+         pair.bodyA, pair.colliderA, &bodyA, &colliderA
+      },
+      ColliderEndpointRef{
+         pair.bodyB, pair.colliderB, &bodyB, &colliderB
+      },
+      *shapePair
+   };
 
-            if (!shapePair) {
-                continue;
-            }
+   std::optional<OverlapHit> hit;
 
-            processColliderPairNormal(
-                batch,
-                ResolvedColliderPair{
-                    ColliderEndpointRef{
-                        pair.bodyA,
-                        colAH,
-                        &bodyA,
-                        &colliderA
-                    },
-                    ColliderEndpointRef{
-                        pair.bodyB,
-                        colBH,
-                        &bodyB,
-                        &colliderB
-                    },
-                    *shapePair
-                }
-            );
-        }
-    }
-}
+   switch (*shapePair) {
+   case ShapePairKind::BoxBox:
+      hit = tryBoxBox(std::move(resolved));
+      break;
 
-void NarrowphaseManager::processColliderPairNormal(
-    ContactBatch& batch,
-    ResolvedColliderPair pair)
-{
-    std::optional<OverlapHit> hit;
+   case ShapePairKind::BoxSphere:
+      hit = tryBoxSphere(std::move(resolved));
+      break;
 
-    switch (pair.shapePair) {
-    case ShapePairKind::BoxBox:
-        hit = tryBoxBox(std::move(pair));
-        break;
+   case ShapePairKind::SphereSphere:
+      hit = trySphereSphere(std::move(resolved));
+      break;
+   }
 
-    case ShapePairKind::BoxSphere:
-        hit = tryBoxSphere(std::move(pair));
-        break;
+   if (!hit) return;
 
-    case ShapePairKind::SphereSphere:
-        hit = trySphereSphere(std::move(pair));
-        break;
-    }
+   PairKey key = makeColliderPairKey(
+      hit->pair.a.colliderHandle,
+      hit->pair.b.colliderHandle
+   );
 
-    if (!hit) {
-        return;
-    }
-
-    PairKey key = makeColliderPairKey(
-        hit->pair.a.colliderHandle,
-        hit->pair.b.colliderHandle
-    );
-
-    normalHitPairs.insert(key);
-
-    emitRigidContact(batch, *hit);
+   normalHitPairs.insert(key);
+   emitRigidContact(batch, *hit);
 }
 
 //=======================================================
-//     Speculative Dynamic pair processing
+//    Speculative pair
 //=======================================================
-void NarrowphaseManager::processSpeculativeDynamicPairs(
-    const SpeculativeDynamicPair& pair,
-    float dt)
+void NarrowphaseManager::processSpeculativePair(
+   const SpeculativeDynamicPair& pair,
+   float dt)
 {
-    RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
-    RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
+   RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
+   RigidBody& bodyB = physicsStorage->getBody(pair.bodyB);
 
-    if (bodyA.type == BodyType::Kinematic &&
-        bodyB.type == BodyType::Kinematic) {
-        return;
-    }
+   if (bodyA.type == BodyType::Kinematic &&
+      bodyB.type == BodyType::Kinematic)
+      return;
 
-    for (const ColliderHandle& colAH : bodyA.colliderHandles) {
-        for (const ColliderHandle& colBH : bodyB.colliderHandles) {
-            Collider& colliderA = physicsStorage->getCollider(colAH);
-            Collider& colliderB = physicsStorage->getCollider(colBH);
+   Collider& colliderA = physicsStorage->getCollider(pair.colliderA);
+   Collider& colliderB = physicsStorage->getCollider(pair.colliderB);
 
-            const std::optional<ShapePairKind> shapePair =
-                classifyShapePair(colliderA, colliderB);
+   const auto shapePair = classifyShapePair(colliderA, colliderB);
+   if (!shapePair) return;
 
-            if (!shapePair) {
-                continue;
-            }
+   PairKey key = makeColliderPairKey(
+      pair.colliderA,
+      pair.colliderB
+   );
 
-            processColliderPairSpeculative(
-                ResolvedColliderPair{
-                    ColliderEndpointRef{
-                        pair.bodyA,
-                        colAH,
-                        &bodyA,
-                        &colliderA
-                    },
-                    ColliderEndpointRef{
-                        pair.bodyB,
-                        colBH,
-                        &bodyB,
-                        &colliderB
-                    },
-                    *shapePair
-                },
-                dt,
-                pair.sweepOwner
-            );
-        }
-    }
+   if (normalHitPairs.contains(key))
+      return;
+
+   ResolvedColliderPair resolved{
+      ColliderEndpointRef{
+         pair.bodyA, pair.colliderA, &bodyA, &colliderA
+      },
+      ColliderEndpointRef{
+         pair.bodyB, pair.colliderB, &bodyB, &colliderB
+      },
+      *shapePair
+   };
+
+   std::optional<SweepHit> hit;
+
+   switch (*shapePair) {
+   case ShapePairKind::BoxBox:
+      hit = trySpeculativeBoxBox(
+         std::move(resolved), dt, pair.sweepOwner
+      );
+      break;
+
+   case ShapePairKind::BoxSphere:
+      hit = trySpeculativeBoxSphere(
+         std::move(resolved), dt, pair.sweepOwner
+      );
+      break;
+
+   case ShapePairKind::SphereSphere:
+      hit = trySpeculativeSphereSphere(
+         std::move(resolved), dt, pair.sweepOwner
+      );
+      break;
+   }
+
+   if (!hit) return;
+
+   pendingSweepHits.emplace_back(std::move(*hit));
 }
-
-void NarrowphaseManager::processColliderPairSpeculative(
-    ResolvedColliderPair pair,
-    float dt,
-    BodyHandle sweepOwner)
-{
-    PairKey key = makeColliderPairKey(
-        pair.a.colliderHandle,
-        pair.b.colliderHandle
-    );
-
-    // If normal narrowphase already created a real contact,
-    // do not also create speculative contact for same collider pair.
-    if (normalHitPairs.find(key) != normalHitPairs.end()) {
-        return;
-    }
-
-    std::optional<SweepHit> hit;
-
-    switch (pair.shapePair) {
-    case ShapePairKind::BoxBox:
-        hit = trySpeculativeBoxBox(
-            std::move(pair),
-            dt,
-            sweepOwner
-        );
-        break;
-
-    case ShapePairKind::BoxSphere:
-        hit = trySpeculativeBoxSphere(
-            std::move(pair),
-            dt,
-            sweepOwner
-        );
-        break;
-
-    case ShapePairKind::SphereSphere:
-        hit = trySpeculativeSphereSphere(
-            std::move(pair),
-            dt,
-            sweepOwner
-        );
-        break;
-    }
-
-    if (!hit) {
-        return;
-    }
-
-    pendingSweepHits.emplace_back(std::move(*hit));
-}
-
 //=======================================================
 //     Normal Terrain pair processing
 //=======================================================
-void NarrowphaseManager::processTerrainPairs(const TerrainPair& terrainPair, ContactBatch& batch, float dt) {
-    RigidBody& body = physicsStorage->getBody(terrainPair.body);
+void NarrowphaseManager::processTerrainPair(
+   const TerrainPair& pair,
+   ContactBatch& batch)
+{
+   RigidBody& body = physicsStorage->getBody(pair.body);
 
-    if (body.type == BodyType::Kinematic && !body.reportContacts) {
-        return;
-    }
+   if (body.type == BodyType::Kinematic && !body.reportContacts)
+      return;
 
-    if (body.type == BodyType::Dynamic) {
-        SleepState& sleepState = physicsStorage->getSleepState(body.sleepStateHandle);
-        if (sleepState.isAsleep()) {
-            return;
-        }
-    }
+   if (body.type == BodyType::Dynamic) {
+      SleepState& sleepState =
+         physicsStorage->getSleepState(body.sleepStateHandle);
 
-    // per collider in body, collect candidate tris and send to SAT + collision manifold generation
-    for (const ColliderHandle& colH : body.colliderHandles) {
-        Collider& collider = physicsStorage->getCollider(colH);
+      if (sleepState.isAsleep())
+         return;
+   }
 
-        const std::vector<Tri*>* candidates = &terrainPair.tris;
+   Collider& collider =
+      physicsStorage->getCollider(pair.collider);
 
-        // if compound, do mid phase AABB tests to filter terrain tris before SAT, otherwise just send all terrain tris to SAT
-        if (body.isCompound()) {
-            terrainTriCandidates.clear();
-            terrainTriCandidates.reserve(terrainPair.tris.size());
-            collectTerrainTriCandidates(collider, terrainPair.tris, terrainTriCandidates);
+   SAT_resultsList.clear();
+   SAT_resultsList.reserve(pair.tris.size());
 
-            if (terrainTriCandidates.empty()) {
-                continue;
-            }
+   switch (collider.type) {
+   case ColliderType::BOX:
+      processTerrainTriBox(
+         batch, pair.body, &collider, &body, pair.tris
+      );
+      break;
 
-            candidates = &terrainTriCandidates;
-        }
-
-        SAT_resultsList.clear();
-        SAT_resultsList.reserve(candidates->size());
-
-        switch (collider.type) {
-        case ColliderType::BOX:
-            processTerrainTriBox(batch, collider.rigidBodyHandle, &collider, &body, *candidates);
-            break;
-
-        case ColliderType::SPHERE:
-            processTerrainTriSphere(batch, collider.rigidBodyHandle, &collider, &body, *candidates);
-            break;
-        }
-    }
+   case ColliderType::SPHERE:
+      processTerrainTriSphere(
+         batch, pair.body, &collider, &body, pair.tris
+      );
+      break;
+   }
 }
 
 //=======================================================
 //     Speculative Terrain pair processing
 //=======================================================
-void NarrowphaseManager::processSpeculativeTerrainPairs(
-    const SpeculativeTerrainPair& pair,
-    float dt)
+void NarrowphaseManager::processSpeculativeTerrainPair(
+   const SpeculativeTerrainPair& pair,
+   float dt)
 {
-    RigidBody& body = physicsStorage->getBody(pair.body);
+   RigidBody& body = physicsStorage->getBody(pair.body);
 
-    if (body.type == BodyType::Kinematic) {
-        return;
-    }
+   if (body.type == BodyType::Kinematic)
+      return;
 
-    for (const ColliderHandle& colH : body.colliderHandles) {
-        Collider& collider = physicsStorage->getCollider(colH);
+   Collider& collider =
+      physicsStorage->getCollider(pair.collider);
 
-        const std::vector<Tri*>* candidates = &pair.tris;
+   ColliderEndpointRef colliderRef{
+      pair.body,
+      pair.collider,
+      &body,
+      &collider
+   };
 
-        if (body.isCompound()) {
-            terrainTriCandidates.clear();
-            terrainTriCandidates.reserve(pair.tris.size());
+   for (Tri* tri : pair.tris) {
+      std::optional<TerrainSweepHit> hit;
 
-            collectTerrainTriCandidates(collider, pair.tris, terrainTriCandidates);
+      switch (collider.type) {
+      case ColliderType::BOX:
+         hit = trySpeculativeBoxTriangle(
+            colliderRef, tri, dt, pair.body
+         );
+         break;
 
-            if (terrainTriCandidates.empty()) {
-                continue;
-            }
+      case ColliderType::SPHERE:
+         hit = trySpeculativeSphereTriangle(
+            colliderRef, tri, dt, pair.body
+         );
+         break;
+      }
 
-            candidates = &terrainTriCandidates;
-        }
+      if (!hit)
+         continue;
 
-        for (Tri* tri : *candidates) {
-            ColliderEndpointRef colliderRef{
-                pair.body,
-                colH,
-                &body,
-                &collider
-            };
-
-            std::optional<TerrainSweepHit> hit;
-
-            if (collider.type == ColliderType::BOX) {
-                hit = trySpeculativeBoxTriangle(
-                    colliderRef,
-                    tri,
-                    dt,
-                    pair.body
-                );
-            }
-            else if (collider.type == ColliderType::SPHERE) {
-                hit = trySpeculativeSphereTriangle(
-                    colliderRef,
-                    tri,
-                    dt,
-                    pair.body
-                );
-            }
-
-            if (!hit) {
-                continue;
-            }
-
-            pendingSweepHits.emplace_back(std::move(*hit));
-        }
-    }
+      pendingSweepHits.emplace_back(std::move(*hit));
+   }
 }
 
 //=======================================================
 //     Collider and body handle packing for pair keys
 //=======================================================
 uint64_t NarrowphaseManager::packColliderHandle(ColliderHandle h) {
-    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+   return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
 }
 uint64_t NarrowphaseManager::packBodyHandle(BodyHandle h) {
-    return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
+   return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
 }
 PairKey NarrowphaseManager::makeColliderPairKey(ColliderHandle a, ColliderHandle b) {
-    uint64_t pa = packColliderHandle(a);
-    uint64_t pb = packColliderHandle(b);
+   uint64_t pa = packColliderHandle(a);
+   uint64_t pb = packColliderHandle(b);
 
-    if (pa > pb) {
-        std::swap(pa, pb);
-    }
+   if (pa > pb) {
+      std::swap(pa, pb);
+   }
 
-    return { pa, pb };
+   return { pa, pb };
 }
 
 //=======================================================
 //     Runtime data generation
 //=======================================================
 ContactRuntime NarrowphaseManager::makeRuntimeData(
-    RigidBody* bodyA, RigidBody* bodyB,
-    Collider* colliderA, Collider* colliderB) const
+   RigidBody* bodyA, RigidBody* bodyB,
+   Collider* colliderA, Collider* colliderB) const
 {
-    ContactRuntime rt;
-    rt.bodyA = bodyA;
-    rt.bodyB = bodyB;
-    rt.colliderA = colliderA;
-    rt.colliderB = colliderB;
-    return rt;
+   ContactRuntime rt;
+   rt.bodyA = bodyA;
+   rt.bodyB = bodyB;
+   rt.colliderA = colliderA;
+   rt.colliderB = colliderB;
+   return rt;
 }
 
 ContactRuntime NarrowphaseManager::makeRuntimeData(
-    RigidBody* bodyA,
-    Collider* colliderA) const
+   RigidBody* bodyA,
+   Collider* colliderA) const
 {
-    ContactRuntime rt;
-    rt.bodyA = bodyA;
-    rt.colliderA = colliderA;
-    return rt;
+   ContactRuntime rt;
+   rt.bodyA = bodyA;
+   rt.colliderA = colliderA;
+   return rt;
 }
 
 //=======================================================
 //     Terrain tri candidate collection
 //=======================================================
 void NarrowphaseManager::collectTerrainTriCandidates(
-    Collider& collider,
-    const std::vector<Tri*>& inputTris,
-    std::vector<Tri*>& outCandidates)
+   Collider& collider,
+   const std::vector<Tri*>& inputTris,
+   std::vector<Tri*>& outCandidates)
 {
-    outCandidates.clear();
+   outCandidates.clear();
 
-    const AABB& colAABB = collider.getAABB();
-    for (Tri* tri : inputTris) {
-        if (tri->getAABB().intersects(colAABB)) {
-            outCandidates.push_back(tri);
-        }
-    }
+   const AABB& colAABB = collider.getAABB();
+   for (Tri* tri : inputTris) {
+      if (tri->getAABB().intersects(colAABB)) {
+         outCandidates.push_back(tri);
+      }
+   }
 }
 
 

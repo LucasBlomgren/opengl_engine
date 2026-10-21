@@ -14,489 +14,489 @@
 #include <random>
 
 namespace {
-    GameObjectHandle createChair(
-        World& world, 
-        glm::vec3 position, 
-        float size, 
-        float mass) 
-    {
-        GameObjectDesc chair;
-        chair.name = "Chair";
-        glm::quat orientation = 
-            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-        chair.rootTransformHandle = 
-            world.createTransform(position, orientation, glm::vec3{size});
-        chair.bodyType = physics::BodyType::Dynamic;
-        chair.mass = mass;
+GameObjectHandle createChair(
+   World& world,
+   glm::vec3 position,
+   float size,
+   float mass)
+{
+   GameObjectDesc chair;
+   chair.name = "Chair";
+   glm::quat orientation =
+      glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+   chair.rootTransformHandle =
+      world.createTransform(position, orientation, glm::vec3{ size });
+   chair.bodyType = physics::BodyType::Dynamic;
+   chair.mass = mass;
 
-        // seat
-        SubPartDesc seat;
-        seat.name = "Seat";
-        glm::vec3 positionSeat = { 0,0,0 };
-        glm::quat orientationSeat = 
-            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-        glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
-        seat.localTransformHandle = 
-            world.createTransform(positionSeat, orientationSeat, scaleSeat);
-        seat.meshName = "cube";
-        seat.textureName = "checker_magenta";
-        seat.shaderName = "default";
-        seat.colliderType = physics::ColliderType::BOX;
-        chair.parts.push_back(seat);
+   // seat
+   SubPartDesc seat;
+   seat.name = "Seat";
+   glm::vec3 positionSeat = { 0,0,0 };
+   glm::quat orientationSeat =
+      glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+   glm::vec3 scaleSeat{ 1.0f, 0.2f, 1.0f };
+   seat.localTransformHandle =
+      world.createTransform(positionSeat, orientationSeat, scaleSeat);
+   seat.meshName = "cube";
+   seat.textureName = "checker_magenta";
+   seat.shaderName = "default";
+   seat.colliderType = physics::ColliderType::BOX;
+   chair.parts.push_back(seat);
 
-        // backrest
-        SubPartDesc backrest;
-        backrest.name = "Backrest";
-        glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
-        glm::quat orientationBackrest = 
-            glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-        glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
-        backrest.localTransformHandle = 
-            world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
-        backrest.meshName = "cube";
-        backrest.textureName = "checker_magenta";
-        backrest.shaderName = "default";
-        backrest.colliderType = physics::ColliderType::BOX;
-        chair.parts.push_back(backrest);
+   // backrest
+   SubPartDesc backrest;
+   backrest.name = "Backrest";
+   glm::vec3 positionBackrest = { -0.4f, 0.6f, 0.0f };
+   glm::quat orientationBackrest =
+      glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+   glm::vec3 scaleBackrest{ 0.2f, 1.0f, 1.0f };
+   backrest.localTransformHandle =
+      world.createTransform(positionBackrest, orientationBackrest, scaleBackrest);
+   backrest.meshName = "cube";
+   backrest.textureName = "checker_magenta";
+   backrest.shaderName = "default";
+   backrest.colliderType = physics::ColliderType::BOX;
+   chair.parts.push_back(backrest);
 
-        // legs
-        std::array<glm::vec3, 4> legPositions{
-            glm::vec3(-0.4f, -0.6f, -0.4f),
-            glm::vec3(0.4f, -0.6f, -0.4f),
-            glm::vec3(-0.4f, -0.6f, 0.4f),
-            glm::vec3(0.4f, -0.6f, 0.4f)
-        };
-        for (int i = 0; i < 4; i++) {
-            SubPartDesc leg;
-            leg.name = "Leg" + std::to_string(i);
-            glm::vec3 positionLeg = legPositions[i];
-            glm::quat orientationLeg = 
-                glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-            glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
-            leg.localTransformHandle = 
-                world.createTransform(positionLeg, orientationLeg, scaleLeg);
-            leg.meshName = "cube";
-            leg.textureName = "checker_magenta";
-            leg.shaderName = "default";
-            leg.colliderType = physics::ColliderType::BOX;
-            chair.parts.push_back(leg);
-        }
-        return world.createGameObject(chair);
-    }
+   // legs
+   std::array<glm::vec3, 4> legPositions{
+       glm::vec3(-0.4f, -0.6f, -0.4f),
+       glm::vec3(0.4f, -0.6f, -0.4f),
+       glm::vec3(-0.4f, -0.6f, 0.4f),
+       glm::vec3(0.4f, -0.6f, 0.4f)
+   };
+   for (int i = 0; i < 4; i++) {
+      SubPartDesc leg;
+      leg.name = "Leg" + std::to_string(i);
+      glm::vec3 positionLeg = legPositions[i];
+      glm::quat orientationLeg =
+         glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
+      glm::vec3 scaleLeg{ 0.2f, 1.0f, 0.2f };
+      leg.localTransformHandle =
+         world.createTransform(positionLeg, orientationLeg, scaleLeg);
+      leg.meshName = "cube";
+      leg.textureName = "checker_magenta";
+      leg.shaderName = "default";
+      leg.colliderType = physics::ColliderType::BOX;
+      chair.parts.push_back(leg);
+   }
+   return world.createGameObject(chair);
+}
 
-    GameObjectHandle createSphere(
-        World& world, 
-        glm::vec3 position, 
-        float size, 
-        float mass) 
-    {
-        GameObjectDesc sphere;
-        sphere.name = "Sphere";
-        sphere.rootTransformHandle = 
-            world.createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, glm::vec3{ size });
-        sphere.mass = mass;
-        SubPartDesc part;
-        part.name = "MainPart";
-        part.localTransformHandle = world.createTransform();
-        part.colliderType = physics::ColliderType::SPHERE;
-        part.meshName = "sphere";
-        part.textureName = "checker_magenta";
-        sphere.parts.push_back(part);
-        return world.createGameObject(sphere);
-    }
+GameObjectHandle createSphere(
+   World& world,
+   glm::vec3 position,
+   float size,
+   float mass)
+{
+   GameObjectDesc sphere;
+   sphere.name = "Sphere";
+   sphere.rootTransformHandle =
+      world.createTransform(position, glm::quat{ 1.0f, 0.0f, 0.0f, 0.0f }, glm::vec3{ size });
+   sphere.mass = mass;
+   SubPartDesc part;
+   part.name = "MainPart";
+   part.localTransformHandle = world.createTransform();
+   part.colliderType = physics::ColliderType::SPHERE;
+   part.meshName = "sphere";
+   part.textureName = "checker_magenta";
+   sphere.parts.push_back(part);
+   return world.createGameObject(sphere);
+}
 }
 
 // ====================================================
 //      Main functions
 // ====================================================
 void Editor::EditorMain::init(
-    float SCR_WIDTH,
-    float SCR_HEIGHT,
-    EngineState* engineState,
-    World* world,
-    SceneBuilder* sceneBuilder,
-    physics::Engine* physicsEngine,
-    InputManager* inputManager,
-    Camera* camera,
-    GLFWwindow* window,
-    ImGuiManager* imguiManager,
-    Renderer* renderer,
-    SkyboxManager* skyboxManager,
-    MeshManager* meshManager,
-    TextureManager* textureManager,
-    FrameTimers* frameTimers,
-    GpuTimers* gpuTimers) 
+   float SCR_WIDTH,
+   float SCR_HEIGHT,
+   EngineState* engineState,
+   World* world,
+   SceneBuilder* sceneBuilder,
+   physics::Engine* physicsEngine,
+   InputManager* inputManager,
+   Camera* camera,
+   GLFWwindow* window,
+   ImGuiManager* imguiManager,
+   Renderer* renderer,
+   SkyboxManager* skyboxManager,
+   MeshManager* meshManager,
+   TextureManager* textureManager,
+   FrameTimers* frameTimers,
+   GpuTimers* gpuTimers)
 {
-    this->SCR_WIDTH = SCR_WIDTH;
-    this->SCR_HEIGHT = SCR_HEIGHT;
-    this->engineState = engineState;
-    this->world = world;
-    this->sceneBuilder = sceneBuilder;
-    this->physicsEngine = physicsEngine;
-    this->renderer = renderer;
-    this->inputManager = inputManager;
-    this->skyboxManager = skyboxManager;
-    this->imguiManager = imguiManager;
-    this->meshManager = meshManager;
-    this->textureManager = textureManager;
-    this->camera = camera;
-    this->window = window;
+   this->SCR_WIDTH = SCR_WIDTH;
+   this->SCR_HEIGHT = SCR_HEIGHT;
+   this->engineState = engineState;
+   this->world = world;
+   this->sceneBuilder = sceneBuilder;
+   this->physicsEngine = physicsEngine;
+   this->renderer = renderer;
+   this->inputManager = inputManager;
+   this->skyboxManager = skyboxManager;
+   this->imguiManager = imguiManager;
+   this->meshManager = meshManager;
+   this->textureManager = textureManager;
+   this->camera = camera;
+   this->window = window;
 
-    panelManager = std::make_unique<Editor::PanelManager>(
-        this,
-        physicsEngine,
-        imguiManager,
-        engineState,
-        renderer,  
-        world,
-        sceneBuilder,
-        skyboxManager,
-        meshManager,
-        textureManager,
-        frameTimers,
-        gpuTimers
-    );
-    panelManager->init();
+   panelManager = std::make_unique<Editor::PanelManager>(
+      this,
+      physicsEngine,
+      imguiManager,
+      engineState,
+      renderer,
+      world,
+      sceneBuilder,
+      skyboxManager,
+      meshManager,
+      textureManager,
+      frameTimers,
+      gpuTimers
+   );
+   panelManager->init();
 }
 
 void Editor::EditorMain::resetState() {
-    selectedObjectIsBeingMoved = false;
-    hoveredObjectHandle = GameObjectHandle{};
-    selectedObjectHandle = GameObjectHandle{};
+   selectedObjectIsBeingMoved = false;
+   hoveredObjectHandle = GameObjectHandle{};
+   selectedObjectHandle = GameObjectHandle{};
 }
 
 // activate/deactivate editor mode
 void Editor::EditorMain::activate() {
-    resetState();
+   resetState();
 }
 void Editor::EditorMain::deactivate() {
-    dropObject();
+   dropObject();
 
-    selectedObjectIsBeingMoved = false;
-    selectedObjectHandle = GameObjectHandle{};
-    hoveredObjectHandle = GameObjectHandle{};
+   selectedObjectIsBeingMoved = false;
+   selectedObjectHandle = GameObjectHandle{};
+   hoveredObjectHandle = GameObjectHandle{};
 }
 
 // ====================================================
 //        Input handling
 // ====================================================
 void Editor::EditorMain::handleInput(
-    const InputFrame& in, 
-    const InputContext& ctx, 
-    Consumed& consumed, 
-    FrameWants& wants) 
+   const InputFrame& in,
+   const InputContext& ctx,
+   Consumed& consumed,
+   FrameWants& wants)
 {
-    if (ctx.isPlayerMode) return;
+   if (ctx.isPlayerMode) return;
 
-    if (in.keyPressed[GLFW_KEY_F1]) {
-        flag_drawUI = !flag_drawUI;
-    }
+   if (in.keyPressed[GLFW_KEY_F1]) {
+      flag_drawUI = !flag_drawUI;
+   }
 
-    // handle viewport LMB drag capture only if started in viewport
-    if (!viewportCapturedLMB &&
-        ctx.viewportHovered &&
-        in.mousePressed[GLFW_MOUSE_BUTTON_1]) 
-    {
-        viewportCapturedLMB = true;
-    }
-    // release capture when LMB is released
-    if (viewportCapturedLMB && !in.mouseDown[GLFW_MOUSE_BUTTON_1])
-        viewportCapturedLMB = false;
+   // handle viewport LMB drag capture only if started in viewport
+   if (!viewportCapturedLMB &&
+      ctx.viewportHovered &&
+      in.mousePressed[GLFW_MOUSE_BUTTON_1])
+   {
+      viewportCapturedLMB = true;
+   }
+   // release capture when LMB is released
+   if (viewportCapturedLMB && !in.mouseDown[GLFW_MOUSE_BUTTON_1])
+      viewportCapturedLMB = false;
 
-    // handle viewport RMB drag capture only if started in viewport
-    if (!viewportCapturedRMB &&
-        ctx.viewportHovered &&
-        in.mousePressed[GLFW_MOUSE_BUTTON_2]) 
-    {
-        viewportCapturedRMB = true;
-    }
-    // release capture when RMB is released
-    if (viewportCapturedRMB && !in.mouseDown[GLFW_MOUSE_BUTTON_2])
-        viewportCapturedRMB = false;
+   // handle viewport RMB drag capture only if started in viewport
+   if (!viewportCapturedRMB &&
+      ctx.viewportHovered &&
+      in.mousePressed[GLFW_MOUSE_BUTTON_2])
+   {
+      viewportCapturedRMB = true;
+   }
+   // release capture when RMB is released
+   if (viewportCapturedRMB && !in.mouseDown[GLFW_MOUSE_BUTTON_2])
+      viewportCapturedRMB = false;
 
-    // handle viewport MMB drag capture only if started in viewport
-    if (!viewportCapturedMMB &&
-        ctx.viewportHovered &&
-        in.mousePressed[GLFW_MOUSE_BUTTON_3])
-    {
-        viewportCapturedMMB = true;
-    }
-    // release capture when MMB is released
-    if (viewportCapturedMMB && !in.mouseDown[GLFW_MOUSE_BUTTON_3])
-        viewportCapturedMMB = false;
+   // handle viewport MMB drag capture only if started in viewport
+   if (!viewportCapturedMMB &&
+      ctx.viewportHovered &&
+      in.mousePressed[GLFW_MOUSE_BUTTON_3])
+   {
+      viewportCapturedMMB = true;
+   }
+   // release capture when MMB is released
+   if (viewportCapturedMMB && !in.mouseDown[GLFW_MOUSE_BUTTON_3])
+      viewportCapturedMMB = false;
 
-    // handle non-viewport input capture
-    ImGuiIO* io = &ImGui::GetIO();
-    if (io->WantCaptureMouse && 
-        !(viewportCapturedLMB || viewportCapturedRMB || viewportCapturedMMB)) {
-        wants.cameraLook = false;
-        wants.captureMouse = false;
-        consumed.mouse = true;
-    }
+   // handle non-viewport input capture
+   ImGuiIO* io = &ImGui::GetIO();
+   if (io->WantCaptureMouse &&
+      !(viewportCapturedLMB || viewportCapturedRMB || viewportCapturedMMB)) {
+      wants.cameraLook = false;
+      wants.captureMouse = false;
+      consumed.mouse = true;
+   }
 
-    // handle non-viewport keyboard capture
-    if (io->WantCaptureKeyboard && !ctx.viewportFocused) {
-        consumed.keyboard = true;
-    }
+   // handle non-viewport keyboard capture
+   if (io->WantCaptureKeyboard && !ctx.viewportFocused) {
+      consumed.keyboard = true;
+   }
 
-    // handle viewport RMB camera look
-    if (viewportCapturedRMB) {
-        wants.cameraLook = true;
-        wants.captureMouse = true;
-    }
+   // handle viewport RMB camera look
+   if (viewportCapturedRMB) {
+      wants.cameraLook = true;
+      wants.captureMouse = true;
+   }
 
-    // handle editor input
-    if (!consumed.mouse) {
-        mouseXLastFrame = in.mousePos.x;
-        mouseYLastFrame = in.mousePos.y;
+   // handle editor input
+   if (!consumed.mouse) {
+      mouseXLastFrame = in.mousePos.x;
+      mouseYLastFrame = in.mousePos.y;
 
-        if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-            if (!selectedObjectHandle.isValid()) {
-                physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
-                selectObject(ctx);
+      if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
+         if (!selectedObjectHandle.isValid()) {
+            physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
+            selectObject(ctx);
+         }
+         else {
+            physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
+
+            if (!hitData.hit) {
+               dropObject();
             }
             else {
-                physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
-
-                if (!hitData.hit) {
-                    dropObject();
-                }
-                else {
-                    GameObjectHandle hitObjHandle =
-                        world->getGameObjectHandle(hitData.bodyHandle);
-                    if (hitObjHandle.slot != selectedObjectHandle.slot) {
-                        dropObject();
-                        rayCastMousePos(SELECT_RANGE);
-                        selectObject(ctx);
-                    }
-                    else {
-                        // klick på samma objekt: resync offset så det inte hoppar
-                        syncSelectionOffset();
-                    }
-                }
+               GameObjectHandle hitObjHandle =
+                  world->getGameObjectHandle(hitData.bodyHandle);
+               if (hitObjHandle.slot != selectedObjectHandle.slot) {
+                  dropObject();
+                  rayCastMousePos(SELECT_RANGE);
+                  selectObject(ctx);
+               }
+               else {
+                  // klick på samma objekt: resync offset så det inte hoppar
+                  syncSelectionOffset();
+               }
             }
-            consumed.mouse = true;
-        }
+         }
+         consumed.mouse = true;
+      }
 
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1]) 
-        {
-            // hardcoded timestep for smoother movement
-            updateSelectedObject(1.0f / 60.0f); 
-            consumed.mouse = true;
-        }
+      if (in.mouseDown[GLFW_MOUSE_BUTTON_1])
+      {
+         // hardcoded timestep for smoother movement
+         updateSelectedObject(1.0f / 60.0f);
+         consumed.mouse = true;
+      }
 
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_2]) {
-            wants.cameraLook = true;
-            wants.captureMouse = true;
-            consumed.mouse = true;
-        }
+      if (in.mouseDown[GLFW_MOUSE_BUTTON_2]) {
+         wants.cameraLook = true;
+         wants.captureMouse = true;
+         consumed.mouse = true;
+      }
 
-        selectedObjectIsBeingMoved = false;
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_1] && 
-            in.mouseDown[GLFW_MOUSE_BUTTON_2] && 
-            selectedObjectHandle.isValid()) 
-        {
-            selectedObjectIsBeingMoved = true;
-        }
+      selectedObjectIsBeingMoved = false;
+      if (in.mouseDown[GLFW_MOUSE_BUTTON_1] &&
+         in.mouseDown[GLFW_MOUSE_BUTTON_2] &&
+         selectedObjectHandle.isValid())
+      {
+         selectedObjectIsBeingMoved = true;
+      }
 
-        // single shot
-        if (in.mousePressed[GLFW_MOUSE_BUTTON_3] && !shootContinuously)
-        {
-            glm::vec3 position = { camera->position + camera->front * 5.0f };
-            GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
-            GameObject* object = world->getGameObject(newObject);
+      // single shot
+      if (in.mousePressed[GLFW_MOUSE_BUTTON_3] && !shootContinuously)
+      {
+         glm::vec3 position = { camera->position + camera->front * 5.0f };
+         GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
+         GameObject* object = world->getGameObject(newObject);
 
-            // apply shoot velocity
-            glm::vec3 dir{ 0.0f };
-            // if RMB is held down, shoot in camera direction, 
-            // otherwise shoot towards mouse location
-            if (viewportCapturedRMB) {
-                dir = camera->front;
-            }
-            else {
-                dir = getRayVectorToMouseLocation();
-            }
-            if (object) {
-                physicsEngine->setLinearVelocity(
-                    object->rigidBodyHandle,
-                    dir * shootVelocity
-                );
-            }
-        }
+         // apply shoot velocity
+         glm::vec3 dir{ 0.0f };
+         // if RMB is held down, shoot in camera direction, 
+         // otherwise shoot towards mouse location
+         if (viewportCapturedRMB) {
+            dir = camera->front;
+         }
+         else {
+            dir = getRayVectorToMouseLocation();
+         }
+         if (object) {
+            physicsEngine->setLinearVelocity(
+               object->rigidBodyHandle,
+               dir * shootVelocity
+            );
+         }
+      }
 
-        // continuous shooting while RMB held down
-        if (in.mouseDown[GLFW_MOUSE_BUTTON_3] && shootContinuously)
-        {
-            static bool wasDown = false;
-            static float shootTimer = 0.0f;
+      // continuous shooting while RMB held down
+      if (in.mouseDown[GLFW_MOUSE_BUTTON_3] && shootContinuously)
+      {
+         static bool wasDown = false;
+         static float shootTimer = 0.0f;
 
-            bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
+         bool down = in.mouseDown[GLFW_MOUSE_BUTTON_3];
 
-            if (down && !wasDown) {
-                // Första pressen: starta “nu” utan att försöka hinna 
-                // ikapp något gammalt
-                shootTimer = shootCooldown;
-            }
+         if (down && !wasDown) {
+            // Första pressen: starta “nu” utan att försöka hinna 
+            // ikapp något gammalt
+            shootTimer = shootCooldown;
+         }
 
-            if (down) {
-                shootTimer -= engineState->deltaTime;
+         if (down) {
+            shootTimer -= engineState->deltaTime;
 
-                int spawnedThisFrame = 0;
-                const int maxPerFrame = 500; // säkerhetscap
+            int spawnedThisFrame = 0;
+            const int maxPerFrame = 500; // säkerhetscap
 
-                while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame) 
-                {
-                    shootTimer += shootCooldown; // håll konstant takt
-                    spawnedThisFrame++;
-
-                    // spawn
-                    static int shot = 0;
-                    int i = shot++ % 10;
-                    int x = i % 5, y = i / 5;
-
-                    glm::vec3 right = 
-                        glm::normalize(glm::cross(camera->front, camera->up));
-
-                    float spread = 2.0f;
-                    float jitter = 1.4f;
-                    glm::vec3 offset = 
-                        right * ((x - 2) * spread) 
-                        + camera->up * ((y - 0.5f) * spread)
-                        + right * (glm::linearRand(-jitter, jitter))
-                        + camera->up * (glm::linearRand(-jitter, jitter));
-
-
-                    glm::vec3 position =
-                        { camera->position + camera->front * 5.0f + offset * shootSize };
-
-                    GameObjectHandle newObject = 
-                        createSphere(*world, position, shootSize, shootMass);
-
-                    GameObject* object = world->getGameObject(newObject);
-
-                    // apply shoot velocity
-                    glm::vec3 dir{ 0.0f };
-                    // if RMB is held down, shoot in camera direction, 
-                    // otherwise shoot towards mouse location
-                    if (viewportCapturedRMB) {
-                        dir = camera->front;
-                    }
-                    else {
-                        dir = getRayVectorToMouseLocation();
-                    }
-                    if (object) {
-                        physicsEngine->setLinearVelocity(
-                            object->rigidBodyHandle,
-                            dir * shootVelocity
-                        );
-                    }
-                }
-            }
-            else {
-                shootTimer = 0.0f;
-            }
-
-            wasDown = down;
-        }
-    }
-
-    if (!consumed.keyboard) {
-        if (in.keyPressed[GLFW_KEY_1]) {
-            drawPlacementAABB = !drawPlacementAABB;
-            consumed.keyboard = true;
-        }
-
-        if (in.keyPressed[GLFW_KEY_2]) {
-            this->objectRainBlocks = !this->objectRainBlocks;
-            objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-            consumed.keyboard = true;
-        }
-        if (in.keyPressed[GLFW_KEY_3]) {
-            this->objectRainSpheres = !this->objectRainSpheres;
-            objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-            consumed.keyboard = true;
-        }
-
-        if (in.keyPressed[GLFW_KEY_4]) {
-            physicsEngine->sleepAllObjects();
-            consumed.keyboard = true;
-        }
-        if (in.keyPressed[GLFW_KEY_5]) {
-            physicsEngine->awakenAllObjects();
-            consumed.keyboard = true;
-        }
-
-        // delete 10 random objects
-        if (in.keyDown[GLFW_KEY_C]) {
-            static size_t nextIndex = 0;
-
-            SlotMap<GameObject, GameObjectHandle>& map = 
-                world->getGameObjectsMap();
-
-            auto& objects = map.dense();
-
-            int removed = 0;
-            size_t checked = 0;
-
-            static std::mt19937 rng(std::random_device{}());
-            while (!objects.empty() && removed < 10)
+            while (shootTimer <= 0.0f && spawnedThisFrame < maxPerFrame)
             {
-                int minIndex = 0;
-                int maxIndex = (int)objects.size() - 1;
-                int randomIndex = 
-                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+               shootTimer += shootCooldown; // håll konstant takt
+               spawnedThisFrame++;
 
-                GameObjectHandle handle =
-                    map.handle_from_dense_index((int)randomIndex);
+               // spawn
+               static int shot = 0;
+               int i = shot++ % 10;
+               int x = i % 5, y = i / 5;
 
-                GameObject* obj = world->getGameObject(handle);
+               glm::vec3 right =
+                  glm::normalize(glm::cross(camera->front, camera->up));
 
-                world->deleteGameObject(handle);
+               float spread = 2.0f;
+               float jitter = 1.4f;
+               glm::vec3 offset =
+                  right * ((x - 2) * spread)
+                  + camera->up * ((y - 0.5f) * spread)
+                  + right * (glm::linearRand(-jitter, jitter))
+                  + camera->up * (glm::linearRand(-jitter, jitter));
 
-                removed++;
+
+               glm::vec3 position =
+               { camera->position + camera->front * 5.0f + offset * shootSize };
+
+               GameObjectHandle newObject =
+                  createSphere(*world, position, shootSize, shootMass);
+
+               GameObject* object = world->getGameObject(newObject);
+
+               // apply shoot velocity
+               glm::vec3 dir{ 0.0f };
+               // if RMB is held down, shoot in camera direction, 
+               // otherwise shoot towards mouse location
+               if (viewportCapturedRMB) {
+                  dir = camera->front;
+               }
+               else {
+                  dir = getRayVectorToMouseLocation();
+               }
+               if (object) {
+                  physicsEngine->setLinearVelocity(
+                     object->rigidBodyHandle,
+                     dir * shootVelocity
+                  );
+               }
             }
-        }
+         }
+         else {
+            shootTimer = 0.0f;
+         }
 
-        // delete 10 random colliders
-        if (in.keyDown[GLFW_KEY_B]) {
-            static size_t nextIndex = 0;
+         wasDown = down;
+      }
+   }
 
-            SlotMap<GameObject, GameObjectHandle>& map =
-                world->getGameObjectsMap();
+   if (!consumed.keyboard) {
+      if (in.keyPressed[GLFW_KEY_1]) {
+         drawPlacementAABB = !drawPlacementAABB;
+         consumed.keyboard = true;
+      }
 
-            auto& objects = map.dense();
+      if (in.keyPressed[GLFW_KEY_2]) {
+         this->objectRainBlocks = !this->objectRainBlocks;
+         objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
+         consumed.keyboard = true;
+      }
+      if (in.keyPressed[GLFW_KEY_3]) {
+         this->objectRainSpheres = !this->objectRainSpheres;
+         objectRainPos = camera->position + camera->front * OBJ_PLACE_DISTANCE;
+         consumed.keyboard = true;
+      }
 
-            int removed = 0;
-            size_t checked = 0;
+      if (in.keyPressed[GLFW_KEY_4]) {
+         physicsEngine->sleepAllObjects();
+         consumed.keyboard = true;
+      }
+      if (in.keyPressed[GLFW_KEY_5]) {
+         physicsEngine->awakenAllObjects();
+         consumed.keyboard = true;
+      }
 
-            static std::mt19937 rng(std::random_device{}());
-            while (!objects.empty() && removed < 10)
-            {
-                int minIndex = 0;
-                int maxIndex = (int)objects.size() - 1;
-                int randomIndex = 
-                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+      // delete 10 random objects
+      if (in.keyDown[GLFW_KEY_C]) {
+         static size_t nextIndex = 0;
 
-                GameObjectHandle handle =
-                    map.handle_from_dense_index((int)randomIndex);
+         SlotMap<GameObject, GameObjectHandle>& map =
+            world->getGameObjectsMap();
 
-                GameObject* obj = world->getGameObject(handle);
+         auto& objects = map.dense();
 
-                if (obj->parts.empty()) {
-                    removed++;
-                    continue;
-                }
+         int removed = 0;
+         size_t checked = 0;
 
-                minIndex = 0;
-                maxIndex = (int)obj->parts.size() - 1;
-                randomIndex =
-                    std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+         static std::mt19937 rng(std::random_device{}());
+         while (!objects.empty() && removed < 10)
+         {
+            int minIndex = 0;
+            int maxIndex = (int)objects.size() - 1;
+            int randomIndex =
+               std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
 
-                world->deleteSubPart(handle, randomIndex);
-                removed++;
+            GameObjectHandle handle =
+               map.handle_from_dense_index((int)randomIndex);
+
+            GameObject* obj = world->getGameObject(handle);
+
+            world->deleteGameObject(handle);
+
+            removed++;
+         }
+      }
+
+      // delete 10 random colliders
+      if (in.keyDown[GLFW_KEY_B]) {
+         static size_t nextIndex = 0;
+
+         SlotMap<GameObject, GameObjectHandle>& map =
+            world->getGameObjectsMap();
+
+         auto& objects = map.dense();
+
+         int removed = 0;
+         size_t checked = 0;
+
+         static std::mt19937 rng(std::random_device{}());
+         while (!objects.empty() && removed < 10)
+         {
+            int minIndex = 0;
+            int maxIndex = (int)objects.size() - 1;
+            int randomIndex =
+               std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+
+            GameObjectHandle handle =
+               map.handle_from_dense_index((int)randomIndex);
+
+            GameObject* obj = world->getGameObject(handle);
+
+            if (obj->parts.empty()) {
+               removed++;
+               continue;
             }
-        }
-    }
+
+            minIndex = 0;
+            maxIndex = (int)obj->parts.size() - 1;
+            randomIndex =
+               std::uniform_int_distribution<int>(minIndex, maxIndex)(rng);
+
+            world->deleteSubPart(handle, randomIndex);
+            removed++;
+         }
+      }
+   }
 }
 
 // ====================================================
@@ -504,263 +504,263 @@ void Editor::EditorMain::handleInput(
 // ====================================================
 void Editor::EditorMain::drawUI(bool paused, InputContext& ctx, float deltaTime)
 {
-    if (!flag_drawUI) return;
+   if (!flag_drawUI) return;
 
-    const char* pausedStr = paused ? "PAUSED" : "RUNNING";
-    ImDrawList* drawList = ImGui::GetForegroundDrawList();
-    ImFont* font = ImGui::GetFont();
+   const char* pausedStr = paused ? "PAUSED" : "RUNNING";
+   ImDrawList* drawList = ImGui::GetForegroundDrawList();
+   ImFont* font = ImGui::GetFont();
 
-    drawList->AddText(
-        font,
-        18.0f,
-        ImVec2(1475.0f, 50.0f),
-        IM_COL32(255, 255, 255, 255),
-        pausedStr
-    );
+   drawList->AddText(
+      font,
+      18.0f,
+      ImVec2(1475.0f, 50.0f),
+      IM_COL32(255, 255, 255, 255),
+      pausedStr
+   );
 
-    panelManager->renderPanels(deltaTime);
+   panelManager->renderPanels(deltaTime);
 
-    // top toolbar
-    ImGui::Begin("Toolbar1");
-    ImGui::End();
+   // top toolbar
+   ImGui::Begin("Toolbar1");
+   ImGui::End();
 
-    // bottom toolbar
-    ImGui::Begin("Toolbar2");
-    ImGui::End();
+   // bottom toolbar
+   ImGui::Begin("Toolbar2");
+   ImGui::End();
 
-    // Viewport panel
-    ImGui::Begin("Scene", nullptr);
+   // Viewport panel
+   ImGui::Begin("Scene", nullptr);
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    ImVec4* c = style.Colors;
-    c[ImGuiCol_Tab] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
-    c[ImGuiCol_TabHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.0f);
-    c[ImGuiCol_TabActive] = ImVec4(0.20f, 0.20f, 0.20f, 1.0f);
-    c[ImGuiCol_TabUnfocused] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
-    c[ImGuiCol_TabUnfocusedActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.0f);
-    c[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
-    c[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
-    c[ImGuiCol_TitleBgCollapsed] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
+   ImGuiStyle& style = ImGui::GetStyle();
+   ImVec4* c = style.Colors;
+   c[ImGuiCol_Tab] = ImVec4(0.15f, 0.15f, 0.15f, 1.0f);
+   c[ImGuiCol_TabHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.0f);
+   c[ImGuiCol_TabActive] = ImVec4(0.20f, 0.20f, 0.20f, 1.0f);
+   c[ImGuiCol_TabUnfocused] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
+   c[ImGuiCol_TabUnfocusedActive] = ImVec4(0.18f, 0.18f, 0.18f, 1.0f);
+   c[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
+   c[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.12f, 0.12f, 1.0f);
+   c[ImGuiCol_TitleBgCollapsed] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
 
-    style.TabRounding = 0.0f; // tab corners
-    style.WindowRounding = 0.0f; // fönster corners
-    style.FrameRounding = 0.0f; // knappar/sliders etc
-    style.ChildRounding = 0.0f; // child windows
-    style.PopupRounding = 0.0f; // popups
+   style.TabRounding = 0.0f; // tab corners
+   style.WindowRounding = 0.0f; // fönster corners
+   style.FrameRounding = 0.0f; // knappar/sliders etc
+   style.ChildRounding = 0.0f; // child windows
+   style.PopupRounding = 0.0f; // popups
 
-    ImVec2 avail = ImGui::GetContentRegionAvail();
-    int w = std::max(1, (int)std::round(avail.x));
-    int h = std::max(1, (int)std::round(avail.y));
-    viewportFBO.resizeIfNeeded(w, h);
+   ImVec2 avail = ImGui::GetContentRegionAvail();
+   int w = std::max(1, (int)std::round(avail.x));
+   int h = std::max(1, (int)std::round(avail.y));
+   viewportFBO.resizeIfNeeded(w, h);
 
-    ImGui::Image(
-        (ImTextureID)(intptr_t)viewportFBO.colorTex, 
-        ImVec2((float)w, (float)h), ImVec2(0, 1), 
-        ImVec2(1, 0)
-    );
+   ImGui::Image(
+      (ImTextureID)(intptr_t)viewportFBO.colorTex,
+      ImVec2((float)w, (float)h), ImVec2(0, 1),
+      ImVec2(1, 0)
+   );
 
-    // 1) Hämta position och storlek på bilden i fönstret
-    ImVec2 image_pos = ImGui::GetItemRectMin(); // top-left på imagen
-    ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right
-    ImVec2 image_size = 
-        ImVec2(image_max.x - image_pos.x, image_max.y - image_pos.y);
+   // 1) Hämta position och storlek på bilden i fönstret
+   ImVec2 image_pos = ImGui::GetItemRectMin(); // top-left på imagen
+   ImVec2 image_max = ImGui::GetItemRectMax(); // bottom-right
+   ImVec2 image_size =
+      ImVec2(image_max.x - image_pos.x, image_max.y - image_pos.y);
 
-    // 2) Hämta muspositionen i skärmens koordinater
-    ImVec2 mouse = ImGui::GetMousePos();
+   // 2) Hämta muspositionen i skärmens koordinater
+   ImVec2 mouse = ImGui::GetMousePos();
 
-    // 3) Mus relativt bilden
-    ImVec2 mouse_in_image = ImVec2(mouse.x - image_pos.x, mouse.y - image_pos.y);
+   // 3) Mus relativt bilden
+   ImVec2 mouse_in_image = ImVec2(mouse.x - image_pos.x, mouse.y - image_pos.y);
 
-    // 4) insideImage = musen ligger inom bildens rektangel
-    bool insideImage =
-        mouse_in_image.x >= 0.0f and mouse_in_image.y >= 0.0f and
-        mouse_in_image.x < image_size.x and mouse_in_image.y < image_size.y;
+   // 4) insideImage = musen ligger inom bildens rektangel
+   bool insideImage =
+      mouse_in_image.x >= 0.0f and mouse_in_image.y >= 0.0f and
+      mouse_in_image.x < image_size.x and mouse_in_image.y < image_size.y;
 
-    ctx.viewportHovered = insideImage;
-    ctx.viewportFocused = ImGui::IsWindowFocused();
+   ctx.viewportHovered = insideImage;
+   ctx.viewportFocused = ImGui::IsWindowFocused();
 
-    // spara lokala coords för raycast
-    viewportMouseX = mouse_in_image.x;
-    viewportMouseY = mouse_in_image.y;
-    viewportDisplayW = std::max(image_size.x, 1.0f);
-    viewportDisplayH = std::max(image_size.y, 1.0f);
+   // spara lokala coords för raycast
+   viewportMouseX = mouse_in_image.x;
+   viewportMouseY = mouse_in_image.y;
+   viewportDisplayW = std::max(image_size.x, 1.0f);
+   viewportDisplayH = std::max(image_size.y, 1.0f);
 
-    ImGui::End();
+   ImGui::End();
 }
 
 // ====================================================
 //        Update 
 // ====================================================
 void Editor::EditorMain::fixedUpdate(float fixedTimeStep) {
-    //updateSelectedObject(fixedTimeStep);
+   //updateSelectedObject(fixedTimeStep);
 }
 
 void Editor::EditorMain::update(Shader& shader) {
 
-    // raycast for hover
-    physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+   // raycast for hover
+   physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
-    // set new hover state
-    if (raycast.hit && !selectedObjectIsBeingMoved) {
-        hoveredObjectHandle =
-            world->getGameObjectHandle(raycast.bodyHandle);
-    }
-    else {
-        hoveredObjectHandle = {};
-    }
+   // set new hover state
+   if (raycast.hit && !selectedObjectIsBeingMoved) {
+      hoveredObjectHandle =
+         world->getGameObjectHandle(raycast.bodyHandle);
+   }
+   else {
+      hoveredObjectHandle = {};
+   }
 }
 
 //====================================================
 // OBJECT SELECTION AND MANIPULATION
 //====================================================
 void Editor::EditorMain::syncSelectionOffset() {
-    if (!selectedObjectHandle.isValid()) return;
+   if (!selectedObjectHandle.isValid()) return;
 
-    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
-    glm::vec3 worldOffset = transform->position - camera->position;
-    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
-    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
-    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+   GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+   Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
+   glm::vec3 worldOffset = transform->position - camera->position;
+   selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+   selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+   selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    transform->lastPosition = transform->position;
+   transform->lastPosition = transform->position;
 }
 
 // select object
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
-    if (selectedObjectHandle.isValid()) return;
+   if (selectedObjectHandle.isValid()) return;
 
-    physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
+   physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
-    // no hit return
-    if (!raycast.hit) {
-        return;
-    }
+   // no hit return
+   if (!raycast.hit) {
+      return;
+   }
 
-    GameObjectHandle selectedHandle =
-        world->getGameObjectHandle(raycast.bodyHandle);
-    if (!selectedHandle.isValid()) {
-        return;
-    }
-    selectedObjectHandle = selectedHandle;
+   GameObjectHandle selectedHandle =
+      world->getGameObjectHandle(raycast.bodyHandle);
+   if (!selectedHandle.isValid()) {
+      return;
+   }
+   selectedObjectHandle = selectedHandle;
 
-    // set selected and hovered states, and calculate selection offset
-    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
-    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
-    transform->lastPosition = transform->position;
+   // set selected and hovered states, and calculate selection offset
+   GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
+   Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
+   transform->lastPosition = transform->position;
 
-    // Project worldofset onto cameras local axes
-    glm::vec3 worldOffset = transform->position - camera->position;
-    selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
-    selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
-    selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
+   // Project worldofset onto cameras local axes
+   glm::vec3 worldOffset = transform->position - camera->position;
+   selectionOffsetLocal.x = glm::dot(worldOffset, camera->right);
+   selectionOffsetLocal.y = glm::dot(worldOffset, camera->up);
+   selectionOffsetLocal.z = glm::dot(worldOffset, camera->front);
 
-    panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
-    panelManager->ctx.objectIsSelected = true;
+   panelManager->ctx.selectedObjectHandle = selectedObjectHandle;
+   panelManager->ctx.objectIsSelected = true;
 }
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-    if (!selectedObjectHandle.isValid())
-        return;
+   if (!selectedObjectHandle.isValid())
+      return;
 
-    GameObject* selectedObject =
-        world->getGameObject(selectedObjectHandle);
+   GameObject* selectedObject =
+      world->getGameObject(selectedObjectHandle);
 
-    if (!selectedObject) {
-        return;
-    }
+   if (!selectedObject) {
+      return;
+   }
 
-    if (selectedObjectIsBeingMoved) {
-        physicsEngine->setLinearVelocity(
-            selectedObject->rigidBodyHandle,
-            glm::vec3(0.0f)
-        );
-        physicsEngine->setAngularVelocity(
-            selectedObject->rigidBodyHandle,
-            glm::vec3(0.0f)
-        );
-    }
+   if (selectedObjectIsBeingMoved) {
+      physicsEngine->setLinearVelocity(
+         selectedObject->rigidBodyHandle,
+         glm::vec3(0.0f)
+      );
+      physicsEngine->setAngularVelocity(
+         selectedObject->rigidBodyHandle,
+         glm::vec3(0.0f)
+      );
+   }
 
-    // position
-    Transform* rootTransform = 
-        world->getTransform(selectedObject->rootTransformHandle);
+   // position
+   Transform* rootTransform =
+      world->getTransform(selectedObject->rootTransformHandle);
 
-    glm::vec3 worldOffset = 
-        camera->right * selectionOffsetLocal.x + 
-        camera->up * selectionOffsetLocal.y + 
-        camera->front * selectionOffsetLocal.z;
+   glm::vec3 worldOffset =
+      camera->right * selectionOffsetLocal.x +
+      camera->up * selectionOffsetLocal.y +
+      camera->front * selectionOffsetLocal.z;
 
-    glm::vec3 newPos = camera->position + worldOffset;
+   glm::vec3 newPos = camera->position + worldOffset;
 
-    rootTransform->position = newPos;
-    rootTransform->lastPosition = newPos;
-    rootTransform->updateCache();
+   rootTransform->position = newPos;
+   rootTransform->lastPosition = newPos;
+   rootTransform->updateCache();
 
-    // velocity
-    //selectedObject->linearVelocity = 
-    // (newPos - selectedObject->lastPosition) / fixedTimeStep;
+   // velocity
+   //selectedObject->linearVelocity = 
+   // (newPos - selectedObject->lastPosition) / fixedTimeStep;
 
-    world->syncGameObjectTransformToPhysics(
-        selectedObjectHandle
-    );
+   world->syncGameObjectTransformToPhysics(
+      selectedObjectHandle
+   );
 }
 
 // drop selected object
 void Editor::EditorMain::dropObject() {
-    selectedSubPartIndex = -1;
+   selectedSubPartIndex = -1;
 
-    selectedObjectHandle = {};
-    hoveredObjectHandle = {};
-    panelManager->ctx.objectIsSelected = false;
-    panelManager->ctx.selectedObjectHandle = {};
+   selectedObjectHandle = {};
+   hoveredObjectHandle = {};
+   panelManager->ctx.objectIsSelected = false;
+   panelManager->ctx.selectedObjectHandle = {};
 }
 
 // Raycast from camera through mouse cursor into world
 physics::RaycastHit Editor::EditorMain::rayCastMousePos(float length)
 {
-    glm::vec3 dir = getRayVectorToMouseLocation();
+   glm::vec3 dir = getRayVectorToMouseLocation();
 
-    float rLength = length;
-    physics::Ray r(camera->position, dir, SELECT_RANGE);
-    physics::RaycastHit hitData = physicsEngine->raycast(r);
+   float rLength = length;
+   physics::Ray r(camera->position, dir, SELECT_RANGE);
+   physics::RaycastHit hitData = physicsEngine->raycast(r);
 
-    return hitData;
+   return hitData;
 }
 
 glm::vec3 Editor::EditorMain::getRayVectorToMouseLocation() {
-    // 0) Normalisera musen i viewport-bilden (display space)
-    float u = viewportMouseX / viewportDisplayW;
-    float v = viewportMouseY / viewportDisplayH;
+   // 0) Normalisera musen i viewport-bilden (display space)
+   float u = viewportMouseX / viewportDisplayW;
+   float v = viewportMouseY / viewportDisplayH;
 
-    if (!flag_drawUI) {
-        // om UI inte ritas, använd global musposition och 
-        // skärmstorlek (screen space)
-        u = mouseXLastFrame / SCR_WIDTH;
-        v = mouseYLastFrame / SCR_HEIGHT;
-    }
+   if (!flag_drawUI) {
+      // om UI inte ritas, använd global musposition och 
+      // skärmstorlek (screen space)
+      u = mouseXLastFrame / SCR_WIDTH;
+      v = mouseYLastFrame / SCR_HEIGHT;
+   }
 
-    // clamp för säkerhet
-    u = std::clamp(u, 0.0f, 1.0f);
-    v = std::clamp(v, 0.0f, 1.0f);
+   // clamp för säkerhet
+   u = std::clamp(u, 0.0f, 1.0f);
+   v = std::clamp(v, 0.0f, 1.0f);
 
-    // 1) u,v -> NDC
-    float x = u * 2.0f - 1.0f;
-    float y = 1.0f - v * 2.0f; // invert Y (top-left -> bottom-left)
-    glm::vec4 rayClip(x, y, -1.0f, 1.0f);
+   // 1) u,v -> NDC
+   float x = u * 2.0f - 1.0f;
+   float y = 1.0f - v * 2.0f; // invert Y (top-left -> bottom-left)
+   glm::vec4 rayClip(x, y, -1.0f, 1.0f);
 
-    // 2) Clip → Eye(inverse projection)
-    float aspect = (float)viewportFBO.width / (float)viewportFBO.height;
+   // 2) Clip → Eye(inverse projection)
+   float aspect = (float)viewportFBO.width / (float)viewportFBO.height;
 
-    glm::mat4 projection = 
-        glm::perspective(glm::radians(camera->zoom), aspect, 0.1f, 10000.0f);
+   glm::mat4 projection =
+      glm::perspective(glm::radians(camera->zoom), aspect, 0.1f, 10000.0f);
 
-    glm::mat4 view = camera->GetViewMatrix();
-    glm::vec4 rayEye = glm::inverse(projection) * rayClip;
-    // Vi vill ha en riktning, inte en punkt:
-    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+   glm::mat4 view = camera->GetViewMatrix();
+   glm::vec4 rayEye = glm::inverse(projection) * rayClip;
+   // Vi vill ha en riktning, inte en punkt:
+   rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
 
-    // 3) Eye → World(inverse view) och normalisera
-    glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
-    return rayWorld;
+   // 3) Eye → World(inverse view) och normalisera
+   glm::vec3 rayWorld = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
+   return rayWorld;
 }

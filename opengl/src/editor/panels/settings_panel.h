@@ -7,18 +7,18 @@ class ImGuiManager;
 class EngineState;
 class Renderer;
 class SceneBuilder;
-class SkyboxManager;    
+class SkyboxManager;
 class MeshManager;
 class TextureManager;
 class FrameTimers;
 struct GpuTimers;
 
-namespace Editor 
+namespace Editor
 {
-    // Settings panel
-    class SettingsPanel : public IPanel {
-        public:
-        virtual const char* GetName() const override { return "Settings"; }
-        virtual void OnImGuiRender(const PanelContext& ctx) override;
-    };
+// Settings panel
+class SettingsPanel : public IPanel {
+public:
+   virtual const char* GetName() const override { return "Settings"; }
+   virtual void OnImGuiRender(const PanelContext& ctx) override;
+};
 }

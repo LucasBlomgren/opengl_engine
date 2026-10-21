@@ -26,12 +26,12 @@ float loadTimeStart = (float)glfwGetTime();
 
 // overload operator<< for glm::vec3 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& v) {
-	os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
-	return os;
+   os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+   return os;
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
+   glViewport(0, 0, width, height);
 }
 
 // settings
@@ -41,356 +41,393 @@ const unsigned int SHADOW_WIDTH = 4096; // 16384
 const unsigned int SHADOW_HEIGHT = 4096; // 16384
 
 // timing
-float deltaTime = 0.0f;	
+float deltaTime = 0.0f;
 float timeLastFrame = 0.0f;
 
 const float fixedTimeStep = 1.0f / 60.0f;
 float accumulator = 0.0f;
 
 int main() {
-	// initialize and configure OpenGL
-	GLFWwindow* window = OpenGL_init(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
+   // initialize and configure OpenGL
+   GLFWwindow* window = OpenGL_init(SCR_WIDTH, SCR_HEIGHT, "OpenGL engine");
 
-	// GPU logging
-	static constexpr int NQ = 4;
-	GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
-	int writeIdx = 0;
-	int readIdx = (writeIdx + 1) % NQ;
-	glGenQueries(NQ, qShadow);
-	glGenQueries(NQ, qMain);
-	glGenQueries(NQ, qDebug);
-	GpuTimers gpu;
+   // GPU logging
+   static constexpr int NQ = 4;
+   GLuint qShadow[NQ]{}, qMain[NQ]{}, qDebug[NQ]{};
+   int writeIdx = 0;
+   int readIdx = (writeIdx + 1) % NQ;
+   glGenQueries(NQ, qShadow);
+   glGenQueries(NQ, qMain);
+   glGenQueries(NQ, qDebug);
+   GpuTimers gpu;
 
-	// setup rng
-	std::mt19937 rng(std::random_device{}());
+   // setup rng
+   std::mt19937 rng(std::random_device{}());
 
-	// systems
-	EngineState engineState;
-	FrameTimers frameTimers;
-	physics::Engine physicsEngine;
-	Renderer renderer;
+   // systems
+   EngineState engineState;
+   FrameTimers frameTimers;
+   physics::Engine physicsEngine;
+   Renderer renderer;
 
-	// managers
-	ImGuiManager imguiManager;
-	InputManager inputManager;
+   // managers
+   ImGuiManager imguiManager;
+   InputManager inputManager;
 
-	TextureManager textureManager;
-	MeshManager meshManager;
-	ShaderManager shaderManager;
-	SkyboxManager skyboxManager; 
-	LightManager lightManager;
-	ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT); 
+   TextureManager textureManager;
+   MeshManager meshManager;
+   ShaderManager shaderManager;
+   SkyboxManager skyboxManager;
+   LightManager lightManager;
+   ShadowManager shadowManager(SHADOW_WIDTH, SHADOW_HEIGHT);
 
-	// editor
-	Editor::EditorMain editor;
+   // editor
+   Editor::EditorMain editor;
 
-	// player
-	Player player;
+   // player
+   Player player;
 
-	// view
-	Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
-	// set initial rotation
-	camera.yaw = 35.0f;
-	camera.pitch = -20.0f;
-	camera.ProcessMouseMovement(0.0f, 0.0f);
+   // view
+   Camera camera(glm::vec3(-70.0f, 40.0f, -30.0f));
+   // set initial rotation
+   camera.yaw = 35.0f;
+   camera.pitch = -20.0f;
+   camera.ProcessMouseMovement(0.0f, 0.0f);
 
-	// scene builder
-	World world(physicsEngine, renderer, textureManager, meshManager, shaderManager);
-	SceneBuilder sceneBuilder(player, editor, world, physicsEngine, renderer, textureManager, meshManager, shaderManager, lightManager, rng);
+   // scene builder
+   World world(physicsEngine, renderer, textureManager, meshManager, shaderManager);
+   SceneBuilder sceneBuilder(
+      player,
+      editor,
+      world,
+      physicsEngine,
+      renderer,
+      textureManager,
+      meshManager,
+      shaderManager,
+      lightManager,
+      rng
+   );
 
-	// physics init
-	physicsEngine.init(&frameTimers);
+   // physics init
+   physicsEngine.init(&frameTimers);
 
-	// setup input
-	inputManager.init(window);
+   // setup input
+   inputManager.init(window);
 
-	// setup rendering
-	renderer.init(SCR_WIDTH, SCR_HEIGHT, world, editor, player, engineState, lightManager, shaderManager, shadowManager, skyboxManager, meshManager);
+   // setup rendering
+   renderer.init(
+      SCR_WIDTH,
+      SCR_HEIGHT,
+      world,
+      editor,
+      player,
+      engineState,
+      lightManager,
+      shaderManager,
+      shadowManager,
+      skyboxManager,
+      meshManager
+   );
 
-	// load textures
-	textureManager.loadTexture("crate", "src/assets/crate.jpg");
-	textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
-	//textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
-	textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
+   // load textures
+   textureManager.loadTexture("crate", "src/assets/crate.jpg");
+   textureManager.loadTexture("uvmap", "src/assets/UV_8K.png");
+   //textureManager.loadTexture("terrain1", "src/assets/terrain_rock_8k.jpg");
+   textureManager.loadTexture("terrain2", "src/assets/terrain_grass_8k.jpg");
 
-	textureManager.loadTexture("checker_magenta", "src/assets/checker_magenta.png");
-	textureManager.loadTexture("checker_gray", "src/assets/checker_gray.png");
+   textureManager.loadTexture("checker_magenta", "src/assets/checker_magenta.png");
+   textureManager.loadTexture("checker_gray", "src/assets/checker_gray.png");
 
-	std::vector<std::string> skyBoxFaces {
-		std::string("src/assets/skyboxes/learnopengl/right.jpg"),
-		std::string("src/assets/skyboxes/learnopengl/left.jpg"),
-		std::string("src/assets/skyboxes/learnopengl/top.jpg"),
-		std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
-		std::string("src/assets/skyboxes/learnopengl/front.jpg"),
-		std::string("src/assets/skyboxes/learnopengl/back.jpg")
-	};
-	textureManager.loadCubemap("skybox_default", skyBoxFaces);
+   std::vector<std::string> skyBoxFaces{
+      std::string("src/assets/skyboxes/learnopengl/right.jpg"),
+      std::string("src/assets/skyboxes/learnopengl/left.jpg"),
+      std::string("src/assets/skyboxes/learnopengl/top.jpg"),
+      std::string("src/assets/skyboxes/learnopengl/bottom.jpg"),
+      std::string("src/assets/skyboxes/learnopengl/front.jpg"),
+      std::string("src/assets/skyboxes/learnopengl/back.jpg")
+   };
+   textureManager.loadCubemap("skybox_default", skyBoxFaces);
 
-	skyBoxFaces = {
-		std::string("src/assets/skyboxes/milkyway/right.png"),
-		std::string("src/assets/skyboxes/milkyway/left.png"),
-		std::string("src/assets/skyboxes/milkyway/top.png"),
-		std::string("src/assets/skyboxes/milkyway/bottom.png"),
-		std::string("src/assets/skyboxes/milkyway/front.png"),
-		std::string("src/assets/skyboxes/milkyway/back.png")
-	};
-	textureManager.loadCubemap("skybox_night", skyBoxFaces);
+   skyBoxFaces = {
+      std::string("src/assets/skyboxes/milkyway/right.png"),
+      std::string("src/assets/skyboxes/milkyway/left.png"),
+      std::string("src/assets/skyboxes/milkyway/top.png"),
+      std::string("src/assets/skyboxes/milkyway/bottom.png"),
+      std::string("src/assets/skyboxes/milkyway/front.png"),
+      std::string("src/assets/skyboxes/milkyway/back.png")
+   };
+   textureManager.loadCubemap("skybox_night", skyBoxFaces);
 
-	// setup skybox
-	skyboxManager.init(); 
+   // setup skybox
+   skyboxManager.init();
 
-	// create default scene 
-	sceneBuilder.createScene(0, engineState.isPlayerMode(), 0);
+   // create default scene 
+   sceneBuilder.createScene(0, engineState.isPlayerMode(), 0);
 
-	// setup editor
-	editor.init(
-		SCR_WIDTH, 
-		SCR_HEIGHT, 
-		&engineState, 
-		&world,
-		&sceneBuilder,
-		&physicsEngine, 
-		&inputManager, 
-		&camera, 
-		window, 
-		&imguiManager,
-		&renderer, 
-		&skyboxManager, 
-		&meshManager,
-		&textureManager,
-		&frameTimers, 
-		&gpu
-	);
+   // setup editor
+   editor.init(
+      SCR_WIDTH,
+      SCR_HEIGHT,
+      &engineState,
+      &world,
+      &sceneBuilder,
+      &physicsEngine,
+      &inputManager,
+      &camera,
+      window,
+      &imguiManager,
+      &renderer,
+      &skyboxManager,
+      &meshManager,
+      &textureManager,
+      &frameTimers,
+      &gpu
+   );
 
-	// setup player
-	player.setPointers(&world, &physicsEngine, &renderer, &camera);
+   // setup player
+   player.setPointers(&world, &physicsEngine, &renderer, &camera);
 
-	// ImGui setup
-	imguiManager.init(window);
+   // ImGui setup
+   imguiManager.init(window);
 
-	// add input routers
-	inputManager.router.add(&editor);
-	inputManager.router.add(&player);
-	inputManager.router.add(&camera);
+   // add input routers
+   inputManager.router.add(&editor);
+   inputManager.router.add(&player);
+   inputManager.router.add(&camera);
 
-	float loadTimeFinished = (float)glfwGetTime();
-	std::cout << "Load time: " << (loadTimeFinished - loadTimeStart) << " seconds\n";
+   float loadTimeFinished = (float)glfwGetTime();
+   std::cout << "Load time: " << (loadTimeFinished - loadTimeStart) << " seconds\n";
 
-	//=============================================================
-	// main loop
-	//=============================================================
-	while (true) {
-		// timing
-		frameTimers.beginFrame();
-		float timeNow = (float)glfwGetTime();
-		deltaTime = timeNow - timeLastFrame;
-		timeLastFrame = timeNow;
-		engineState.deltaTime = deltaTime;
+   //=============================================================
+   // main loop
+   //=============================================================
+   while (true) {
+      // timing
+      frameTimers.beginFrame();
+      float timeNow = (float)glfwGetTime();
+      deltaTime = timeNow - timeLastFrame;
+      timeLastFrame = timeNow;
+      engineState.deltaTime = deltaTime;
 
-		// update camera
-		camera.updateDeltaTime(deltaTime);
+      // update camera
+      camera.updateDeltaTime(deltaTime);
 
-		// events
-		inputManager.beginFrame();
-		glfwPollEvents();
+      // events
+      inputManager.beginFrame();
+      glfwPollEvents();
 
-		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			glfwSetWindowShouldClose(window, true);
+      if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+         glfwSetWindowShouldClose(window, true);
 
-		// exit condition
-		if (glfwWindowShouldClose(window)) {
-			break;
-		}
+      // exit condition
+      if (glfwWindowShouldClose(window)) {
+         break;
+      }
 
-		// start ImGui frame
-		imguiManager.newFrame();
+      // start ImGui frame
+      imguiManager.newFrame();
 
-		// read GPU timers from previous frames
-		GLuint avail = 0;
-		// SHADOW
-		glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-		if (avail) {
-			GLuint64 ns = 0;
-			glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
-			gpu.shadowMs = ns / 1e6;
-		}
-		// MAIN
-		glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-		if (avail) {
-			GLuint64 ns = 0;
-			glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
-			gpu.mainMs = ns / 1e6;
-		}
-		// DEBUG
-		glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
-		if (avail) {
-			GLuint64 ns = 0;
-			glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
-			gpu.debugMs = ns / 1e6;
-		}
-		// Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
-		// bumpa readIdx så vi läser nästa nästa gång
-		if (avail) {
-			readIdx = (readIdx + 1) % NQ;
-		}
+      // read GPU timers from previous frames
+      GLuint avail = 0;
+      // SHADOW
+      glGetQueryObjectuiv(qShadow[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+      if (avail) {
+         GLuint64 ns = 0;
+         glGetQueryObjectui64v(qShadow[readIdx], GL_QUERY_RESULT, &ns); // blockar inte när avail==true
+         gpu.shadowMs = ns / 1e6;
+      }
+      // MAIN
+      glGetQueryObjectuiv(qMain[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+      if (avail) {
+         GLuint64 ns = 0;
+         glGetQueryObjectui64v(qMain[readIdx], GL_QUERY_RESULT, &ns);
+         gpu.mainMs = ns / 1e6;
+      }
+      // DEBUG
+      glGetQueryObjectuiv(qDebug[readIdx], GL_QUERY_RESULT_AVAILABLE, &avail);
+      if (avail) {
+         GLuint64 ns = 0;
+         glGetQueryObjectui64v(qDebug[readIdx], GL_QUERY_RESULT, &ns);
+         gpu.debugMs = ns / 1e6;
+      }
+      // Endast om båda var tillgängliga (eller om du vill tillåta var för sig):
+      // bumpa readIdx så vi läser nästa nästa gång
+      if (avail) {
+         readIdx = (readIdx + 1) % NQ;
+      }
 
-		// setup input context
-		inputManager.setCurrentContext(
-			ImGui::GetIO().WantCaptureMouse,
-			ImGui::GetIO().WantCaptureKeyboard,
-			engineState.isPlayerMode());
+      // setup input context
+      inputManager.setCurrentContext(
+         ImGui::GetIO().WantCaptureMouse,
+         ImGui::GetIO().WantCaptureKeyboard,
+         engineState.isPlayerMode());
 
-		// route input
-		inputManager.route(window);
+      // route input
+      inputManager.route(window);
 
-		// input [V]: toggle editor/player mode
-		if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
-			engineState.setPlayerMode(!engineState.isPlayerMode());
+      // input [V]: toggle editor/player mode
+      if (inputManager.currentFrame.keyPressed[GLFW_KEY_V]) {
+         engineState.setPlayerMode(!engineState.isPlayerMode());
 
-			if (engineState.isPlayerMode()) {
-				player.activate();
-				editor.deactivate();
-				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-				inputManager.resetFirstMouse();
-			}
-			else {
-				player.deactivate();
-				editor.activate();
-				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-				inputManager.resetFirstMouse();
-			}
-		}
+         if (engineState.isPlayerMode()) {
+            player.activate();
+            editor.deactivate();
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            inputManager.resetFirstMouse();
+         }
+         else {
+            player.deactivate();
+            editor.activate();
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            inputManager.resetFirstMouse();
+         }
+      }
 
-		// editor/player update
-		if (!engineState.isPlayerMode()) {
-			ScopedTimer t(frameTimers, "Editor");
-			editor.update(*renderer.debugShader);
-		}
-		else {
-			ScopedTimer t(frameTimers, "Player");
-			player.updateMovement(deltaTime);
-			player.updateObjectSelection(*renderer.debugShader);
-			player.moveSelectedObject(deltaTime);
-		}
+      // editor/player update
+      if (!engineState.isPlayerMode()) {
+         ScopedTimer t(frameTimers, "Editor");
+         editor.update(*renderer.debugShader);
+      }
+      else {
+         ScopedTimer t(frameTimers, "Player");
+         player.updateMovement(deltaTime);
+         player.updateObjectSelection(*renderer.debugShader);
+         player.moveSelectedObject(deltaTime);
+      }
 
-		// pause toggle [G]
-		if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
-			engineState.setPaused(!engineState.isPaused());
-		}
-		// advance step [F]
-		if (inputManager.currentFrame.keyPressed[GLFW_KEY_F]) {
-			engineState.setAdvanceStep(true);
-		}
+      // pause toggle [G]
+      if (inputManager.currentFrame.keyPressed[GLFW_KEY_G]) {
+         engineState.setPaused(!engineState.isPaused());
+      }
+      // advance step [F]
+      if (inputManager.currentFrame.keyPressed[GLFW_KEY_F]) {
+         engineState.setAdvanceStep(true);
+      }
 
-		//=============================================================
-		// physics step
-		//=============================================================
-		if (!engineState.isPaused() or engineState.getAdvanceStep()) {
-			const int   kMaxStepsPerFrame = 8;
-			float simSpeed = engineState.getSimulationSpeed();
-			const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
+      //=============================================================
+      // physics step
+      //=============================================================
+      if (!engineState.isPaused() or engineState.getAdvanceStep()) {
+         const int   kMaxStepsPerFrame = 8;
+         float simSpeed = engineState.getSimulationSpeed();
+         const float kMaxAccum = kMaxStepsPerFrame * fixedTimeStep;
 
-			accumulator = std::min(accumulator + deltaTime * simSpeed, kMaxAccum);
+         accumulator = std::min(accumulator + deltaTime * simSpeed, kMaxAccum);
 
-			// single step advance
-			if (engineState.getAdvanceStep()) {
-				accumulator = fixedTimeStep;
-			}
+         // single step advance
+         if (engineState.getAdvanceStep()) {
+            accumulator = fixedTimeStep;
+         }
 
-			int possibleSteps = std::min(
-				static_cast<int>(accumulator / fixedTimeStep),
-				kMaxStepsPerFrame
-			);
+         int possibleSteps = std::min(
+            static_cast<int>(accumulator / fixedTimeStep),
+            kMaxStepsPerFrame
+         );
 
-			if (possibleSteps > 0)
-				physicsEngine.prepareStepLoop();
+         if (possibleSteps > 0)
+            physicsEngine.prepareStepLoop();
 
-			// stepping loop
-			int steps = 0;
-			while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame) 
-			{
-				// physics step & player update if in player mode
-				if (engineState.isPlayerMode()) {
-					player.updateBody(fixedTimeStep);
-				}
-				world.syncTransformsToPhysics();
-				physicsEngine.step(fixedTimeStep, engineState);
-				world.syncPhysicsToTransforms();
-				if (engineState.isPlayerMode()) {
-					player.resolveExternalContact();
-				}
+         // stepping loop
+         int steps = 0;
+         while (accumulator >= fixedTimeStep and steps < kMaxStepsPerFrame)
+         {
+            // physics step & player update if in player mode
+            if (engineState.isPlayerMode()) {
+               player.updateBody(fixedTimeStep);
+            }
+            world.syncTransformsToPhysics();
+            physicsEngine.step(fixedTimeStep, engineState);
+            world.syncPhysicsToTransforms();
+            if (engineState.isPlayerMode()) {
+               player.resolveExternalContact();
+            }
 
-				accumulator -= fixedTimeStep;
-				steps++;
-			}
-		}
+            accumulator -= fixedTimeStep;
+            steps++;
+         }
+      }
 
-		// single step advance flag reset
-		if (engineState.getAdvanceStep()) {
-			engineState.setAdvanceStep(false);
-		}
+      // single step advance flag reset
+      if (engineState.getAdvanceStep()) {
+         engineState.setAdvanceStep(false);
+      }
 
-		// object rain
-		if (!engineState.isPaused()) {
-			if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
-			else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
-		}
+      // object rain
+      if (!engineState.isPaused()) {
+         if (editor.objectRainBlocks) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 0);
+         else if (editor.objectRainSpheres) sceneBuilder.objectRain(timeNow, editor.objectRainPos, 1);
+      }
 
-        // Delete out of bounds objects
-        std::vector<GameObjectHandle> outOfBoundsObjects;
-        for (const physics::BodyHandle& handle : physicsEngine.getAwakeList()) {
-            const std::optional<physics::BodyState> state =
-                physicsEngine.getRigidBodyState(handle);
+      // Delete out of bounds objects
+      std::vector<GameObjectHandle> outOfBoundsObjects;
+      for (const physics::BodyHandle& handle : physicsEngine.getAwakeList()) {
+         const std::optional<physics::BodyState> state =
+            physicsEngine.getRigidBodyState(handle);
 
-			if (state &&
-                (state->pose.position.y < -1000.0f ||
-                 state->pose.position.y > 5000.0f)) {
-                GameObjectHandle objectHandle =
-                    world.getGameObjectHandle(handle);
+         if (state &&
+            (state->pose.position.y < -1000.0f ||
+               state->pose.position.y > 5000.0f)) {
+            GameObjectHandle objectHandle =
+               world.getGameObjectHandle(handle);
 
-                if (objectHandle.isValid()) {
-                    outOfBoundsObjects.push_back(objectHandle);
-                }
-			}
-        }
-        for (GameObjectHandle handle : outOfBoundsObjects) {
-            world.deleteGameObject(handle);
-        }
+            if (objectHandle.isValid()) {
+               outOfBoundsObjects.push_back(objectHandle);
+            }
+         }
+      }
+      for (GameObjectHandle handle : outOfBoundsObjects) {
+         world.deleteGameObject(handle);
+      }
 
-		//=============================================================
-		// rendering
-		//=============================================================
-		{
-			ScopedTimer t(frameTimers, "Render");
+      //=============================================================
+      // rendering
+      //=============================================================
+      {
+         ScopedTimer t(frameTimers, "Render");
 
-			// render to screen or editor viewport
-			if (engineState.isPlayerMode()) {
-				renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-			}
-			else {
-				if (editor.flag_drawUI) {
-					ImGui::DockSpaceOverViewport();
-					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, &editor.viewportFBO);
-				}
-				else {
-					renderer.render(camera, sceneBuilder, physicsEngine, qShadow, qMain, qDebug, writeIdx, nullptr);
-				}
-			}
-			sceneBuilder.sceneDirty = false;
-			writeIdx = (writeIdx + 1) % NQ;
+         // render to fullscreen
+         if (engineState.isPlayerMode() || !editor.flag_drawUI) {
+            renderer.render(
+               camera,
+               sceneBuilder,
+               physicsEngine,
+               qShadow,
+               qMain,
+               qDebug,
+               writeIdx,
+               nullptr
+            );
+         }
+         // render to editor viewport
+         else {
+            ImGui::DockSpaceOverViewport();
+            renderer.render(
+               camera,
+               sceneBuilder,
+               physicsEngine,
+               qShadow,
+               qMain,
+               qDebug,
+               writeIdx,
+               &editor.viewportFBO
+            );
+         }
+         sceneBuilder.sceneDirty = false;
+         writeIdx = (writeIdx + 1) % NQ;
 
-			// Imgui rendering
-			if (!engineState.isPlayerMode()) {
-				ScopedTimer a(frameTimers, "ImGui");
-				editor.drawUI(engineState.isPaused(), inputManager.currentContext, deltaTime);
-			}
-			imguiManager.render();
-		}
+         // Imgui rendering
+         if (!engineState.isPlayerMode()) {
+            ScopedTimer a(frameTimers, "ImGui");
+            editor.drawUI(engineState.isPaused(), inputManager.currentContext, deltaTime);
+         }
+         imguiManager.render();
+      }
 
-		frameTimers.endFrame();
+      frameTimers.endFrame();
 
-		// swap buffers
-		glfwSwapBuffers(window);
+      // swap buffers
+      glfwSwapBuffers(window);
    }
 
    imguiManager.shutdown();

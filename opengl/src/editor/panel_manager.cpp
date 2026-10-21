@@ -10,29 +10,29 @@
 
 // Initialize panels
 void Editor::PanelManager::init() {
-	panels.push_back(std::make_shared<Editor::PerformancePanel>());
-	panels.push_back(std::make_shared<Editor::SettingsPanel>());
-	panels.push_back(std::make_shared<Editor::InspectorPanel>());
+   panels.push_back(std::make_shared<Editor::PerformancePanel>());
+   panels.push_back(std::make_shared<Editor::SettingsPanel>());
+   panels.push_back(std::make_shared<Editor::InspectorPanel>());
 }
 
 // Render all panels
 void Editor::PanelManager::renderPanels(float deltaTime) {
-	auto& io = ImGui::GetIO();
-	ctx.deltaTime = deltaTime;
-	ctx.fps = io.Framerate;
-	ctx.amountObjects = world->getGameObjectsMap().dense().size();
+   auto& io = ImGui::GetIO();
+   ctx.deltaTime = deltaTime;
+   ctx.fps = io.Framerate;
+   ctx.amountObjects = world->getGameObjectsMap().dense().size();
 
-	const physics::debug::Data data = physicsEngine->getDebugData();
-	ctx.amountAwakeObjects = data.awake;
-	ctx.amountAsleepObjects = data.asleep;
-	ctx.amountStaticObjects = data.staticBodies;
-	ctx.amountTerrainTris = data.terrainTris;
-	ctx.amountContacts = data.contacts;
-    ctx.amountSpeculativeContacts = data.speculativeContacts;
-	ctx.amountColliders = data.colliders;
-    ctx.substepAmount = data.currentSubstepAmount;
+   const physics::debug::Data data = physicsEngine->getDebugData();
+   ctx.amountAwakeObjects = data.awake;
+   ctx.amountAsleepObjects = data.asleep;
+   ctx.amountStaticObjects = data.staticBodies;
+   ctx.amountTerrainTris = data.terrainTris;
+   ctx.amountContacts = data.contacts;
+   ctx.amountSpeculativeContacts = data.speculativeContacts;
+   ctx.amountColliders = data.colliders;
+   ctx.substepAmount = data.currentSubstepAmount;
 
-	for (const auto& panel : panels) {
-		panel->OnImGuiRender(ctx);
-	}
+   for (const auto& panel : panels) {
+      panel->OnImGuiRender(ctx);
+   }
 }

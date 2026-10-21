@@ -1,5 +1,6 @@
 #pragma once
 
+#include <source_location>
 #include <unordered_map>
 
 #include "slot_map.h"
@@ -9,80 +10,97 @@
 #include "physics/bodies/motion_state.h"
 #include "physics/sleep/sleep_state.h"
 #include "physics/collider/collider.h"
+#include "physics/collider/compound_collider.h"
+#include "physics/collider/collider_ref.h"
 
 namespace physics::internal {
 
+using SourceLoc = std::source_location;
+
 class PhysicsStorage {
 public:
-    void clear();
+   void clear();
 
-    // Handle reservation
-    BodyHandle reserveBodyHandle();
-    ColliderHandle reserveColliderHandle();
+   //===========================================
+   // Reservation
+   //===========================================
+   BodyHandle reserveBodyHandle();
+   ColliderHandle reserveColliderHandle();
+   CompoundHandle reserveCompoundHandle();
 
-    void releaseBodyReservation(BodyHandle handle);
-    void releaseColliderReservation(ColliderHandle handle);
+   void releaseBodyReservation(BodyHandle);
+   void releaseColliderReservation(ColliderHandle);
+   void releaseCompoundReservation(CompoundHandle);
 
-    // Commit creation
-    RigidBody* commitBody(
-        BodyHandle handle,
-        RigidBody&& body);
+   //===========================================
+   // Creation
+   //===========================================
+   RigidBody* commitBody(BodyHandle, RigidBody&&);
+   Collider* commitCollider(ColliderHandle, Collider&&);
+   Compound* commitCompound(CompoundHandle, Compound&&);
+   MotionStateHandle commitMotionState(MotionState&&);
+   SleepStateHandle commitSleepState(SleepState&&);
 
-    Collider* commitCollider(
-        ColliderHandle handle,
-        Collider&& collider);
+   //===========================================
+   // Deletion
+   //===========================================
+   void destroyBody(BodyHandle);
+   void destroyMotionState(MotionStateHandle);
+   void destroySleepState(SleepStateHandle);
+   void destroyCollider(ColliderHandle);
+   void destroyCompound(CompoundHandle);
 
-    MotionStateHandle commitMotionState(
-        MotionState&& motionState);
+   //===========================================
+   // Get data by handle
+   //===========================================
+   RigidBody& getBody(BodyHandle);
+   RigidBody* tryGetBody(BodyHandle, SourceLoc c = SourceLoc::current());
+   const RigidBody* tryGetBody(BodyHandle, SourceLoc c = SourceLoc::current()) const;
 
-    SleepStateHandle commitSleepState(
-        SleepState&& sleepState);
+   MotionState& getMotionState(MotionStateHandle);
+   const MotionState& getMotionState(MotionStateHandle) const;
 
-    // Active deletion
-    void destroyBody(BodyHandle handle);
-    void destroyMotionState(MotionStateHandle handle);
-    void destroySleepState(SleepStateHandle handle);
-    void destroyCollider(ColliderHandle handle);
+   SleepState& getSleepState(SleepStateHandle);
+   const SleepState& getSleepState(SleepStateHandle) const;
+   SleepState* tryGetSleepState(SleepStateHandle, SourceLoc c = SourceLoc::current());
 
-    // Active lookup only
-    RigidBody& getBody(BodyHandle handle);
-    RigidBody* tryGetBody(BodyHandle handle);
-    const RigidBody* tryGetBody(BodyHandle handle) const;
+   Collider& getCollider(ColliderHandle);
+   Collider* tryGetCollider(ColliderHandle, SourceLoc c = SourceLoc::current());
+   const Collider* tryGetCollider(ColliderHandle, SourceLoc c = SourceLoc::current()) const;
 
-    MotionState& getMotionState(MotionStateHandle handle);
-    const MotionState& getMotionState(MotionStateHandle handle) const;
-    SleepState& getSleepState(SleepStateHandle handle);
-    const SleepState& getSleepState(SleepStateHandle handle) const;
-    SleepState* tryGetSleepState(SleepStateHandle handle);
+   Compound& getCompound(CompoundHandle);
+   Compound* tryGetCompound(CompoundHandle, SourceLoc c = SourceLoc::current());
+   const Compound* tryGetCompound(CompoundHandle, SourceLoc c = SourceLoc::current()) const;
 
-    Collider& getCollider(ColliderHandle handle);
-    Collider* tryGetCollider(ColliderHandle handle);
-    const Collider* tryGetCollider(ColliderHandle handle) const;
+   //===========================================
+   // Get storage
+   //===========================================
+   SlotMap<RigidBody, BodyHandle>& bodyStorage();
+   const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
 
-    // Needed by caches, iteration and queries
-    SlotMap<RigidBody, BodyHandle>& bodyStorage();
-    const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
+   SlotMap<MotionState, MotionStateHandle>& motionStatesStorage();
+   const SlotMap<MotionState, MotionStateHandle>& motionStatesStorage() const;
 
-    SlotMap<MotionState, MotionStateHandle> motionStatesStorage();
-    const SlotMap<MotionState, MotionStateHandle> motionStatesStorage() const;
+   SlotMap<SleepState, SleepStateHandle>& sleepStatesStorage();
+   const SlotMap<SleepState, SleepStateHandle>& sleepStatesStorage() const;
 
-    SlotMap<SleepState, SleepStateHandle> sleepStatesStorage();
-    const SlotMap<SleepState, SleepStateHandle> sleepStatesStorage() const;
+   SlotMap<Collider, ColliderHandle>& colliderStorage();
+   const SlotMap<Collider, ColliderHandle>& colliderStorage() const;
 
-    SlotMap<Collider, ColliderHandle>& colliderStorage();
-    const SlotMap<Collider, ColliderHandle>& colliderStorage() const;
-
-    AABB computeBodyAABB(const RigidBody& body);
+   SlotMap<Compound, CompoundHandle>& compoundStorage();
+   const SlotMap<Compound, CompoundHandle>& compoundStorage() const;
 
 private:
-    int colliderId = 0;
-    int rigidBodyId = 0;
-    SlotMap<RigidBody, BodyHandle> bodies{ "RigidBody" };
-    SlotMap<MotionState, MotionStateHandle> motionStates{ "MotionState" };
-    SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
-    SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
+   int colliderId = 0;
+   int rigidBodyId = 0;
+   SlotMap<RigidBody, BodyHandle> bodies{ "RigidBody" };
+   SlotMap<MotionState, MotionStateHandle> motionStates{ "MotionState" };
+   SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
+   SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
+   SlotMap<Compound, CompoundHandle> compounds{ "Compound" };
 
-    SlotMap<Sphere, ShapeHandle> spheres{ "Sphere" };
-    SlotMap<BoxData, ShapeHandle> boxes{ "Box" };
+   SlotMap<Sphere, ShapeHandle> spheres{ "Sphere" };
+   SlotMap<BoxData, ShapeHandle> boxes{ "Box" };
+
 };
 }

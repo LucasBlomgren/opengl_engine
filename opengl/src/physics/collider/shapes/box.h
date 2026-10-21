@@ -7,17 +7,17 @@
 
 #include "physics/public/physics_types.h"
 
-#include "collider_transform_cache.h"
+#include "physics/collider/collider_transform_cache.h"
 
 namespace physics::internal {
 
 enum class FaceId {
-    MinX,
-    MaxX,
-    MinY,
-    MaxY,
-    MinZ,
-    MaxZ
+   MinX,
+   MaxX,
+   MinY,
+   MaxY,
+   MinZ,
+   MaxZ
 };
 
 inline constexpr std::array<std::array<int, 4>, 6> FACE_INDICES = { {
@@ -37,40 +37,40 @@ inline const std::array<glm::vec3, 3> LOCAL_AXES = {
 
 class Box {
 public:
-    // Physics-owned scale used to build the world-space box.
-    glm::vec3 scale{ 1.0f };
+   // Physics-owned scale used to build the world-space box.
+   glm::vec3 scale{ 1.0f };
 
-    glm::vec3 worldCenter{ 0.0f };
-    glm::vec3 localHalfExtents{ 0.5f };
+   glm::vec3 worldCenter{ 0.0f };
+   glm::vec3 localHalfExtents{ 0.5f };
 
-    std::array<glm::vec3, 8> worldVertices{};
-    std::array<glm::vec3, 3> worldAxes{
-        glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f)
-    };
+   std::array<glm::vec3, 8> worldVertices{};
+   std::array<glm::vec3, 3> worldAxes{
+       glm::vec3(1.0f, 0.0f, 0.0f),
+       glm::vec3(0.0f, 1.0f, 0.0f),
+       glm::vec3(0.0f, 0.0f, 1.0f)
+   };
 
-    Box() = default;
-    explicit Box(const std::vector<glm::vec3>& vertices);
-    explicit Box(const glm::vec3& halfExtents, const glm::vec3& center = glm::vec3(0.0f));
+   Box() = default;
+   explicit Box(const std::vector<glm::vec3>& vertices);
+   explicit Box(const glm::vec3& halfExtents, const glm::vec3& center = glm::vec3(0.0f));
 
-    void init(const std::vector<glm::vec3>& vertices);
-    void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
-    void update(const Pose& worldPose, const glm::vec3& worldScale);
+   void init(const std::vector<glm::vec3>& vertices);
+   void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
+   void update(const Pose& worldPose, const glm::vec3& worldScale);
 
-    std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
+   std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 
 private:
-    glm::vec3 localCenter{ 0.0f };
-    std::array<glm::vec3, 8> localVertices{};
+   glm::vec3 localCenter{ 0.0f };
+   std::array<glm::vec3, 8> localVertices{};
 
-    void rebuildLocalVertices();
+   void rebuildLocalVertices();
 };
 
 
 struct BoxData {
-    Box box;
-    ColliderTransformCache transformCache;
+   Box box;
+   ColliderTransformCache transformCache;
 };
 
 }

@@ -1,7 +1,8 @@
 #include "pch.h"
 
 #include "physics/public/engine.h"
-#include "physics/engine/runtime/body_spatial_update.h"
+#include "physics/collider/aabb.h"
+#include "physics/collider/body_collider_utils.h"
 
 namespace physics {
 
@@ -11,102 +12,105 @@ using namespace internal;
 // Integrate Forces / Velocities
 //==============================================================
 void Engine::integrateForcesAndVelocities(
-    const std::vector<BodyHandle>& awakeBodies,
-    float dt)
+   const std::vector<BodyHandle>& awakeBodies,
+   float dt)
 {
-    for (const BodyHandle& bodyHandle : awakeBodies) {
-        RigidBody& body = physicsStorage.getBody(bodyHandle);
+   for (BodyHandle bodyHandle : awakeBodies) {
+      RigidBody& body = physicsStorage.getBody(bodyHandle);
 
-        if (body.colliderHandles.empty()) {
-            continue;
-        }
+      if (!body.colliderRef.isValid())
+         continue;
 
-        Collider& mainCollider =
-            physicsStorage.getCollider(body.colliderHandles[0]);
+      if (body.type != BodyType::Dynamic)
+         continue;
 
-        if (body.type == BodyType::Dynamic) {
-            SleepState& sleepState = physicsStorage.getSleepState(body.sleepStateHandle);
+      SleepState& sleepState =
+         physicsStorage.getSleepState(body.sleepStateHandle);
 
-            if (body.colliderHandles.size() == 1) {
-                body.applyRollingFriction(mainCollider.type, dt, sleepState);
-            }
+      ColliderHandle singleCollider{};
 
-            body.applyVelocityDamping(dt, sleepState);
-            body.applyGravity(dt);
-        }
-    }
+      if (body.colliderRef.isSingle()) {
+         singleCollider = body.colliderRef.single;
+      }
+      else if (body.colliderRef.isCompound()) {
+         const Compound& compound =
+            physicsStorage.getCompound(body.colliderRef.compound);
+
+         if (compound.colliders.size() == 1)
+            singleCollider = compound.colliders.front();
+      }
+
+      if (singleCollider.isValid()) {
+         const Collider& collider =
+            physicsStorage.getCollider(singleCollider);
+
+         body.applyRollingFriction(
+            collider.type, dt, sleepState
+         );
+      }
+
+      body.applyVelocityDamping(dt, sleepState);
+      body.applyGravity(dt);
+   }
 }
 
 //==============================================================
 // Integrate Positions and Update Colliders
 //==============================================================
 void Engine::integratePositionsAndColliders(
-    const std::vector<BodyHandle>& awakeBodies,
-    float dt)
+   const std::vector<BodyHandle>& awakeBodies,
+   float dt)
 {
-    for (const BodyHandle& bodyHandle : awakeBodies) {
-        RigidBody& body = physicsStorage.getBody(bodyHandle);
-        body.integratePose(dt);
-        body.updateInertiaWorld();
-        updateCollidersAndBodyAABB(physicsStorage, &body);
-    }
+   for (BodyHandle bodyHandle : awakeBodies) {
+      RigidBody& body = physicsStorage.getBody(bodyHandle);
+
+      body.integratePose(dt);
+      body.updateInertiaWorld();
+
+      updateCollidersAndBodyRadius(body);
+   }
 }
 
 //==============================================================
-// Update Collider Poses and Body AABB
+// Update Collider Poses and Body Bounding Radius
 //==============================================================
-void internal::updateCollidersAndBodyAABB(
-    PhysicsStorage& storage,
-    RigidBody* body)
+void Engine::updateCollidersAndBodyRadius(RigidBody& body)
 {
-    bool hasAABB = false;
-    internal::AABB combinedAABB;
+   float maxRadius = 0.0f;
 
-    for (ColliderHandle colliderHandle : body->colliderHandles) {
-        Collider& collider =
-            storage.getCollider(colliderHandle);
+   forEachBodyCollider(
+      physicsStorage,
+      body.colliderRef,
+      [&](ColliderHandle colliderH) {
+         Collider& collider = physicsStorage.getCollider(colliderH);
 
-        if (!collider.enabled) {
-            continue;
-        }
+         if (!collider.enabled)
+            return;
 
-        collider.updateWorldPose(body->pose, body->scale);
-        collider.updateShape();
-        collider.updateAABB();
+         collider.updateWorldPose(body.pose, body.scale);
+         collider.updateShape();
+         collider.updateAABB();
 
-        const internal::AABB& colliderAABB = collider.getAABB();
+         const internal::AABB& aabb = collider.getAABB();
 
-        if (!hasAABB) {
-            combinedAABB = colliderAABB;
-            hasAABB = true;
-        }
-        else {
-            combinedAABB.growToInclude(colliderAABB.worldMin);
-            combinedAABB.growToInclude(colliderAABB.worldMax);
-        }
-    }
+         const glm::vec3 minDelta =
+            glm::abs(aabb.worldMin - body.pose.position);
 
-    if (!hasAABB) {
-        body->aabb = internal::AABB{};
-        body->invRadius = 0.0f;
-        return;
-    }
+         const glm::vec3 maxDelta =
+            glm::abs(aabb.worldMax - body.pose.position);
 
-    combinedAABB.worldCenter =
-        (combinedAABB.worldMin + combinedAABB.worldMax) * 0.5f;
+         const float radius = glm::length(
+            glm::max(minDelta, maxDelta)
+         );
 
-    combinedAABB.worldHalfExtents =
-        (combinedAABB.worldMax - combinedAABB.worldMin) * 0.5f;
+         maxRadius = std::max(maxRadius, radius);
+      }
+   );
 
-    body->aabb = combinedAABB;
-
-    const float boundingRadius =
-        glm::length(combinedAABB.worldHalfExtents);
-
-    body->invRadius =
-        boundingRadius > 0.0f
-        ? 1.0f / boundingRadius
-        : 0.0f;
+   // #TODO: inte beräkna varje frame
+   body.invRadius = maxRadius > 0.0f
+      ? 1.0f / maxRadius
+      : 0.0f;
 }
 
 }

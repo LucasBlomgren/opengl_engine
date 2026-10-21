@@ -6,766 +6,769 @@
 //           Init
 //-----------------------------
 void Renderer::init(
-    unsigned int width,
-    unsigned int height,
-    World& world,
-    Editor::EditorMain& editor,
-    Player& player,
-    EngineState& engineState, 
-    LightManager& lightManager, 
-    ShaderManager& shaderManager,
-    ShadowManager& shadowManager, 
-    SkyboxManager& skyboxManager,
-    MeshManager& meshManager) 
+   unsigned int width,
+   unsigned int height,
+   World& world,
+   Editor::EditorMain& editor,
+   Player& player,
+   EngineState& engineState,
+   LightManager& lightManager,
+   ShaderManager& shaderManager,
+   ShadowManager& shadowManager,
+   SkyboxManager& skyboxManager,
+   MeshManager& meshManager)
 {
-    screenWidth  = (float)width;
-    screenHeight = (float)height;
+   screenWidth = (float)width;
+   screenHeight = (float)height;
 
-    this->world         = &world;
-    this->editor        = &editor;
-    this->player        = &player;
-    this->engineState   = &engineState;
-    this->lightManager  = &lightManager;
-    this->shadowManager = &shadowManager;
-    this->skyboxManager = &skyboxManager;
-    this->shaderManager = &shaderManager;
-    this->meshManager   = &meshManager;
+   this->world = &world;
+   this->editor = &editor;
+   this->player = &player;
+   this->engineState = &engineState;
+   this->lightManager = &lightManager;
+   this->shadowManager = &shadowManager;
+   this->skyboxManager = &skyboxManager;
+   this->shaderManager = &shaderManager;
+   this->meshManager = &meshManager;
 
-    defaultShader = shaderManager.getShader("default");
-    debugShader   = shaderManager.getShader("debug");
-    shadowShader  = shaderManager.getShader("shadow");
-    skyboxShader  = shaderManager.getShader("skybox");
+   defaultShader = shaderManager.getShader("default");
+   debugShader = shaderManager.getShader("debug");
+   shadowShader = shaderManager.getShader("shadow");
+   skyboxShader = shaderManager.getShader("skybox");
 
-    defaultShader->use();
-    batches.reserve(100000);
+   defaultShader->use();
+   batches.reserve(100000);
 
-    debugRenderer.init(engineState, meshManager, shaderManager);
+   debugRenderer.init(engineState, meshManager, shaderManager);
 }
 
 // set viewport
 void Renderer::setViewPort(unsigned int w, unsigned int h) {
-    glViewport(0, 0, w, h);
+   glViewport(0, 0, w, h);
 }
 
 // clear render batches
 void Renderer::clearRenderBatches() {
-    batches.clear();
+   batches.clear();
 }
 
 //-----------------------------
 //    Add Object to Batch
 //----------------------------- 
 void Renderer::addObjectToBatch(GameObjectHandle objectH) {
-    GameObject* obj = world->getGameObject(objectH);  
-    Transform* rootT = world->getTransform(obj->rootTransformHandle);
+   GameObject* obj = world->getGameObject(objectH);
+   Transform* rootT = world->getTransform(obj->rootTransformHandle);
 
-    for (int i = 0; i < (int)obj->parts.size(); ++i) {
-        SubPart& part = obj->parts[i];
+   for (int i = 0; i < (int)obj->parts.size(); ++i) {
+      SubPart& part = obj->parts[i];
 
-        // invisible part, skip
-        if (part.seeThrough) {
-            continue;
-        }
+      // invisible part, skip
+      if (part.seeThrough) {
+         continue;
+      }
 
-        // collider-only part
-        if (part.mesh == nullptr || part.shader == nullptr) {
-            continue;
-        }
+      // collider-only part
+      if (part.mesh == nullptr || part.shader == nullptr) {
+         continue;
+      }
 
-        Transform* localT = world->getTransform(part.localTransformHandle);
+      Transform* localT = world->getTransform(part.localTransformHandle);
 
-        bool addedToBatch = false;
+      bool addedToBatch = false;
 
-        // check existing buckets
-        for (RenderBatch& bucket : batches) {
-            if (bucket.mesh == part.mesh &&
-                bucket.shader == part.shader &&
-                bucket.textureId == part.textureId)
-            {
-                bucket.parts.push_back({ objectH, i });
-                bucket.instances.emplace_back(
-                    rootT->modelMatrix * localT->modelMatrix, 
-                    part.color
-                );
-
-                part.batchIdx = static_cast<int>(&bucket - &batches[0]);
-                part.batchInstanceIdx = static_cast<int>(bucket.parts.size()) - 1;
-                addedToBatch = true;
-                break;
-            }
-        }
-
-        // if no existing bucket found, create a new one
-        if (!addedToBatch) {
-            RenderBatch newBatch;
-            newBatch.mesh = part.mesh;
-            newBatch.shader = part.shader;
-            newBatch.textureId = part.textureId;
-            newBatch.parts.push_back({ objectH, i });
-            newBatch.instances.emplace_back(
-                rootT->modelMatrix * localT->modelMatrix, 
-                part.color
+      // check existing buckets
+      for (RenderBatch& bucket : batches) {
+         if (bucket.mesh == part.mesh &&
+            bucket.shader == part.shader &&
+            bucket.textureId == part.textureId)
+         {
+            bucket.parts.push_back({ objectH, i });
+            bucket.instances.emplace_back(
+               rootT->modelMatrix * localT->modelMatrix,
+               part.color
             );
 
-            // new batch & instance
-            part.batchIdx = static_cast<int>(batches.size());
-            part.batchInstanceIdx = 0;
+            part.batchIdx = static_cast<int>(&bucket - &batches[0]);
+            part.batchInstanceIdx = static_cast<int>(bucket.parts.size()) - 1;
+            addedToBatch = true;
+            break;
+         }
+      }
 
-            batches.push_back(std::move(newBatch));
-        }
-    }
+      // if no existing bucket found, create a new one
+      if (!addedToBatch) {
+         RenderBatch newBatch;
+         newBatch.mesh = part.mesh;
+         newBatch.shader = part.shader;
+         newBatch.textureId = part.textureId;
+         newBatch.parts.push_back({ objectH, i });
+         newBatch.instances.emplace_back(
+            rootT->modelMatrix * localT->modelMatrix,
+            part.color
+         );
+
+         // new batch & instance
+         part.batchIdx = static_cast<int>(batches.size());
+         part.batchInstanceIdx = 0;
+
+         batches.push_back(std::move(newBatch));
+      }
+   }
 }
 
 //-----------------------------
 //  Remove Object from Batch
 //----------------------------- 
 void Renderer::removeObjectFromBatch(GameObjectHandle handle) {
-    GameObject* obj = world->getGameObject(handle);
+   GameObject* obj = world->getGameObject(handle);
 
-    for (int i = 0; i < (int)obj->parts.size(); ++i) {
-        SubPart& part = obj->parts[i];
+   for (int i = 0; i < (int)obj->parts.size(); ++i) {
+      SubPart& part = obj->parts[i];
 
-        if (part.batchIdx == -1 || part.batchInstanceIdx == -1) {
-            continue; // part not in a batch
-        }
+      if (part.batchIdx == -1 || part.batchInstanceIdx == -1) {
+         continue; // part not in a batch
+      }
 
-        RenderBatch& batch = batches[part.batchIdx];
-        int removeIdx = part.batchInstanceIdx;
-        int lastIdx = static_cast<int>(batch.parts.size()) - 1;
+      RenderBatch& batch = batches[part.batchIdx];
+      int removeIdx = part.batchInstanceIdx;
+      int lastIdx = static_cast<int>(batch.parts.size()) - 1;
 
-        if (removeIdx != lastIdx) {
-            // move last part into the removed slot
-            RenderRef movedRef = batch.parts[lastIdx];
+      if (removeIdx != lastIdx) {
+         // move last part into the removed slot
+         RenderRef movedRef = batch.parts[lastIdx];
 
-            batch.parts[removeIdx] = movedRef;
-            batch.instances[removeIdx] = batch.instances[lastIdx];
+         batch.parts[removeIdx] = movedRef;
+         batch.instances[removeIdx] = batch.instances[lastIdx];
 
-            GameObject* movedObj = world->getGameObject(movedRef.objectH);
-            if (movedObj) {
-                SubPart& movedPart = movedObj->parts[movedRef.partIndex];
-                movedPart.batchIdx = part.batchIdx;
-                movedPart.batchInstanceIdx = removeIdx;
-            }
-        }
+         GameObject* movedObj = world->getGameObject(movedRef.objectH);
+         if (movedObj) {
+            SubPart& movedPart = movedObj->parts[movedRef.partIndex];
+            movedPart.batchIdx = part.batchIdx;
+            movedPart.batchInstanceIdx = removeIdx;
+         }
+      }
 
-        batch.parts.pop_back();
-        batch.instances.pop_back();
+      batch.parts.pop_back();
+      batch.instances.pop_back();
 
-        part.batchIdx = -1;
-        part.batchInstanceIdx = -1;
-    }
+      part.batchIdx = -1;
+      part.batchInstanceIdx = -1;
+   }
 }
 
 //-----------------------------
 //       View Projection
 //-----------------------------
-void Renderer::setViewProjection(Camera& camera, float aspect) 
+void Renderer::setViewProjection(Camera& camera, float aspect)
 {
-    glm::mat4 projection = 
-        glm::perspective(glm::radians(80.0f), aspect, 0.1f, maxViewDistance);
+   glm::mat4 projection =
+      glm::perspective(glm::radians(80.0f), aspect, 0.1f, maxViewDistance);
 
-    // camera/view transformation
-    glm::mat4 view = camera.GetViewMatrix();
+   // camera/view transformation
+   glm::mat4 view = camera.GetViewMatrix();
 
-    defaultShader->use();
-    defaultShader->setMat4("projection", projection);
-    defaultShader->setMat4("view", view);
-    defaultShader->setVec3("viewPos", camera.position);
+   defaultShader->use();
+   defaultShader->setMat4("projection", projection);
+   defaultShader->setMat4("view", view);
+   defaultShader->setVec3("viewPos", camera.position);
 
-    Shader* defaultInstancedShader = defaultShader->instancedVariant;
-    if (defaultInstancedShader) {
-        defaultInstancedShader->use();
-        defaultInstancedShader->setMat4("projection", projection);
-        defaultInstancedShader->setMat4("view", view);
-        defaultInstancedShader->setVec3("viewPos", camera.position);
-    }
+   Shader* defaultInstancedShader = defaultShader->instancedVariant;
+   if (defaultInstancedShader) {
+      defaultInstancedShader->use();
+      defaultInstancedShader->setMat4("projection", projection);
+      defaultInstancedShader->setMat4("view", view);
+      defaultInstancedShader->setVec3("viewPos", camera.position);
+   }
 
-    debugShader->use();
-    debugShader->setMat4("projection", projection);
-    debugShader->setMat4("view", view);
-    debugShader->setVec3("viewPos", camera.position);
+   debugShader->use();
+   debugShader->setMat4("projection", projection);
+   debugShader->setMat4("view", view);
+   debugShader->setVec3("viewPos", camera.position);
 
-    skyboxShader->use();
-    skyboxShader->setMat4("projection", projection);
+   skyboxShader->use();
+   skyboxShader->setMat4("projection", projection);
 
-    // remove translation from the view matrix
-    skyboxShader->setMat4("view", glm::mat4(glm::mat3(view)));
+   // remove translation from the view matrix
+   skyboxShader->setMat4("view", glm::mat4(glm::mat3(view)));
 }
 
 //-----------------------------
 //      Set Shadow Render
 //-----------------------------
 void Renderer::setShadowRender(glm::mat4& lightSpaceMatrix) {
-    setViewPort(shadowManager->width, shadowManager->height);
-    shadowManager->bind();
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glCullFace(GL_FRONT);
+   setViewPort(shadowManager->width, shadowManager->height);
+   shadowManager->bind();
+   glClear(GL_DEPTH_BUFFER_BIT);
+   glCullFace(GL_FRONT);
 
-    shadowShader->use();
-    shadowShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+   shadowShader->use();
+   shadowShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
 
-    Shader* shadowInstancedShader = shadowShader->instancedVariant;
-    if (shadowInstancedShader) {
-        shadowInstancedShader->use();
-        shadowInstancedShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    }
+   Shader* shadowInstancedShader = shadowShader->instancedVariant;
+   if (shadowInstancedShader) {
+      shadowInstancedShader->use();
+      shadowInstancedShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+   }
 }
 
 //-----------------------------
 //    Cleanup Shadow Render
 //-----------------------------
 void Renderer::cleanupShadowRender() {
-    glCullFace(GL_BACK);
-    shadowManager->unbind();
+   glCullFace(GL_BACK);
+   shadowManager->unbind();
 }
 
 //-----------------------------
 //      Set Default Render
 //-----------------------------
 void Renderer::setDefaultRender(
-    glm::mat4& lightSpaceMatrix, 
-    int targetW, 
-    int targetH) 
+   glm::mat4& lightSpaceMatrix,
+   int targetW,
+   int targetH)
 {
-    setViewPort(targetW, targetH);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+   setViewPort(targetW, targetH);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-    defaultShader->use();
-    defaultShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    defaultShader->setInt("shadowMap", 1);
+   defaultShader->use();
+   defaultShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+   defaultShader->setInt("shadowMap", 1);
 
-    Shader* inst = defaultShader->instancedVariant;
-    inst->use();
-    inst->setMat4("lightSpaceMatrix", lightSpaceMatrix);
-    inst->setInt("shadowMap", 1);
+   Shader* inst = defaultShader->instancedVariant;
+   inst->use();
+   inst->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+   inst->setInt("shadowMap", 1);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, shadowManager->depthMap);
-    glActiveTexture(GL_TEXTURE0);
+   glActiveTexture(GL_TEXTURE1);
+   glBindTexture(GL_TEXTURE_2D, shadowManager->depthMap);
+   glActiveTexture(GL_TEXTURE0);
 }
 
 //-------------------------------------
 //        Main render
 //-------------------------------------
 void Renderer::render(
-    Camera& camera,
-    SceneBuilder& builder,
-    physics::Engine& physics,
-    GLuint qShadow[],
-    GLuint qMain[],
-    GLuint qDebug[],
-    int writeIdx,
-    const Editor::ViewportFBO* viewportFBO
+   Camera& camera,
+   SceneBuilder& builder,
+   physics::Engine& physics,
+   GLuint qShadow[],
+   GLuint qMain[],
+   GLuint qDebug[],
+   int writeIdx,
+   const Editor::ViewportFBO* viewportFBO
 ) {
-    physicsEngine = &physics;
+   physicsEngine = &physics;
 
-    // update scene bounds if dirty
-    if (builder.sceneDirty) {
-        computeSceneBounds(builder);
-    }
+   // update scene bounds if dirty
+   if (builder.sceneDirty) {
+      computeSceneBounds(builder);
+   }
 
-    // #TODO: optimize by only updating batches that changed
-    // only awake dynamic objects should need batch updates, static and 
-    // asleep objects won't move and thus their batch instance data 
-    // won't need updating.
+   // #TODO: optimize by only updating batches that changed
+   // only awake dynamic objects should need batch updates, static and 
+   // asleep objects won't move and thus their batch instance data 
+   // won't need updating.
 
-    fillBatchInstances();
-    debugRenderer.prepareFrame(
-        physics, 
-        world->getGameObjectsMap().dense(), 
-        *world, 
-        editor->selectedObjectHandle, 
-        editor->selectedSubPartIndex
-    );
+   fillBatchInstances();
+   debugRenderer.prepareFrame(
+      physics,
+      world->getGameObjectsMap().dense(),
+      *world,
+      editor->selectedObjectHandle,
+      editor->selectedSubPartIndex
+   );
 
-    // shadow depth map render
-    glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
-    glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
-    setShadowRender(lightSpaceMatrix);
-    renderGameObjectsShadow();
-    debugRenderer.renderShadowPass();
-    renderTerrain(builder.getTerrainData(), builder.sceneDirty, true);
-    cleanupShadowRender();
-    glEndQuery(GL_TIME_ELAPSED);
+   // shadow depth map render
+   glBeginQuery(GL_TIME_ELAPSED, qShadow[writeIdx]);
+   glm::mat4 lightSpaceMatrix = computeLightSpaceMatrix();
+   setShadowRender(lightSpaceMatrix);
+   renderGameObjectsShadow();
+   debugRenderer.renderShadowPass();
+   renderTerrain(builder.getTerrainData(), builder.sceneDirty, true);
+   cleanupShadowRender();
+   glEndQuery(GL_TIME_ELAPSED);
 
-    // bind viewport FBO if provided
-    int targetW = (int)screenWidth;
-    int targetH = (int)screenHeight;
-    // viewport render
-    if (viewportFBO) {
-        viewportFBO->bind();
-        targetW = viewportFBO->width;
-        targetH = viewportFBO->height;
-    }
-    else {
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-    float aspect = (float)targetW / (float)targetH;
+   // bind viewport FBO if provided
+   int targetW = (int)screenWidth;
+   int targetH = (int)screenHeight;
+   // viewport render
+   if (viewportFBO) {
+      viewportFBO->bind();
+      targetW = viewportFBO->width;
+      targetH = viewportFBO->height;
+   }
+   else {
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+   }
+   float aspect = (float)targetW / (float)targetH;
 
-    // default render
-    glBeginQuery(GL_TIME_ELAPSED, qMain[writeIdx]);
-    setDefaultRender(lightSpaceMatrix, targetW, targetH);
-    setViewProjection(camera, aspect);
-    uploadDirectionalLight();
-    uploadLightsToShader();
+   // default render
+   glBeginQuery(GL_TIME_ELAPSED, qMain[writeIdx]);
+   setDefaultRender(lightSpaceMatrix, targetW, targetH);
+   setViewProjection(camera, aspect);
+   uploadDirectionalLight();
+   uploadLightsToShader();
 
-    // update selected light position to match selected object position
-    if (editor->selectedObjectHandle.isValid()) {
-        GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
-        if (obj) {
-            Transform* t = world->getTransform(obj->rootTransformHandle);
-            std::vector<Light>& selectedLights = lightManager->getLights();
+   // update selected light position to match selected object position
+   if (editor->selectedObjectHandle.isValid()) {
+      GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
+      if (obj) {
+         Transform* t = world->getTransform(obj->rootTransformHandle);
+         std::vector<Light>& selectedLights = lightManager->getLights();
 
-            if (!selectedLights.empty()) {
-                selectedLights[0].position = t->position;
-            }
-        }
-    }
+         if (!selectedLights.empty()) {
+            selectedLights[0].position = t->position;
+         }
+      }
+   }
 
-    //// draw sky quad
-    //DirectionalLight& light = lightManager->getDirectionalLight();
-    //light.direction.y -= 0.0001f;
-    //quadRenderer.draw(
-    //    shaderManager->getShader("SkyShader"), 
-    //    &camera, 
-    //    light.direction, 
-    //    targetW, 
-    //    targetH
-    //);
+   //// draw sky quad
+   //DirectionalLight& light = lightManager->getDirectionalLight();
+   //light.direction.y -= 0.0001f;
+   //quadRenderer.draw(
+   //    shaderManager->getShader("SkyShader"), 
+   //    &camera, 
+   //    light.direction, 
+   //    targetW, 
+   //    targetH
+   //);
 
-    renderLights();
-    renderScene(builder);
-    glEndQuery(GL_TIME_ELAPSED);
+   renderLights();
+   renderScene(builder);
+   glEndQuery(GL_TIME_ELAPSED);
 
-    // render raycast hit for player/editor
-    if (engineState->isPlayerMode()) {
-        renderSelectedObjectOutline(player->selectedObjectHandle, camera, builder);
-        renderHoveredObjectOutline(player->hoveredObjectHandle, camera, builder);
-    } else {
-        renderSelectedObjectOutline(editor->selectedObjectHandle, camera, builder);
-        renderHoveredObjectOutline(editor->hoveredObjectHandle, camera, builder);
-    }
+   // render raycast hit for player/editor
+   if (engineState->isPlayerMode()) {
+      renderSelectedObjectOutline(player->selectedObjectHandle, camera, builder);
+      renderHoveredObjectOutline(player->hoveredObjectHandle, camera, builder);
+   }
+   else {
+      renderSelectedObjectOutline(editor->selectedObjectHandle, camera, builder);
+      renderHoveredObjectOutline(editor->hoveredObjectHandle, camera, builder);
+   }
 
-    glDepthFunc(GL_LEQUAL);
-    skyboxManager->render(*skyboxShader); 
-    glDepthFunc(GL_LESS); 
+   glDepthFunc(GL_LEQUAL);
+   skyboxManager->render(*skyboxShader);
+   glDepthFunc(GL_LESS);
 
-    // debug
-    glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
+   // debug
+   glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
-    debugRenderer.renderOverlayPass(
-        physics, 
-        camera, 
-        world->getGameObjectsMap().dense(), 
-        *world
-    );
+   debugRenderer.renderOverlayPass(
+      physics,
+      camera,
+      world->getGameObjectsMap().dense(),
+      *world
+   );
 
-    glEndQuery(GL_TIME_ELAPSED);
+   glEndQuery(GL_TIME_ELAPSED);
 
-    if (viewportFBO) {
-        viewportFBO->unbind(screenWidth, screenHeight);
-    }
+   if (viewportFBO) {
+      viewportFBO->unbind(screenWidth, screenHeight);
+   }
 }
 
 //-----------------------------
 //   Fill Batch Instances
 //-----------------------------
 void Renderer::fillBatchInstances() {
-    for (RenderBatch& bucket : batches) {
-        bucket.instances.clear();
-        for (RenderRef& ref : bucket.parts) {
-            GameObject* obj = world->getGameObject(ref.objectH);
-            SubPart& part = obj->parts[ref.partIndex];
+   for (RenderBatch& bucket : batches) {
+      bucket.instances.clear();
+      for (RenderRef& ref : bucket.parts) {
+         GameObject* obj = world->getGameObject(ref.objectH);
+         SubPart& part = obj->parts[ref.partIndex];
 
-            Transform* rootT = world->getTransform(obj->rootTransformHandle);
-            Transform* localT = world->getTransform(part.localTransformHandle);
+         Transform* rootT = world->getTransform(obj->rootTransformHandle);
+         Transform* localT = world->getTransform(part.localTransformHandle);
 
-            bucket.instances.emplace_back(
-                rootT->modelMatrix * localT->modelMatrix, 
-                part.color
-            );
-        }
-    }
+         bucket.instances.emplace_back(
+            rootT->modelMatrix * localT->modelMatrix,
+            part.color
+         );
+      }
+   }
 }
 
 //-----------------------------
 //       Render Shadows
 //-----------------------------
 void Renderer::renderGameObjectsShadow() {
-    for (auto& batch : batches) {
-        auto& instances = batch.instances;
-        Shader* shader;
-        Mesh* mesh = batch.mesh;
-        glBindVertexArray(mesh->VAO);
+   for (auto& batch : batches) {
+      auto& instances = batch.instances;
+      Shader* shader;
+      Mesh* mesh = batch.mesh;
+      glBindVertexArray(mesh->VAO);
 
-        // no instancing
-        if (instances.size() < INSTANCING_THRESHOLD) {
-            shader = shadowShader;
-            shader->use();
-            for (const auto& inst : instances) {
-                shader->setMat4("model", inst.model);
-                mesh->draw();
-            }
-        }
-        // instancing
-        else {
-            shader = shadowShader->instancedVariant;
-            shader->use();
+      // no instancing
+      if (instances.size() < INSTANCING_THRESHOLD) {
+         shader = shadowShader;
+         shader->use();
+         for (const auto& inst : instances) {
+            shader->setMat4("model", inst.model);
+            mesh->draw();
+         }
+      }
+      // instancing
+      else {
+         shader = shadowShader->instancedVariant;
+         shader->use();
 
-            // #TODO: instanceVBO should live in RenderBatch, otherwise all batches 
-            // that share mesh.
-            // If BatchA uploads awake data and BatchB is non-dirty and doesn't 
-            // upload asleep data, BatchB will still use the awake instance data 
-            // uploaded by BatchA, 
-            // causing asleep objects to render in the wrong position until 
-            // BatchB uploads its own asleep data and overwrites the awake data.
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
+         // #TODO: instanceVBO should live in RenderBatch, otherwise all batches 
+         // that share mesh.
+         // If BatchA uploads awake data and BatchB is non-dirty and doesn't 
+         // upload asleep data, BatchB will still use the awake instance data 
+         // uploaded by BatchA, 
+         // causing asleep objects to render in the wrong position until 
+         // BatchB uploads its own asleep data and overwrites the awake data.
+         glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
 
-            glBufferData(
-                GL_ARRAY_BUFFER, 
-                instances.size() * sizeof(InstanceData), 
-                instances.data(), 
-                GL_DYNAMIC_DRAW
-            );
-            glDrawElementsInstanced(
-                GL_TRIANGLES, 
-                mesh->indexCount,
-                GL_UNSIGNED_INT, 
-                0, 
-                instances.size()
-            );
-        }
-    }
+         glBufferData(
+            GL_ARRAY_BUFFER,
+            instances.size() * sizeof(InstanceData),
+            instances.data(),
+            GL_DYNAMIC_DRAW
+         );
+         glDrawElementsInstanced(
+            GL_TRIANGLES,
+            mesh->indexCount,
+            GL_UNSIGNED_INT,
+            0,
+            instances.size()
+         );
+      }
+   }
 }
 
 //-----------------------------
 //       Render scene
 //-----------------------------
 void Renderer::renderScene(SceneBuilder& builder) {
-    renderGameObjects(world->getGameObjectsMap().dense());
-    renderTerrain(builder.getTerrainData(), builder.sceneDirty, false);
+   renderGameObjects(world->getGameObjectsMap().dense());
+   renderTerrain(builder.getTerrainData(), builder.sceneDirty, false);
 }
 
 //---------------------------
 //    Render game objects 
 //---------------------------
 void Renderer::renderGameObjects(std::vector<GameObject>& objects) {
-    for (RenderBatch& bucket : batches) {
-        Shader* shader;
-        Mesh* mesh = bucket.mesh;
-        GLuint texId = bucket.textureId;
-        auto& instances = bucket.instances;
+   for (RenderBatch& bucket : batches) {
+      Shader* shader;
+      Mesh* mesh = bucket.mesh;
+      GLuint texId = bucket.textureId;
+      auto& instances = bucket.instances;
 
-        glBindVertexArray(mesh->VAO);
-        glBindTexture(GL_TEXTURE_2D, texId);
+      glBindVertexArray(mesh->VAO);
+      glBindTexture(GL_TEXTURE_2D, texId);
 
-        // no instancing
-        if (instances.size() < INSTANCING_THRESHOLD) {
-            shader = bucket.shader;
-            shader->use();
-            for (const auto& inst : instances) {
-                // Set texture or uniform color
-                if (texId != 999) {
-                    shader->setBool("useTexture", true);
-                } else {
-                    shader->setBool("useTexture", false);
-                    shader->setVec3("uColor", inst.color);
-                }
-
-                shader->setMat4("model", inst.model);
-                mesh->draw();
-            }
-        }
-        // instancing
-        else {
-            shader = bucket.shader->instancedVariant;
-            shader->use();
-
+      // no instancing
+      if (instances.size() < INSTANCING_THRESHOLD) {
+         shader = bucket.shader;
+         shader->use();
+         for (const auto& inst : instances) {
+            // Set texture or uniform color
             if (texId != 999) {
-                shader->setBool("useTexture", true);
-            } else {
-                shader->setBool("useTexture", false);
+               shader->setBool("useTexture", true);
+            }
+            else {
+               shader->setBool("useTexture", false);
+               shader->setVec3("uColor", inst.color);
             }
 
-            // fill instace buffer
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
+            shader->setMat4("model", inst.model);
+            mesh->draw();
+         }
+      }
+      // instancing
+      else {
+         shader = bucket.shader->instancedVariant;
+         shader->use();
 
-            glBufferData(
-                GL_ARRAY_BUFFER, 
-                instances.size() * sizeof(InstanceData), 
-                instances.data(), 
-                GL_DYNAMIC_DRAW);
+         if (texId != 999) {
+            shader->setBool("useTexture", true);
+         }
+         else {
+            shader->setBool("useTexture", false);
+         }
 
-            // draw instanced
-            glDrawElementsInstanced(
-                GL_TRIANGLES, 
-                mesh->indexCount, 
-                GL_UNSIGNED_INT, 
-                0, 
-                instances.size());
-        }
-    }
+         // fill instace buffer
+         glBindBuffer(GL_ARRAY_BUFFER, mesh->instanceVBO);
+
+         glBufferData(
+            GL_ARRAY_BUFFER,
+            instances.size() * sizeof(InstanceData),
+            instances.data(),
+            GL_DYNAMIC_DRAW);
+
+         // draw instanced
+         glDrawElementsInstanced(
+            GL_TRIANGLES,
+            mesh->indexCount,
+            GL_UNSIGNED_INT,
+            0,
+            instances.size());
+      }
+   }
 }
 
 //-----------------------------
 //       Render terrain
 //-----------------------------
 void Renderer::renderTerrain(
-    SceneBuilder::TerrainData& data, 
-    bool sceneDirty, 
-    bool shadowPass) 
+   SceneBuilder::TerrainData& data,
+   bool sceneDirty,
+   bool shadowPass)
 {
-    if (data.triangles.size() == 0) {
-        return;
-    }
+   if (data.triangles.size() == 0) {
+      return;
+   }
 
-    std::vector<Vertex>& vertices = data.vertices;
-    std::vector<uint32_t>& indices = data.indices;
+   std::vector<Vertex>& vertices = data.vertices;
+   std::vector<uint32_t>& indices = data.indices;
 
-    static GLuint VAO = 0;
-    static GLuint VBO = 0;
-    static GLuint EBO = 0;
+   static GLuint VAO = 0;
+   static GLuint VBO = 0;
+   static GLuint EBO = 0;
 
-    static float minHeight = std::numeric_limits<float>::max();
-    static float maxHeight = std::numeric_limits<float>::lowest();
+   static float minHeight = std::numeric_limits<float>::max();
+   static float maxHeight = std::numeric_limits<float>::lowest();
 
-    if (sceneDirty) {
-        if (VAO != 0) {
-            glDeleteVertexArrays(1, &VAO);
-            glDeleteBuffers(1, &VBO);
-            glDeleteBuffers(1, &EBO); 
-            
-            glcount::decVAO();
-            glcount::decVBO();
-            glcount::decEBO();
-        }
-        VAO = 0;
-        VBO = 0;
-        EBO = 0;
-    }
+   if (sceneDirty) {
+      if (VAO != 0) {
+         glDeleteVertexArrays(1, &VAO);
+         glDeleteBuffers(1, &VBO);
+         glDeleteBuffers(1, &EBO);
 
-    // --- Wireframe setup: skapas bara en gång ----
-    if (VAO == 0) {
-        constexpr float textureTileSize = 5.0f;
+         glcount::decVAO();
+         glcount::decVBO();
+         glcount::decEBO();
+      }
+      VAO = 0;
+      VBO = 0;
+      EBO = 0;
+   }
 
-        for (Vertex& vertex : vertices) {
-            vertex.texCoords = glm::vec2(
-                    vertex.position.x / textureTileSize, 
-                    vertex.position.z / textureTileSize);
-        }
+   // --- Wireframe setup: skapas bara en gång ----
+   if (VAO == 0) {
+      constexpr float textureTileSize = 5.0f;
 
-        glGenVertexArrays(1, &VAO);
-        glcount::incVAO();
+      for (Vertex& vertex : vertices) {
+         vertex.texCoords = glm::vec2(
+            vertex.position.x / textureTileSize,
+            vertex.position.z / textureTileSize);
+      }
 
-        glGenBuffers(1, &VBO);
-        glcount::incVBO();
+      glGenVertexArrays(1, &VAO);
+      glcount::incVAO();
 
-        glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(
-            GL_ARRAY_BUFFER, 
-            vertices.size() * sizeof(Vertex), 
-            vertices.data(), GL_STATIC_DRAW
-        );
+      glGenBuffers(1, &VBO);
+      glcount::incVBO();
 
-        glGenBuffers(1, &EBO);
-        glcount::incEBO();
+      glBindVertexArray(VAO);
+      glBindBuffer(GL_ARRAY_BUFFER, VBO);
+      glBufferData(
+         GL_ARRAY_BUFFER,
+         vertices.size() * sizeof(Vertex),
+         vertices.data(), GL_STATIC_DRAW
+      );
 
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER, 
-            indices.size() * sizeof(uint32_t), 
-            indices.data(), 
-            GL_STATIC_DRAW);
+      glGenBuffers(1, &EBO);
+      glcount::incEBO();
 
-        glVertexAttribPointer(
-            0, 3,
-            GL_FLOAT, GL_FALSE, 
-            sizeof(Vertex), 
-            (void*)offsetof(Vertex, position));
-        glEnableVertexAttribArray(0);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+      glBufferData(
+         GL_ELEMENT_ARRAY_BUFFER,
+         indices.size() * sizeof(uint32_t),
+         indices.data(),
+         GL_STATIC_DRAW);
 
-        glVertexAttribPointer(
-            1, 3, 
-            GL_FLOAT, GL_FALSE, 
-            sizeof(Vertex), 
-            (void*)offsetof(Vertex, normal));
-        glEnableVertexAttribArray(1);
+      glVertexAttribPointer(
+         0, 3,
+         GL_FLOAT, GL_FALSE,
+         sizeof(Vertex),
+         (void*)offsetof(Vertex, position));
+      glEnableVertexAttribArray(0);
 
-        glVertexAttribPointer(
-            2, 2, 
-            GL_FLOAT, GL_FALSE, 
-            sizeof(Vertex), 
-            (void*)offsetof(Vertex, texCoords));
-        glEnableVertexAttribArray(2);
+      glVertexAttribPointer(
+         1, 3,
+         GL_FLOAT, GL_FALSE,
+         sizeof(Vertex),
+         (void*)offsetof(Vertex, normal));
+      glEnableVertexAttribArray(1);
 
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
+      glVertexAttribPointer(
+         2, 2,
+         GL_FLOAT, GL_FALSE,
+         sizeof(Vertex),
+         (void*)offsetof(Vertex, texCoords));
+      glEnableVertexAttribArray(2);
 
-    static glm::mat4 model = glm::mat4(1.0f);
-    glBindVertexArray(VAO);
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      glBindVertexArray(0);
+   }
 
-    constexpr bool renderTextured = true;
-    constexpr bool renderWireframe = false;
+   static glm::mat4 model = glm::mat4(1.0f);
+   glBindVertexArray(VAO);
 
-    if (shadowPass) {
-        shadowShader->use();
-        shadowShader->setMat4("model", model);
-    }
+   constexpr bool renderTextured = true;
+   constexpr bool renderWireframe = false;
 
-    if (renderTextured) {
-        if (!shadowPass) {
-            defaultShader->use();
-            defaultShader->setMat4("model", model);
-            defaultShader->setBool("useTexture", true);
-            defaultShader->setVec3("uColor", glm::vec3(0.0f, 1.0f, 0.0f));
+   if (shadowPass) {
+      shadowShader->use();
+      shadowShader->setMat4("model", model);
+   }
 
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, 5);
-            defaultShader->setInt("texture1", 0);
+   if (renderTextured) {
+      if (!shadowPass) {
+         defaultShader->use();
+         defaultShader->setMat4("model", model);
+         defaultShader->setBool("useTexture", true);
+         defaultShader->setVec3("uColor", glm::vec3(0.0f, 1.0f, 0.0f));
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        }
+         glActiveTexture(GL_TEXTURE0);
+         glBindTexture(GL_TEXTURE_2D, 5);
+         defaultShader->setInt("texture1", 0);
 
-        glDrawElements(
-            GL_TRIANGLES, 
-            static_cast<GLsizei>(indices.size()), 
-            GL_UNSIGNED_INT, 
-            nullptr);
-    }
-    if (renderWireframe) {
-        if (!shadowPass) {
-            debugShader->use();
-            debugShader->setMat4("model", model);
-            debugShader->setInt("debug.objectType", 0);
-            debugShader->setVec3("debug.uColor", glm::vec3(0.3f));
-            debugShader->setBool("debug.useUniformColor", true);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      }
 
-            glDisable(GL_CULL_FACE);
-            glEnable(GL_POLYGON_OFFSET_LINE);
-            glPolygonOffset(-1.0f, -1.0f);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glLineWidth(TERRAIN_WIREFRAME_LINE_WIDTH);
-        }
+      glDrawElements(
+         GL_TRIANGLES,
+         static_cast<GLsizei>(indices.size()),
+         GL_UNSIGNED_INT,
+         nullptr);
+   }
+   if (renderWireframe) {
+      if (!shadowPass) {
+         debugShader->use();
+         debugShader->setMat4("model", model);
+         debugShader->setInt("debug.objectType", 0);
+         debugShader->setVec3("debug.uColor", glm::vec3(0.3f));
+         debugShader->setBool("debug.useUniformColor", true);
 
-        glDrawElements(
-            GL_TRIANGLES, 
-            (GLsizei)indices.size(), 
-            GL_UNSIGNED_INT, 
-            nullptr
-        );
+         glDisable(GL_CULL_FACE);
+         glEnable(GL_POLYGON_OFFSET_LINE);
+         glPolygonOffset(-1.0f, -1.0f);
+         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+         glLineWidth(TERRAIN_WIREFRAME_LINE_WIDTH);
+      }
 
-        if (!shadowPass) {
-            // restore
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glDisable(GL_POLYGON_OFFSET_LINE);
-            glEnable(GL_CULL_FACE);
-        }
-    }
+      glDrawElements(
+         GL_TRIANGLES,
+         (GLsizei)indices.size(),
+         GL_UNSIGNED_INT,
+         nullptr
+      );
+
+      if (!shadowPass) {
+         // restore
+         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+         glDisable(GL_POLYGON_OFFSET_LINE);
+         glEnable(GL_CULL_FACE);
+      }
+   }
 }
 
 //-----------------------------------
 //    Compute Light Space Matrix
 //-----------------------------------
 glm::mat4 Renderer::computeLightSpaceMatrix() {
-    const DirectionalLight& light = lightManager->getDirectionalLight();
+   const DirectionalLight& light = lightManager->getDirectionalLight();
 
-    glm::vec3 lightPos = sceneCenter - light.direction;
-    glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, glm::vec3(0, 1, 0));
+   glm::vec3 lightPos = sceneCenter - light.direction;
+   glm::mat4 lightView = glm::lookAt(lightPos, sceneCenter, glm::vec3(0, 1, 0));
 
-    glm::vec3 minLS(std::numeric_limits<float>::max());
-    glm::vec3 maxLS(-std::numeric_limits<float>::max());
-    for (auto& cw : sceneCorners) {
-        glm::vec4 tmp = lightView * glm::vec4(cw, 1.0f);
-        glm::vec3 ls = glm::vec3(tmp) / tmp.w; // om du vill, för orto w är 1
-        minLS = glm::min(minLS, ls);
-        maxLS = glm::max(maxLS, ls);
-    }
+   glm::vec3 minLS(std::numeric_limits<float>::max());
+   glm::vec3 maxLS(-std::numeric_limits<float>::max());
+   for (auto& cw : sceneCorners) {
+      glm::vec4 tmp = lightView * glm::vec4(cw, 1.0f);
+      glm::vec3 ls = glm::vec3(tmp) / tmp.w; // om du vill, för orto w är 1
+      minLS = glm::min(minLS, ls);
+      maxLS = glm::max(maxLS, ls);
+   }
 
-    glm::mat4 lightProjection = glm::ortho(
-         minLS.x,  maxLS.x,    // tight X‐intervall
-         minLS.y,  maxLS.y,    // tight Y‐intervall
+   glm::mat4 lightProjection = glm::ortho(
+      minLS.x, maxLS.x,    // tight X‐intervall
+      minLS.y, maxLS.y,    // tight Y‐intervall
 
-        // Z‐intervall: notera att near/far i ljus‐space ofta behöver inverteras
-        -maxLS.z, -minLS.z
-    );
+      // Z‐intervall: notera att near/far i ljus‐space ofta behöver inverteras
+      -maxLS.z, -minLS.z
+   );
 
-    return lightProjection * lightView;
+   return lightProjection * lightView;
 }
 
 //-----------------------------------
 //    Compute Scene Bounds
 //-----------------------------------
 void Renderer::computeSceneBounds(SceneBuilder& builder) {
-    sceneCorners.clear();
+   sceneCorners.clear();
 
-    SceneBuilder::TerrainData& tData = builder.getTerrainData();
-    std::vector<GameObject>& dData = world->getGameObjectsMap().dense();
+   SceneBuilder::TerrainData& tData = builder.getTerrainData();
+   std::vector<GameObject>& dData = world->getGameObjectsMap().dense();
 
-    //inf max variable
-    float minY = std::numeric_limits<float>::max(); 
-    float maxY = std::numeric_limits<float>::lowest();
-    float minX = std::numeric_limits<float>::max(); 
-    float maxX = std::numeric_limits<float>::lowest(); 
-    float minZ = std::numeric_limits<float>::max(); 
-    float maxZ = std::numeric_limits<float>::lowest(); 
+   //inf max variable
+   float minY = std::numeric_limits<float>::max();
+   float maxY = std::numeric_limits<float>::lowest();
+   float minX = std::numeric_limits<float>::max();
+   float maxX = std::numeric_limits<float>::lowest();
+   float minZ = std::numeric_limits<float>::max();
+   float maxZ = std::numeric_limits<float>::lowest();
 
-    // beräkna min/max för terrängen
-    if (tData.triangles.size() > 0) {
-        for (const physics::Triangle& tri : tData.triangles) {
-            for (const glm::vec3& v : tri.vertices) {
-                minY = std::min(minY, v.y); 
-                maxY = std::max(maxY, v.y); 
-                minX = std::min(minX, v.x); 
-                maxX = std::max(maxX, v.x); 
-                minZ = std::min(minZ, v.z); 
-                maxZ = std::max(maxZ, v.z); 
+   // beräkna min/max för terrängen
+   if (tData.triangles.size() > 0) {
+      for (const physics::Triangle& tri : tData.triangles) {
+         for (const glm::vec3& v : tri.vertices) {
+            minY = std::min(minY, v.y);
+            maxY = std::max(maxY, v.y);
+            minX = std::min(minX, v.x);
+            maxX = std::max(maxX, v.x);
+            minZ = std::min(minZ, v.z);
+            maxZ = std::max(maxZ, v.z);
+         }
+      }
+   }
+   // beräkna min/max för dynamiska objekt
+   else if (dData.size() > 0) {
+      for (const GameObject& obj : dData) {
+         for (const SubPart& part : obj.parts) {
+            if (part.mesh == nullptr) {
+               continue; // skip collider-only parts
             }
-        }
-    }
-    // beräkna min/max för dynamiska objekt
-    else if (dData.size() > 0) {
-        for (const GameObject& obj : dData) {
-            for (const SubPart& part : obj.parts) {
-                if (part.mesh == nullptr) {
-                    continue; // skip collider-only parts
-                }
 
-                const std::optional<physics::ColliderState> collider =
-                    physicsEngine->getColliderState(
-                        part.colliderHandle
-                    );
+            const std::optional<physics::ColliderState> collider =
+               physicsEngine->getColliderState(
+                  part.colliderHandle
+               );
 
-                if (!collider) {
-                    continue;
-                }
-
-                const physics::AABB& aabb = collider->bounds;
-                minY = std::min(minY, aabb.worldMin.y);
-                maxY = std::max(maxY, aabb.worldMax.y);
-                minX = std::min(minX, aabb.worldMin.x);
-                maxX = std::max(maxX, aabb.worldMax.x);
-                minZ = std::min(minZ, aabb.worldMin.z);
-                maxZ = std::max(maxZ, aabb.worldMax.z);
+            if (!collider) {
+               continue;
             }
-        }
-    }
 
-    sceneMin = glm::vec3(minX, minY, minZ);
-    sceneMax = glm::vec3(maxX, maxY, maxZ);
-    sceneCenter = (sceneMin + sceneMax) * 0.5f; // mittpunkt av scenen 
+            const physics::AABB& aabb = collider->bounds;
+            minY = std::min(minY, aabb.worldMin.y);
+            maxY = std::max(maxY, aabb.worldMax.y);
+            minX = std::min(minX, aabb.worldMin.x);
+            maxX = std::max(maxX, aabb.worldMax.x);
+            minZ = std::min(minZ, aabb.worldMin.z);
+            maxZ = std::max(maxZ, aabb.worldMax.z);
+         }
+      }
+   }
 
-    sceneCorners.emplace_back(sceneMin.x, sceneMin.y, sceneMin.z);
-    sceneCorners.emplace_back(sceneMin.x, sceneMin.y, sceneMax.z);
-    sceneCorners.emplace_back(sceneMin.x, sceneMax.y, sceneMin.z);  
-    sceneCorners.emplace_back(sceneMin.x, sceneMax.y, sceneMax.z); 
-    sceneCorners.emplace_back(sceneMax.x, sceneMin.y, sceneMin.z); 
-    sceneCorners.emplace_back(sceneMax.x, sceneMin.y, sceneMax.z); 
-    sceneCorners.emplace_back(sceneMax.x, sceneMax.y, sceneMin.z); 
-    sceneCorners.emplace_back(sceneMax.x, sceneMax.y, sceneMax.z); 
+   sceneMin = glm::vec3(minX, minY, minZ);
+   sceneMax = glm::vec3(maxX, maxY, maxZ);
+   sceneCenter = (sceneMin + sceneMax) * 0.5f; // mittpunkt av scenen 
+
+   sceneCorners.emplace_back(sceneMin.x, sceneMin.y, sceneMin.z);
+   sceneCorners.emplace_back(sceneMin.x, sceneMin.y, sceneMax.z);
+   sceneCorners.emplace_back(sceneMin.x, sceneMax.y, sceneMin.z);
+   sceneCorners.emplace_back(sceneMin.x, sceneMax.y, sceneMax.z);
+   sceneCorners.emplace_back(sceneMax.x, sceneMin.y, sceneMin.z);
+   sceneCorners.emplace_back(sceneMax.x, sceneMin.y, sceneMax.z);
+   sceneCorners.emplace_back(sceneMax.x, sceneMax.y, sceneMin.z);
+   sceneCorners.emplace_back(sceneMax.x, sceneMax.y, sceneMax.z);
 }
 
 //------------------------------
@@ -773,55 +776,55 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
 //------------------------------
 void Renderer::uploadLightsToShader() {
 
-    defaultShader->use();
-    const std::vector<Light>& lights = lightManager->getLights();
+   defaultShader->use();
+   const std::vector<Light>& lights = lightManager->getLights();
 
-    for (int i = 0; i < lights.size(); ++i) {
-        const Light& light = lights[i];
-        std::string base = "pointLights[" + std::to_string(i) + "]";
+   for (int i = 0; i < lights.size(); ++i) {
+      const Light& light = lights[i];
+      std::string base = "pointLights[" + std::to_string(i) + "]";
 
-        defaultShader->setVec3(base + ".position", light.position);
-        defaultShader->setVec3(base + ".color", light.color);
+      defaultShader->setVec3(base + ".position", light.position);
+      defaultShader->setVec3(base + ".color", light.color);
 
-        defaultShader->setVec3(base + ".ambient", light.ambient * light.intensity);
-        defaultShader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
-        defaultShader->setVec3(base + ".specular", light.specular * light.intensity);
+      defaultShader->setVec3(base + ".ambient", light.ambient * light.intensity);
+      defaultShader->setVec3(base + ".diffuse", light.diffuse * light.intensity);
+      defaultShader->setVec3(base + ".specular", light.specular * light.intensity);
 
-        defaultShader->setFloat(base + ".constant", light.constant);
-        defaultShader->setFloat(base + ".linear", light.linear);
-        defaultShader->setFloat(base + ".quadratic", light.quadratic);
-    }
-    defaultShader->setInt("numPointLights", static_cast<int>(lights.size()));
+      defaultShader->setFloat(base + ".constant", light.constant);
+      defaultShader->setFloat(base + ".linear", light.linear);
+      defaultShader->setFloat(base + ".quadratic", light.quadratic);
+   }
+   defaultShader->setInt("numPointLights", static_cast<int>(lights.size()));
 
-    // Instanced shader
-    Shader* defaultInstancedShader = defaultShader->instancedVariant;
-    defaultInstancedShader->use();
+   // Instanced shader
+   Shader* defaultInstancedShader = defaultShader->instancedVariant;
+   defaultInstancedShader->use();
 
-    for (int i = 0; i < lights.size(); ++i) {
-        const Light& light = lights[i];
-        std::string base = "pointLights[" + std::to_string(i) + "]";
+   for (int i = 0; i < lights.size(); ++i) {
+      const Light& light = lights[i];
+      std::string base = "pointLights[" + std::to_string(i) + "]";
 
-        defaultInstancedShader->setVec3(base + ".position", light.position);
-        defaultInstancedShader->setVec3(base + ".color", light.color);
+      defaultInstancedShader->setVec3(base + ".position", light.position);
+      defaultInstancedShader->setVec3(base + ".color", light.color);
 
-        defaultInstancedShader->setVec3(
-            base + ".ambient", 
-            light.ambient * light.intensity
-        );
-        defaultInstancedShader->setVec3(
-            base + ".diffuse", 
-            light.diffuse * light.intensity
-        );
-        defaultInstancedShader->setVec3(
-            base + ".specular", 
-            light.specular * light.intensity
-        );
+      defaultInstancedShader->setVec3(
+         base + ".ambient",
+         light.ambient * light.intensity
+      );
+      defaultInstancedShader->setVec3(
+         base + ".diffuse",
+         light.diffuse * light.intensity
+      );
+      defaultInstancedShader->setVec3(
+         base + ".specular",
+         light.specular * light.intensity
+      );
 
-        defaultInstancedShader->setFloat(base + ".constant", light.constant);
-        defaultInstancedShader->setFloat(base + ".linear", light.linear);
-        defaultInstancedShader->setFloat(base + ".quadratic", light.quadratic);
-    }
-    defaultInstancedShader->setInt("numPointLights", static_cast<int>(lights.size()));
+      defaultInstancedShader->setFloat(base + ".constant", light.constant);
+      defaultInstancedShader->setFloat(base + ".linear", light.linear);
+      defaultInstancedShader->setFloat(base + ".quadratic", light.quadratic);
+   }
+   defaultInstancedShader->setInt("numPointLights", static_cast<int>(lights.size()));
 
 }
 
@@ -829,144 +832,144 @@ void Renderer::uploadLightsToShader() {
 //     Upload Directional Light
 //---------------------------------
 void Renderer::uploadDirectionalLight() {
-    const DirectionalLight& light = lightManager->getDirectionalLight();
+   const DirectionalLight& light = lightManager->getDirectionalLight();
 
-    defaultShader->use();
-    defaultShader->setVec3("dirLight.direction", light.direction);
-    defaultShader->setVec3("dirLight.ambient", light.ambient);
-    defaultShader->setVec3("dirLight.diffuse", light.diffuse);
-    defaultShader->setVec3("dirLight.specular", light.specular);
+   defaultShader->use();
+   defaultShader->setVec3("dirLight.direction", light.direction);
+   defaultShader->setVec3("dirLight.ambient", light.ambient);
+   defaultShader->setVec3("dirLight.diffuse", light.diffuse);
+   defaultShader->setVec3("dirLight.specular", light.specular);
 
-    Shader* defaultInstancedShader = defaultShader->instancedVariant;
-    defaultInstancedShader->use();
-    defaultInstancedShader->setVec3("dirLight.direction", light.direction);
-    defaultInstancedShader->setVec3("dirLight.ambient", light.ambient);
-    defaultInstancedShader->setVec3("dirLight.diffuse", light.diffuse);
-    defaultInstancedShader->setVec3("dirLight.specular", light.specular);
+   Shader* defaultInstancedShader = defaultShader->instancedVariant;
+   defaultInstancedShader->use();
+   defaultInstancedShader->setVec3("dirLight.direction", light.direction);
+   defaultInstancedShader->setVec3("dirLight.ambient", light.ambient);
+   defaultInstancedShader->setVec3("dirLight.diffuse", light.diffuse);
+   defaultInstancedShader->setVec3("dirLight.specular", light.specular);
 }
 
 void Renderer::renderLights() const {
-    const std::vector<Light>& lights = lightManager->getLights();
-    for (const Light& light : lights) {
-        light.render(*defaultShader);
-    }
+   const std::vector<Light>& lights = lightManager->getLights();
+   for (const Light& light : lights) {
+      light.render(*defaultShader);
+   }
 }
 
 //----------------------------------------
 //     Hovered Object Outline
 //----------------------------------------
 void Renderer::renderHoveredObjectOutline(
-    GameObjectHandle& handle, 
-    Camera& camera, 
-    SceneBuilder& builder) 
+   GameObjectHandle& handle,
+   Camera& camera,
+   SceneBuilder& builder)
 {
-    if (!handle.isValid()) return;
+   if (!handle.isValid()) return;
 
-    GameObject* obj = world->getGameObject(handle);
-    if (!obj || !physicsEngine) return;
+   GameObject* obj = world->getGameObject(handle);
+   if (!obj || !physicsEngine) return;
 
-    const std::optional<physics::BodyState> body =
-        physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
-    if (!body) return;
+   const std::optional<physics::BodyState> body =
+      physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+   if (!body) return;
 
-    debugShader->use();
-    debugShader->setBool("debug.useUniformColor", true);
+   debugShader->use();
+   debugShader->setBool("debug.useUniformColor", true);
 
-    glLineWidth(OOBB_LINE_WIDTH);
-    glm::vec3 color = HOVERED_COLOR;
+   glLineWidth(OOBB_LINE_WIDTH);
+   glm::vec3 color = HOVERED_COLOR;
 
-    for (physics::ColliderHandle colliderHandle : body->colliders) {
-        const std::optional<physics::ColliderState> collider =
-            physicsEngine->getColliderState(colliderHandle);
-        if (!collider) continue;
+   for (physics::ColliderHandle colliderHandle : body->colliders) {
+      const std::optional<physics::ColliderState> collider =
+         physicsEngine->getColliderState(colliderHandle);
+      if (!collider) continue;
 
-        // render based on collider type
-        if (collider->type == physics::ColliderType::BOX) {
-            debugRenderer.oobbRenderer.renderBox(
-                *debugShader,
-                collider->worldPose,
-                std::get<physics::BoxGeometry>(collider->shape),
-                color
+      // render based on collider type
+      if (collider->type == physics::ColliderType::BOX) {
+         debugRenderer.oobbRenderer.renderBox(
+            *debugShader,
+            collider->worldPose,
+            std::get<physics::BoxGeometry>(collider->shape),
+            color
+         );
+      }
+      else if (collider->type == physics::ColliderType::SPHERE) {
+         const physics::SphereGeometry& sphere =
+            std::get<physics::SphereGeometry>(
+               collider->shape
             );
-        }
-        else if (collider->type == physics::ColliderType::SPHERE) {
-            const physics::SphereGeometry& sphere =
-                std::get<physics::SphereGeometry>(
-                    collider->shape
-                );
-            debugRenderer.sphereOutlineRenderer.render(
-                *debugShader,
-                camera.position,
-                sphere.worldCenter,
-                sphere.radius,
-                color
-            );
-        }
-    }
+         debugRenderer.sphereOutlineRenderer.render(
+            *debugShader,
+            camera.position,
+            sphere.worldCenter,
+            sphere.radius,
+            color
+         );
+      }
+   }
 }
 
 //----------------------------------------
 //     Selected Object Outline
 //----------------------------------------
 void Renderer::renderSelectedObjectOutline(
-    GameObjectHandle& handle, 
-    Camera& camera, 
-    SceneBuilder& builder) 
+   GameObjectHandle& handle,
+   Camera& camera,
+   SceneBuilder& builder)
 {
-    if (!handle.isValid()) return;
+   if (!handle.isValid()) return;
 
-    GameObject* obj = world->getGameObject(handle);
-    if (!obj || !physicsEngine) return;
+   GameObject* obj = world->getGameObject(handle);
+   if (!obj || !physicsEngine) return;
 
-    const std::optional<physics::BodyState> body =
-        physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
-    if (!body) return;
+   const std::optional<physics::BodyState> body =
+      physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+   if (!body) return;
 
-    debugShader->use();
-    debugShader->setBool("debug.useUniformColor", true);
+   debugShader->use();
+   debugShader->setBool("debug.useUniformColor", true);
 
-    glLineWidth(OOBB_LINE_WIDTH);
-    glm::vec3 color = SELECTED_COLOR;
+   glLineWidth(OOBB_LINE_WIDTH);
+   glm::vec3 color = SELECTED_COLOR;
 
-    for (size_t i = 0; i < body->colliders.size(); ++i) {
-        const std::optional<physics::ColliderState> collider =
-            physicsEngine->getColliderState(body->colliders[i]);
-        if (!collider) continue;
+   for (size_t i = 0; i < body->colliders.size(); ++i) {
+      const std::optional<physics::ColliderState> collider =
+         physicsEngine->getColliderState(body->colliders[i]);
+      if (!collider) continue;
 
-        // editor mode: if this collider is part of the selected subpart, 
-        // use subpart color and line width instead
-        if (!engineState->isPlayerMode()) {
-            if (i == editor->selectedSubPartIndex) {
-                glLineWidth(SUBPART_LINE_WIDTH);
-                color = SUBPART_SELECTED_COLOR;
-            }
-            else {
-                glLineWidth(OOBB_LINE_WIDTH);
-                color = SELECTED_COLOR;
-            }
-        }
+      // editor mode: if this collider is part of the selected subpart, 
+      // use subpart color and line width instead
+      if (!engineState->isPlayerMode()) {
+         if (i == editor->selectedSubPartIndex) {
+            glLineWidth(SUBPART_LINE_WIDTH);
+            color = SUBPART_SELECTED_COLOR;
+         }
+         else {
+            glLineWidth(OOBB_LINE_WIDTH);
+            color = SELECTED_COLOR;
+         }
+      }
 
-        // render based on collider type
-        if (collider->type == physics::ColliderType::BOX) {
-            debugRenderer.oobbRenderer.renderBox(
-                *debugShader,
-                collider->worldPose,
-                std::get<physics::BoxGeometry>(collider->shape),
-                color
+      // render based on collider type
+      if (collider->type == physics::ColliderType::BOX) {
+         debugRenderer.oobbRenderer.renderBox(
+            *debugShader,
+            collider->worldPose,
+            std::get<physics::BoxGeometry>(collider->shape),
+            color
+         );
+      }
+      else if (collider->type == physics::ColliderType::SPHERE) {
+         const physics::SphereGeometry& sphere =
+            std::get<physics::SphereGeometry>(
+               collider->shape
             );
-        }
-        else if (collider->type == physics::ColliderType::SPHERE) {
-            const physics::SphereGeometry& sphere =
-                std::get<physics::SphereGeometry>(
-                    collider->shape
-                );
-            debugRenderer.sphereOutlineRenderer.render(
-                *debugShader,
-                camera.position,
-                sphere.worldCenter,
-                sphere.radius,
-                color
-            );
-        }
-    }
+         debugRenderer.sphereOutlineRenderer.render(
+            *debugShader,
+            camera.position,
+            sphere.worldCenter,
+            sphere.radius,
+            color
+         );
+      }
+   }
 }

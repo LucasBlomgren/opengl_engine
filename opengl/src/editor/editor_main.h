@@ -18,106 +18,106 @@ class ImGuiManager;
 class MeshManager;
 class TextureManager;
 
-namespace Editor 
+namespace Editor
 {
 class EditorMain : public IInputReceiver {
 public:
-    ViewportFBO viewportFBO{ 1920, 1080 };
-    std::unique_ptr<PanelManager> panelManager;
+   ViewportFBO viewportFBO{ 1920, 1080 };
+   std::unique_ptr<PanelManager> panelManager;
 
-    void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
+   void handleInput(const InputFrame& in, const InputContext& ctx, Consumed& consumed, FrameWants& wants);
 
-    void init(
-        float SCR_WIDTH,
-        float SCR_HEIGHT,
-        EngineState* engineState,
-        World* world,
-        SceneBuilder* sceneBuilder,
-        physics::Engine* physicsEngine,
-        InputManager* inputManager,
-        Camera* camera,
-        GLFWwindow* window,
-        ImGuiManager* imguiManager,
-        Renderer* renderer,
-        SkyboxManager* skyboxManager,
-        MeshManager* meshManager,
-        TextureManager* textureManager, 
-        FrameTimers* frameTimers,
-        GpuTimers* gpuTimers
-    );
+   void init(
+      float SCR_WIDTH,
+      float SCR_HEIGHT,
+      EngineState* engineState,
+      World* world,
+      SceneBuilder* sceneBuilder,
+      physics::Engine* physicsEngine,
+      InputManager* inputManager,
+      Camera* camera,
+      GLFWwindow* window,
+      ImGuiManager* imguiManager,
+      Renderer* renderer,
+      SkyboxManager* skyboxManager,
+      MeshManager* meshManager,
+      TextureManager* textureManager,
+      FrameTimers* frameTimers,
+      GpuTimers* gpuTimers
+   );
 
-    bool flag_drawUI = true;
-    void drawUI(bool paused, InputContext& ctx, float deltaTime);
+   bool flag_drawUI = true;
+   void drawUI(bool paused, InputContext& ctx, float deltaTime);
 
-    // activate/deactivate editor mode
-    void activate();
-    void deactivate();
-    void resetState();
+   // activate/deactivate editor mode
+   void activate();
+   void deactivate();
+   void resetState();
 
-    // update
-    void fixedUpdate(float fixedTimeStep);
-    void update(Shader& shader);
+   // update
+   void fixedUpdate(float fixedTimeStep);
+   void update(Shader& shader);
 
-    // select object
-    bool selectedObjectIsBeingMoved = false;
-    GameObjectHandle selectedObjectHandle;
-    GameObjectHandle hoveredObjectHandle;
-    int selectedSubPartIndex = -1; // for compound colliders, -1 means whole object
-    glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
+   // select object
+   bool selectedObjectIsBeingMoved = false;
+   GameObjectHandle selectedObjectHandle;
+   GameObjectHandle hoveredObjectHandle;
+   int selectedSubPartIndex = -1; // for compound colliders, -1 means whole object
+   glm::vec3 selectionOffsetLocal{ 0.0f, 0.0f, 0.0f };
 
-    void syncSelectionOffset();
-    void selectObject(const InputContext& ctx);
-    void dropObject();
-    void updateSelectedObject(float fixedTimeStep);
+   void syncSelectionOffset();
+   void selectObject(const InputContext& ctx);
+   void dropObject();
+   void updateSelectedObject(float fixedTimeStep);
 
-    // raycast for selection
-    glm::vec3 getRayVectorToMouseLocation();
-    physics::RaycastHit rayCastMousePos(float length);
+   // raycast for selection
+   glm::vec3 getRayVectorToMouseLocation();
+   physics::RaycastHit rayCastMousePos(float length);
 
-    glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
-    bool objectRainBlocks = false;
-    bool objectRainSpheres = false;
+   glm::vec3 objectRainPos = { 0.0f, 100.0f, 0.0f };
+   bool objectRainBlocks = false;
+   bool objectRainSpheres = false;
 
 
-    bool shootContinuously = false;
-    float shootCooldown = 0.1f;
-    float shootVelocity = 500.0f;
-    float shootMass = 10.0f;
-    float shootSize = 1.0f;
+   bool shootContinuously = false;
+   float shootCooldown = 0.1f;
+   float shootVelocity = 500.0f;
+   float shootMass = 10.0f;
+   float shootSize = 1.0f;
 
 private:
-    float SCR_WIDTH = 800.0f;
-    float SCR_HEIGHT = 600.0f;
-    EngineState* engineState = nullptr;
-    World* world = nullptr;
-    SceneBuilder* sceneBuilder = nullptr;
-    physics::Engine* physicsEngine = nullptr;
-    InputManager* inputManager = nullptr;
-    Camera* camera = nullptr;
-    GLFWwindow* window = nullptr;
-    ImGuiManager* imguiManager = nullptr;
-    Renderer* renderer = nullptr;
-    SkyboxManager* skyboxManager = nullptr;
-    MeshManager* meshManager = nullptr;
-    TextureManager* textureManager = nullptr;
-    FrameTimers* frameTimers = nullptr;
-    GpuTimers* gpuTimers = nullptr;
+   float SCR_WIDTH = 800.0f;
+   float SCR_HEIGHT = 600.0f;
+   EngineState* engineState = nullptr;
+   World* world = nullptr;
+   SceneBuilder* sceneBuilder = nullptr;
+   physics::Engine* physicsEngine = nullptr;
+   InputManager* inputManager = nullptr;
+   Camera* camera = nullptr;
+   GLFWwindow* window = nullptr;
+   ImGuiManager* imguiManager = nullptr;
+   Renderer* renderer = nullptr;
+   SkyboxManager* skyboxManager = nullptr;
+   MeshManager* meshManager = nullptr;
+   TextureManager* textureManager = nullptr;
+   FrameTimers* frameTimers = nullptr;
+   GpuTimers* gpuTimers = nullptr;
 
-    bool viewportCapturedRMB = false;
-    bool viewportCapturedLMB = false;
-    bool viewportCapturedMMB = false;
-    float viewportMouseX = 0.0f;
-    float viewportMouseY = 0.0f;
-    float viewportDisplayW = 0.0f;
-    float viewportDisplayH = 0.0f;
+   bool viewportCapturedRMB = false;
+   bool viewportCapturedLMB = false;
+   bool viewportCapturedMMB = false;
+   float viewportMouseX = 0.0f;
+   float viewportMouseY = 0.0f;
+   float viewportDisplayW = 0.0f;
+   float viewportDisplayH = 0.0f;
 
-    float mouseXLastFrame = 0.0f;
-    float mouseYLastFrame = 0.0f;
+   float mouseXLastFrame = 0.0f;
+   float mouseYLastFrame = 0.0f;
 
-    // selection and placement
-    bool drawPlacementAABB = false;
-    constexpr static float SELECT_RANGE = 1000.0f;
-    constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
-    constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
+   // selection and placement
+   bool drawPlacementAABB = false;
+   constexpr static float SELECT_RANGE = 1000.0f;
+   constexpr static float OBJ_PLACE_DISTANCE = 150.0f;
+   constexpr static glm::vec3 OBJ_PLACE_SIZE{ 1.0f, 1.0f, 1.0f };
 };
 }

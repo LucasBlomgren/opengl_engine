@@ -12,23 +12,23 @@ namespace physics {
 // retrieve the current state of a rigid body.
 //=====================================================
 struct BodyState {
-    Pose pose;
-    glm::vec3 scale{ 1.0f };
+   Pose pose;
+   glm::vec3 scale{ 1.0f };
 
-    glm::vec3 linearVelocity{ 0.0f };
-    glm::vec3 angularVelocity{ 0.0f };
+   glm::vec3 linearVelocity{ 0.0f };
+   glm::vec3 angularVelocity{ 0.0f };
 
-    BodyType type = BodyType::Dynamic;
-    bool reportContacts = false;
+   BodyType type = BodyType::Dynamic;
+   bool reportContacts = false;
 
-    float mass = 0.0f;
+   float mass = 0.0f;
 
-    bool asleep = false;
-    bool allowSleep = true;
-    bool allowGravity = true;
+   bool asleep = false;
+   bool allowSleep = true;
+   bool allowGravity = true;
 
-    AABB bounds;
-    std::vector<ColliderHandle> colliders;
+   AABB bounds;
+   std::vector<ColliderHandle> colliders;
 };
 
 }

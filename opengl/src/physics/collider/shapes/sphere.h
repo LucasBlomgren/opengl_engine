@@ -11,25 +11,25 @@ namespace physics::internal {
 
 class Sphere {
 public:
-    glm::vec3 centerLocal{ 0.0f };
-    glm::vec3 centerWorld{ 0.0f };
+   glm::vec3 centerLocal{ 0.0f };
+   glm::vec3 centerWorld{ 0.0f };
 
-    float radiusLocal = 0.5f;
-    float radiusWorld = 0.5f;
+   float radiusLocal = 0.5f;
+   float radiusWorld = 0.5f;
 
-    Sphere() = default;
+   Sphere() = default;
 
-    explicit Sphere(float radius, const glm::vec3& centerLocal) 
-        : radiusLocal(radius), 
-        radiusWorld(radius),
-        centerLocal(centerLocal)
-    {}
+   explicit Sphere(float radius, const glm::vec3& centerLocal)
+      : radiusLocal(radius),
+      radiusWorld(radius),
+      centerLocal(centerLocal)
+   {}
 
-    void update(const Pose& worldPose, const glm::vec3& worldScale) {
-        glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
-        centerWorld = worldPose.position + rotation * (worldScale * centerLocal);
-        radiusWorld = radiusLocal * std::max({ worldScale.x, worldScale.y, worldScale.z });
-    }
+   void update(const Pose& worldPose, const glm::vec3& worldScale) {
+      glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
+      centerWorld = worldPose.position + rotation * (worldScale * centerLocal);
+      radiusWorld = radiusLocal * std::max({ worldScale.x, worldScale.y, worldScale.z });
+   }
 };
 
 }

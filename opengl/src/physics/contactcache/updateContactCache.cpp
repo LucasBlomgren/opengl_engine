@@ -7,22 +7,22 @@ namespace physics {
 //       Contact Cache
 //=================================================
 void Engine::updateContactCache() {
-    constexpr int maxFramesWithoutCollision = 3;
-    for (auto it = contactCache.begin(); it != contactCache.end(); ) {
-        if (!it->second.wasUsedThisFrame) {
-            it->second.framesSinceUsed++;
+   constexpr int maxFramesWithoutCollision = 3;
+   for (auto it = contactCache.begin(); it != contactCache.end(); ) {
+      if (!it->second.wasUsedThisFrame) {
+         it->second.framesSinceUsed++;
 
-            // Ta bort manifold efter X antal frames utan kollisionsmatch
-            if (it->second.framesSinceUsed > maxFramesWithoutCollision) {
-                it = contactCache.erase(it);
-                continue;
-            }
-        }
-        else {
-            it->second.framesSinceUsed = 0;
-        }
-        ++it;
-    }
+         // Ta bort manifold efter X antal frames utan kollisionsmatch
+         if (it->second.framesSinceUsed > maxFramesWithoutCollision) {
+            it = contactCache.erase(it);
+            continue;
+         }
+      }
+      else {
+         it->second.framesSinceUsed = 0;
+      }
+      ++it;
+   }
 }
 
 }

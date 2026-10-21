@@ -1,14 +1,15 @@
 #include "pch.h"
 #include "engine_state.h"
 
-void EngineState::toggleShowWireframes() { 
-    showWireframes = !showWireframes; 
+void EngineState::toggleShowWireframes() {
+   showWireframes = !showWireframes;
 
-    if (showWireframes) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    } else {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
+   if (showWireframes) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+   }
+   else {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+   }
 }
 
 void EngineState::togglePause() { paused = !paused; }

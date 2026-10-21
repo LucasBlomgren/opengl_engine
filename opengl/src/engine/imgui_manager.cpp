@@ -6,35 +6,35 @@
 #include "backends/imgui_impl_opengl3.h"
 
 void ImGuiManager::init(GLFWwindow* window) {
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
+   IMGUI_CHECKVERSION();
+   ImGui::CreateContext();
 
-	ImGuiIO& io = ImGui::GetIO();
-	(void)io;
+   ImGuiIO& io = ImGui::GetIO();
+   (void)io;
 
-	// init backends
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init("#version 330");
+   // init backends
+   ImGui_ImplGlfw_InitForOpenGL(window, true);
+   ImGui_ImplOpenGL3_Init("#version 330");
 
-	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+   ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
-	ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.12f, 1.0f);
+   ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.12f, 1.0f);
 }
 
 void ImGuiManager::newFrame() {
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
+   ImGui_ImplOpenGL3_NewFrame();
+   ImGui_ImplGlfw_NewFrame();
+   ImGui::NewFrame();
 }
 
 void ImGuiManager::render() {
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+   ImGui::Render();
+   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void ImGuiManager::shutdown() {
-	ImGui::DestroyPlatformWindows();
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
+   ImGui::DestroyPlatformWindows();
+   ImGui_ImplOpenGL3_Shutdown();
+   ImGui_ImplGlfw_Shutdown();
+   ImGui::DestroyContext();
 }
