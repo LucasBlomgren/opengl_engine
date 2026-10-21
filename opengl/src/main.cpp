@@ -119,6 +119,7 @@ int main() {
    renderer.init(
       SCR_WIDTH,
       SCR_HEIGHT,
+      physicsEngine,
       world,
       editor,
       player,
@@ -391,7 +392,6 @@ int main() {
             renderer.render(
                camera,
                sceneBuilder,
-               physicsEngine,
                qShadow,
                qMain,
                qDebug,
@@ -405,7 +405,6 @@ int main() {
             renderer.render(
                camera,
                sceneBuilder,
-               physicsEngine,
                qShadow,
                qMain,
                qDebug,

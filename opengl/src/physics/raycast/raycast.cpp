@@ -9,30 +9,31 @@ namespace raycast {
 RaycastHit raycastTree(
    const Ray& ray,
    const BVHTree& bvh,
-   const SlotMap<RigidBody, BodyHandle>& bodyMap,
+   const SlotMap<Collider, ColliderHandle>& colliderMap,
    BodyHandle ignoredBody)
 {
    AABB rayAABB;
    rayAABB.worldMin = glm::min(ray.start, ray.end);
    rayAABB.worldMax = glm::max(ray.start, ray.end);
 
-   BodyHandle bestBodyHandle;
+   ColliderHandle bestColliderHandle;
    float bestT = std::numeric_limits<float>::max();
 
    std::vector<BVHLeafRef> candidates;
    bvh.singleQuery(rayAABB, candidates);
+
 
    for (BVHLeafRef ref : candidates) {
       if (ref.body == ignoredBody) {
          continue;
       }
 
-      const RigidBody& body = bodyMap.get(ref.body);
+      const Collider& col = colliderMap.get(ref.collider);
 
       const glm::vec3 tMin =
-         (body.aabb.worldMin - ray.start) / ray.direction;
+         (col.aabb.worldMin - ray.start) / ray.direction;
       const glm::vec3 tMax =
-         (body.aabb.worldMax - ray.start) / ray.direction;
+         (col.aabb.worldMax - ray.start) / ray.direction;
 
       const glm::vec3 t1 = glm::min(tMin, tMax);
       const glm::vec3 t2 = glm::max(tMin, tMax);
@@ -45,20 +46,20 @@ RaycastHit raycastTree(
          tNear < bestT)
       {
          bestT = tNear;
-         bestBodyHandle = ref.body;
+         bestColliderHandle = ref.collider;
       }
    }
 
-   if (!bestBodyHandle.isValid()) {
+   if (!bestColliderHandle.isValid()) {
       return {};
    }
 
-   const RigidBody& bestBody = bodyMap.get(bestBodyHandle);
+   const Collider& bestCollider = colliderMap.get(bestColliderHandle);
 
    const glm::vec3 tMin =
-      (bestBody.aabb.worldMin - ray.start) / ray.direction;
+      (bestCollider.aabb.worldMin - ray.start) / ray.direction;
    const glm::vec3 tMax =
-      (bestBody.aabb.worldMax - ray.start) / ray.direction;
+      (bestCollider.aabb.worldMax - ray.start) / ray.direction;
    const glm::vec3 entry = glm::min(tMin, tMax);
 
    int hitAxis = 2;
@@ -84,7 +85,7 @@ RaycastHit raycastTree(
 
    RaycastHit hit;
    hit.hit = true;
-   hit.bodyHandle = bestBodyHandle;
+   hit.bodyHandle = bestCollider.bodyHandle;
    hit.point = ray.start + ray.direction * bestT;
    hit.normal = normal;
    hit.t = bestT;

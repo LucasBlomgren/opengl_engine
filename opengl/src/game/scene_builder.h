@@ -17,8 +17,26 @@ class Renderer;
 class SceneBuilder {
 public:
    SceneBuilder(
-      Player& p, Editor::EditorMain& e, World& w, physics::Engine& pe, Renderer& re, TextureManager& tm, MeshManager& mm, ShaderManager& sm, LightManager& lm, std::mt19937& rng) :
-      player(p), editor(e), world(w), physicsEngine(pe), renderer(re), textureManager(tm), meshManager(mm), shaderManager(sm), lightManager(lm), rng(rng)
+      Player& p, 
+      Editor::EditorMain& e, 
+      World& w, 
+      physics::Engine& pe, 
+      Renderer& re, 
+      TextureManager& tm,
+      MeshManager& mm, 
+      ShaderManager& sm, 
+      LightManager& lm, 
+      std::mt19937& rng) 
+      : player(p), 
+      editor(e), 
+      world(w), 
+      physicsEngine(pe), 
+      renderer(re), 
+      textureManager(tm), 
+      meshManager(mm), 
+      shaderManager(sm), 
+      lightManager(lm), 
+      rng(rng)
    {}
 
    bool sceneDirty = true;

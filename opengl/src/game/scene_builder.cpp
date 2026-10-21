@@ -128,6 +128,8 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
 
    physicsEngine.activateScene(terrainData.triangles);
 
+   renderer.computeSceneBounds(*this);
+
    glcount::print();
 }
 

@@ -24,6 +24,7 @@ public:
    void init(
       unsigned int width,
       unsigned int height,
+      physics::Engine& physics,
       World& world,
       Editor::EditorMain& editor,
       Player& player,
@@ -38,7 +39,6 @@ public:
    void render(
       Camera& camera,
       SceneBuilder& builder,
-      physics::Engine& physics,
       GLuint qShadow[],
       GLuint qMain[],
       GLuint qDebug[],
@@ -88,7 +88,7 @@ private:
    float screenHeight = 600.0f;
 
    World* world = nullptr;
-   physics::Engine* physicsEngine = nullptr;
+   physics::Engine* physics = nullptr;
    Editor::EditorMain* editor = nullptr;
    Player* player = nullptr;
    EngineState* engineState = nullptr;

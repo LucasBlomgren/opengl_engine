@@ -8,6 +8,7 @@
 void Renderer::init(
    unsigned int width,
    unsigned int height,
+   physics::Engine& physics,
    World& world,
    Editor::EditorMain& editor,
    Player& player,
@@ -21,6 +22,7 @@ void Renderer::init(
    screenWidth = (float)width;
    screenHeight = (float)height;
 
+   this->physics = &physics;
    this->world = &world;
    this->editor = &editor;
    this->player = &player;
@@ -251,20 +253,12 @@ void Renderer::setDefaultRender(
 void Renderer::render(
    Camera& camera,
    SceneBuilder& builder,
-   physics::Engine& physics,
    GLuint qShadow[],
    GLuint qMain[],
    GLuint qDebug[],
    int writeIdx,
-   const Editor::ViewportFBO* viewportFBO
-) {
-   physicsEngine = &physics;
-
-   // update scene bounds if dirty
-   if (builder.sceneDirty) {
-      computeSceneBounds(builder);
-   }
-
+   const Editor::ViewportFBO* viewportFBO) 
+{
    // #TODO: optimize by only updating batches that changed
    // only awake dynamic objects should need batch updates, static and 
    // asleep objects won't move and thus their batch instance data 
@@ -272,7 +266,7 @@ void Renderer::render(
 
    fillBatchInstances();
    debugRenderer.prepareFrame(
-      physics,
+      *physics,
       world->getGameObjectsMap().dense(),
       *world,
       editor->selectedObjectHandle,
@@ -356,7 +350,7 @@ void Renderer::render(
    glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
 
    debugRenderer.renderOverlayPass(
-      physics,
+      *physics,
       camera,
       world->getGameObjectsMap().dense(),
       *world
@@ -738,7 +732,7 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
             }
 
             const std::optional<physics::ColliderState> collider =
-               physicsEngine->getColliderState(
+               physics->getColliderState(
                   part.colliderHandle
                );
 
@@ -866,10 +860,10 @@ void Renderer::renderHoveredObjectOutline(
    if (!handle.isValid()) return;
 
    GameObject* obj = world->getGameObject(handle);
-   if (!obj || !physicsEngine) return;
+   if (!obj) return;
 
    const std::optional<physics::BodyState> body =
-      physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+      physics->getRigidBodyState(obj->rigidBodyHandle);
    if (!body) return;
 
    debugShader->use();
@@ -880,7 +874,7 @@ void Renderer::renderHoveredObjectOutline(
 
    for (physics::ColliderHandle colliderHandle : body->colliders) {
       const std::optional<physics::ColliderState> collider =
-         physicsEngine->getColliderState(colliderHandle);
+         physics->getColliderState(colliderHandle);
       if (!collider) continue;
 
       // render based on collider type
@@ -919,10 +913,10 @@ void Renderer::renderSelectedObjectOutline(
    if (!handle.isValid()) return;
 
    GameObject* obj = world->getGameObject(handle);
-   if (!obj || !physicsEngine) return;
+   if (!obj) return;
 
    const std::optional<physics::BodyState> body =
-      physicsEngine->getRigidBodyState(obj->rigidBodyHandle);
+      physics->getRigidBodyState(obj->rigidBodyHandle);
    if (!body) return;
 
    debugShader->use();
@@ -933,7 +927,7 @@ void Renderer::renderSelectedObjectOutline(
 
    for (size_t i = 0; i < body->colliders.size(); ++i) {
       const std::optional<physics::ColliderState> collider =
-         physicsEngine->getColliderState(body->colliders[i]);
+         physics->getColliderState(body->colliders[i]);
       if (!collider) continue;
 
       // editor mode: if this collider is part of the selected subpart, 

@@ -71,7 +71,7 @@ void DebugRenderer::renderOverlayPass(const physics::Engine& physics, const Came
       physics.getDebugSpeculativeContacts()
    );
    renderBVHs(physics);
-   //renderSweptAABBs(physics.debugSweeps, glm::vec3(1.0f, 1.0f, 0.0f));
+   renderSweptAABBs(physics.getDebugSweeps(), glm::vec3(1.0f, 1.0f, 0.0f));
 
    // render debug meshes with lighting
    litMeshShader->use();

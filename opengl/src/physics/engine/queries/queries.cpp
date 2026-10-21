@@ -8,6 +8,38 @@ namespace physics {
 using namespace internal;
 
 namespace {
+internal::AABB getCombinedBounds(
+   const PhysicsStorage& storage,
+   const std::vector<ColliderHandle>& handles)
+{
+   internal::AABB bounds{};
+   bool first = true;
+
+   for (ColliderHandle handle : handles) {
+      const Collider* collider = storage.tryGetCollider(handle);
+      if (!collider || !collider->enabled)
+         continue;
+
+      const internal::AABB& box = collider->aabb;
+
+      if (first) {
+         bounds = box;
+         first = false;
+      }
+      else {
+         bounds.growToInclude(box.worldMin);
+         bounds.growToInclude(box.worldMax);
+      }
+   }
+
+   if (!first) {
+      bounds.worldCenter = (bounds.worldMin + bounds.worldMax) * 0.5f;
+      bounds.worldHalfExtents = (bounds.worldMax - bounds.worldMin) * 0.5f;
+   }
+
+   return bounds;
+}
+
 physics::AABB toPublicBounds(const internal::AABB& bounds) {
    physics::AABB result;
    result.worldMin = bounds.worldMin;
@@ -34,8 +66,8 @@ RaycastHit Engine::raycast(
    const Ray& ray,
    BodyHandle ignoredBody)
 {
-   const SlotMap<RigidBody, BodyHandle>& bodyMap =
-      physicsStorage.bodyStorage();
+   const SlotMap<Collider, ColliderHandle>& colliderMap =
+      physicsStorage.colliderStorage();
 
    RaycastHit bestHit;
 
@@ -49,7 +81,7 @@ RaycastHit Engine::raycast(
       RaycastHit hit = raycast::raycastTree(
          ray,
          *tree,
-         bodyMap,
+         colliderMap,
          ignoredBody
       );
 
@@ -102,16 +134,16 @@ std::vector<BodyHandle> Engine::queryBodies(
 // State queries
 //=========================================
 std::optional<BodyState>
-Engine::getRigidBodyState(
-   BodyHandle handle) const
+Engine::getRigidBodyState(BodyHandle handle) const 
 {
-   // Check if the body is pending creation, 
-   // already exists in the physics world or
-   // is pending destruction.
-   const RigidBody* body = commandBuffer.tryGetPendingBodyCreate(handle);
-   if (!body) {
-      body = physicsStorage.tryGetBody(handle);
-   }
+   if (commandBuffer.isBodyPendingDestroy(handle))
+      return std::nullopt;
+
+   if (commandBuffer.tryGetPendingBodyCreate(handle))
+      return std::nullopt;
+
+   const RigidBody* body = physicsStorage.tryGetBody(handle);
+
    if (!body || commandBuffer.isBodyPendingDestroy(handle)) {
       return std::nullopt;
    }
@@ -125,7 +157,6 @@ Engine::getRigidBodyState(
    state.reportContacts = body->reportContacts;
    state.mass = body->mass;
    state.allowGravity = body->allowGravity;
-   state.bounds = toPublicBounds(body->aabb);
    
    const BodyColliderRef& ref = body->colliderRef;
 
@@ -133,9 +164,12 @@ Engine::getRigidBodyState(
       state.colliders =
          physicsStorage.tryGetCompound(ref.compound)->colliders;
    }
-   else {
+   else if (ref.isSingle()) {
       state.colliders.push_back(ref.single);
    }
+
+   state.bounds =
+      toPublicBounds(getCombinedBounds(physicsStorage, state.colliders));
 
 
    if (body->type == BodyType::Dynamic) {
@@ -149,26 +183,19 @@ Engine::getRigidBodyState(
 }
 
 std::optional<ColliderState>
-Engine::getColliderState(
-   ColliderHandle handle) const
+Engine::getColliderState(ColliderHandle handle) const
 {
-   // Check if the collider is pending creation, 
-   // already exists in the physics world or
-   // is pending destruction.
-   const Collider* collider =
-      commandBuffer.tryGetPendingColliderCreate(handle);
-   if (!collider) {
-      collider = physicsStorage.tryGetCollider(handle);
-   }
-   if (!collider || commandBuffer.isColliderPendingDestroy(handle)) {
+   if (commandBuffer.isColliderPendingDestroy(handle) ||
+      commandBuffer.tryGetPendingColliderCreate(handle) ||
+      !physicsStorage.colliderStorage().alive(handle))
       return std::nullopt;
-   }
+
+   const Collider* collider =
+      physicsStorage.tryGetCollider(handle);
 
    if (!collider ||
-      commandBuffer.isColliderPendingDestroy(handle) ||
-      commandBuffer.isBodyPendingDestroy(collider->bodyHandle)) {
+      commandBuffer.isBodyPendingDestroy(collider->bodyHandle))
       return std::nullopt;
-   }
 
    ColliderState state;
    state.body = collider->bodyHandle;

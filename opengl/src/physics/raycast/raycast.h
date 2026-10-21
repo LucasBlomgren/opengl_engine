@@ -12,7 +12,7 @@ namespace raycast {
 RaycastHit raycastTree(
    const Ray& ray,
    const BVHTree& tree,
-   const SlotMap<RigidBody, BodyHandle>& bodyMap,
+   const SlotMap<Collider, ColliderHandle>& colliderMap,
    BodyHandle ignoredBody
 );
 }

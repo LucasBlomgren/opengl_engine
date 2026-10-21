@@ -379,6 +379,8 @@ void Processor::applyCommand(
    body->scale = command.scale;
 
    refreshBodySpatialState(command.body);
+
+   broadphaseManager.setBVHDirty(command.body);
 }
 
 void Processor::applyCommand(

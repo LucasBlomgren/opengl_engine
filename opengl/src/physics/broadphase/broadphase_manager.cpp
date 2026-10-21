@@ -104,7 +104,7 @@ void BroadphaseManager::updateBVHs() {
    awakeBvh.update();
 
    if (asleepBvh.dirty) asleepBvh.update();
-   if (staticBvh.dirty) constructBvh(staticBvh, staticHandles);
+   if (staticBvh.dirty) staticBvh.update();
 }
 
 //==================================================
@@ -234,6 +234,8 @@ void BroadphaseManager::buildSpeculativePairs(
    AABBs.clear();
 
    determineSpeculativeBodies(dt, colliders, AABBs);
+
+   //debugSweeps = AABBs;
 
    speculativeBvh.clear();
    speculativeBvh.buildFromExternalAABBs(colliders, AABBs);
