@@ -7,33 +7,33 @@ namespace physics::internal {
 
 namespace raycast {
 RaycastHit raycastTree(
+   PhysicsStorage& storage,
    const Ray& ray,
    const BVHTree& bvh,
-   const SlotMap<Collider, ColliderHandle>& colliderMap,
    BodyHandle ignoredBody)
 {
    AABB rayAABB;
    rayAABB.worldMin = glm::min(ray.start, ray.end);
    rayAABB.worldMax = glm::max(ray.start, ray.end);
 
-   ColliderHandle bestColliderHandle;
+   BodyHandle bestBodyHandle;
    float bestT = std::numeric_limits<float>::max();
 
-   std::vector<BVHLeafRef> candidates;
+   static std::vector<BodyHandle> candidates;
+   candidates.clear();
+   candidates.reserve(10000); // #TODO: Raycast better reserve value
+
    bvh.singleQuery(rayAABB, candidates);
 
-
-   for (BVHLeafRef ref : candidates) {
-      if (ref.body == ignoredBody) {
+   for (BodyHandle handle : candidates) {
+      if (handle == ignoredBody) {
          continue;
       }
 
-      const Collider& col = colliderMap.get(ref.collider);
+      AABB& aabb = storage.getAABB(handle);
 
-      const glm::vec3 tMin =
-         (col.aabb.worldMin - ray.start) / ray.direction;
-      const glm::vec3 tMax =
-         (col.aabb.worldMax - ray.start) / ray.direction;
+      const glm::vec3 tMin = (aabb.worldMin - ray.start) / ray.direction;
+      const glm::vec3 tMax = (aabb.worldMax - ray.start) / ray.direction;
 
       const glm::vec3 t1 = glm::min(tMin, tMax);
       const glm::vec3 t2 = glm::max(tMin, tMax);
@@ -46,20 +46,18 @@ RaycastHit raycastTree(
          tNear < bestT)
       {
          bestT = tNear;
-         bestColliderHandle = ref.collider;
+         bestBodyHandle = handle;
       }
    }
 
-   if (!bestColliderHandle.isValid()) {
+   if (!bestBodyHandle.isValid()) {
       return {};
    }
 
-   const Collider& bestCollider = colliderMap.get(bestColliderHandle);
+   AABB& aabb = storage.getAABB(bestBodyHandle);
 
-   const glm::vec3 tMin =
-      (bestCollider.aabb.worldMin - ray.start) / ray.direction;
-   const glm::vec3 tMax =
-      (bestCollider.aabb.worldMax - ray.start) / ray.direction;
+   const glm::vec3 tMin = (aabb.worldMin - ray.start) / ray.direction;
+   const glm::vec3 tMax = (aabb.worldMax - ray.start) / ray.direction;
    const glm::vec3 entry = glm::min(tMin, tMax);
 
    int hitAxis = 2;
@@ -85,7 +83,7 @@ RaycastHit raycastTree(
 
    RaycastHit hit;
    hit.hit = true;
-   hit.bodyHandle = bestCollider.bodyHandle;
+   hit.bodyHandle = bestBodyHandle;
    hit.point = ray.start + ray.direction * bestT;
    hit.normal = normal;
    hit.t = bestT;

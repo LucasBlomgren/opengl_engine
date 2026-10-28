@@ -19,8 +19,8 @@ bool SAT::speculativeSphereSphere(
    glm::vec3 centerA = colliderA.worldPose.position;
    glm::vec3 centerB = colliderB.worldPose.position;
 
-   float radiusA = sphereA.radiusWorld;
-   float radiusB = sphereB.radiusWorld;
+   float radiusA = sphereA.radius;
+   float radiusB = sphereB.radius;
    float radiusSum = radiusA + radiusB;
 
    glm::vec3 p = centerB - centerA; // relative position A -> B now

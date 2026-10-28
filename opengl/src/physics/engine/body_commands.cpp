@@ -43,16 +43,12 @@ BodyHandle Engine::createRigidBody(
 
    RigidBody body;
    body.pose = desc.pose;
-   body.scale = desc.scale;
    body.type = desc.type;
    body.reportContacts = desc.reportContacts;
 
    body.linearVelocity = desc.linearVelocity;
    body.angularVelocity = desc.angularVelocity;
    body.allowGravity = desc.allowGravity;
-
-   const float radius = 0.5f * glm::length(desc.scale);
-   body.invRadius = radius > 0.0f ? 1.0f / radius : 0.0f;
 
    if (desc.type == BodyType::Dynamic) {
       body.mass = desc.mass;
@@ -67,8 +63,6 @@ BodyHandle Engine::createRigidBody(
    if (desc.type == BodyType::Dynamic) {
       MotionState motionState;
       motionState.mass = body.mass;
-      motionState.radius = radius;
-      motionState.invRadius = body.invRadius;
       motionState.linearVelocity = desc.linearVelocity;
       motionState.angularVelocity = desc.angularVelocity;
       motionState.allowGravity = desc.allowGravity;
@@ -190,8 +184,7 @@ bool Engine::setKinematicTarget(
 
 bool Engine::setRigidBodyTransform(
    BodyHandle handle,
-   const Pose& pose,
-   const glm::vec3& scale)
+   const Pose& pose)
 {
    const RigidBody* body = resolveBody(
       commandBuffer,
@@ -203,7 +196,7 @@ bool Engine::setRigidBodyTransform(
       return false;
    }
 
-   commandBuffer.recordSetBodyTransform(handle, pose, scale);
+   commandBuffer.recordSetBodyTransform(handle, pose);
    return true;
 }
 

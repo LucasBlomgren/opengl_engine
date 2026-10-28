@@ -9,8 +9,7 @@ namespace physics::internal {
 
 struct Compound {
    std::vector<ColliderHandle> colliders;
-   AABB localAABB;
-   AABB worldAABB;
+   AABB aabb;
 
    Compound() = default;
 

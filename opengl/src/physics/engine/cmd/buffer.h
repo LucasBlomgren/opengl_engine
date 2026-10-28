@@ -45,7 +45,6 @@ public:
    struct SetBodyTransform {
       BodyHandle body;
       Pose pose;
-      glm::vec3 scale;
    };
 
    struct SetBodySleepState {
@@ -188,8 +187,7 @@ public:
 
    void recordSetBodyTransform(
       BodyHandle body,
-      const Pose& pose,
-      const glm::vec3& scale);
+      const Pose& pose);
 
    void recordSetBodySleepState(BodyHandle body, bool asleep);
    void recordSetBodyType(BodyHandle body, BodyType type);

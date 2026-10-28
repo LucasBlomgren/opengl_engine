@@ -71,6 +71,20 @@ CompoundMap& PS::compoundStorage() { return compounds; }
 const CompoundMap& PS::compoundStorage() const { return compounds; }
 
 //===========================================
+// Get Body AABB
+//===========================================
+AABB& PS::getAABB(const BodyHandle h) 
+{
+   RigidBody& body = getBody(h);
+   BodyColliderRef& ref = body.colliderRef;
+
+   if (ref.isSingle())
+      return getCollider(ref.single).getAABB();
+
+   return getCompound(ref.compound).aabb;
+}
+
+//===========================================
 // Reservation
 //===========================================
 BodyHandle PS::reserveBodyHandle() { return bodies.reserve(); }

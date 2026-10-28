@@ -28,6 +28,7 @@ struct BodyColliderRef {
    BodyColliderRef(CompoundHandle h)
       : type(Type::COMPOUND), compound(h) {}
 
+
    bool isSingle() const {
       if (type == Type::SINGLE) return true;
       return false;

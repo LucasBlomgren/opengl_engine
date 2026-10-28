@@ -13,7 +13,6 @@ namespace physics {
 //=====================================================
 struct BodyState {
    Pose pose;
-   glm::vec3 scale{ 1.0f };
 
    glm::vec3 linearVelocity{ 0.0f };
    glm::vec3 angularVelocity{ 0.0f };

@@ -62,4 +62,15 @@ void Engine::clear() {
    terrainTriangles.clear();
 }
 
+//====================================
+// Scene-wide command submission
+//====================================
+void Engine::sleepAllObjects() {
+   commandBuffer.recordSleepAllObjects();
+}
+
+void Engine::awakenAllObjects() {
+   commandBuffer.recordAwakenAllObjects();
+}
+
 }

@@ -967,8 +967,8 @@ void SceneBuilder::tallStructureScene() {
    // big box with high initial velocity
    GameObjectDesc bigBoxDesc;
    bigBoxDesc.name = "bigBox";
-   bigBoxDesc.rootTransformHandle = world.createTransform(glm::vec3(-10.0, 5.0, -10.0), glm::quat(1, 0, 0, 0), glm::vec3(7.2));
-   bigBoxDesc.mass = 1000;
+   bigBoxDesc.rootTransformHandle = world.createTransform(glm::vec3(-10.5, 5.0, -10.0), glm::quat(1, 0, 0, 0), glm::vec3(7.2));
+   bigBoxDesc.mass = 1000.0f;
    SubPartDesc bigBoxPart;
    bigBoxPart.localTransformHandle = world.createTransform();
    bigBoxDesc.parts.push_back(bigBoxPart);
@@ -1457,7 +1457,7 @@ void SceneBuilder::sandBox() {
       plankSize,
       10.0f,
       identity,
-      999.0f
+      false
    );
 
    createSinglePartObject(
@@ -1470,7 +1470,7 @@ void SceneBuilder::sandBox() {
       glm::vec3(0.5f),
       1.0f,
       identity,
-      1.0f
+      false
    );
 
    createSinglePartObject(
@@ -1674,7 +1674,7 @@ void SceneBuilder::sandBox() {
       glm::vec3(2.5f),
       10.0f,
       identity,
-      3.5f
+      false
    );
 
    createSinglePartObject(

@@ -56,7 +56,7 @@ public:
 
    void init(const std::vector<glm::vec3>& vertices);
    void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
-   void update(const Pose& worldPose, const glm::vec3& worldScale);
+   void update(const Pose& worldPose);
 
    std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 

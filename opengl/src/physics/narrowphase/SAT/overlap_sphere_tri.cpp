@@ -21,7 +21,7 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
       }
    }
 
-   float depth = sphere.radiusWorld - glm::length(sphere.centerWorld - P);
+   float depth = sphere.radius - glm::length(sphere.centerWorld - P);
 
    if (isInside and depth > 0.0f) {
       out.point = P;
@@ -49,10 +49,10 @@ bool SAT::sphereTri(Collider& A, Tri& tri, Result& out) {
       }
    }
 
-   if (bestDist2 <= sphere.radiusWorld * sphere.radiusWorld) {
+   if (bestDist2 <= sphere.radius * sphere.radius) {
       out.point = bestQ;
       out.normal = glm::normalize(sphere.centerWorld - bestQ);
-      out.depth = sphere.radiusWorld - std::sqrt(bestDist2);
+      out.depth = sphere.radius - std::sqrt(bestDist2);
       out.tri_ptr = &tri;
       return true;
    }

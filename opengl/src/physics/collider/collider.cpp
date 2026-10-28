@@ -7,15 +7,13 @@ AABB& Collider::getAABB() {
    return aabb;
 }
 
-void Collider::updateWorldPose(const Pose& bodyPose, const glm::vec3& bodyScale) {
+void Collider::updateWorldPose(const Pose& bodyPose) {
    glm::mat3 bodyRotation = glm::mat3_cast(bodyPose.orientation);
 
-   worldPose.position = bodyPose.position + bodyRotation * (bodyScale * localPose.position);
+   worldPose.position = bodyPose.position + bodyRotation * localPose.position;
    worldPose.orientation = glm::normalize(bodyPose.orientation * localPose.orientation);
 
-   worldScale = bodyScale * localScale;
-
-   transformCache.markDirty(worldScale);
+   transformCache.markDirty();
    aabbDirty = true;
 }
 
@@ -24,10 +22,10 @@ void Collider::updateShape() {
       using ShapeType = std::decay_t<decltype(colliderShape)>;
 
       if constexpr (std::is_same_v<ShapeType, Box>) {
-         colliderShape.update(worldPose, worldScale);
+         colliderShape.update(worldPose);
       }
       else if constexpr (std::is_same_v<ShapeType, Sphere>) {
-         colliderShape.update(worldPose, worldScale);
+         colliderShape.update(worldPose);
       }
       }, shape);
 }
@@ -58,10 +56,10 @@ void Collider::rebuildAABB() {
    else if (type == ColliderType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(shape);
 
-      aabb.worldMin = sphere.centerWorld - glm::vec3(sphere.radiusWorld);
-      aabb.worldMax = sphere.centerWorld + glm::vec3(sphere.radiusWorld);
+      aabb.worldMin = sphere.centerWorld - glm::vec3(sphere.radius);
+      aabb.worldMax = sphere.centerWorld + glm::vec3(sphere.radius);
       aabb.worldCenter = sphere.centerWorld;
-      aabb.worldHalfExtents = glm::vec3(sphere.radiusWorld);
+      aabb.worldHalfExtents = glm::vec3(sphere.radius);
    }
 }
 

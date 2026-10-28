@@ -90,6 +90,11 @@ public:
    SlotMap<Compound, CompoundHandle>& compoundStorage();
    const SlotMap<Compound, CompoundHandle>& compoundStorage() const;
 
+   //===========================================
+   // Get Body AABB
+   //===========================================
+   AABB& getAABB(const BodyHandle h);
+
 private:
    int colliderId = 0;
    int rigidBodyId = 0;

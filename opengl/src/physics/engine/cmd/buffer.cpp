@@ -373,9 +373,8 @@ void Buffer::recordSetKinematicTarget(
 
 void Buffer::recordSetBodyTransform(
    BodyHandle body,
-   const Pose& pose,
-   const glm::vec3& scale) {
-   mutations.emplace_back(SetBodyTransform{ body, pose, scale });
+   const Pose& pose) {
+   mutations.emplace_back(SetBodyTransform{ body, pose });
 }
 
 void Buffer::recordSetBodySleepState(

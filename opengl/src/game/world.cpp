@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include <algorithm>
 #include <source_location>
 
 #include "world.h"
@@ -50,6 +51,55 @@ physics::Pose makePhysicsPose(const Transform& transform) {
    pose.position = transform.position;
    pose.orientation = transform.orientation;
    return pose;
+}
+
+// Match the root * part matrix hierarchy, while keeping collider poses unscaled.
+physics::Pose makeColliderLocalPose(
+   const Transform& root,
+   const Transform& part)
+{
+   physics::Pose pose = makePhysicsPose(part);
+   pose.position = root.scale * part.position;
+   return pose;
+}
+
+bool posesDiffer(
+   const physics::Pose& left,
+   const physics::Pose& right)
+{
+   return vectorsDiffer(left.position, right.position) ||
+      orientationsDiffer(left.orientation, right.orientation);
+}
+
+// Express S_root * R_part * S_part in the collider's R_part frame.
+// This captures correct centers and conservative OBB half-extents even
+// when nonuniform root scaling and part rotation cause shear.
+glm::mat3 getBakedShapeTransform(
+   const Transform& root,
+   const Transform& part)
+{
+   const glm::mat3 R = glm::mat3_cast(glm::normalize(part.orientation));
+   glm::mat3 rootScale(1.0f);
+   rootScale[0][0] = root.scale.x;
+   rootScale[1][1] = root.scale.y;
+   rootScale[2][2] = root.scale.z;
+
+   glm::mat3 partScale(1.0f);
+   partScale[0][0] = part.scale.x;
+   partScale[1][1] = part.scale.y;
+   partScale[2][2] = part.scale.z;
+
+   return glm::transpose(R) * rootScale * R * partScale;
+}
+
+// Axis-aligned bounds of the transformed box in collider-local coordinates.
+glm::vec3 getTransformedHalfExtents(
+   const glm::mat3& transform,
+   const glm::vec3& halfExtents)
+{
+   return glm::abs(transform[0]) * halfExtents.x +
+      glm::abs(transform[1]) * halfExtents.y +
+      glm::abs(transform[2]) * halfExtents.z;
 }
 }
 
@@ -116,7 +166,6 @@ GameObjectHandle World::createGameObject(
 
    physics::BodyDesc bodyDesc;
    bodyDesc.pose = makePhysicsPose(*rootTransform);
-   bodyDesc.scale = rootTransform->scale;
    bodyDesc.type = objectDesc.bodyType;
    bodyDesc.reportContacts = objectDesc.reportContacts;
    bodyDesc.mass = objectDesc.mass;
@@ -203,15 +252,24 @@ GameObjectHandle World::createGameObject(
          localHalfExtents = (maximum - minimum) * 0.5f;
       }
 
-      // Create the collider for the SubPart
+      // Build unscaled collider pose + geometry baked to match the render mesh.
       physics::ColliderDesc colliderDesc;
-      colliderDesc.localPose = makePhysicsPose(*partTransform);
-      colliderDesc.localScale = partTransform->scale;
+      colliderDesc.localPose = makeColliderLocalPose(
+         *rootTransform, *partTransform
+      );
+
+      const glm::mat3 bakedTransform = getBakedShapeTransform(
+         *rootTransform, *partTransform
+      );
+      const glm::vec3 bakedCenter = bakedTransform * localCenter;
 
       if (partDesc.colliderType == physics::ColliderType::BOX) {
+         const glm::vec3 bakedHalfExtents =
+            getTransformedHalfExtents(bakedTransform, localHalfExtents);
+
          colliderDesc.shape = physics::BoxShapeDesc{
-             localCenter,
-             localHalfExtents
+            bakedCenter,
+            bakedHalfExtents
          };
       }
       else if (partDesc.colliderType == physics::ColliderType::SPHERE) {
@@ -219,7 +277,6 @@ GameObjectHandle World::createGameObject(
 
          if (!part.mesh->vertices.empty()) {
             radius = 0.0f;
-
             for (const Vertex& vertex : part.mesh->vertices) {
                radius = (std::max)(
                   radius,
@@ -228,9 +285,15 @@ GameObjectHandle World::createGameObject(
             }
          }
 
+         // Conservative sphere enclosing an anisotropically scaled mesh.
+         const float maxRootScale =
+            glm::compMax(glm::abs(rootTransform->scale));
+         const float maxPartScale =
+            glm::compMax(glm::abs(partTransform->scale));
+
          colliderDesc.shape = physics::SphereShapeDesc{
-             localCenter,
-             radius
+            bakedCenter,
+            radius * maxRootScale * maxPartScale
          };
       }
       else {
@@ -361,13 +424,11 @@ void World::syncGameObjectTransformToPhysics(
       return;
    }
 
-   if (posesDiffer(bodyState->pose, *rootTransform) ||
-      vectorsDiffer(bodyState->scale, rootTransform->scale))
+   if (posesDiffer(bodyState->pose, *rootTransform))
    {
       physicsEngine.setRigidBodyTransform(
          object->rigidBodyHandle,
-         makePhysicsPose(*rootTransform),
-         rootTransform->scale
+         makePhysicsPose(*rootTransform)
       );
    }
 
@@ -381,21 +442,21 @@ void World::syncGameObjectTransformToPhysics(
          continue;
       }
 
-      if (posesDiffer(colliderState->localPose, *localTransform) ||
-         vectorsDiffer(
-            colliderState->localScale,
-            localTransform->scale
-         )) {
-         physicsEngine.setColliderLocalTransform(
+      const physics::Pose expectedPose = makeColliderLocalPose(
+         *rootTransform, *localTransform
+      );
+
+      if (posesDiffer(colliderState->localPose, expectedPose)) {
+         physicsEngine.setColliderLocalPose(
             part.colliderHandle,
-            makePhysicsPose(*localTransform),
-            localTransform->scale
+            expectedPose
          );
       }
    }
 }
 
 void World::syncTransformsToPhysics() {
+   double start = glfwGetTime();
    const std::vector<GameObject>& objects = gameObjects.dense();
 
    for (uint32_t index = 0;
@@ -417,6 +478,13 @@ void World::syncTransformsToPhysics() {
          continue;
       }
 
+      Transform* rootTransform =
+         transforms.try_get(object.rootTransformHandle);
+
+      if (!rootTransform) {
+         continue;
+      }
+
       for (const SubPart& part : object.parts)
       {
          Transform* localTransform =
@@ -429,23 +497,26 @@ void World::syncTransformsToPhysics() {
             continue;
          }
 
-         if (posesDiffer(colliderState->localPose, *localTransform) ||
-            vectorsDiffer(
-               colliderState->localScale,
-               localTransform->scale))
-         {
-            physicsEngine.setColliderLocalTransform(
+         const physics::Pose expectedPose = makeColliderLocalPose(
+            *rootTransform, *localTransform
+         );
+
+         if (posesDiffer(colliderState->localPose, expectedPose)) {
+            physicsEngine.setColliderLocalPose(
                part.colliderHandle,
-               makePhysicsPose(*localTransform),
-               localTransform->scale
+               expectedPose
             );
          }
       }
    }
+
+   double end = glfwGetTime();
+   //std::cout << "syncTransformsToPhysics: " << (end - start) * 1000 << " ms\n";
 }
 
 void World::syncPhysicsToTransforms()
 {
+   double start = glfwGetTime();
    std::vector<GameObject>& objects = gameObjects.dense();
 
    for (GameObject& object : objects) {
@@ -471,16 +542,16 @@ void World::syncPhysicsToTransforms()
          continue;
       }
 
-      if (!posesDiffer(bodyState->pose, *transform) &&
-         !vectorsDiffer(bodyState->scale, transform->scale))
-      {
+      if (!posesDiffer(bodyState->pose, *transform)) {
          continue;
       }
 
       transform->lastPosition = transform->position;
       transform->position = bodyState->pose.position;
       transform->orientation = bodyState->pose.orientation;
-      transform->scale = bodyState->scale;
       transform->updateCache();
    }
+
+   double end = glfwGetTime();
+   //std::cout << "syncPhysicsToTransforms: " << (end - start) * 1000 << " ms \n";
 }

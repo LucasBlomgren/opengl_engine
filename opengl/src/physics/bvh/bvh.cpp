@@ -30,7 +30,7 @@ void BVHTree::clear() {
 //=======================================================
 //        Single Query
 //=======================================================
-void BVHTree::singleQuery(const AABB& qBox, std::vector<BVHLeafRef>& out) const {
+void BVHTree::singleQuery(const AABB& qBox, std::vector<BodyHandle>& out) const {
    out.clear();
 
    if (rootIdx == -1 || nodes.empty()) {
@@ -82,7 +82,7 @@ bool BVHTree::queryAny(const AABB& qBox, BodyHandle ignoreBody) const {
          if (n->childBIdx != -1) stack[sp++] = &nodes[n->childBIdx];
       }
       else {
-         if (n->element.body == ignoreBody)
+         if (n->element == ignoreBody)
             continue;
 
          if (qBox.intersects(n->tightBox)) {
@@ -97,16 +97,16 @@ bool BVHTree::queryAny(const AABB& qBox, BodyHandle ignoreBody) const {
 //========================================================
 //      Insert Leaf
 //========================================================
-int BVHTree::insertLeaf(BodyHandle bodyH, ColliderHandle colliderH) {
-   Collider& col = physicsStorage->getCollider(colliderH);
+int BVHTree::insertLeaf(BodyHandle handle) {
+   RigidBody& body = physicsStorage->getBody(handle);
 
-   if (col.BVHleafIdx != -1) {
+   if (body.broadphaseHandle.leafIdx != -1) {
       // already in tree
       return -1;
    }
 
    // create leaf node
-   int leafIdx = createLeaf(bodyH, colliderH, col);
+   int leafIdx = createLeaf(handle);
 
    // if tree is empty, set rootIdx. Leaf becomes root.
    if (rootIdx == -1) {
@@ -155,20 +155,18 @@ int BVHTree::insertLeaf(BodyHandle bodyH, ColliderHandle colliderH) {
    return leaf.selfIdx;
 }
 
-int BVHTree::createLeaf(
-   BodyHandle bodyH, 
-   ColliderHandle colliderH, 
-   Collider& collider) 
+int BVHTree::createLeaf(BodyHandle handle) 
 {
    Node& leaf = nodes.emplace_back();
    leaf.selfIdx = nodes.size() - 1;
    leaf.isLeaf = true;
-   leaf.element = BVHLeafRef{ bodyH, colliderH };
-   leaf.tightBox = collider.getAABB();
+   leaf.element = handle;
+   leaf.tightBox = physicsStorage->getAABB(handle);
    leaf.fatBox = leaf.tightBox;
    leaf.fatBox.grow(fatBoxMargin);
 
-   collider.BVHleafIdx = leaf.selfIdx;
+   RigidBody& body = physicsStorage->getBody(handle);
+   body.broadphaseHandle.leafIdx = leaf.selfIdx;
 
    if (shouldUpdateRenderData)
       updateRenderData(leaf);
@@ -231,8 +229,8 @@ void BVHTree::removeLeaf(int leafIdx)
 
    // root is leaf, clear tree
    if (leafIdx == rootIdx) {
-      Collider& col = physicsStorage->getCollider(leaf.element.collider);
-      col.BVHleafIdx = -1;
+      RigidBody& body = physicsStorage->getBody(leaf.element);
+      body.broadphaseHandle.leafIdx = -1;
 
       rootIdx = -1;
       nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
@@ -267,10 +265,9 @@ void BVHTree::removeLeaf(int leafIdx)
    leaf.alive = false;
    leaf.parentIdx = -1;
 
-   Collider& col = physicsStorage->getCollider(leaf.element.collider);
-
-   col.BVHleafIdx = -1;
-   leaf.element = BVHLeafRef{};
+   RigidBody& body = physicsStorage->getBody(leaf.element);
+   body.broadphaseHandle.leafIdx = -1;
+   leaf.element = {};
 
    parent.alive = false;
    parent.parentIdx = -1;
@@ -310,8 +307,7 @@ void BVHTree::updateLeaves() {
          continue;
       }
 
-      Collider& col = physicsStorage->getCollider(n.element.collider);
-      n.tightBox = col.getAABB();
+      n.tightBox = physicsStorage->getAABB(n.element);
 
       if (n.fatBox.contains(n.tightBox)) {
          continue;
@@ -325,7 +321,7 @@ void BVHTree::updateLeaves() {
       if (shouldUpdateRenderData)
          updateRenderData(n);
 
-      // Markera just det lövet **och alla dess föräldrar**
+      // Markera lövet och alla dess föräldrar
       for (int p = i; p != -1; p = nodes[p].parentIdx) {
          nodes[p].dirty = true;
       }
@@ -351,7 +347,7 @@ void BVHTree::refitDirtySubtree(int nodeIdx) {
    refitDirtySubtree(node.childBIdx);
 
    // när barnen är klara, unionera dem
-   if (childA and childB) {
+   if (childA && childB) {
       node.fatBox.worldMin = glm::min(childA->fatBox.worldMin, childB->fatBox.worldMin);
       node.fatBox.worldMax = glm::max(childA->fatBox.worldMax, childB->fatBox.worldMax);
    }
@@ -370,8 +366,7 @@ void BVHTree::rebuildFromLeaves() {
       if (!node.alive || !node.isLeaf)
          continue;
 
-      const AABB& box =
-         physicsStorage->getCollider(node.element.collider).getAABB();
+      const AABB& box = physicsStorage->getAABB(node.element);
 
       BVHPrimitive prim{};
       prim.min = box.worldMin;
@@ -388,46 +383,46 @@ void BVHTree::rebuildFromLeaves() {
 //========================================================
 //      Build
 //========================================================
-void BVHTree::buildFromColliders(const std::vector<ColliderHandle>& handles)
+void BVHTree::buildFromBodies(const std::vector<BodyHandle>& handles)
 {
-   collectPrimitivesFromColliders(handles);
+   collectPrimitivesFromBodies(handles);
    constructTree();
 }
 
 void BVHTree::buildFromExternalAABBs(
-   const std::vector<ColliderHandle>& handles,
+   const std::vector<BodyHandle>& handles,
    const std::vector<AABB>& boxes)
 {
    createPrimitivesFromExternalAABBs(handles, boxes);
    constructTree();
 }
 
-void BVHTree::collectPrimitivesFromColliders(
-   const std::vector<ColliderHandle>& handles)
+void BVHTree::collectPrimitivesFromBodies(
+   const std::vector<BodyHandle>& handles)
 {
    prims.clear();
    prims.reserve(handles.size());
 
-   for (const ColliderHandle& colliderH : handles) {
-      Collider& col = physicsStorage->getCollider(colliderH);
+   for (const BodyHandle& bodyH : handles) {
+      RigidBody& body = physicsStorage->getBody(bodyH);
 
       if (writeBodyLeafIndices) {
-         col.BVHleafIdx = -1;
+         body.broadphaseHandle.leafIdx = -1;
       }
 
-      const AABB& box = col.getAABB();
+      const AABB& box = physicsStorage->getAABB(bodyH);
 
       BVHPrimitive prim{};
       prim.min = box.worldMin;
       prim.max = box.worldMax;
       prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
-      prim.element = BVHLeafRef{ col.bodyHandle, colliderH };
+      prim.element = bodyH;
       prims.push_back(prim);
    }
 }
 
 void BVHTree::createPrimitivesFromExternalAABBs(
-   const std::vector<ColliderHandle>& handles,
+   const std::vector<BodyHandle>& handles,
    const std::vector<AABB>& boxes)
 {
    prims.clear();
@@ -439,19 +434,19 @@ void BVHTree::createPrimitivesFromExternalAABBs(
    prims.reserve(handles.size());
 
    for (size_t i = 0; i < handles.size(); ++i) {
-      const ColliderHandle& colH = handles[i];
+      const BodyHandle& bodyH = handles[i];
       const AABB& box = boxes[i];
 
-      Collider& col = physicsStorage->getCollider(colH);
+      RigidBody& body = physicsStorage->getBody(bodyH);
       if (writeBodyLeafIndices) {
-         col.BVHleafIdx = -1;
+         body.broadphaseHandle.leafIdx = -1;
       }
 
       BVHPrimitive prim{};
       prim.min = box.worldMin;
       prim.max = box.worldMax;
       prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
-      prim.element = BVHLeafRef{ col.bodyHandle, colH };
+      prim.element = bodyH;
       prims.push_back(prim);
    }
 }
@@ -510,25 +505,6 @@ void BVHTree::constructTree()
 
    if (rootIdx != -1) {
       refitDirtySubtree(rootIdx);
-   }
-}
-
-void BVHTree::createPrimitives(std::vector<ColliderHandle>& handles) {
-   prims.clear();
-   prims.reserve(handles.size());
-
-   for (ColliderHandle& colH : handles) {
-      Collider& col = physicsStorage->getCollider(colH);
-      col.BVHleafIdx = -1;
-
-      AABB& box = col.getAABB();
-
-      BVHPrimitive prim;
-      prim.min = box.worldMin;
-      prim.max = box.worldMax;
-      prim.centroid = box.worldCenter;
-      prim.element = BVHLeafRef{ col.bodyHandle, colH };
-      prims.push_back(prim);
    }
 }
 
@@ -619,8 +595,8 @@ void BVHTree::finalizeLeaf(int nodeIdx)
    leaf.fatBox = leaf.tightBox;
 
    if (writeBodyLeafIndices) {
-      Collider& col = physicsStorage->getCollider(leaf.element.collider);
-      col.BVHleafIdx = leaf.selfIdx;
+      RigidBody& body = physicsStorage->getBody(leaf.element);
+      body.broadphaseHandle.leafIdx = leaf.selfIdx;
    }
 }
 

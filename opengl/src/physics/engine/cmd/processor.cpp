@@ -376,7 +376,6 @@ void Processor::applyCommand(
    }
 
    body->pose = command.pose;
-   body->scale = command.scale;
 
    refreshBodySpatialState(command.body);
 
@@ -537,7 +536,6 @@ void Processor::applyCommand(
    }
 
    collider->localPose = command.localPose;
-   collider->localScale = command.localScale;
    refreshBodySpatialState(collider->bodyHandle);
 }
 
@@ -657,21 +655,20 @@ void Processor::refreshBodyInertia(RigidBody& body)
       return;
    }
 
-   // worldScale already contains body.scale * collider.localScale.
-   // Multiplying by body.scale again makes elongated bodies artificially
-   // resistant to angular impulses because their inertia grows from a
-   // squared scale.
-   glm::vec3 inertiaScale = collider->worldScale;
+   glm::vec3 inertiaScale{ 0.0f };
 
    if (collider->type == ColliderType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider->shape);
-      inertiaScale = glm::vec3(sphere.radiusWorld * 2.0f);
+      inertiaScale = glm::vec3(sphere.radius * 2.0f);
+   }
+   else if (collider->type == ColliderType::BOX) {
+      const Box& box = std::get<Box>(collider->shape);
+      inertiaScale = box.localHalfExtents * 2.0f;
    }
 
    body.calculateInverseInertia(
       collider->type,
-      *collider,
-      inertiaScale
+      *collider
    );
    body.updateInertiaWorld();
 }
@@ -701,7 +698,7 @@ void Processor::refreshBodySpatialState(
       [&](ColliderHandle colliderH) {
          Collider& collider = physicsStorage.getCollider(colliderH);
 
-         collider.updateWorldPose(body.pose, body.scale);
+         collider.updateWorldPose(body.pose);
          collider.updateShape();
          collider.updateAABB();
 

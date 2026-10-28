@@ -24,14 +24,9 @@ struct Collider {
    BodyHandle bodyHandle;
 
    Pose localPose;
-   glm::vec3 localScale{ 1.0f };
-
    Pose worldPose;
-   glm::vec3 worldScale{ 1.0f };
 
    ColliderTransformCache transformCache;
-
-   int BVHleafIdx = -1;
 
    AABB aabb;
    bool aabbDirty = true;
@@ -41,7 +36,7 @@ struct Collider {
 
    uint32_t userTag = 0;
 
-   void updateWorldPose(const Pose& bodyPose, const glm::vec3& bodyScale);
+   void updateWorldPose(const Pose& bodyPose);
    void updateShape();
    void updateAABB();
 

@@ -23,8 +23,6 @@ public:
    );
    void clear();
 
-   void constructBvh(BVHTree& tree, std::vector<BodyHandle>& handles);
-
    // update BVHs if dirty
    void updateBVHs();
 
@@ -38,7 +36,7 @@ public:
    );
    void determineSpeculativeBodies(
       float dt,
-      std::vector<ColliderHandle>& outColliders,
+      std::vector<BodyHandle>& outBodies,
       std::vector<AABB>& outAABBs
    );
 
@@ -84,8 +82,8 @@ private:
    TerrainBVH terrainBvh;
 
    // pairs buffers
-   std::vector<std::pair<BVHLeafRef, Tri*>> pairsBufTerrain;
-   std::vector<std::pair<BVHLeafRef, BVHLeafRef>> pairsBufDynamic;
+   std::vector<std::pair<BodyHandle, Tri*>> pairsBufTerrain;
+   std::vector<std::pair<BodyHandle, BodyHandle>> pairsBufDynamic;
 
    // helpers
    void swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list);

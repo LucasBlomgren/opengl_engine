@@ -11,16 +11,16 @@ bool SAT::sphereSphere(Collider& A, Collider& B, Result& out) {
 
    glm::vec3 delta = sphereB.centerWorld - sphereA.centerWorld;
    float dist2 = glm::dot(delta, delta);
-   float r2 = (sphereA.radiusWorld + sphereB.radiusWorld) * (sphereA.radiusWorld + sphereB.radiusWorld);
+   float r2 = (sphereA.radius + sphereB.radius) * (sphereA.radius + sphereB.radius);
 
    if (dist2 > r2) {
       return false; // No intersection
    }
 
    float dist = std::sqrt(dist2);
-   out.depth = (sphereA.radiusWorld + sphereB.radiusWorld) - dist;
+   out.depth = (sphereA.radius + sphereB.radius) - dist;
    out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f, 1.0f, 0.0f));
-   out.point = sphereB.centerWorld - out.normal * sphereB.radiusWorld; // Contact point on sphereB
+   out.point = sphereB.centerWorld - out.normal * sphereB.radius; // Contact point on sphereB
 
    return true;
 }

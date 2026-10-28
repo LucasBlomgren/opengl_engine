@@ -22,7 +22,7 @@ bool SAT::speculativeSphereTriangle(
 
    const glm::vec3 center = sphereCollider.worldPose.position;
    const glm::vec3 velocity = sphereBody.linearVelocity;
-   const float radius = sphere.radiusWorld;
+   const float radius = sphere.radius;
 
    if (radius <= 0.0f) {
       return false;

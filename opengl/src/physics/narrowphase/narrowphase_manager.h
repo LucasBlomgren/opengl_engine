@@ -64,17 +64,6 @@ private:
       float dt
    );
 
-   void processColliderPair(
-      ContactBatch& batch,
-      ResolvedColliderPair pair
-   );
-
-   void processColliderPairSpeculative(
-      ResolvedColliderPair pair,
-      float dt,
-      BodyHandle sweepOwner
-   );
-
    //=======================================================
    //     SAT tests
    //=======================================================

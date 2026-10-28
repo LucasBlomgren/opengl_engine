@@ -35,35 +35,10 @@ void BroadphaseManager::init(
    asleepHandles.reserve(slotCap * 2);
    staticHandles.reserve(slotCap * 2);
 
-
-   constructBvh(awakeBvh, awakeHandles);
-   constructBvh(asleepBvh, asleepHandles);
-   constructBvh(staticBvh, staticHandles);
+   awakeBvh.buildFromBodies(awakeHandles);
+   asleepBvh.buildFromBodies(asleepHandles);
+   staticBvh.buildFromBodies(staticHandles);
    terrainBvh.build(*terrainTriangles);
-}
-
-void BroadphaseManager::constructBvh(
-   BVHTree& tree,
-   std::vector<BodyHandle>& handles)
-{
-   std::vector<ColliderHandle> colliderHandles;
-
-   for (BodyHandle bodyH : handles) {
-      RigidBody& body = storage->getBody(bodyH);
-
-      if (body.colliderRef.isCompound()) {
-         Compound& compound =
-            storage->getCompound(body.colliderRef.compound);
-
-         for (ColliderHandle colH : compound.colliders)
-            colliderHandles.push_back(colH);
-      }
-      else {
-         colliderHandles.push_back(body.colliderRef.single);
-      }
-   }
-
-   tree.buildFromColliders(colliderHandles);
 }
 
 void BroadphaseManager::clear() {
@@ -122,26 +97,20 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 
       treeVsOtherTreeQuery(awakeBvh, terrainBvh, pairsBufTerrain);
 
-      // Group terrain triangles by collider
-      std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
+      // Group terrain triangles by body
+      std::unordered_map<BodyHandle, std::vector<Tri*>> temp;
       temp.reserve(pairsBufTerrain.size());
 
-      for (const auto& [leafRef, tri] : pairsBufTerrain) {
-         temp[leafRef.collider].push_back(tri);
+      for (const auto& [body, tri] : pairsBufTerrain) {
+         temp[body].emplace_back(tri);
       }
 
       // Finalize terrain pairs
       batch.terrainPairs.clear();
       batch.terrainPairs.reserve(temp.size());
 
-      for (auto& [colH, trisVec] : temp) {
-         const Collider& collider = storage->getCollider(colH);
-
-         batch.terrainPairs.push_back(TerrainPair{
-            collider.bodyHandle,
-            colH,
-            std::move(trisVec)
-            });
+      for (auto& [bodyH, trisVec] : temp) {
+         batch.terrainPairs.emplace_back(TerrainPair{ bodyH,std::move(trisVec) });
       }
    }
 
@@ -153,19 +122,11 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
       treeVsSameTreeQuery(awakeBvh, pairsBufDynamic);
 
       int cap = static_cast<int>(pairsBufDynamic.size());
-      batch.dynamicPairs.resize(cap);
-      int sp = 0;
+      batch.dynamicPairs.reserve(cap);
 
       for (auto& hp : pairsBufDynamic) {
-         batch.dynamicPairs[sp++] =
-            DynamicPair{
-               hp.first.body,
-               hp.second.body,
-               hp.first.collider,
-               hp.second.collider
-         };
+         batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
       }
-      batch.dynamicPairs.resize(sp);
    }
 
    // dynamic vs asleep
@@ -175,17 +136,9 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 
       int cap = static_cast<int>(pairsBufDynamic.size());
       batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
-      int sp = 0;
 
       for (auto& hp : pairsBufDynamic) {
-         batch.dynamicPairs.emplace_back(
-            DynamicPair{
-               hp.first.body,
-               hp.second.body,
-               hp.first.collider,
-               hp.second.collider
-            }
-         );
+         batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
       }
    }
 
@@ -196,17 +149,9 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 
       int cap = static_cast<int>(pairsBufDynamic.size());
       batch.dynamicPairs.reserve(batch.dynamicPairs.size() + cap);
-      int sp = 0;
 
       for (auto& hp : pairsBufDynamic) {
-         batch.dynamicPairs.emplace_back(
-            DynamicPair{
-               hp.first.body,
-               hp.second.body,
-               hp.first.collider,
-               hp.second.collider
-            }
-         );
+         batch.dynamicPairs.emplace_back(DynamicPair{ hp.first, hp.second });
       }
    }
 }
@@ -224,21 +169,16 @@ void BroadphaseManager::buildSpeculativePairs(
    batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
    batch.speculativeTerrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
-   static std::vector<ColliderHandle> colliders;
-   static std::vector<AABB> AABBs;
-
-   colliders.reserve(awakeHandles.size());
-   colliders.clear();
-
-   AABBs.reserve(awakeHandles.size());
-   AABBs.clear();
-
-   determineSpeculativeBodies(dt, colliders, AABBs);
-
-   //debugSweeps = AABBs;
+   static std::vector<BodyHandle> speculativeBodies;
+   static std::vector<AABB> speculativeAABBs;
+   speculativeBodies.reserve(awakeHandles.size());
+   speculativeAABBs.reserve(awakeHandles.size());
+   speculativeBodies.clear();
+   speculativeAABBs.clear();
+   determineSpeculativeBodies(dt, speculativeBodies, speculativeAABBs);
 
    speculativeBvh.clear();
-   speculativeBvh.buildFromExternalAABBs(colliders, AABBs);
+   speculativeBvh.buildFromExternalAABBs(speculativeBodies, speculativeAABBs);
 
    struct SpecKey {
       uint64_t owner;
@@ -264,23 +204,21 @@ void BroadphaseManager::buildSpeculativePairs(
    static std::unordered_set<SpecKey, SpecKeyHash> seenSpecPairs;
    seenSpecPairs.clear();
 
-   auto packHandle = [](auto h) -> uint64_t {
+   auto packHandle = [](BodyHandle h) -> uint64_t {
       return (uint64_t(h.slot) << 32) | uint64_t(h.gen);
       };
 
    auto addSpecPair = [&](
-      BodyHandle bodyA,
-      BodyHandle bodyB,
-      ColliderHandle colA,
-      ColliderHandle colB,
+      BodyHandle a,
+      BodyHandle b,
       BodyHandle owner)
       {
-         if (bodyA == bodyB) {
+         if (a == b) {
             return;
          }
 
-         uint64_t ak = packHandle(colA);
-         uint64_t bk = packHandle(colB);
+         uint64_t ak = packHandle(a);
+         uint64_t bk = packHandle(b);
          uint64_t ok = packHandle(owner);
 
          if (bk < ak) {
@@ -297,40 +235,38 @@ void BroadphaseManager::buildSpeculativePairs(
          }
 
          batch.speculativeDynamicPairs.emplace_back(
-            SpeculativeDynamicPair{ bodyA, bodyB, colA, colB, owner }
+            SpeculativeDynamicPair{ a, b, owner }
          );
       };
 
-   // ----- Dynamic vs terrain -----
+   // ----- dynamic vs terrain -----
    if (terrainBvh.rootIdx != -1) {
-      pairsBufTerrain.clear();
       pairsBufTerrain.reserve(BVHTree::MaxCollisionBuf);
-
+      pairsBufTerrain.clear();
       treeVsOtherTreeQuery(speculativeBvh, terrainBvh, pairsBufTerrain);
 
-      // Group terrain triangles by collider
-      std::unordered_map<ColliderHandle, std::vector<Tri*>> temp;
+      // Sort terrain pairs by body to avoid duplicates 
+      std::unordered_map<BodyHandle, std::vector<Tri*>> temp;
       temp.reserve(pairsBufTerrain.size());
+      if (temp.bucket_count() < pairsBufTerrain.size())
+         temp.reserve(pairsBufTerrain.size());
 
-      for (const auto& [leafRef, tri] : pairsBufTerrain) {
-         temp[leafRef.collider].push_back(tri);
+      for (int i = 0; i < pairsBufTerrain.size(); i++) {
+         auto [body, tri] = pairsBufTerrain[i];
+         temp[body].push_back(tri);
       }
 
       // Finalize terrain pairs
       batch.speculativeTerrainPairs.clear();
-      batch.speculativeTerrainPairs.reserve(temp.size());
+      int cap = static_cast<int>(temp.size());
+      batch.speculativeTerrainPairs.resize(cap);
+      int sp = 0;
 
-      for (auto& [colH, trisVec] : temp) {
-         const Collider& collider = storage->getCollider(colH);
-
-         batch.speculativeTerrainPairs.push_back(
-            SpeculativeTerrainPair{
-               collider.bodyHandle,
-               colH,
-               std::move(trisVec)
-            }
-         );
+      for (auto& [bodyHandle, trisVec] : temp) {
+         batch.speculativeTerrainPairs[sp++] =
+            SpeculativeTerrainPair{ bodyHandle, std::move(trisVec) };
       }
+      batch.speculativeTerrainPairs.resize(sp);
    }
 
    // ----- speculative vs speculative -----
@@ -342,13 +278,11 @@ void BroadphaseManager::buildSpeculativePairs(
       batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
 
       for (auto& hp : pairsBufDynamic) {
-         BodyHandle& bodyA = hp.first.body;
-         BodyHandle& bodyB = hp.second.body;
-         ColliderHandle& colA = hp.first.collider;
-         ColliderHandle& colB = hp.second.collider;
+         BodyHandle a = hp.first;
+         BodyHandle b = hp.second;
 
-         addSpecPair(bodyA, bodyB, colA, colB, bodyA); // A's owner
-         addSpecPair(bodyA, bodyB, colA, colB, bodyB); // B's owner
+         addSpecPair(a, b, a); // A's owner
+         addSpecPair(a, b, b); // B's owner
       }
    }
 
@@ -361,12 +295,7 @@ void BroadphaseManager::buildSpeculativePairs(
       batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
 
       for (auto& hp : pairsBufDynamic) {
-         BodyHandle& bodyA = hp.first.body;
-         BodyHandle& bodyB = hp.second.body;
-         ColliderHandle& colA = hp.first.collider;
-         ColliderHandle& colB = hp.second.collider;
-
-         addSpecPair(bodyA, bodyB, colA, colB, bodyA); // A's owner
+         addSpecPair(hp.first, hp.second, hp.first);
       }
    }
 
@@ -380,13 +309,7 @@ void BroadphaseManager::buildSpeculativePairs(
 
       for (auto& hp : pairsBufDynamic) {
          batch.speculativeDynamicPairs.emplace_back(
-            SpeculativeDynamicPair{ 
-               hp.first.body, 
-               hp.second.body, 
-               hp.first.collider,
-               hp.second.collider,
-               hp.first.body 
-            }
+            SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
          );
       }
    }
@@ -401,13 +324,7 @@ void BroadphaseManager::buildSpeculativePairs(
 
       for (auto& hp : pairsBufDynamic) {
          batch.speculativeDynamicPairs.emplace_back(
-            SpeculativeDynamicPair{
-               hp.first.body,
-               hp.second.body,
-               hp.first.collider,
-               hp.second.collider,
-               hp.first.body
-            }
+            SpeculativeDynamicPair{ hp.first, hp.second, hp.first }
          );
       }
    }
@@ -415,66 +332,141 @@ void BroadphaseManager::buildSpeculativePairs(
 
 void BroadphaseManager::determineSpeculativeBodies(
    float dt,
-   std::vector<ColliderHandle>& outColliders,
+   std::vector<BodyHandle>& outBodies,
    std::vector<AABB>& outAABBs)
 {
-   for (const BodyHandle& handle : awakeHandles) {
+   constexpr float safeFraction = 0.50f;
+   constexpr float minSafeDistance = 0.02f;
+
+   const float dt2 = dt * dt;
+
+   for (BodyHandle handle : awakeHandles) {
       RigidBody& body = storage->getBody(handle);
 
-      if (body.type != BodyType::Dynamic) {
+      if (body.type != BodyType::Dynamic ||
+         !body.colliderRef.isValid())
          continue;
-      }
 
-      if (!body.colliderRef.isValid()) {
+      float minExtent = std::numeric_limits<float>::max();
+      float maxRadius = 0.0f;
+      bool hasCollider = false;
+
+      // Determine if body needs speculative detection
+      forEachBodyCollider(
+         *storage,
+         body.colliderRef,
+         [&](ColliderHandle colliderH) {
+            Collider& collider = storage->getCollider(colliderH);
+
+            if (!collider.enabled)
+               return;
+
+            hasCollider = true;
+
+            float extent = 0.0f;
+            float radius = 0.0f;
+
+            if (collider.type == ColliderType::BOX) {
+               const Box& box = std::get<Box>(collider.shape);
+
+               const glm::vec3& h = box.localHalfExtents;
+
+               extent = 2.0f * std::min(
+                  h.x, std::min(h.y, h.z)
+               );
+
+               const AABB& aabb = collider.getAABB();
+
+               radius =
+                  glm::length(aabb.worldCenter - body.pose.position) +
+                  glm::length(aabb.worldHalfExtents);
+            }
+            else if (collider.type == ColliderType::SPHERE) {
+               const Sphere& sphere = std::get<Sphere>(collider.shape);
+
+               extent = 2.0f * sphere.radius;
+
+               // Only the sphere center moves due to body rotation.
+               radius = glm::length(
+                  sphere.centerWorld - body.pose.position
+               );
+            }
+
+            minExtent = std::min(minExtent, extent);
+            maxRadius = std::max(maxRadius, radius);
+         }
+      );
+
+      if (!hasCollider)
          continue;
-      }
 
-      constexpr float safeFraction = 0.50f;
-      constexpr float minSafeDistance = 0.02f;
+      const float safeDistance = std::max(
+         minExtent * safeFraction,
+         minSafeDistance
+      );
 
-      const glm::vec3& scale = body.scale;
-
-      float minExtent =
-         std::min(scale.x, std::min(scale.y, scale.z));
-
-      float safeDistance =
-         std::max(minExtent * safeFraction, minSafeDistance);
-
-      float scale2 = glm::dot(scale, scale);
-      float dt2 = dt * dt;
-
-      float linearMotion2 =
+      const float linearMotion2 =
          glm::dot(body.linearVelocity, body.linearVelocity) * dt2;
 
-      float angularMotion2 =
+      const float angularMotion2 =
          glm::dot(body.angularVelocity, body.angularVelocity) *
-         (0.25f * scale2) *
-         dt2;
+         maxRadius * maxRadius * dt2;
 
-      float safeDistance2 = safeDistance * safeDistance;
-
-      if (linearMotion2 + angularMotion2 <= 0.5f * safeDistance2) {
+      if (linearMotion2 + angularMotion2 <=
+         0.5f * safeDistance * safeDistance)
          continue;
-      }
 
-      forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
-         Collider& collider = storage->getCollider(colH);
+      // Build swept AABB from all enabled colliders
+      AABB sweptAABB{};
+      bool first = true;
 
-         if (!collider.enabled)
-            return;
+      forEachBodyCollider(
+         *storage,
+         body.colliderRef,
+         [&](ColliderHandle colliderH) {
+            Collider& collider = storage->getCollider(colliderH);
 
-         outColliders.push_back(colH);
-         outAABBs.emplace_back(computeSweptAABB(body, collider, dt));
-      });
+            if (!collider.enabled)
+               return;
+
+            const AABB childSwept =
+               computeSweptAABB(body, collider, dt);
+
+            if (first) {
+               sweptAABB = childSwept;
+               first = false;
+            }
+            else {
+               sweptAABB.worldMin = glm::min(
+                  sweptAABB.worldMin, childSwept.worldMin
+               );
+
+               sweptAABB.worldMax = glm::max(
+                  sweptAABB.worldMax, childSwept.worldMax
+               );
+            }
+         }
+      );
+
+      sweptAABB.worldCenter =
+         (sweptAABB.worldMin + sweptAABB.worldMax) * 0.5f;
+
+      sweptAABB.worldHalfExtents =
+         (sweptAABB.worldMax - sweptAABB.worldMin) * 0.5f;
+
+      outBodies.push_back(handle);
+      outAABBs.push_back(sweptAABB);
    }
 }
+
 
 AABB BroadphaseManager::computeSweptAABB(
    const RigidBody& body,
    Collider& collider,
    float dt)
 {
-   AABB swept = collider.getAABB();
+   const AABB& aabb = collider.getAABB();
+   AABB swept = aabb;
 
    // Linear motion
    glm::vec3 delta = body.linearVelocity * dt;
@@ -483,27 +475,44 @@ AABB BroadphaseManager::computeSweptAABB(
    swept.worldMax += glm::max(delta, glm::vec3(0.0f));
 
    // Angular motion
-   const AABB& aabb = collider.getAABB();
+   float rotationRadius = 0.0f;
 
-   glm::vec3 center =
-      (aabb.worldMin + aabb.worldMax) * 0.5f;
+   if (collider.type == ColliderType::SPHERE) {
+      const Sphere& sphere = std::get<Sphere>(collider.shape);
 
-   glm::vec3 halfExtents =
-      (aabb.worldMax - aabb.worldMin) * 0.5f;
+      // Only the sphere center moves due to rotation
+      rotationRadius = glm::length(
+         sphere.centerWorld - body.pose.position
+      );
+   }
+   else {
+      glm::vec3 center =
+         (aabb.worldMin + aabb.worldMax) * 0.5f;
 
-   float rotationRadius =
-      glm::length(center - body.pose.position) +
-      glm::length(halfExtents);
+      glm::vec3 halfExtents =
+         (aabb.worldMax - aabb.worldMin) * 0.5f;
 
-   float angularExpansion =
-      glm::length(body.angularVelocity) * dt * rotationRadius;
+      rotationRadius =
+         glm::length(center - body.pose.position) +
+         glm::length(halfExtents);
+   }
+
+   // Conservative per-axis angular expansion
+   const glm::vec3& omega = body.angularVelocity;
+   float omega2 = glm::dot(omega, omega);
+
+   glm::vec3 angularExpansion = glm::sqrt(glm::max(
+      glm::vec3(omega2) - omega * omega,
+      glm::vec3(0.0f)
+   )) * dt * rotationRadius;
 
    constexpr float sweptSkin = 0.01f;
 
-   float expansion = angularExpansion + sweptSkin;
+   glm::vec3 expansion =
+      angularExpansion + glm::vec3(sweptSkin);
 
-   swept.worldMin -= glm::vec3(expansion);
-   swept.worldMax += glm::vec3(expansion);
+   swept.worldMin -= expansion;
+   swept.worldMax += expansion;
 
    swept.worldCenter =
       (swept.worldMin + swept.worldMax) * 0.5f;
@@ -524,24 +533,19 @@ void BroadphaseManager::add(const BodyHandle& handle, BroadphaseBucket dst) {
    }
 
    auto& h = body.broadphaseHandle;
-   if (h.bucket != BroadphaseBucket::None) return;
+   if (h.bucket != BroadphaseBucket::None) {
+      return;
+   }
 
    auto& list = listFor(dst);
    list.push_back(handle);
    h.listIdx = (int)list.size() - 1;
 
    auto& bvh = bvhFor(dst);
-
-   forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
-      Collider& col = storage->getCollider(colH);
-
-      if (col.enabled)
-         bvh.insertLeaf(handle, colH);
-   });
+   h.leafIdx = bvh.insertLeaf(handle);
+   bvh.dirty = true;
 
    h.bucket = dst;
-
-   bvh.dirty = true;
 }
 
 // Remove from current list
@@ -556,19 +560,11 @@ void BroadphaseManager::remove(const BodyHandle& handle) {
 
    // remove from BVH
    auto& bvh = bvhFor(h.bucket);
-   forEachBodyCollider(*storage, body.colliderRef, [&](ColliderHandle colH) {
-      Collider& col = storage->getCollider(colH);
-
-      if (col.enabled) {
-         bvh.removeLeaf(col.BVHleafIdx);
-         col.BVHleafIdx = -1;
-      }
-
-   });
-
-   h.bucket = BroadphaseBucket::None;
-
+   bvh.removeLeaf(h.leafIdx);
    bvh.dirty = true;
+
+   h.leafIdx = -1;
+   h.bucket = BroadphaseBucket::None;
 }
 
 // Move to awake

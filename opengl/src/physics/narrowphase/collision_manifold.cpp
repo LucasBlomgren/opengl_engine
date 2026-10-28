@@ -8,17 +8,8 @@ glm::vec3 worldToBodyLocalPoint(
    const RigidBody& body,
    const glm::vec3& worldPoint)
 {
-   glm::vec3 local =
-      glm::conjugate(glm::normalize(body.pose.orientation)) *
+   return glm::conjugate(glm::normalize(body.pose.orientation)) *
       (worldPoint - body.pose.position);
-
-   constexpr float epsilon = 1e-8f;
-
-   if (glm::abs(body.scale.x) > epsilon) local.x /= body.scale.x;
-   if (glm::abs(body.scale.y) > epsilon) local.y /= body.scale.y;
-   if (glm::abs(body.scale.z) > epsilon) local.z /= body.scale.z;
-
-   return local;
 }
 
 glm::vec3 bodyLocalToWorldPoint(
@@ -26,8 +17,7 @@ glm::vec3 bodyLocalToWorldPoint(
    const glm::vec3& localPoint)
 {
    return body.pose.position +
-      glm::normalize(body.pose.orientation) *
-      (body.scale * localPoint);
+      glm::normalize(body.pose.orientation) * localPoint;
 }
 
 RigidBody* getReferenceBody(Contact& contact) {

@@ -112,12 +112,11 @@ void RigidBody::commitBiasImpulses(float dt) {
 //===============================================
 void RigidBody::calculateInverseInertia(
    const ColliderType& colliderType,
-   const Collider& collider,
-   const glm::vec3& inertiaScale)
+   const Collider& collider)
 {
    if (colliderType == ColliderType::BOX) {
       const Box& box = std::get<Box>(collider.shape);
-      const glm::vec3 size = box.localHalfExtents * 2.0f * inertiaScale;
+      const glm::vec3 size = box.localHalfExtents * 2.0f;
       bool isUniform = approxEqual(size.x, size.y) and approxEqual(size.y, size.z);
 
       if (isUniform) {
@@ -128,7 +127,9 @@ void RigidBody::calculateInverseInertia(
       }
    }
    else if (colliderType == ColliderType::SPHERE) {
-      inertiaSphere(inertiaScale);
+      const Sphere& sphere = std::get<Sphere>(collider.shape);
+      const glm::vec3 size = glm::vec3(sphere.radius);
+      inertiaSphere(size);
    }
 
    invInertiaWorld = invInertiaLocal;

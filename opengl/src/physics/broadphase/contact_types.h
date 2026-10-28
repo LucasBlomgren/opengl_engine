@@ -10,27 +10,21 @@ class Tri;
 
 struct TerrainPair {
    BodyHandle body;
-   ColliderHandle collider;
    std::vector<Tri*> tris;
 };
 struct DynamicPair {
    BodyHandle bodyA;
    BodyHandle bodyB;
-   ColliderHandle colliderA;
-   ColliderHandle colliderB;
 };
 
 struct SpeculativeDynamicPair {
    BodyHandle bodyA;
    BodyHandle bodyB;
-   ColliderHandle colliderA;
-   ColliderHandle colliderB;
    BodyHandle sweepOwner;
 };
 
 struct SpeculativeTerrainPair {
    BodyHandle body;
-   ColliderHandle collider;
    std::vector<Tri*> tris;
 };
 

@@ -13,7 +13,6 @@ namespace physics {
 //==========================================================
 struct BodyDesc {
    Pose pose;
-   glm::vec3 scale{ 1.0f };
 
    BodyType type = BodyType::Dynamic;
    bool reportContacts = false;

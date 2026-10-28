@@ -10,8 +10,6 @@ class MotionState {
 public:
    float mass = 0.0f;
    float invMass = 0.0f;
-   float radius = 0.0f;
-   float invRadius = 0.0f;
    bool allowGravity = true;
 
    uint32_t lastBiasCommitFrame = 0;

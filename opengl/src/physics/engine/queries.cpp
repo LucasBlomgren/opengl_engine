@@ -66,9 +66,6 @@ RaycastHit Engine::raycast(
    const Ray& ray,
    BodyHandle ignoredBody)
 {
-   const SlotMap<Collider, ColliderHandle>& colliderMap =
-      physicsStorage.colliderStorage();
-
    RaycastHit bestHit;
 
    const BVHTree* trees[] = {
@@ -79,9 +76,9 @@ RaycastHit Engine::raycast(
 
    for (const BVHTree* tree : trees) {
       RaycastHit hit = raycast::raycastTree(
+         physicsStorage,
          ray,
          *tree,
-         colliderMap,
          ignoredBody
       );
 
@@ -114,16 +111,16 @@ std::vector<BodyHandle> Engine::queryBodies(
    std::vector<BodyHandle> result;
    if (!tree) return result;
 
-   std::vector<BVHLeafRef> hits;
+   std::vector<BodyHandle> hits;
    tree->singleQuery(toInternalBounds(bounds), hits);
 
    std::unordered_set<BodyHandle> seen;
    seen.reserve(hits.size());
    result.reserve(hits.size());
 
-   for (const BVHLeafRef& hit : hits) {
-      if (seen.insert(hit.body).second) {
-         result.push_back(hit.body);
+   for (const BodyHandle& hit : hits) {
+      if (seen.insert(hit).second) {
+         result.push_back(hit);
       }
    }
 
@@ -150,7 +147,6 @@ Engine::getRigidBodyState(BodyHandle handle) const
 
    BodyState state;
    state.pose = body->pose;
-   state.scale = body->scale;
    state.linearVelocity = body->linearVelocity;
    state.angularVelocity = body->angularVelocity;
    state.type = body->type;
@@ -200,9 +196,7 @@ Engine::getColliderState(ColliderHandle handle) const
    ColliderState state;
    state.body = collider->bodyHandle;
    state.localPose = collider->localPose;
-   state.localScale = collider->localScale;
    state.worldPose = collider->worldPose;
-   state.worldScale = collider->worldScale;
    state.type = collider->type;
    state.bounds = toPublicBounds(collider->aabb);
    state.enabled = collider->enabled;
@@ -221,7 +215,7 @@ Engine::getColliderState(ColliderHandle handle) const
       const Sphere& sphere = std::get<Sphere>(collider->shape);
       state.shape = SphereGeometry{
           sphere.centerWorld,
-          sphere.radiusWorld
+          sphere.radius
       };
    }
 

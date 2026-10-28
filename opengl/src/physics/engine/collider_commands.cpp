@@ -79,7 +79,6 @@ ColliderHandle Engine::createCollider(
    Collider collider;
    collider.bodyHandle = bodyHandle;
    collider.localPose = desc.localPose;
-   collider.localScale = desc.localScale;
    collider.enabled = desc.enabled;
    collider.isTrigger = desc.isTrigger;
    collider.userTag = desc.userTag;
@@ -107,7 +106,7 @@ ColliderHandle Engine::createCollider(
       return {};
    }
 
-   collider.updateWorldPose(body->pose, body->scale);
+   collider.updateWorldPose(body->pose);
    collider.updateShape();
    collider.updateAABB();
 

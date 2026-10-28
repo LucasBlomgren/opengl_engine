@@ -67,8 +67,8 @@ void treeVsSameTreeQuery(
          tree.forEachLeafElement(nA, [&](const auto& elemA, const AABB& boxA) {
             tree.forEachLeafElement(nB, [&](const auto& elemB, const AABB& boxB) {
 
-               const uint32_t keyA = elementKey(elemA.body);
-               const uint32_t keyB = elementKey(elemB.body);
+               const uint32_t keyA = elementKey(elemA);
+               const uint32_t keyB = elementKey(elemB);
 
                if (sameLeaf) {
                   // Samma leaf mot sig själv:

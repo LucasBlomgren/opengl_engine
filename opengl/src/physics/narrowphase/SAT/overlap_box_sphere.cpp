@@ -31,7 +31,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& tran
    // Beräkna delta och dist2
    glm::vec3 delta = worldC - closestWorld;
    float dist2 = glm::dot(delta, delta);
-   float r2 = sph->radiusWorld * sph->radiusWorld;
+   float r2 = sph->radius * sph->radius;
 
    // Test mot radie
    if (dist2 > r2) {
@@ -40,7 +40,7 @@ bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& tran
 
    // Fyll ut resultat, logga penetration & normal
    float dist = std::sqrt(dist2);
-   out.depth = sph->radiusWorld - dist;
+   out.depth = sph->radius - dist;
    out.normal = (dist > 1e-6f ? delta / dist : glm::vec3(0.0f, 1.0f, 0.0f));
    out.point = closestWorld;
 

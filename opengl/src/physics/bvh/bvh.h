@@ -1,6 +1,5 @@
 #pragma once
 
-#include "bvh_leaf_ref.h"
 #include "physics/storage/physics_storage.h"
 #include "physics/bodies/rigidbody.h"
 #include "physics/collider/aabb.h"
@@ -29,7 +28,7 @@ class BVHTree {
 public:
    BVHTree() = default;
 
-   using Element = BVHLeafRef;
+   using Element = BodyHandle;
 
    void init(
       PhysicsStorage* storage,
@@ -70,19 +69,19 @@ public:
    static constexpr int MaxStackSize = 512;
    static constexpr int MaxCollisionBuf = 25000;
 
-   void buildFromColliders(const std::vector<ColliderHandle>& objects);
+   void buildFromBodies(const std::vector<BodyHandle>& handles);
 
    // for speculative pairs, using speculative AABBs
    void buildFromExternalAABBs(
-      const std::vector<ColliderHandle>& handles,
+      const std::vector<BodyHandle>& handles,
       const std::vector<AABB>& boxes
    );
 
    void update();
-   void singleQuery(const AABB& qBox, std::vector<BVHLeafRef>& out) const;
+   void singleQuery(const AABB& qBox, std::vector<BodyHandle>& out) const;
    bool queryAny(const AABB& qBox, BodyHandle ignoreBody) const;
 
-   int insertLeaf(BodyHandle bodyH, ColliderHandle colliderH);
+   int insertLeaf(BodyHandle handle);
 
    void removeLeaf(int leafIdx);
 
@@ -116,7 +115,6 @@ private:
    std::vector<BVHPrimitive> prims;
 
    void initChild(int parentIdx, int nodeIdx, bool isLeft, int start, int end);
-   void createPrimitives(std::vector<ColliderHandle>& handles);
    void finalizeLeaf(int leafIdx);
    void splitNode(int parentIdx, int depth);
    void updateLeaves();
@@ -124,9 +122,9 @@ private:
    void refitAncestors(int leafIdx);
    void updateRenderData(Node& n);
 
-   void collectPrimitivesFromColliders(const std::vector<ColliderHandle>& handles);
+   void collectPrimitivesFromBodies(const std::vector<BodyHandle>& handles);
    void createPrimitivesFromExternalAABBs(
-      const std::vector<ColliderHandle>& handles,
+      const std::vector<BodyHandle>& handles,
       const std::vector<AABB>& boxes
    );
 
@@ -135,11 +133,7 @@ private:
 
    int findBestSibling(AABB& box);
 
-   int createLeaf(
-      BodyHandle bodyH,
-      ColliderHandle colliderH,
-      Collider& collider
-   );
+   int createLeaf(BodyHandle bodyH);
 };
 
 

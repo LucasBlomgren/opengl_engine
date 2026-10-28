@@ -337,6 +337,7 @@ int main() {
             if (engineState.isPlayerMode()) {
                player.updateBody(fixedTimeStep);
             }
+            //std::cout << "Step: " << steps << "\n";
             world.syncTransformsToPhysics();
             physicsEngine.step(fixedTimeStep, engineState);
             world.syncPhysicsToTransforms();

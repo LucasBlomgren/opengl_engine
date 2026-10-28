@@ -16,6 +16,7 @@ enum class BroadphaseBucket : uint8_t {
 struct BroadphaseHandle {
    BroadphaseBucket bucket = BroadphaseBucket::None;
    int listIdx = -1;
+   int leafIdx = -1;
 };
 
 }

@@ -67,16 +67,22 @@ void Engine::integratePositionsAndColliders(
       body.integratePose(dt);
       body.updateInertiaWorld();
 
-      updateCollidersAndBodyRadius(body);
+      updateColliders(body);
    }
 }
 
 //==============================================================
 // Update Collider Poses and Body Bounding Radius
 //==============================================================
-void Engine::updateCollidersAndBodyRadius(RigidBody& body)
+void Engine::updateColliders(RigidBody& body)
 {
-   float maxRadius = 0.0f;
+   Compound* compound = nullptr;
+
+   if (body.colliderRef.isCompound()) {
+      compound = &physicsStorage.getCompound(body.colliderRef.compound);
+   }
+
+   bool hasBounds = false;
 
    forEachBodyCollider(
       physicsStorage,
@@ -87,30 +93,42 @@ void Engine::updateCollidersAndBodyRadius(RigidBody& body)
          if (!collider.enabled)
             return;
 
-         collider.updateWorldPose(body.pose, body.scale);
+         collider.updateWorldPose(body.pose);
          collider.updateShape();
          collider.updateAABB();
 
-         const internal::AABB& aabb = collider.getAABB();
+         // Compound AABB bounds
+         if (compound) {
+            const internal::AABB& aabb = collider.getAABB();
 
-         const glm::vec3 minDelta =
-            glm::abs(aabb.worldMin - body.pose.position);
+            if (!hasBounds) {
+               compound->aabb = aabb;
+               hasBounds = true;
+            }
+            else {
+               compound->aabb.worldMin =
+                  glm::min(compound->aabb.worldMin, aabb.worldMin);
 
-         const glm::vec3 maxDelta =
-            glm::abs(aabb.worldMax - body.pose.position);
-
-         const float radius = glm::length(
-            glm::max(minDelta, maxDelta)
-         );
-
-         maxRadius = std::max(maxRadius, radius);
+               compound->aabb.worldMax =
+                  glm::max(compound->aabb.worldMax, aabb.worldMax);
+            }
+         }
       }
    );
 
-   // #TODO: inte beräkna varje frame
-   body.invRadius = maxRadius > 0.0f
-      ? 1.0f / maxRadius
-      : 0.0f;
+   // Compound AABB center and extents
+   if (compound) {
+      if (hasBounds) {
+         compound->aabb.worldCenter =
+            (compound->aabb.worldMin + compound->aabb.worldMax) * 0.5f;
+
+         compound->aabb.worldHalfExtents =
+            (compound->aabb.worldMax - compound->aabb.worldMin) * 0.5f;
+      }
+      else {
+         compound->aabb = internal::AABB{};
+      }
+   }
 }
 
 }

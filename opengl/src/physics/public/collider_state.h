@@ -21,7 +21,7 @@ struct ColliderState {
 
    ColliderType type = ColliderType::BOX;
    std::variant<BoxGeometry, SphereGeometry> shape;
-   AABB bounds;
+   physics::AABB bounds;
 
    bool enabled = true;
    bool isTrigger = false;

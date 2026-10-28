@@ -10,9 +10,9 @@ namespace physics::internal {
 
 namespace raycast {
 RaycastHit raycastTree(
+   PhysicsStorage& storage,
    const Ray& ray,
    const BVHTree& tree,
-   const SlotMap<Collider, ColliderHandle>& colliderMap,
    BodyHandle ignoredBody
 );
 }

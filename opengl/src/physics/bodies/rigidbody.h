@@ -22,30 +22,17 @@ public:
 
    Pose pose;
 
+   BodyColliderRef colliderRef;
+   BroadphaseHandle broadphaseHandle;
+
+   //==============================
+   // physics state
+   //=============================
    MotionStateHandle motionStateHandle;
    SleepStateHandle sleepStateHandle;
 
-   // #TODO: ta bort scale helt från fysiken,
-   // scale behövs bara initialt för att bakea en 
-   // mesh till en collider och det kan göras utanför fysikmotorn
-   glm::vec3 scale{ 1.0f };
-
-   // physics-internal handles
-   BroadphaseHandle broadphaseHandle;
-   //std::vector<ColliderHandle> colliderHandles;
-
-   BodyColliderRef colliderRef;
-
-   // if compound, this is the AABB of the whole body, 
-   // otherwise AABB of the single collider.
-   AABB aabb;
-
-   //==============================
-   // physics
-   //=============================
    float mass = 0.0f;
    float invMass = 0.0f;
-   float radius = 0.0f;
    float invRadius = 0.0f;
    bool allowGravity = true;
    uint32_t lastBiasCommitFrame = 0;
@@ -83,8 +70,7 @@ public:
 
    void calculateInverseInertia(
       const ColliderType& type,
-      const Collider& collider,
-      const glm::vec3& inertiaScale);
+      const Collider& collider);
 
    void inertiaCube(const float sideX);
    void inertiaCuboid(const glm::vec3& scale);
@@ -93,6 +79,8 @@ public:
    bool approxEqual(float a, float b, float epsilon = 0.0001f) {
       return fabs(a - b) < epsilon;
    }
+
+
 };
 
 }

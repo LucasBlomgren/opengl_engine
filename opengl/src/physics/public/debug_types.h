@@ -51,7 +51,7 @@ struct SpeculativeContact {
 
 struct BvhNode {
    bool isLeaf = false;
-   AABB bounds;
+   physics::AABB bounds;
 };
 
 struct Bvh {

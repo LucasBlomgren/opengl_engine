@@ -54,20 +54,17 @@ void Box::rebuildLocalVertices() {
    localVertices[7] = center + glm::vec3(-half.x, half.y, half.z);
 }
 
-void Box::update(const Pose& worldPose, const glm::vec3& worldScale) {
-   scale = worldScale;
-
+void Box::update(const Pose& worldPose) {
    glm::mat3 rotation = glm::mat3_cast(worldPose.orientation);
 
    worldAxes[0] = rotation * LOCAL_AXES[0];
    worldAxes[1] = rotation * LOCAL_AXES[1];
    worldAxes[2] = rotation * LOCAL_AXES[2];
 
-   worldCenter = worldPose.position + rotation * (worldScale * localCenter);
+   worldCenter = worldPose.position + rotation * localCenter;
 
    for (size_t i = 0; i < localVertices.size(); ++i) {
-      glm::vec3 scaledLocalVertex = worldScale * localVertices[i];
-      worldVertices[i] = worldPose.position + rotation * scaledLocalVertex;
+      worldVertices[i] = worldPose.position + rotation * localVertices[i];
    }
 }
 

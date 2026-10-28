@@ -88,8 +88,7 @@ public:
 
    bool setRigidBodyTransform(
       BodyHandle body,
-      const Pose& pose,
-      const glm::vec3& scale);
+      const Pose& pose);
 
    bool setRigidBodySleepState(
       BodyHandle body,
@@ -185,7 +184,7 @@ private:
    void stepDiscrete(float deltaTime);
    void endPhysicsStep(float outerDt);
 
-   void updateCollidersAndBodyRadius(internal::RigidBody& body);
+   void updateColliders(internal::RigidBody& body);
 
    void integrateForcesAndVelocities(
       const std::vector<BodyHandle>& bodies,
