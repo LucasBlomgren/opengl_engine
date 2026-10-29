@@ -13,6 +13,8 @@
 
 namespace physics::internal {
 
+struct SweepFrame;
+
 class NarrowphaseManager {
 public:
    void init(
@@ -31,6 +33,7 @@ public:
    void narrowPhase(
       const PairBatch& pairs,
       ContactBatch& batch,
+      const SweepFrame& sweepFrame,
       float dt
    );
 
@@ -57,10 +60,12 @@ private:
 
    void processSpeculativePair(
       const SpeculativeDynamicPair& pair,
+      const SweepFrame& sweepFrame,
       float dt
    );
    void processSpeculativeTerrainPair(
       const SpeculativeTerrainPair& pair,
+      const SweepFrame& sweepFrame,
       float dt
    );
 

@@ -71,11 +71,15 @@ void Engine::updateBVHRenderData(
 }
 
 std::vector<physics::AABB>
-Engine::getDebugSweeps() const {
-   std::vector<physics::AABB> result;
-   result.reserve(debugSweeps.size());
+Engine::getDebugSweeps() const 
+{
+   const std::vector<internal::AABB>& aabbs = broadphaseManager.getBodySweptAABBs();
 
-   for (const internal::AABB& bounds : debugSweeps) {
+   static std::vector<physics::AABB> result;
+   result.clear();
+   result.reserve(static_cast<int>(aabbs.size()));
+
+   for (const internal::AABB& bounds : broadphaseManager.getBodySweptAABBs()) {
       result.push_back(toPublicBounds(bounds));
    }
 

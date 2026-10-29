@@ -159,26 +159,31 @@ void BroadphaseManager::buildPairs(PairBatch& batch)
 //==================================================
 //     Speculative pair building for narrowphase
 //==================================================
-void BroadphaseManager::buildSpeculativePairs(
-   float dt,
-   PairBatch& batch,
-   std::vector<AABB>& debugSweeps)
+void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch)
 {
    batch.speculativeDynamicPairs.clear();
    batch.speculativeTerrainPairs.clear();
    batch.speculativeDynamicPairs.reserve(BVHTree::MaxCollisionBuf);
    batch.speculativeTerrainPairs.reserve(BVHTree::MaxCollisionBuf);
 
-   static std::vector<BodyHandle> speculativeBodies;
-   static std::vector<AABB> speculativeAABBs;
-   speculativeBodies.reserve(awakeHandles.size());
-   speculativeAABBs.reserve(awakeHandles.size());
+   // Reset previous speculative bodies
+   for (BodyHandle& h : speculativeBodies) {
+      sweepFrame.infoByBodySlot[h.slot] = BodySweepInfo{};
+   }
+   // Clear previous step
    speculativeBodies.clear();
-   speculativeAABBs.clear();
-   determineSpeculativeBodies(dt, speculativeBodies, speculativeAABBs);
+   bodySweptAABBs.clear();
+   sweepFrame.childSweptAABBs.clear();
+
+   // Resize only when new slots have been allocated
+   sweepFrame.infoByBodySlot.resize(
+      storage->bodyStorage().slot_capacity()
+   );
+
+   determineSpeculativeBodies(dt);
 
    speculativeBvh.clear();
-   speculativeBvh.buildFromExternalAABBs(speculativeBodies, speculativeAABBs);
+   speculativeBvh.buildFromExternalAABBs(speculativeBodies, bodySweptAABBs);
 
    struct SpecKey {
       uint64_t owner;
@@ -278,8 +283,8 @@ void BroadphaseManager::buildSpeculativePairs(
       batch.speculativeDynamicPairs.reserve(batch.speculativeDynamicPairs.size() + cap);
 
       for (auto& hp : pairsBufDynamic) {
-         BodyHandle a = hp.first;
-         BodyHandle b = hp.second;
+         BodyHandle& a = hp.first;
+         BodyHandle& b = hp.second;
 
          addSpecPair(a, b, a); // A's owner
          addSpecPair(a, b, b); // B's owner
@@ -330,17 +335,14 @@ void BroadphaseManager::buildSpeculativePairs(
    }
 }
 
-void BroadphaseManager::determineSpeculativeBodies(
-   float dt,
-   std::vector<BodyHandle>& outBodies,
-   std::vector<AABB>& outAABBs)
+void BroadphaseManager::determineSpeculativeBodies(float dt)
 {
    constexpr float safeFraction = 0.50f;
    constexpr float minSafeDistance = 0.02f;
 
    const float dt2 = dt * dt;
 
-   for (BodyHandle handle : awakeHandles) {
+   for (BodyHandle& handle : awakeHandles) {
       RigidBody& body = storage->getBody(handle);
 
       if (body.type != BodyType::Dynamic ||
@@ -420,6 +422,9 @@ void BroadphaseManager::determineSpeculativeBodies(
       AABB sweptAABB{};
       bool first = true;
 
+      const int childStart =
+         static_cast<int>(sweepFrame.childSweptAABBs.size());
+
       forEachBodyCollider(
          *storage,
          body.colliderRef,
@@ -431,6 +436,8 @@ void BroadphaseManager::determineSpeculativeBodies(
 
             const AABB childSwept =
                computeSweptAABB(body, collider, dt);
+
+            sweepFrame.childSweptAABBs.emplace_back(childSwept);
 
             if (first) {
                sweptAABB = childSwept;
@@ -454,11 +461,21 @@ void BroadphaseManager::determineSpeculativeBodies(
       sweptAABB.worldHalfExtents =
          (sweptAABB.worldMax - sweptAABB.worldMin) * 0.5f;
 
-      outBodies.push_back(handle);
-      outAABBs.push_back(sweptAABB);
+      const int childCount = 
+         static_cast<int>(sweepFrame.childSweptAABBs.size()) - childStart;
+
+      const int bodyAABBIdx = static_cast<int>(bodySweptAABBs.size());
+
+      speculativeBodies.push_back(handle);
+      bodySweptAABBs.push_back(sweptAABB);
+
+      sweepFrame.infoByBodySlot[handle.slot] = {
+         bodyAABBIdx,
+         childStart,
+         childCount
+      };
    }
 }
-
 
 AABB BroadphaseManager::computeSweptAABB(
    const RigidBody& body,

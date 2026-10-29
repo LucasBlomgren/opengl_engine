@@ -71,7 +71,9 @@ void DebugRenderer::renderOverlayPass(const physics::Engine& physics, const Came
       physics.getDebugSpeculativeContacts()
    );
    renderBVHs(physics);
-   renderSweptAABBs(physics.getDebugSweeps(), glm::vec3(1.0f, 1.0f, 0.0f));
+
+   if (engineState->getShowSweptAABB())
+      renderSweptAABBs(physics.getDebugSweeps(), glm::vec3(1.0f, 1.0f, 0.0f));
 
    // render debug meshes with lighting
    litMeshShader->use();
@@ -209,7 +211,8 @@ void DebugRenderer::renderAABBs(
 void DebugRenderer::renderColliders(
    const physics::Engine& physics,
    const std::vector<GameObject>& objects,
-   const Camera& camera) {
+   const Camera& camera) 
+{
    if (!engineState->getShowColliders()) return;
 
    debugShapeShader->setBool("debug.useUniformColor", true);

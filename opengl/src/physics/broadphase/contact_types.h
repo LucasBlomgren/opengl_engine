@@ -12,6 +12,7 @@ struct TerrainPair {
    BodyHandle body;
    std::vector<Tri*> tris;
 };
+
 struct DynamicPair {
    BodyHandle bodyA;
    BodyHandle bodyB;

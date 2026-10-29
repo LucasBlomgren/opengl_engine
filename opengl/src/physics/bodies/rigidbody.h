@@ -79,8 +79,6 @@ public:
    bool approxEqual(float a, float b, float epsilon = 0.0001f) {
       return fabs(a - b) < epsilon;
    }
-
-
 };
 
 }

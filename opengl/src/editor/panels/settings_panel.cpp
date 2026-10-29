@@ -50,6 +50,11 @@ void Editor::SettingsPanel::OnImGuiRender(const PanelContext& ctx)
          ctx.engineState->toggleShowAABB();
       }
 
+      bool showSweptAABB = ctx.engineState->getShowSweptAABB();
+      if (ImGui::Checkbox("Swept AABBs", &showSweptAABB)) {
+         ctx.engineState->toggleShowSweptAABB();
+      }
+
       bool showColliders = ctx.engineState->getShowColliders();
       if (ImGui::Checkbox("Colliders", &showColliders)) {
          ctx.engineState->toggleShowColliders();

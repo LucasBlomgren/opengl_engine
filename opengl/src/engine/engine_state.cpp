@@ -6,8 +6,7 @@ void EngineState::toggleShowWireframes() {
 
    if (showWireframes) {
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-   }
-   else {
+   } else {
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
    }
 }
@@ -15,6 +14,7 @@ void EngineState::toggleShowWireframes() {
 void EngineState::togglePause() { paused = !paused; }
 void EngineState::toggleShowFPS() { showFPS = !showFPS; }
 void EngineState::toggleShowAABB() { showAABB = !showAABB; }
+void EngineState::toggleShowSweptAABB() { showSweptAABB = !showSweptAABB; }
 void EngineState::toggleShowColliders() { showColliders = !showColliders; }
 void EngineState::toggleShowContactPoints() { showContactPoints = !showContactPoints; }
 void EngineState::toggleShowObjectLocalNormals() { showObjectLocalNormals = !showObjectLocalNormals; }
@@ -33,6 +33,7 @@ bool EngineState::getAdvanceStep() const { return advanceStep; }
 bool EngineState::isPaused() const { return paused; }
 bool EngineState::getShowFPS() const { return showFPS; }
 bool EngineState::getShowAABB() const { return showAABB; }
+bool EngineState::getShowSweptAABB() const { return showSweptAABB; }
 bool EngineState::getShowColliders() const { return showColliders; }
 bool EngineState::getShowContactPoints() const { return showContactPoints; }
 bool EngineState::getShowObjectLocalNormals() const { return showObjectLocalNormals; }

@@ -83,7 +83,7 @@ void Engine::step(float dt, EngineState& engine) {
    start = glfwGetTime() * 1000.0;
    pairBatch.clear();
    broadphaseManager.buildPairs(pairBatch);
-   broadphaseManager.buildSpeculativePairs(dt, pairBatch, debugSweeps);
+   broadphaseManager.buildSpeculativePairs(dt, pairBatch);
    frameTimers->submit(
       "Broadphase",
       frameTimers->get("Broadphase") + glfwGetTime() * 1000.0 - start
@@ -101,7 +101,13 @@ void Engine::step(float dt, EngineState& engine) {
       pairBatch.dynamicPairs.size() +
       pairBatch.terrainPairs.size()
    );
-   narrowphaseManager.narrowPhase(pairBatch, contactBatch, dt);
+
+   narrowphaseManager.narrowPhase(
+      pairBatch, 
+      contactBatch, 
+      broadphaseManager.getSweepFrame(), 
+      dt
+   );
 
    contactsThisFrame +=
       static_cast<uint32_t>(contactBatch.contacts.size());
@@ -190,7 +196,6 @@ void Engine::beginPhysicsStep(float outerDt) {
    uint32_t bodySlotCapacity =
       physicsStorage.bodyStorage().slot_capacity();
 
-   debugSweeps.clear();
    debugSpeculativeContacts.clear();
 
    contactsThisFrame = 0;

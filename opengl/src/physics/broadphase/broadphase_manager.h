@@ -15,6 +15,17 @@ namespace physics::internal {
 class RigidBody;
 class Tri;
 
+struct BodySweepInfo {
+   int bodyAABBIdx = -1;
+   int childStart = -1;
+   int childCount = 0;
+};
+
+struct SweepFrame {
+   std::vector<BodySweepInfo> infoByBodySlot;
+   std::vector<AABB> childSweptAABBs;
+};
+
 class BroadphaseManager {
 public:
    void init(
@@ -29,16 +40,8 @@ public:
    //   Build pairs for narrowphase
    void buildPairs(PairBatch& batch);
 
-   void buildSpeculativePairs(
-      float dt,
-      PairBatch& batch,
-      std::vector<AABB>& debugSweeps
-   );
-   void determineSpeculativeBodies(
-      float dt,
-      std::vector<BodyHandle>& outBodies,
-      std::vector<AABB>& outAABBs
-   );
+   void buildSpeculativePairs(float dt, PairBatch& batch);
+   void determineSpeculativeBodies(float dt);
 
    // add/remove from current list
    void add(const BodyHandle& handle, BroadphaseBucket dst);
@@ -62,6 +65,9 @@ public:
    const BVHTree& getStaticBVH() const { return staticBvh; }
    const TerrainBVH& getTerrainBVH() const { return terrainBvh; }
 
+   const SweepFrame& getSweepFrame() const { return sweepFrame; }
+   const std::vector<AABB>& getBodySweptAABBs() const { return bodySweptAABBs; }
+
    void updateBVHRenderData(const physics::debug::BvhType& type, bool update);
 
 private:
@@ -84,6 +90,13 @@ private:
    // pairs buffers
    std::vector<std::pair<BodyHandle, Tri*>> pairsBufTerrain;
    std::vector<std::pair<BodyHandle, BodyHandle>> pairsBufDynamic;
+
+   // sweep buffers
+   std::vector<BodyHandle> speculativeBodies;
+   std::vector<AABB> bodySweptAABBs;
+
+   // sweep data for midphase
+   SweepFrame sweepFrame;
 
    // helpers
    void swapAndPop(const BodyHandle& handle, std::vector<BodyHandle>& list);

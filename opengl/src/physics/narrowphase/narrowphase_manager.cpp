@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "narrowphase_manager.h"
 
+#include "physics/broadphase/broadphase_manager.h"
+
 #include "physics/collider/body_collider_utils.h"
 
 namespace physics::internal {
@@ -70,6 +72,7 @@ void NarrowphaseManager::clear() {
 void NarrowphaseManager::narrowPhase(
    const PairBatch& pairs,
    ContactBatch& batch,
+   const SweepFrame& sweepFrame,
    float dt)
 {
    externalContacts.clear();
@@ -83,7 +86,7 @@ void NarrowphaseManager::narrowPhase(
 
    // Speculative terrain
    for (const SpeculativeTerrainPair& pair : pairs.speculativeTerrainPairs) {
-      processSpeculativeTerrainPair(pair, dt);
+      processSpeculativeTerrainPair(pair, sweepFrame, dt);
    }
 
    // Dynamic
@@ -95,7 +98,7 @@ void NarrowphaseManager::narrowPhase(
    // Speculative dynamic
    start = glfwGetTime();
    for (const SpeculativeDynamicPair& pair : pairs.speculativeDynamicPairs) {
-      processSpeculativePair(pair, dt);
+      processSpeculativePair(pair, sweepFrame, dt);
    }
 
    flushPendingSweepHits(batch);
@@ -188,6 +191,7 @@ void NarrowphaseManager::processDynamicPair(
 //=======================================================
 void NarrowphaseManager::processSpeculativePair(
    const SpeculativeDynamicPair& pair,
+   const SweepFrame& sweepFrame,
    float dt)
 {
    RigidBody& bodyA = physicsStorage->getBody(pair.bodyA);
@@ -196,6 +200,19 @@ void NarrowphaseManager::processSpeculativePair(
    if (bodyA.type == BodyType::Kinematic &&
       bodyB.type == BodyType::Kinematic)
       return;
+
+   // Get speculative metadata
+   auto getSweepInfo = [&](BodyHandle handle) -> const BodySweepInfo* {
+      const BodySweepInfo& info = sweepFrame.infoByBodySlot[handle.slot];
+
+      return info.bodyAABBIdx != -1 ? &info : nullptr;
+      };
+
+   const BodySweepInfo* infoA = getSweepInfo(pair.bodyA);
+   const BodySweepInfo* infoB = getSweepInfo(pair.bodyB);
+
+   // Step forward to next child even if AABB-test failed
+   int childIdxA = 0;
 
    forEachBodyCollider(
       *physicsStorage,
@@ -207,6 +224,16 @@ void NarrowphaseManager::processSpeculativePair(
          if (!colliderA.enabled)
             return;
 
+         // Swept AABB if speculative, otherwise tight AABB
+         const AABB& aabbA = infoA
+            ? sweepFrame.childSweptAABBs[infoA->childStart + childIdxA]
+            : colliderA.getAABB();
+
+         ++childIdxA;
+
+         // Step forward to next child even if AABB-test failed
+         int childIdxB = 0;
+
          forEachBodyCollider(
             *physicsStorage,
             bodyB.colliderRef,
@@ -217,7 +244,16 @@ void NarrowphaseManager::processSpeculativePair(
                if (!colliderB.enabled)
                   return;
 
-               // Skip if normal narrowphase already found contact
+               const AABB& aabbB = infoB
+                  ? sweepFrame.childSweptAABBs[infoB->childStart + childIdxB]
+                  : colliderB.getAABB();
+
+               ++childIdxB;
+
+               // Midphase: reject before expensive SAT
+               if (!aabbA.intersects(aabbB))
+                  return;
+
                PairKey key = makeColliderPairKey(colA, colB);
 
                if (normalHitPairs.contains(key))
@@ -261,10 +297,8 @@ void NarrowphaseManager::processSpeculativePair(
                   break;
                }
 
-               if (!hit)
-                  return;
-
-               pendingSweepHits.emplace_back(std::move(*hit));
+               if (hit)
+                  pendingSweepHits.emplace_back(std::move(*hit));
             }
          );
       }
@@ -347,12 +381,18 @@ void NarrowphaseManager::processTerrainPair(
 //=======================================================
 void NarrowphaseManager::processSpeculativeTerrainPair(
    const SpeculativeTerrainPair& pair,
+   const SweepFrame& sweepFrame,
    float dt)
 {
    RigidBody& body = physicsStorage->getBody(pair.body);
 
    if (body.type == BodyType::Kinematic)
       return;
+
+   const BodySweepInfo& info = sweepFrame.infoByBodySlot[pair.body.slot];
+
+   // Step forward to next child even if AABB-test failed
+   int childIdx = 0;
 
    forEachBodyCollider(
       *physicsStorage,
@@ -365,6 +405,11 @@ void NarrowphaseManager::processSpeculativeTerrainPair(
          if (!collider.enabled)
             return;
 
+         const AABB& sweptAABB =
+            sweepFrame.childSweptAABBs[info.childStart + childIdx];
+
+         ++childIdx;
+
          ColliderEndpointRef colliderRef{
             pair.body,
             colliderH,
@@ -372,7 +417,12 @@ void NarrowphaseManager::processSpeculativeTerrainPair(
             &collider
          };
 
-         for (Tri* tri : pair.tris) {
+         for (Tri* tri : pair.tris) 
+         {
+            // Midphase filtering
+            if (!sweptAABB.intersects(tri->getAABB()))
+               continue;
+
             std::optional<TerrainSweepHit> hit;
 
             switch (collider.type) {
@@ -389,13 +439,13 @@ void NarrowphaseManager::processSpeculativeTerrainPair(
                break;
             }
 
-            if (!hit)
-               continue;
-
-            pendingSweepHits.emplace_back(std::move(*hit));
+            if (hit)
+               pendingSweepHits.emplace_back(std::move(*hit));
          }
       }
    );
+
+   assert(childIdx == info.childCount);
 }
 
 //=======================================================

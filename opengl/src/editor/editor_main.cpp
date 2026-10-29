@@ -81,6 +81,7 @@ GameObjectHandle createChair(
       leg.colliderType = physics::ColliderType::BOX;
       chair.parts.push_back(leg);
    }
+
    return world.createGameObject(chair);
 }
 
@@ -303,7 +304,10 @@ void Editor::EditorMain::handleInput(
       if (in.mousePressed[GLFW_MOUSE_BUTTON_3] && !shootContinuously)
       {
          glm::vec3 position = { camera->position + camera->front * 5.0f };
-         GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
+         //GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
+
+         GameObjectHandle newObject = createChair(*world, position, shootSize, shootMass);
+
          GameObject* object = world->getGameObject(newObject);
 
          // apply shoot velocity
@@ -369,8 +373,9 @@ void Editor::EditorMain::handleInput(
                glm::vec3 position =
                { camera->position + camera->front * 5.0f + offset * shootSize };
 
-               GameObjectHandle newObject =
-                  createSphere(*world, position, shootSize, shootMass);
+               //GameObjectHandle newObject = createSphere(*world, position, shootSize, shootMass);
+
+               GameObjectHandle newObject = createChair(*world, position, shootSize, shootMass);
 
                GameObject* object = world->getGameObject(newObject);
 

@@ -51,7 +51,6 @@ void Engine::clear() {
    commandBuffer.clear(physicsStorage);
 
    contactCache.clear();
-   debugSweeps.clear();
    debugSpeculativeContacts.clear();
 
    broadphaseManager.clear();

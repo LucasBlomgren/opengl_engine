@@ -4,6 +4,7 @@
 
 namespace physics::internal {
 
+// Applies function to single or every compound collider
 template<typename Func>
 void forEachBodyCollider(
    PhysicsStorage& storage,

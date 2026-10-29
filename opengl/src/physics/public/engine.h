@@ -215,7 +215,6 @@ private:
    std::unordered_map<size_t, internal::Contact> contactCache;
    std::vector<internal::Tri> terrainTriangles;
 
-   std::vector<internal::AABB> debugSweeps;
    std::vector<internal::DebugSpeculativeContact> debugSpeculativeContacts;
 
    //======================================

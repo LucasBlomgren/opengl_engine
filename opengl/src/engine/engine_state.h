@@ -9,6 +9,7 @@ public:
    void togglePause();
    void toggleShowFPS();
    void toggleShowAABB();
+   void toggleShowSweptAABB();
    void toggleShowColliders();
    void toggleShowContactPoints();
    void toggleShowCollisionNormals();
@@ -26,6 +27,7 @@ public:
    bool getShowObjectLocalNormals() const;
    bool getShowCollisionNormals() const;
    bool getShowAABB() const;
+   bool getShowSweptAABB() const;
    bool getShowColliders() const;
    bool getShowContactPoints() const;
    bool getShowBVH_awake() const;
@@ -45,6 +47,7 @@ private:
    bool paused = false;
    bool showFPS = false;
    bool showAABB = false;
+   bool showSweptAABB = false;
    bool showColliders = false;
    bool showContactPoints = false;
    bool showCollisionNormals = false;
