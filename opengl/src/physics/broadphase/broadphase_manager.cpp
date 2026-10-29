@@ -337,7 +337,8 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch)
 
 void BroadphaseManager::determineSpeculativeBodies(float dt)
 {
-   constexpr float safeFraction = 0.50f;
+   // #TODO: better Sweep Fraction
+   constexpr float safeFraction = 5.0f;
    constexpr float minSafeDistance = 0.02f;
 
    const float dt2 = dt * dt;

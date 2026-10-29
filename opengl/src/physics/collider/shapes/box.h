@@ -37,9 +37,6 @@ inline const std::array<glm::vec3, 3> LOCAL_AXES = {
 
 class Box {
 public:
-   // Physics-owned scale used to build the world-space box.
-   glm::vec3 scale{ 1.0f };
-
    glm::vec3 worldCenter{ 0.0f };
    glm::vec3 localHalfExtents{ 0.5f };
 
@@ -56,7 +53,7 @@ public:
 
    void init(const std::vector<glm::vec3>& vertices);
    void setLocalBounds(const glm::vec3& center, const glm::vec3& halfExtents);
-   void update(const Pose& worldPose);
+   void update(const Pose& worldPose, const glm::mat3& rotation);
 
    std::array<glm::vec3, 4> getLocalFace(FaceId face) const;
 

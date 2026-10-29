@@ -21,9 +21,9 @@ bool SAT::speculativeBoxTriangle(
    glm::vec3 boxVelocity = boxBody.linearVelocity;
 
    // Adjust to your actual Box field name.
-   glm::vec3 half = box.localHalfExtents * box.scale;
+   const glm::vec3& half = box.localHalfExtents;
 
-   glm::mat3 rot = glm::mat3_cast(boxCollider.worldPose.orientation);
+   const glm::mat3& rot = boxCollider.transformCache.getRotationMatrix(boxCollider.worldPose);
 
    glm::vec3 boxAxes[3] = {
        glm::normalize(rot[0]),

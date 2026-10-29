@@ -46,8 +46,8 @@ bool SAT::boxTri(Collider& A, Tri& tri, Result& out) {
        box.worldAxes[2]
    };
 
-   const glm::vec3 c = box.worldCenter;
-   const glm::vec3 e = glm::abs(box.localHalfExtents * box.scale);
+   const glm::vec3& c = box.worldCenter;
+   const glm::vec3& e = box.localHalfExtents;
 
    // Transformera triangeln till boxens lokala rum
    const glm::vec3 w0 = tri.vertices[0] - c;

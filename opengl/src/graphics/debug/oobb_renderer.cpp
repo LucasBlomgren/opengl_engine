@@ -40,8 +40,7 @@ void OOBBRenderer::makeOOBBModelMatrix(
    const physics::BoxGeometry& box,
    const physics::Pose& worldPose)
 {
-   const glm::vec3 size =
-      2.0f * box.localHalfExtents * box.scale;
+   const glm::vec3 size = 2.0f * box.localHalfExtents;
 
    const glm::mat3 rotation =
       glm::mat3_cast(worldPose.orientation);

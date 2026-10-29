@@ -15,8 +15,8 @@ bool SAT::boxBox(Collider& colA, Collider& colB, Result& out)
    const glm::vec3 Bu[3] = { B.worldAxes[0], B.worldAxes[1], B.worldAxes[2] };
 
    // Half extents i world-scale men fortfarande längs boxarnas lokala/worldAxes-riktningar
-   const glm::vec3 a = A.localHalfExtents * A.scale;
-   const glm::vec3 b = B.localHalfExtents * B.scale;
+   const glm::vec3& a = A.localHalfExtents;
+   const glm::vec3& b = B.localHalfExtents;
 
    const glm::vec3 cA = A.worldCenter;
    const glm::vec3 cB = B.worldCenter;

@@ -452,13 +452,10 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
    std::array<glm::vec3, 4>& outFace,
    glm::vec3& outNormal)
 {
-   transformCache.ensureInvModelMatrix(pose);
-   transformCache.ensureModelMatrix(pose);
-
    const Box& box = std::get<Box>(collider->shape);
 
    // rotate the contact normal into the box's local space
-   glm::vec3 rotated = transformCache.invModelMatrix * glm::vec4(normal, 0.0f);
+   glm::vec3 rotated = transformCache.getInvModelMatrix(collider->worldPose) * glm::vec4(normal, 0.0f);
    glm::vec3 absN = glm::abs(rotated);
 
    // choose the face whose normal is most aligned with 
@@ -480,8 +477,8 @@ void CollisionManifold::selectOOBBCollisionRefFaceAndNormal(
 
    // transform the four local face vertices to world space 
    // using the box's model matrix (which includes rotation and scale)
-   glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
-   glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
+   glm::mat3 M3 = glm::mat3(transformCache.getModelMatrix(collider->worldPose));
+   glm::vec3 T3 = glm::vec3(transformCache.getModelMatrix(collider->worldPose)[3]);
 
    for (int i = 0; i < localFace.size(); i++) {
       outFace[i] = M3 * localFace[i] + T3;
@@ -504,13 +501,10 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(
    const glm::vec3& normal,
    std::array<glm::vec3, 4>& outFace)
 {
-   transformCache.ensureInvRotationMatrix(pose);
-   transformCache.ensureModelMatrix(pose);
-
    const Box& box = std::get<Box>(collider->shape);
 
    // rotate the contact normal into the box's local space
-   glm::vec3 rotated = transformCache.invRotationMatrix * normal;
+   glm::vec3 rotated = transformCache.getInvRotationMatrix(collider->worldPose) * normal;
    glm::vec3 absN = glm::abs(rotated);
 
    // choose the face whose normal is most aligned with 
@@ -535,8 +529,8 @@ void CollisionManifold::selectOOBBCollisionIncidentFace(
 
    // transform the four local face vertices to world space 
    // using the box's model matrix (which includes rotation and scale)
-   glm::mat3 M3 = glm::mat3(transformCache.modelMatrix);
-   glm::vec3 T3 = glm::vec3(transformCache.modelMatrix[3]);
+   glm::mat3 M3 = glm::mat3(transformCache.getModelMatrix(collider->worldPose));
+   glm::vec3 T3 = glm::vec3(transformCache.getModelMatrix(collider->worldPose)[3]);
 
    for (int i = 0; i < localFace.size(); i++) {
       outFace[i] = M3 * localFace[i] + T3;

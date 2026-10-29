@@ -23,7 +23,7 @@ bool SAT::speculativeBoxSphere(
    const glm::vec3 sphereCenter = sphereCollider.worldPose.position;
 
    // Adjust these names to your actual fields.
-   const glm::vec3 half = box.localHalfExtents * box.scale; // half extents in local space
+   const glm::vec3& half = box.localHalfExtents;
    const float radius = sphere.radius;
 
    glm::mat3 rot = glm::mat3_cast(boxCollider.worldPose.orientation);

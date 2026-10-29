@@ -22,7 +22,7 @@ void Collider::updateShape() {
       using ShapeType = std::decay_t<decltype(colliderShape)>;
 
       if constexpr (std::is_same_v<ShapeType, Box>) {
-         colliderShape.update(worldPose);
+         colliderShape.update(worldPose, transformCache.getRotationMatrix(worldPose));
       }
       else if constexpr (std::is_same_v<ShapeType, Sphere>) {
          colliderShape.update(worldPose);

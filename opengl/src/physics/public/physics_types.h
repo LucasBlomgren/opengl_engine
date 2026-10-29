@@ -27,7 +27,6 @@ struct Pose {
 struct BoxGeometry {
    glm::vec3 worldCenter{ 0.0f };
    glm::vec3 localHalfExtents{ 0.5f };
-   glm::vec3 scale{ 1.0f };
 };
 
 struct SphereGeometry {

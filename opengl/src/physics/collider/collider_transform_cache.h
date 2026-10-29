@@ -7,18 +7,20 @@
 
 namespace physics::internal {
 
-struct ColliderTransformCache {
-   glm::mat3 rotationMatrix{ 1.0f };
-   glm::mat3 invRotationMatrix{ 1.0f };
+class ColliderTransformCache {
+private:
+   mutable glm::mat3 rotationMatrix{ 1.0f };
+   mutable glm::mat3 invRotationMatrix{ 1.0f };
 
-   glm::mat4 modelMatrix{ 1.0f };
-   glm::mat4 invModelMatrix{ 1.0f };
+   mutable glm::mat4 modelMatrix{ 1.0f };
+   mutable glm::mat4 invModelMatrix{ 1.0f };
 
-   bool modelDirty = true;
-   bool invModelDirty = true;
-   bool rotationDirty = true;
-   bool invRotationDirty = true;
+   mutable bool modelDirty = true;
+   mutable bool invModelDirty = true;
+   mutable bool rotationDirty = true;
+   mutable bool invRotationDirty = true;
 
+public:
    void markDirty() {
       modelDirty = true;
       invModelDirty = true;
@@ -26,45 +28,52 @@ struct ColliderTransformCache {
       invRotationDirty = true;
    }
 
-   void ensureModelMatrix(const Pose& pose) {
-      if (!modelDirty) {
-         return;
+   const glm::mat3& getRotationMatrix(const Pose& pose) const {
+      if (rotationDirty) {
+         rotationMatrix = glm::mat3_cast(pose.orientation);
+         rotationDirty = false;
       }
 
-      glm::mat4 translation = glm::translate(glm::mat4(1.0f), pose.position);
-      glm::mat4 rotation = glm::mat4_cast(pose.orientation);
-
-      modelMatrix = translation * rotation;
-      modelDirty = false;
+      return rotationMatrix;
    }
 
-   void ensureInvModelMatrix(const Pose& pose) {
-      if (!invModelDirty) {
-         return;
+   const glm::mat3& getInvRotationMatrix(const Pose& pose) const {
+      if (invRotationDirty) {
+         invRotationMatrix = glm::transpose(getRotationMatrix(pose));
+         invRotationDirty = false;
       }
 
-      ensureModelMatrix(pose);
-      invModelMatrix = glm::inverse(modelMatrix);
-      invModelDirty = false;
+      return invRotationMatrix;
    }
 
-   void ensureRotationMatrix(const Pose& pose) {
-      if (!rotationDirty) {
-         return;
+   const glm::mat4& getModelMatrix(const Pose& pose) const {
+      if (modelDirty) {
+         glm::mat4 translation =
+            glm::translate(glm::mat4(1.0f), pose.position);
+
+         glm::mat4 rotation =
+            glm::mat4(getRotationMatrix(pose));
+
+         modelMatrix = translation * rotation;
+         modelDirty = false;
       }
 
-      rotationMatrix = glm::mat3_cast(pose.orientation);
-      rotationDirty = false;
+      return modelMatrix;
    }
 
-   void ensureInvRotationMatrix(const Pose& pose) {
-      if (!invRotationDirty) {
-         return;
+   const glm::mat4& getInvModelMatrix(const Pose& pose) const {
+      if (invModelDirty) {
+         const glm::mat3& invRot = getInvRotationMatrix(pose);
+
+         invModelMatrix = glm::mat4(invRot);
+         invModelMatrix[3] = glm::vec4(
+            -(invRot * pose.position), 1.0f
+         );
+
+         invModelDirty = false;
       }
 
-      ensureRotationMatrix(pose);
-      invRotationMatrix = glm::transpose(rotationMatrix);
-      invRotationDirty = false;
+      return invModelMatrix;
    }
 };
 

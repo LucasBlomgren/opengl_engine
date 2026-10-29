@@ -66,14 +66,19 @@ void DebugRenderer::renderOverlayPass(const physics::Engine& physics, const Came
    debugShapeShader->setInt("debug.objectType", 0);
    renderAABBs(physics, objects);
    renderColliders(physics, objects, camera);
-   renderContactPoints(
-      physics.getDebugContacts(),
-      physics.getDebugSpeculativeContacts()
-   );
+
+   if (engineState->getShowContactPoints()) {
+      renderContactPoints(
+         physics.getDebugContacts(),
+         physics.getDebugSpeculativeContacts()
+      );
+   }
+
    renderBVHs(physics);
 
-   if (engineState->getShowSweptAABB())
+   if (engineState->getShowSweptAABB()) {
       renderSweptAABBs(physics.getDebugSweeps(), glm::vec3(1.0f, 1.0f, 0.0f));
+   }
 
    // render debug meshes with lighting
    litMeshShader->use();
@@ -270,8 +275,6 @@ void DebugRenderer::renderContactPoints(
    const std::vector<physics::debug::Contact>& contacts,
    const std::vector<physics::debug::SpeculativeContact>& speculativeContacts) const
 {
-   if (!engineState->getShowContactPoints()) return;
-
    debugShapeShader->setInt("debug.objectType", 2);
    debugShapeShader->setBool("debug.useUniformColor", true);
    debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 250, 154));

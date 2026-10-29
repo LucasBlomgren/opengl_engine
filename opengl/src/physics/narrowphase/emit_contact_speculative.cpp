@@ -72,6 +72,9 @@ void NarrowphaseManager::flushPendingSweepHits(ContactBatch& batch)
                );
             }
             else {
+               // #TODO: Alla trianglar som träffas av samma collider får samma nyckel.
+               // Därmed kan bara en av dessa terrain - kontakter emitteras per flush, 
+               // oavsett om de representerar olika ytor.
                return makeColliderPairKey(
                   hit.collider.colliderHandle,
                   ColliderHandle{}

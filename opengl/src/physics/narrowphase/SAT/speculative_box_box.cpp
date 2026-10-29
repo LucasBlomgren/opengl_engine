@@ -1,6 +1,8 @@
+
 #include "sat.h"
 
-#include <iostream>
+#include <algorithm>
+#include <cmath>
 
 namespace physics::internal {
 
@@ -13,46 +15,72 @@ bool SAT::speculativeBoxBox(
    SAT::Result& out)
 {
    constexpr float eps = 1e-6f;
+   constexpr float axisEps2 = 1e-10f;
 
-   if (dt <= 0.0f) {
+   if (dt <= 0.0f)
       return false;
-   }
 
    const Box& boxA = std::get<Box>(colliderA.shape);
    const Box& boxB = std::get<Box>(colliderB.shape);
 
-   glm::vec3 centerA = colliderA.worldPose.position;
-   glm::vec3 centerB = colliderB.worldPose.position;
+   const glm::vec3& centerA = colliderA.worldPose.position;
+   const glm::vec3& centerB = colliderB.worldPose.position;
 
-   glm::vec3 halfExtentsA = boxA.localHalfExtents * boxA.scale;
-   glm::vec3 halfExtentsB = boxB.localHalfExtents * boxB.scale;
+   const glm::vec3& halfA = boxA.localHalfExtents;
+   const glm::vec3& halfB = boxB.localHalfExtents;
 
-   glm::mat3 rotA = glm::mat3_cast(colliderA.worldPose.orientation);
-   glm::mat3 rotB = glm::mat3_cast(colliderB.worldPose.orientation);
+   const glm::mat3& rotA =
+      colliderA.transformCache.getRotationMatrix(colliderA.worldPose);
 
-   glm::vec3 axesA[3] = {
-       glm::normalize(rotA[0]),
-       glm::normalize(rotA[1]),
-       glm::normalize(rotA[2])
+   const glm::mat3& rotB =
+      colliderB.transformCache.getRotationMatrix(colliderB.worldPose);
+
+   // Rotation axes are unit length if quaternions are normalized.
+   const glm::vec3 axesA[3] = {
+      rotA[0], rotA[1], rotA[2]
    };
 
-   glm::vec3 axesB[3] = {
-       glm::normalize(rotB[0]),
-       glm::normalize(rotB[1]),
-       glm::normalize(rotB[2])
+   const glm::vec3 axesB[3] = {
+      rotB[0], rotB[1], rotB[2]
    };
 
-   glm::vec3 velocityA = bodyA.linearVelocity;
-   glm::vec3 velocityB = bodyB.linearVelocity;
+   const glm::vec3& velocityA = bodyA.linearVelocity;
+   const glm::vec3& velocityB = bodyB.linearVelocity;
 
-   // B relative to A.
-   glm::vec3 relV = velocityB - velocityA;
+   const glm::vec3 centerDelta = centerB - centerA;
+   const glm::vec3 relV = velocityB - velocityA;
+
+   // Precompute dot products between the box axes.
+   float R[3][3];
+   float absR[3][3];
+
+   for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+         R[i][j] = glm::dot(axesA[i], axesB[j]);
+         absR[i][j] = std::abs(R[i][j]);
+      }
+   }
+
+   // Precompute relative position and velocity projections.
+   float distA[3];
+   float speedA[3];
+   float distB[3];
+   float speedB[3];
+
+   for (int i = 0; i < 3; ++i) {
+      distA[i] = glm::dot(centerDelta, axesA[i]);
+      speedA[i] = glm::dot(relV, axesA[i]);
+
+      distB[i] = glm::dot(centerDelta, axesB[i]);
+      speedB[i] = glm::dot(relV, axesB[i]);
+   }
 
    float enterTime = 0.0f;
    float exitTime = dt;
 
    glm::vec3 bestAxis{ 0.0f };
    float bestSeparation = 0.0f;
+
    SAT::AxisType bestType = SAT::AxisType::None;
    int bestFaceA = -1;
    int bestFaceB = -1;
@@ -61,74 +89,51 @@ bool SAT::speculativeBoxBox(
 
    bool separatedAtStart = false;
 
-   auto projectRadius = [](
-      const glm::vec3& axis,
-      const glm::vec3 shapeAxes[3],
-      const glm::vec3& halfExtents) -> float
-      {
-         return
-            halfExtents.x * std::abs(glm::dot(shapeAxes[0], axis)) +
-            halfExtents.y * std::abs(glm::dot(shapeAxes[1], axis)) +
-            halfExtents.z * std::abs(glm::dot(shapeAxes[2], axis));
-      };
-
+   // Axis does not need to be normalized.
    auto testAxis = [&](
-      glm::vec3 axis,
+      const glm::vec3& axis,
+      float radius,
+      float dist,
+      float speed,
       SAT::AxisType axisType,
       int faceA,
       int faceB,
       int edgeA,
       int edgeB) -> bool
       {
-         float len2 = glm::dot(axis, axis);
+         const float len2 = glm::dot(axis, axis);
 
-         if (len2 < 1e-10f) {
-            return true; // degenerate cross axis, skip
-         }
+         if (len2 < axisEps2)
+            return true;
 
-         axis *= 1.0f / std::sqrt(len2);
+         const float separation = std::abs(dist) - radius;
 
-         float ra = projectRadius(axis, axesA, halfExtentsA);
-         float rb = projectRadius(axis, axesB, halfExtentsB);
-         float r = ra + rb;
-
-         float dist = glm::dot(centerB - centerA, axis);
-         float speed = glm::dot(relV, axis);
-
-         float absDist = std::abs(dist);
-         float currentSeparation = absDist - r;
-
-         if (currentSeparation > 0.0f) {
+         if (separation > 0.0f)
             separatedAtStart = true;
-         }
+
+         // Compare speed relative to axis length.
+         if (speed * speed < eps * eps * len2)
+            return separation <= 0.0f;
 
          // Solve:
-         // -r <= dist + speed * t <= r
-         if (std::abs(speed) < eps) {
-            // Not moving along this axis. If separated now, never overlaps.
-            if (currentSeparation > 0.0f) {
-               return false;
-            }
+         // -radius <= dist + speed * t <= radius
+         const float invSpeed = 1.0f / speed;
 
-            return true;
-         }
+         float t0 = (-radius - dist) * invSpeed;
+         float t1 = (radius - dist) * invSpeed;
 
-         float t0 = (-r - dist) / speed;
-         float t1 = (r - dist) / speed;
-
-         if (t0 > t1) {
+         if (t0 > t1)
             std::swap(t0, t1);
-         }
 
          if (t0 > enterTime) {
             enterTime = t0;
 
-            float distAtEnter = dist + speed * t0;
+            // Normal A -> B at first entry.
+            bestAxis = (speed < 0.0f) ? axis : -axis;
 
-            // normal A -> B
-            bestAxis = (distAtEnter >= 0.0f) ? axis : -axis;
+            // Separation is in unnormalized axis units.
+            bestSeparation = std::max(separation, 0.0f);
 
-            bestSeparation = glm::max(currentSeparation, 0.0f);
             bestType = axisType;
             bestFaceA = faceA;
             bestFaceB = faceB;
@@ -136,77 +141,114 @@ bool SAT::speculativeBoxBox(
             bestEdgeB = edgeB;
          }
 
-         exitTime = glm::min(exitTime, t1);
+         exitTime = std::min(exitTime, t1);
 
-         if (enterTime > exitTime) {
-            return false;
-         }
-
-         return true;
+         return enterTime <= exitTime;
       };
 
    // A face axes
    for (int i = 0; i < 3; ++i) {
+      const float ra = halfA[i];
+
+      const float rb =
+         halfB[0] * absR[i][0] +
+         halfB[1] * absR[i][1] +
+         halfB[2] * absR[i][2];
+
       if (!testAxis(
          axesA[i],
+         ra + rb,
+         distA[i],
+         speedA[i],
          SAT::AxisType::FaceA,
-         i,
-         -1,
-         -1,
-         -1))
+         i, -1, -1, -1))
       {
          return false;
       }
    }
 
    // B face axes
-   for (int i = 0; i < 3; ++i) {
+   for (int j = 0; j < 3; ++j) {
+      const float ra =
+         halfA[0] * absR[0][j] +
+         halfA[1] * absR[1][j] +
+         halfA[2] * absR[2][j];
+
+      const float rb = halfB[j];
+
       if (!testAxis(
-         axesB[i],
+         axesB[j],
+         ra + rb,
+         distB[j],
+         speedB[j],
          SAT::AxisType::FaceB,
-         -1,
-         i,
-         -1,
-         -1))
+         -1, j, -1, -1))
       {
          return false;
       }
    }
 
-   // Edge cross edge axes
+   // Edge-edge cross axes
+   constexpr int next[3] = { 1, 2, 0 };
+   constexpr int next2[3] = { 2, 0, 1 };
+
    for (int i = 0; i < 3; ++i) {
+      const int i1 = next[i];
+      const int i2 = next2[i];
+
       for (int j = 0; j < 3; ++j) {
-         glm::vec3 axis = glm::cross(axesA[i], axesB[j]);
+         const int j1 = next[j];
+         const int j2 = next2[j];
+
+         const glm::vec3 axis = glm::cross(axesA[i], axesB[j]);
+
+         // Projection radii using precomputed R.
+         const float ra =
+            halfA[i1] * absR[i2][j] +
+            halfA[i2] * absR[i1][j];
+
+         const float rb =
+            halfB[j1] * absR[i][j2] +
+            halfB[j2] * absR[i][j1];
+
+         const float dist = glm::dot(centerDelta, axis);
+         const float speed = glm::dot(relV, axis);
 
          if (!testAxis(
             axis,
+            ra + rb,
+            dist,
+            speed,
             SAT::AxisType::EdgeEdge,
-            -1,
-            -1,
-            i,
-            j))
+            -1, -1, i, j))
          {
             return false;
          }
       }
    }
 
-   // If they already overlap, normal narrowphase should handle it.
-   if (!separatedAtStart) {
+   // Normal narrowphase handles initial overlaps.
+   if (!separatedAtStart)
       return false;
-   }
 
-   if (enterTime < 0.0f || enterTime > dt) {
+   if (enterTime < 0.0f || enterTime > dt)
       return false;
-   }
 
-   if (glm::dot(bestAxis, bestAxis) < 1e-10f) {
+   const float bestLen2 = glm::dot(bestAxis, bestAxis);
+
+   if (bestLen2 < axisEps2)
       return false;
-   }
 
-   glm::vec3 centerAAtHit = centerA + velocityA * enterTime;
-   glm::vec3 centerBAtHit = centerB + velocityB * enterTime;
+   // Normalize only the final collision axis.
+   const float invLen = 1.0f / std::sqrt(bestLen2);
 
+   bestAxis *= invLen;
+   bestSeparation *= invLen;
+
+   const glm::vec3 centerAAtHit =
+      centerA + velocityA * enterTime;
+
+   // Approximate support point on A.
    auto supportPoint = [](
       const glm::vec3& center,
       const glm::vec3 shapeAxes[3],
@@ -215,23 +257,29 @@ bool SAT::speculativeBoxBox(
       {
          glm::vec3 p = center;
 
-         p += shapeAxes[0] * ((glm::dot(shapeAxes[0], dir) >= 0.0f) ? halfExtents.x : -halfExtents.x);
-         p += shapeAxes[1] * ((glm::dot(shapeAxes[1], dir) >= 0.0f) ? halfExtents.y : -halfExtents.y);
-         p += shapeAxes[2] * ((glm::dot(shapeAxes[2], dir) >= 0.0f) ? halfExtents.z : -halfExtents.z);
+         for (int i = 0; i < 3; ++i) {
+            const float sign =
+               glm::dot(shapeAxes[i], dir) >= 0.0f
+               ? 1.0f : -1.0f;
+
+            p += shapeAxes[i] * (halfExtents[i] * sign);
+         }
 
          return p;
       };
 
-   glm::vec3 pointA = supportPoint(centerAAtHit, axesA, halfExtentsA, bestAxis);
-   //glm::vec3 pointB = supportPoint(centerBAtHit, axesB, halfExtentsB, -bestAxis);
+   const glm::vec3 pointA = supportPoint(
+      centerAAtHit,
+      axesA,
+      halfA,
+      bestAxis
+   );
 
    out.hitType = SAT::HitType::Speculative;
-   out.normal = bestAxis; // A -> B
+   out.normal = bestAxis;
    out.separation = bestSeparation;
    out.depth = -bestSeparation;
    out.toi = enterTime;
-   //out.point = 0.5f * (pointA + pointB);
-
    out.point = pointA;
 
    out.feature.type = bestType;
@@ -239,12 +287,10 @@ bool SAT::speculativeBoxBox(
    out.feature.edgeIndexA = bestEdgeA;
    out.feature.edgeIndexB = bestEdgeB;
 
-   if (bestType == SAT::AxisType::FaceA) {
+   if (bestType == SAT::AxisType::FaceA)
       out.feature.faceIndex = bestFaceA;
-   }
-   else if (bestType == SAT::AxisType::FaceB) {
+   else if (bestType == SAT::AxisType::FaceB)
       out.feature.faceIndex = bestFaceB;
-   }
 
    return true;
 }

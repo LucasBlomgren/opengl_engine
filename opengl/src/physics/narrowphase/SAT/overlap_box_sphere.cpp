@@ -5,14 +5,15 @@ namespace physics::internal {
 //=======================================================
 //  Box-Sphere
 //=======================================================
-bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& transformCache, Result& out) {
+bool SAT::boxSphere(Collider& A, Collider& B, const ColliderTransformCache& transformCache, Result& out) 
+{
    // Plocka alltid ut BOX i A och sphere i B
    Box* box = std::get_if<Box>(&A.shape);
    Sphere* sph = std::get_if<Sphere>(&B.shape);
 
    // Collider-local matrices used by rendering and collision bounds.
-   const glm::mat4& M = transformCache.modelMatrix;
-   const glm::mat4& iM = transformCache.invModelMatrix;
+   const glm::mat4& M = transformCache.getModelMatrix(A.worldPose);
+   const glm::mat4& iM = transformCache.getInvModelMatrix(A.worldPose);
 
    // Sphere center i värld
    glm::vec3 worldC = sph->centerWorld;

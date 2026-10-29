@@ -22,7 +22,7 @@ void NarrowphaseManager::processTerrainTriBox(
    // Box data once, since collider pose is same for all terrain triangles.
    const Box& box = std::get<Box>(collider->shape);
 
-   glm::mat3 R = glm::mat3_cast(collider->worldPose.orientation);
+   const glm::mat3& R = collider->transformCache.getRotationMatrix(collider->worldPose);
 
    glm::vec3 boxAxes[3] = {
        glm::normalize(R[0]),
@@ -31,7 +31,7 @@ void NarrowphaseManager::processTerrainTriBox(
    };
 
    // Anpassa om din scale sitter på annan plats.
-   glm::vec3 half = box.localHalfExtents * box.scale;
+   const glm::vec3& half = box.localHalfExtents;
 
    glm::vec3 boxCenter = collider->worldPose.position;
 

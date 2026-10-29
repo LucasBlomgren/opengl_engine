@@ -208,7 +208,6 @@ Engine::getColliderState(ColliderHandle handle) const
       state.shape = BoxGeometry{
           box.worldCenter,
           box.localHalfExtents,
-          box.scale
       };
    }
    else {

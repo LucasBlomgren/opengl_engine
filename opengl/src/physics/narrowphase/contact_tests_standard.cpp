@@ -35,10 +35,6 @@ std::optional<OverlapHit> NarrowphaseManager::tryBoxSphere(
       pair.swapAB();
    }
 
-   pair.a.collider->transformCache.ensureInvModelMatrix(
-      pair.a.collider->worldPose
-   );
-
    SAT::Result geometry{};
    if (!SAT::boxSphere(
       *pair.a.collider,
