@@ -9,6 +9,7 @@ using ColH = ColliderHandle;
 using CompH = CompoundHandle;
 using MotionH = MotionStateHandle;
 using SleepH = SleepStateHandle;
+using MeshH = MeshHandle;
 
 using BodyMap = SlotMap<RigidBody, BodyHandle>;
 using MotionMap = SlotMap<MotionState, MotionStateHandle>;
@@ -90,14 +91,19 @@ AABB& PS::getAABB(const BodyHandle h)
 BodyHandle PS::reserveBodyHandle() { return bodies.reserve(); }
 ColliderHandle PS::reserveColliderHandle() { return colliders.reserve(); }
 CompoundHandle PS::reserveCompoundHandle() { return compounds.reserve(); }
+MeshHandle PS::reserveMeshHandle() { return meshes.reserve(); }
 
 void PS::releaseBodyReservation(BodyH h) { bodies.release_reserved(h); }
 void PS::releaseColliderReservation(ColH h) { colliders.release_reserved(h); }
 void PS::releaseCompoundReservation(CompH h) { compounds.release_reserved(h); }
+void PS::releaseMeshReservation (MeshH h) { meshes.release_reserved(h); }
 
 //===========================================
 // Creation
 //===========================================
+Mesh* PS::commitMesh(MeshHandle h, Mesh&& m) {
+   return meshes.create_reserved(h, std::move(m));
+}
 RigidBody* PS::commitBody(BodyH h, RigidBody&& b) {
    b.id = rigidBodyId++;
    return bodies.create_reserved(h, std::move(b));
@@ -119,6 +125,7 @@ SleepStateHandle PS::commitSleepState(SleepState&& s) {
 //===========================================
 // Deletion
 //===========================================
+void PS::destroyMesh(MeshH h) { meshes.destroy(h); }
 void PS::destroyBody(BodyH h) { bodies.destroy(h); }
 void PS::destroyCollider(ColH h) { colliders.destroy(h); }
 void PS::destroyCompound(CompH h) { compounds.destroy(h); }

@@ -13,6 +13,7 @@
 namespace physics::internal {
 
 class RigidBody;
+class Collider;
 class Tri;
 
 struct BodySweepInfo {

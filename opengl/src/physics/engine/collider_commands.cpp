@@ -53,7 +53,61 @@ const Collider* resolveCollider(
 
    return collider;
 }
+} // namespace 
 
+//=========================================
+// Upload Mesh Collider
+//=========================================
+MeshHandle Engine::uploadMeshCollider(
+   const std::string& id, 
+   const MeshShapeDesc& desc)
+{
+   std::unordered_map<std::string, MeshHandle>& registry = 
+      physicsStorage.getMeshRegistry();
+
+   if (auto search = registry.find(id); search != registry.end()) {
+      std::cout << "[Physics] Mesh already uploaded." << std::endl;
+      return {};
+   }
+
+   if (desc.faces.size() <= 0 ||
+      desc.vertices.size() <= 0 ||
+      desc.faceIndices.size() <= 0)
+   {
+      std::cout << "[Physics] Invalid Mesh." << std::endl;
+      return {};
+   }
+
+   for (const MeshFaceDesc& faceDesc : desc.faces) {
+      if (faceDesc.firstIndex < 0 || faceDesc.vertexCount <= 0)
+      {
+         std::cout << "[Physics] Invalid Mesh Face." << std::endl;
+         return {};
+      }
+   }
+
+   MeshHandle handle = physicsStorage.reserveMeshHandle();
+   registry.emplace(id, handle);
+
+   // cook mesh data
+   Mesh mesh;
+   mesh.vertices = desc.vertices;
+   mesh.faceIndices = desc.faceIndices;
+
+   for (const MeshFaceDesc& faceDesc : desc.faces) {
+      MeshFace face;
+      face.firstIndex = faceDesc.firstIndex;
+      face.vertexCount = faceDesc.vertexCount;
+      mesh.faces.push_back(face);
+      // #TODO: Mesh collider: also upload face normals
+   }
+
+   commandBuffer.recordMeshCreate(
+      handle,
+      std::move(mesh)
+   );
+
+   return handle;
 }
 
 //=========================================
@@ -118,8 +172,8 @@ ColliderHandle Engine::createCollider(
    return colliderHandle;
 }
 
-bool Engine::destroyCollider(
-   ColliderHandle colliderHandle) {
+bool Engine::destroyCollider(ColliderHandle colliderHandle) 
+{
    if (!resolveCollider(
       commandBuffer,
       physicsStorage,

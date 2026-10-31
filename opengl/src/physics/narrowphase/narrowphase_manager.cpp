@@ -214,7 +214,7 @@ void NarrowphaseManager::processSpeculativePair(
    // Step forward to next child even if AABB-test failed
    int childIdxA = 0;
 
-   // #TODO: Om childSweptAABBs innehåller en AABB per collider, 
+   // #TODO: Narrowphase: Om childSweptAABBs innehåller en AABB per collider, 
    // även för inaktiva colliders, blir indexeringen fel när en collider är disabled.
 
    forEachBodyCollider(
@@ -397,7 +397,7 @@ void NarrowphaseManager::processSpeculativeTerrainPair(
    // Step forward to next child even if AABB-test failed
    int childIdx = 0;
 
-   // #TODO: Om childSweptAABBs innehåller en AABB per collider, 
+   // #TODO: Narrowphase: Om childSweptAABBs innehåller en AABB per collider, 
    // även för inaktiva colliders, blir indexeringen fel när en collider är disabled.
 
    forEachBodyCollider(

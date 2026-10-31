@@ -13,7 +13,7 @@ namespace physics::internal {
 
 // forward declarations
 class RigidBody;
-struct Collider;
+class Collider;
 struct Contact;
 
 

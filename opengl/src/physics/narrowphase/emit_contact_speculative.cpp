@@ -47,7 +47,7 @@ void NarrowphaseManager::flushPendingSweepHits(ContactBatch& batch)
    std::unordered_set<PairKey, PairKeyHash> emittedSpeculativePairs;
    emittedSpeculativePairs.reserve(pendingSweepHits.size());
 
-   // #TODO: Ska egentligen vara ett field framför 
+   // #TODO: Broadphase: Ska egentligen vara ett field framför 
    // collidern som bestämmer vilka träffar som ska generera kontakt.
    const float toiSlop = 5.5f;
 
@@ -72,7 +72,7 @@ void NarrowphaseManager::flushPendingSweepHits(ContactBatch& batch)
                );
             }
             else {
-               // #TODO: Alla trianglar som träffas av samma collider får samma nyckel.
+               // #TODO: Broadphase: Alla trianglar som träffas av samma collider får samma nyckel.
                // Därmed kan bara en av dessa terrain - kontakter emitteras per flush, 
                // oavsett om de representerar olika ytor.
                return makeColliderPairKey(

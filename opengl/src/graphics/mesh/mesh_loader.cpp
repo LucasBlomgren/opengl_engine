@@ -39,6 +39,31 @@ std::vector<unsigned int> loadIndicesFromTxt(const std::string& path) {
    return indices;
 }
 
+std::vector<std::vector<uint32_t>> loadFacesFromTxt(const std::string& path) {
+   std::ifstream file(path);
+   if (!file) {
+      throw std::runtime_error("Could not open " + path);
+   }
+
+   std::vector<std::vector<uint32_t>> faces;
+   std::string line;
+
+   while (std::getline(file, line)) {
+      std::istringstream stream(line);
+      std::vector<uint32_t> face;
+
+      uint32_t idx;
+      while (stream >> idx) {
+         face.push_back(idx);
+      }
+
+      if (!face.empty())
+         faces.push_back(std::move(face));
+   }
+
+   return faces;
+}
+
 std::vector<Vertex> recenterMesh(std::vector<Vertex>& vertices) {
    glm::vec3 minPos(+FLT_MAX);
    glm::vec3 maxPos(-FLT_MAX);

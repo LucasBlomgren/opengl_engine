@@ -6,6 +6,7 @@
 #include "aabb.h"
 #include "shapes/box.h"
 #include "shapes/sphere.h"
+#include "shapes/mesh.h"
 #include "collider_transform_cache.h"
 
 #include "physics/public/handles.h"
@@ -13,9 +14,10 @@
 
 namespace physics::internal {
 
-using ColliderShape = std::variant<Box, Sphere>;
+using ColliderShape = std::variant<Box, Sphere, Mesh>;
 
-struct Collider {
+class Collider {
+public:
    int id = -1;
 
    ColliderType type = ColliderType::BOX;

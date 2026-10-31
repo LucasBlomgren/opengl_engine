@@ -63,7 +63,7 @@ void PGSSolver::buildSolverData(
    constraintSources.clear();
    pointSources.clear();
 
-   // #TODO: bör vara touched bodies i scope, inte alla bodies i caches
+   // #TODO: Solver: bör vara touched bodies i scope, inte alla bodies i caches
    // om slot_capacity() är mycket större än antalet aktiva bodies, nollställs
    // mer än nödvändigt varje frame.
    size_t slotCap = physicsStorage->bodyStorage().slot_capacity();
@@ -79,7 +79,7 @@ void PGSSolver::buildSolverData(
    constraintSources.reserve(batch.contacts.size());
    pointSources.reserve(batch.contacts.size() * 4);
 
-   // #TODO: inte super effektivt att loopa igenom en linked list av contacts.
+   // #TODO: Solver: inte super effektivt att loopa igenom en linked list av contacts.
    // Kan optimera senare om det behövs.
    for (Contact* contact : batch.contacts) {
       if (!contact) {
@@ -132,7 +132,7 @@ void PGSSolver::buildSolverData(
       cc.t1 = contact->t1;
       cc.t2 = contact->t2;
 
-      // #TODO: warm-start twist impulse?
+      // #TODO: Solver: warm-start twist impulse?
       cc.invMassTwist = 0.0f;
       cc.accumulatedTwistImpulse = 0.0f;
 
@@ -379,7 +379,7 @@ void PGSSolver::precomputePointData(
    }
    // bodyA motion behavior
    if (contact.flags & ContactFlags::ContributesMotionA) {
-      rA = worldPos - bodyA->pose.position; // #TODO: use center of mass.
+      rA = worldPos - bodyA->pose.position; // #TODO: Solver: use center of mass.
       linearVelocityA = bodyA->linearVelocity;
       angularVelocityA = bodyA->angularVelocity;
    }
@@ -400,7 +400,7 @@ void PGSSolver::precomputePointData(
    }
    // bodyB motion behavior
    if (contact.flags & ContactFlags::ContributesMotionB) {
-      rB = worldPos - bodyB->pose.position; // #TODO: use center of mass.
+      rB = worldPos - bodyB->pose.position; // #TODO: Solver: use center of mass.
       linearVelocityB = bodyB->linearVelocity;
       angularVelocityB = bodyB->angularVelocity;
    }

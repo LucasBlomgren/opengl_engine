@@ -11,7 +11,7 @@ void PGSSolver::init(PhysicsStorage& storage)
 {
    this->physicsStorage = &storage;
 
-   // #TODO: PGSSolver init - arbitrary limits, or dynamic resizing?
+   // #TODO: Solver: PGSSolver init - arbitrary limits, or dynamic resizing?
    solverBodies.reserve(1024);
    contactConstraints.reserve(1024);
    contactPoints.reserve(4096);
@@ -93,7 +93,7 @@ void PGSSolver::resolveContacts(
    const int PGSiterations,
    const float dt)
 {
-   // #TODO: solver islands
+   // #TODO: Solver: islands
    // för att undvika att lösa stora staplar av kontakter som inte påverkar varandra, vilket kan hända i t.ex. en pyramid av boxar där varje box har kontakt med flera
    // det påverkar också determinism 
 
@@ -575,7 +575,7 @@ void PGSSolver::postSolve(
    }
 
    // Write back twist impulses to Contacts
-   // #TODO: twist impulse warmstarting is not implemented yet
+   // #TODO: Solver: twist impulse warmstarting is not implemented yet
    //for (size_t i = 0; i < contactConstraints.size(); i++) {
    //    Contact* dst = constraintSources[i];
    //    if (!dst) {

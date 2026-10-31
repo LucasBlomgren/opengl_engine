@@ -16,7 +16,7 @@ public:
    BodyType type = BodyType::Dynamic;
    bool reportContacts = false;
 
-   // #TODO: lägga till COM
+   // #TODO: RigidBody: add COM
    // annars fungerar fysiken bara om collidernas 
    // lokala transform är centrerade runt COM
 

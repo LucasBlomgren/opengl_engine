@@ -200,6 +200,40 @@ int main() {
    float loadTimeFinished = (float)glfwGetTime();
    std::cout << "Load time: " << (loadTimeFinished - loadTimeStart) << " seconds\n";
 
+
+
+
+
+
+   Mesh* mesh = meshManager.getMesh("cylinder_collider");
+   physics::MeshShapeDesc meshCollider;
+
+   for (Vertex& v : mesh->vertices) {
+      meshCollider.vertices.push_back(v.position);
+   }
+
+   for (std::vector<uint32_t>& face : mesh->faces) 
+   {
+      physics::MeshFaceDesc faceDesc;
+      faceDesc.firstIndex = meshCollider.faceIndices.size();
+      faceDesc.vertexCount = face.size();
+
+      for (uint32_t idx : face) {
+         meshCollider.faceIndices.push_back(idx);
+      }
+
+      meshCollider.faces.push_back(faceDesc);
+   }
+
+   physics::MeshHandle handle =
+      physicsEngine.uploadMeshCollider("Cylinder", meshCollider);
+
+
+
+
+
+
+
    //=============================================================
    // main loop
    //=============================================================

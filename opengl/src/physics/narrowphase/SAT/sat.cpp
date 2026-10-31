@@ -203,7 +203,7 @@ bool SAT::intersectPolygons(
    return true;
 }
 
-// #TODO: Korrekt hantering av face vs edge-edge för BoxBox
+// #TODO: SAT: Korrekt hantering av face vs edge-edge för BoxBox
 // 
 // ---- Välja face-face:
 // 

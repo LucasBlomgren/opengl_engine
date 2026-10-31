@@ -259,7 +259,7 @@ void Renderer::render(
    int writeIdx,
    const Editor::ViewportFBO* viewportFBO) 
 {
-   // #TODO: optimize by only updating batches that changed
+   // #TODO: Renderer: optimize by only updating batches that changed
    // only awake dynamic objects should need batch updates, static and 
    // asleep objects won't move and thus their batch instance data 
    // won't need updating.
@@ -408,7 +408,7 @@ void Renderer::renderGameObjectsShadow() {
          shader = shadowShader->instancedVariant;
          shader->use();
 
-         // #TODO: instanceVBO should live in RenderBatch, otherwise all batches 
+         // #TODO: Renderer: instanceVBO should live in RenderBatch, otherwise all batches 
          // that share mesh.
          // If BatchA uploads awake data and BatchB is non-dirty and doesn't 
          // upload asleep data, BatchB will still use the awake instance data 

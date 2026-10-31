@@ -33,7 +33,7 @@ class EngineState;
 class FrameTimers;
 
 namespace physics::internal {
-   struct RigidBody;
+   class RigidBody;
 }
 
 namespace physics {
@@ -61,12 +61,15 @@ public:
    //======================================
    // Objects
    //======================================
-   [[nodiscard]] BodyHandle createRigidBody(const BodyDesc& desc);
+   [[nodiscard]]
+   MeshHandle uploadMeshCollider(const std::string& id, const MeshShapeDesc& mesh);
+
+   [[nodiscard]] 
+   BodyHandle createRigidBody(const BodyDesc& desc);
    bool destroyRigidBody(BodyHandle body);
 
-   [[nodiscard]] ColliderHandle createCollider(
-      BodyHandle body,
-      const ColliderDesc& desc);
+   [[nodiscard]] 
+   ColliderHandle createCollider(BodyHandle body, const ColliderDesc& desc);
 
    bool destroyCollider(ColliderHandle collider);
 

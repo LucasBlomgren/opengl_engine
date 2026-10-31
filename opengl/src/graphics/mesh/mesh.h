@@ -11,13 +11,18 @@ public:
    std::vector<Vertex> vertices;
    std::vector<unsigned int> indices;
 
+   // Physics / original topology
+   std::vector<std::vector<uint32_t>> faces;
+
    GLuint VAO = 0;
    GLuint VBO = 0;
    GLuint EBO = 0;
    GLuint instanceVBO = 0;
    GLsizei indexCount = 0;
 
-   Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
+   Mesh(const std::vector<Vertex>& vertices, 
+      const std::vector<unsigned int>& indices)
+   {
       this->vertices = vertices;
       this->indices = indices;
 

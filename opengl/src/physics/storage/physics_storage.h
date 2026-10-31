@@ -27,14 +27,17 @@ public:
    BodyHandle reserveBodyHandle();
    ColliderHandle reserveColliderHandle();
    CompoundHandle reserveCompoundHandle();
+   MeshHandle reserveMeshHandle();
 
    void releaseBodyReservation(BodyHandle);
    void releaseColliderReservation(ColliderHandle);
    void releaseCompoundReservation(CompoundHandle);
+   void releaseMeshReservation(MeshHandle);
 
    //===========================================
    // Creation
    //===========================================
+   Mesh* commitMesh(MeshHandle, Mesh&&);
    RigidBody* commitBody(BodyHandle, RigidBody&&);
    Collider* commitCollider(ColliderHandle, Collider&&);
    Compound* commitCompound(CompoundHandle, Compound&&);
@@ -44,6 +47,7 @@ public:
    //===========================================
    // Deletion
    //===========================================
+   void destroyMesh(MeshHandle h);
    void destroyBody(BodyHandle);
    void destroyMotionState(MotionStateHandle);
    void destroySleepState(SleepStateHandle);
@@ -95,6 +99,16 @@ public:
    //===========================================
    AABB& getAABB(const BodyHandle h);
 
+   //===========================================
+   // Get Unique Mesh Colliders
+   //===========================================
+   std::unordered_map<std::string, MeshHandle>& getMeshRegistry() {
+      return meshRegistry;
+   }
+   const std::unordered_map<std::string, MeshHandle>& getMeshRegistry() const {
+      return meshRegistry;
+   }
+
 private:
    int colliderId = 0;
    int rigidBodyId = 0;
@@ -103,9 +117,12 @@ private:
    SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
    SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
    SlotMap<Compound, CompoundHandle> compounds{ "Compound" };
+   SlotMap<Mesh, MeshHandle> meshes{ "Mesh" };
 
    SlotMap<Sphere, ShapeHandle> spheres{ "Sphere" };
    SlotMap<BoxData, ShapeHandle> boxes{ "Box" };
 
+   //SlotMap<MeshData, ShapeHandle> meshes{ "Mesh" };
+   std::unordered_map<std::string, MeshHandle> meshRegistry;
 };
 }

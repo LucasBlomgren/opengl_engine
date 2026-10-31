@@ -4,6 +4,7 @@
 #include "broadphase_manager.h"
 
 #include "physics/bodies/rigidbody.h"
+#include "physics/collider/collider.h"
 #include "physics/collider/body_collider_utils.h"
 #include "physics/collider/geometry/tri.h"
 #include "physics/bvh/query_othertree.h"
@@ -337,7 +338,7 @@ void BroadphaseManager::buildSpeculativePairs(float dt, PairBatch& batch)
 
 void BroadphaseManager::determineSpeculativeBodies(float dt)
 {
-   // #TODO: better Sweep Fraction
+   // #TODO: Broadphase: better Sweep Fraction
    constexpr float safeFraction = 5.0f;
    constexpr float minSafeDistance = 0.02f;
 

@@ -202,6 +202,15 @@ void Processor::process(
 //================================================
 void Processor::processLifecycleCommands(Buffer::Batch& batch)
 {
+   // Destroy Meshes
+   for (MeshHandle h : batch.meshDestroys) {
+      physicsStorage.destroyMesh(h);
+   }
+   // Commit Meshes
+   for (auto& [meshH, mesh] : batch.meshCreates) {
+      physicsStorage.commitMesh(meshH, std::move(mesh));
+   }
+
    std::unordered_set<BodyHandle> bodiesToRefresh;
 
    // Collect affected bodies
@@ -635,7 +644,7 @@ void Processor::applyCommand(
 //================================================
 void Processor::refreshBodyInertia(RigidBody& body)
 {
-   // #TODO: Combine inertia for compound bodies. 
+   // #TODO: Processor: Combine inertia for compound bodies. 
    // For now, just use the first collider.
 
    if (body.type != BodyType::Dynamic) {

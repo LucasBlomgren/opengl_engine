@@ -56,8 +56,11 @@ Buffer::Batch Buffer::take() {
       }
    };
 
+   transferNodes(meshCreates, batch.meshCreates);
    transferNodes(bodyCreates, batch.bodyCreates);
    transferNodes(colliderCreates, batch.colliderCreates);
+
+   transferNodes(meshDestroys, batch.meshDestroys);
    transferNodes(bodyDestroys, batch.bodyDestroys);
    transferNodes(colliderDestroys, batch.colliderDestroys);
 
@@ -74,6 +77,16 @@ Buffer::Batch Buffer::take() {
 //=========================================
 // Lifecycle create
 //=========================================
+void Buffer::recordMeshCreate(
+   MeshHandle mesh,
+   Mesh&& meshData)
+{
+   meshCreates.insert_or_assign(
+      mesh,
+      std::move(meshData)
+   );
+}
+
 void Buffer::recordBodyCreate(
    BodyHandle body,
    RigidBody&& rigidBody)
@@ -97,6 +110,11 @@ void Buffer::recordColliderCreate(
 //=========================================
 // Lifecycle destroy
 //=========================================
+bool Buffer::recordMeshDestroy(MeshHandle mesh) 
+{
+   return meshDestroys.insert(mesh).second;
+}
+
 bool Buffer::recordBodyDestroy(
    BodyHandle body,
    PhysicsStorage& physicsStorage)

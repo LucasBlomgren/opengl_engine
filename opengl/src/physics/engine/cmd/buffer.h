@@ -137,15 +137,20 @@ public:
    // Complete command batch
    //=========================================
    struct Batch {
+      std::unordered_map<MeshHandle, Mesh> meshCreates;
       std::unordered_map<BodyHandle, RigidBody> bodyCreates;
       std::unordered_map<ColliderHandle, Collider> colliderCreates;
+      std::unordered_set<MeshHandle> meshDestroys;
       std::unordered_set<BodyHandle> bodyDestroys;
       std::unordered_map<ColliderHandle, BodyHandle> colliderDestroys;
       std::vector<Mutation> mutations;
 
       bool empty() const noexcept {
-         return bodyCreates.empty() &&
+         return 
+            meshCreates.empty() &&
+            bodyCreates.empty() &&
             colliderCreates.empty() &&
+            meshDestroys.empty() &&
             bodyDestroys.empty() &&
             colliderDestroys.empty() &&
             mutations.empty();
@@ -162,9 +167,11 @@ public:
    //=========================================
    // Lifecycle recording
    //=========================================
-   void recordBodyCreate(BodyHandle body, RigidBody&& rigidBody);
+   void recordMeshCreate(MeshHandle mesh, Mesh&& meshData);
+   void recordBodyCreate(BodyHandle body, RigidBody&& bodyData);
    void recordColliderCreate(ColliderHandle collider, Collider&& colliderData);
 
+   bool recordMeshDestroy(MeshHandle mesh);
    bool recordBodyDestroy(BodyHandle body, PhysicsStorage& physicsStorage);
    bool recordColliderDestroy(ColliderHandle collider, PhysicsStorage& physicsStorage);
 
@@ -232,8 +239,12 @@ private:
    void removeMutationsTargeting(ColliderHandle collider);
 
    std::vector<Mutation> mutations;
+   std::unordered_map<MeshHandle, Mesh> meshCreates;
+   std::unordered_set<MeshHandle> meshDestroys;
+
    std::unordered_map<BodyHandle, RigidBody> bodyCreates;
    std::unordered_set<BodyHandle> bodyDestroys;
+
    std::unordered_map<ColliderHandle, Collider> colliderCreates;
    std::unordered_map<ColliderHandle, BodyHandle> colliderDestroys;
 };

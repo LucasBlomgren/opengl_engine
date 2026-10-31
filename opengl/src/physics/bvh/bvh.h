@@ -1,12 +1,15 @@
 #pragma once
 
-#include "physics/storage/physics_storage.h"
-#include "physics/bodies/rigidbody.h"
+#include <vector>
+#include <cstddef>
+#include <glm/vec3.hpp>
+
+#include "physics/public/handles.h"
 #include "physics/collider/aabb.h"
 
 namespace physics::internal {
 
-// #TODO: optimize nodes for cache size:
+// #TODO: BVH: optimize nodes for cache size:
 // Het array — bara det traverseringen rör. Indexeras parallellt med cold[].
 //struct BVHNodeHot {
 //    float fatMin[3];   // 12
@@ -23,6 +26,8 @@ namespace physics::internal {
 //    bool alive, dirty;
 //    // local-koordinater etc.
 //};
+
+class PhysicsStorage;
 
 class BVHTree {
 public:
@@ -57,7 +62,7 @@ public:
 
       Element element;
 
-      // #TODO: probably better with physicsStorage.getCollider().getAABB() instead
+      // #TODO: BVH: better with physicsStorage.getCollider().getAABB() instead
       // and remove tightBox
       AABB  tightBox;     // only for leaf nodes
 
@@ -101,10 +106,10 @@ private:
    int rebuildThreshold = 0; // recalculated in build() as log2(n) * rebuildRatio
 
    // min refits before rebuild, to avoid rebuilding too early when n is small
-   const int   minRebuildThreshold = 5;
+   static constexpr int   minRebuildThreshold = 5;
 
-   const float rebuildRatio = 0.40f; // % of leaf corrections before rebuild
-   const glm::vec3 fatBoxMargin{ 0.2f };
+   static constexpr float rebuildRatio = 0.40f; // % of leaf corrections before rebuild
+   static constexpr glm::vec3 fatBoxMargin{ 0.2f };
 
    struct BVHPrimitive {
       glm::vec3 min{ 0.0f };

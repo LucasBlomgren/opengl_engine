@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "bvh.h"
 
+#include "physics/bodies/rigidbody.h"
+#include "physics/storage/physics_storage.h"
+
 namespace physics::internal {
 
 //=======================================================
@@ -233,7 +236,7 @@ void BVHTree::removeLeaf(int leafIdx)
       body.broadphaseHandle.leafIdx = -1;
 
       rootIdx = -1;
-      nodes.clear(); // #TODO: Fixa så att noder återanvänds. Det är bara här/rebuild som noder tas bort.
+      nodes.clear(); // #TODO: BVH: Reuse nodes outside here
       prims.clear();
       return;
    }
@@ -281,7 +284,7 @@ void BVHTree::removeLeaf(int leafIdx)
 void BVHTree::update() {
    this->dirty = false;
 
-   // #BUG: tar det rebuildCooldown innan awake och asleep byggs on startup?
+   // #BUG: BVH: tar det rebuildCooldown innan awake och asleep byggs on startup?
    // för build kallas aldrig på dem tror jag?
    rebuildCooldownCounter++;
    if (numRefits > rebuildThreshold && rebuildCooldownCounter >= rebuildCooldown)

@@ -31,7 +31,7 @@ RigidBody* getReferenceBody(Contact& contact) {
 }
 }
 
-// #TODO: implementera recycled contacts för att genom heuristik 
+// #TODO: Manifold: implementera recycled contacts för att genom heuristik 
 // kunna återanvända gamla contacts 
 // istället för att skapa nya varje frame, för att förbättra 
 // solver stabilitet och prestanda.
@@ -144,7 +144,7 @@ Contact* CollisionManifold::boxBox(
       }
    }
    else {
-      // #TODO: different points are chosen different frames, 
+      // #TODO: Manifold: different points are chosen different frames, 
       // causing solver instability, maybe add some temporal coherence 
       // to point selection?
       // like remembering which points were chosen last frame and 
@@ -636,7 +636,7 @@ void CollisionManifold::createClippingPlanes(
    const std::array<glm::vec3, 4>& face,
    const glm::vec3& faceNormal)
 {
-   // #TODO: Använda FaceCenter för point on plane i stället för face[i]. 
+   // #TODO: Manifold: Använda FaceCenter för point on plane i stället för face[i]. 
    // Pga precision.
    // T.ex: float depth = dot(n, contactPoint - planePoint); 
    // (depth per contact point)
@@ -839,7 +839,7 @@ float CollisionManifold::computePenetrationDepth(
    return -glm::dot(point - refFace[0], refFaceNormal);
 }
 
-// #TODO: FaceCenter kan användas för att sortera contact points om:
+// #TODO: Manifold: FaceCenter kan användas för att sortera contact points om:
 // 1. nya kontaktpunkter skapades
 // 2. antal ändrades
 // 3. cache-matchning var osäker
@@ -1046,14 +1046,14 @@ Contact* CollisionManifold::integrateContact(
 size_t CollisionManifold::generateKey(int idA, int idB) {
    return (uint64_t)std::min(idA, idB) << 32 | std::max(idA, idB);
 
-   // #TODO: en terrain-kontakt ovanifrån kan i värsta fall:
+   // #TODO: Manifold: en terrain-kontakt ovanifrån kan i värsta fall:
    // 1. hitta "fel" cached manifold
    // 2. skriva över en box-box manifold
    // 3. warm-starta med fel impulser
    // 4. eller bara byta kontakt-cache-innehåll mellan 
    // körningar beroende på vilken kontakt som råkade gå in sist
 
-   // #TODO: Nytt objekt med samma slot(id) i SlotMap som ett 
+   // #TODO: Manifold: Nytt objekt med samma slot(id) i SlotMap som ett 
    // gammalt objekt i contact cache kan orsaka hash-kollision.
    // Varar endast i 5 frames men behöver fixas. Kan orsaka 
    // jitter och/eller felaktiga kontaktpunkter.

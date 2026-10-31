@@ -216,6 +216,7 @@
     <ClInclude Include="src\physics\collider\collider_ref.h" />
     <ClInclude Include="src\physics\collider\compound_collider.h" />
     <ClInclude Include="src\physics\collider\body_collider_utils.h" />
+    <ClInclude Include="src\physics\collider\shapes\mesh.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />
