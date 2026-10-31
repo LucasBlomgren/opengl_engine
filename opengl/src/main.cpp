@@ -226,11 +226,7 @@ int main() {
    }
 
    physics::MeshHandle handle =
-      physicsEngine.uploadMeshCollider("Cylinder", meshCollider);
-
-
-
-
+      physicsEngine.uploadMesh("Cylinder", meshCollider);
 
 
 

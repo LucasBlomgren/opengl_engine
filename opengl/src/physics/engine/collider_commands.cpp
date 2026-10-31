@@ -56,9 +56,9 @@ const Collider* resolveCollider(
 } // namespace 
 
 //=========================================
-// Upload Mesh Collider
+// Mesh upload and destruction
 //=========================================
-MeshHandle Engine::uploadMeshCollider(
+MeshHandle Engine::uploadMesh(
    const std::string& id, 
    const MeshShapeDesc& desc)
 {
@@ -89,7 +89,6 @@ MeshHandle Engine::uploadMeshCollider(
    MeshHandle handle = physicsStorage.reserveMeshHandle();
    registry.emplace(id, handle);
 
-   // cook mesh data
    Mesh mesh;
    mesh.vertices = desc.vertices;
    mesh.faceIndices = desc.faceIndices;
@@ -102,12 +101,30 @@ MeshHandle Engine::uploadMeshCollider(
       // #TODO: Mesh collider: also upload face normals
    }
 
+
+   // #TODO: Mesh Collider: cook face AABBs, face normals, BVH
+
+
    commandBuffer.recordMeshCreate(
       handle,
       std::move(mesh)
    );
 
    return handle;
+}
+
+bool Engine::destroyMesh(MeshHandle meshHandle) 
+{
+   if (!physicsStorage.tryGetMesh(meshHandle)) {
+      std::cout << "Mesh handle is not alive" << std::endl;
+
+      return false;
+   }
+
+
+   return commandBuffer.recordMeshDestroy(
+      meshHandle, 
+      physicsStorage);
 }
 
 //=========================================

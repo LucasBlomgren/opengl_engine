@@ -11,6 +11,7 @@ using MotionH = MotionStateHandle;
 using SleepH = SleepStateHandle;
 using MeshH = MeshHandle;
 
+using MeshMap = SlotMap<Mesh, MeshHandle>;
 using BodyMap = SlotMap<RigidBody, BodyHandle>;
 using MotionMap = SlotMap<MotionState, MotionStateHandle>;
 using SleepMap = SlotMap<SleepState, SleepStateHandle>;
@@ -34,6 +35,10 @@ void PS::clear() {
 //===========================================
 // Get data by handle
 //===========================================
+Mesh& PS::getMesh(MeshH h) { return meshes.get(h); }
+Mesh* PS::tryGetMesh(MeshH h, SourceLoc c) { return meshes.try_get(h, c); }
+const Mesh* PS::tryGetMesh(MeshH h, SourceLoc c) const { return meshes.try_get(h, c); }
+
 RigidBody& PS::getBody(BodyH h) { return bodies.get(h); }
 RigidBody* PS::tryGetBody(BodyH h, SourceLoc c) { return bodies.try_get(h, c); }
 const RigidBody* PS::tryGetBody(BodyH h, SourceLoc c) const { return bodies.try_get(h, c); }
@@ -56,6 +61,9 @@ const Compound* PS::tryGetCompound(CompH h, SourceLoc c) const { return compound
 //===========================================
 // Get storage
 //===========================================
+MeshMap& PS::meshStorage() { return meshes; }
+const MeshMap& PS::meshStorage() const { return meshes; }
+
 BodyMap& PS::bodyStorage() { return bodies; }
 const BodyMap& PS::bodyStorage() const { return bodies; }
 

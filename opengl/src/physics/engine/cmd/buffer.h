@@ -171,7 +171,7 @@ public:
    void recordBodyCreate(BodyHandle body, RigidBody&& bodyData);
    void recordColliderCreate(ColliderHandle collider, Collider&& colliderData);
 
-   bool recordMeshDestroy(MeshHandle mesh);
+   bool recordMeshDestroy(MeshHandle mesh, PhysicsStorage& physicsStorage);
    bool recordBodyDestroy(BodyHandle body, PhysicsStorage& physicsStorage);
    bool recordColliderDestroy(ColliderHandle collider, PhysicsStorage& physicsStorage);
 

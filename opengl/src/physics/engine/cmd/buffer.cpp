@@ -110,8 +110,17 @@ void Buffer::recordColliderCreate(
 //=========================================
 // Lifecycle destroy
 //=========================================
-bool Buffer::recordMeshDestroy(MeshHandle mesh) 
+bool Buffer::recordMeshDestroy(
+   MeshHandle mesh, 
+   PhysicsStorage& physicsStorage)
 {
+   if (meshCreates.contains(mesh)) {
+      meshCreates.erase(mesh);
+      physicsStorage.releaseMeshReservation(mesh);
+
+      return false;
+   }
+
    return meshDestroys.insert(mesh).second;
 }
 

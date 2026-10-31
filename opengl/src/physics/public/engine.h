@@ -62,7 +62,8 @@ public:
    // Objects
    //======================================
    [[nodiscard]]
-   MeshHandle uploadMeshCollider(const std::string& id, const MeshShapeDesc& mesh);
+   MeshHandle uploadMesh(const std::string& id, const MeshShapeDesc& mesh);
+   bool destroyMesh(MeshHandle mesh);
 
    [[nodiscard]] 
    BodyHandle createRigidBody(const BodyDesc& desc);

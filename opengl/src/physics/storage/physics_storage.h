@@ -57,6 +57,10 @@ public:
    //===========================================
    // Get data by handle
    //===========================================
+   Mesh& getMesh(MeshHandle);
+   Mesh* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current());
+   const Mesh* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current()) const;
+
    RigidBody& getBody(BodyHandle);
    RigidBody* tryGetBody(BodyHandle, SourceLoc c = SourceLoc::current());
    const RigidBody* tryGetBody(BodyHandle, SourceLoc c = SourceLoc::current()) const;
@@ -79,6 +83,9 @@ public:
    //===========================================
    // Get storage
    //===========================================
+   SlotMap<Mesh, MeshHandle>& meshStorage();
+   const SlotMap<Mesh, MeshHandle>& meshStorage() const;
+
    SlotMap<RigidBody, BodyHandle>& bodyStorage();
    const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
 
