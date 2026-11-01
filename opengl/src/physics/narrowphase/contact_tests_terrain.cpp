@@ -147,8 +147,10 @@ void NarrowphaseManager::processTerrainTriBox(
 
    ContactRuntime runtimeData = makeRuntimeData(body, collider);
    Contact contact(bodyH, runtimeData, avgNormal);
+
    Contact* contactPtr =
       collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
+
    batch.contacts.push_back(contactPtr);
 }
 
@@ -231,6 +233,7 @@ void NarrowphaseManager::processTerrainTriSphere(
    ContactRuntime runtimeData = makeRuntimeData(body, collider);
 
    Contact contact(bodyH, runtimeData, avgSolverNormal);
+
    Contact* contactPtr =
       collisionManifold->sphereMesh(contact, *contactCache, SAT_resultsList);
 

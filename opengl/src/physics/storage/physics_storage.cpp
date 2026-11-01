@@ -20,10 +20,18 @@ using CompoundMap = SlotMap<Compound, CompoundHandle>;
 
 using PS = PhysicsStorage;
 
+
+template bool PhysicsStorage::isAlive<MotionStateTag>(
+   MotionStateHandle) const;
+
+template bool PhysicsStorage::isAlive<SleepStateTag>(
+   SleepStateHandle) const;
+
 //===========================================
 // Clear all data
 //===========================================
 void PS::clear() {
+   meshes.clear();
    colliders.clear();
    bodies.clear();
    motionStates.clear();
@@ -87,10 +95,12 @@ AABB& PS::getAABB(const BodyHandle h)
    RigidBody& body = getBody(h);
    BodyColliderRef& ref = body.colliderRef;
 
-   if (ref.isSingle())
+   if (ref.isSingle()) {
       return getCollider(ref.single).getAABB();
-
-   return getCompound(ref.compound).aabb;
+   }
+   else if (ref.isCompound()) {
+      return getCompound(ref.compound).aabb;
+   }
 }
 
 //===========================================

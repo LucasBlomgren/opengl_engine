@@ -204,7 +204,7 @@ int main() {
 
 
 
-
+   // 1. upload mesh
    Mesh* mesh = meshManager.getMesh("cylinder_collider");
    physics::MeshShapeDesc meshCollider;
 
@@ -221,12 +221,62 @@ int main() {
       for (uint32_t idx : face) {
          meshCollider.faceIndices.push_back(idx);
       }
-
       meshCollider.faces.push_back(faceDesc);
    }
-
-   physics::MeshHandle handle =
+   physics::MeshHandle meshHandle =
       physicsEngine.uploadMesh("Cylinder", meshCollider);
+
+
+   {
+      // 1. Create GameObject
+      GameObjectDesc desc;
+      desc.name = "MeshTest";
+      desc.rootTransformHandle = world.createTransform();
+
+      SubPartDesc sub;
+      sub.localTransformHandle = world.createTransform();
+      sub.meshName = "cylinder_render";
+      sub.colliderType = physics::ColliderType::MESH;
+      desc.parts.push_back(sub);
+
+      GameObjectHandle objH = world.createGameObject(desc);
+      GameObject* obj = world.getGameObject(objH);
+
+      // 2. Create Mesh Collider
+      physics::ColliderDesc colliderDesc;
+      colliderDesc.shape = meshHandle;
+      colliderDesc.localPose = {};
+
+      // 3. Attach Collider to GameObject's RigidBody
+      physics::ColliderHandle colliderH =
+         physicsEngine.createCollider(obj->rigidBodyHandle, colliderDesc);
+   }
+   {
+      // 1. Create GameObject
+      GameObjectDesc desc;
+      desc.name = "MeshTest";
+      desc.rootTransformHandle = world.createTransform(glm::vec3(5.0,0,0));
+
+      SubPartDesc sub;
+      sub.localTransformHandle = world.createTransform();
+      sub.meshName = "cylinder_render";
+      sub.colliderType = physics::ColliderType::MESH;
+      desc.parts.push_back(sub);
+
+      GameObjectHandle objH = world.createGameObject(desc);
+      GameObject* obj = world.getGameObject(objH);
+
+      // 2. Create Mesh Collider
+      physics::ColliderDesc colliderDesc;
+      colliderDesc.shape = meshHandle;
+      colliderDesc.localPose = {};
+
+      // 3. Attach Collider to GameObject's RigidBody
+      physics::ColliderHandle colliderH =
+         physicsEngine.createCollider(obj->rigidBodyHandle, colliderDesc);
+   }
+
+
 
 
 
@@ -403,7 +453,7 @@ int main() {
             GameObjectHandle objectHandle =
                world.getGameObjectHandle(handle);
 
-            if (objectHandle.isValid()) {
+            if (objectHandle.isSet()) {
                outOfBoundsObjects.push_back(objectHandle);
             }
          }

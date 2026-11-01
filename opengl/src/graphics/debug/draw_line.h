@@ -2,8 +2,12 @@
 
 #include "graphics/shaders/shader.h"
 
-// Deklarera setupLine-funktionen
-unsigned int setupLine();
+void initLineRenderer(Shader* shader);
 
-// Deklarera drawLine-funktionen
-void drawLine(const Shader& shader, unsigned int& VAO, const glm::vec3& lineStart, const glm::vec3& lineEnd, const glm::vec3& color);
+glm::vec3 colorFromIndex(uint32_t index);
+
+void drawLine(
+   const glm::vec3& lineStart, 
+   const glm::vec3& lineEnd, 
+   uint32_t index
+);

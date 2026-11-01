@@ -17,7 +17,11 @@ class World;
 
 class DebugRenderer {
 public:
-   void init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager);
+   void init(
+      const EngineState& engineState, 
+      const MeshManager& meshManager, 
+      const ShaderManager& shaderManager
+   );
 
    void prepareFrame(
       physics::Engine& physics,
@@ -28,7 +32,12 @@ public:
    );
 
    void renderShadowPass() const;
-   void renderOverlayPass(const physics::Engine& physicsEngine, const Camera& camera, const std::vector<GameObject>& objects, World& world);
+   void renderOverlayPass(
+      const physics::Engine& physicsEngine, 
+      const Camera& camera, 
+      const std::vector<GameObject>& objects, 
+      World& world
+   );
 
    OOBBRenderer oobbRenderer;
    SphereOutlineRenderer sphereOutlineRenderer;

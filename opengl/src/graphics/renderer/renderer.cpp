@@ -305,7 +305,7 @@ void Renderer::render(
    uploadLightsToShader();
 
    // update selected light position to match selected object position
-   if (editor->selectedObjectHandle.isValid()) {
+   if (editor->selectedObjectHandle.isSet()) {
       GameObject* obj = world->getGameObject(editor->selectedObjectHandle);
       if (obj) {
          Transform* t = world->getTransform(obj->rootTransformHandle);
@@ -348,6 +348,8 @@ void Renderer::render(
 
    // debug
    glBeginQuery(GL_TIME_ELAPSED, qDebug[writeIdx]);
+
+   physics->renderDebugImmediate();
 
    debugRenderer.renderOverlayPass(
       *physics,
@@ -857,7 +859,7 @@ void Renderer::renderHoveredObjectOutline(
    Camera& camera,
    SceneBuilder& builder)
 {
-   if (!handle.isValid()) return;
+   if (!handle.isSet()) return;
 
    GameObject* obj = world->getGameObject(handle);
    if (!obj) return;
@@ -910,7 +912,7 @@ void Renderer::renderSelectedObjectOutline(
    Camera& camera,
    SceneBuilder& builder)
 {
-   if (!handle.isValid()) return;
+   if (!handle.isSet()) return;
 
    GameObject* obj = world->getGameObject(handle);
    if (!obj) return;

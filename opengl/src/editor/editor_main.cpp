@@ -252,7 +252,7 @@ void Editor::EditorMain::handleInput(
       mouseYLastFrame = in.mousePos.y;
 
       if (in.mousePressed[GLFW_MOUSE_BUTTON_1]) {
-         if (!selectedObjectHandle.isValid()) {
+         if (!selectedObjectHandle.isSet()) {
             physics::RaycastHit hitData = rayCastMousePos(SELECT_RANGE);
             selectObject(ctx);
          }
@@ -295,7 +295,7 @@ void Editor::EditorMain::handleInput(
       selectedObjectIsBeingMoved = false;
       if (in.mouseDown[GLFW_MOUSE_BUTTON_1] &&
          in.mouseDown[GLFW_MOUSE_BUTTON_2] &&
-         selectedObjectHandle.isValid())
+         selectedObjectHandle.isSet())
       {
          selectedObjectIsBeingMoved = true;
       }
@@ -619,7 +619,7 @@ void Editor::EditorMain::update(Shader& shader) {
 // OBJECT SELECTION AND MANIPULATION
 //====================================================
 void Editor::EditorMain::syncSelectionOffset() {
-   if (!selectedObjectHandle.isValid()) return;
+   if (!selectedObjectHandle.isSet()) return;
 
    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
    Transform* transform = world->getTransform(selectedObject->rootTransformHandle);
@@ -633,7 +633,7 @@ void Editor::EditorMain::syncSelectionOffset() {
 
 // select object
 void Editor::EditorMain::selectObject(const InputContext& ctx) {
-   if (selectedObjectHandle.isValid()) return;
+   if (selectedObjectHandle.isSet()) return;
 
    physics::RaycastHit raycast = rayCastMousePos(SELECT_RANGE);
 
@@ -644,7 +644,7 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
 
    GameObjectHandle selectedHandle =
       world->getGameObjectHandle(raycast.bodyHandle);
-   if (!selectedHandle.isValid()) {
+   if (!selectedHandle.isSet()) {
       return;
    }
    selectedObjectHandle = selectedHandle;
@@ -666,7 +666,7 @@ void Editor::EditorMain::selectObject(const InputContext& ctx) {
 
 // update selected object position based on camera and offset
 void Editor::EditorMain::updateSelectedObject(float fixedTimeStep) {
-   if (!selectedObjectHandle.isValid())
+   if (!selectedObjectHandle.isSet())
       return;
 
    GameObject* selectedObject =

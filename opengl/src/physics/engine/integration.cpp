@@ -18,7 +18,7 @@ void Engine::integrateForcesAndVelocities(
    for (BodyHandle bodyHandle : awakeBodies) {
       RigidBody& body = physicsStorage.getBody(bodyHandle);
 
-      if (!body.colliderRef.isValid())
+      if (body.colliderRef.isNone())
          continue;
 
       if (body.type != BodyType::Dynamic)
@@ -40,7 +40,7 @@ void Engine::integrateForcesAndVelocities(
             singleCollider = compound.colliders.front();
       }
 
-      if (singleCollider.isValid()) {
+      if (singleCollider.isSet()) {
          const Collider& collider =
             physicsStorage.getCollider(singleCollider);
 
@@ -95,7 +95,15 @@ void Engine::updateColliders(RigidBody& body)
 
          collider.updateWorldPose(body.pose);
          collider.updateShape();
-         collider.updateAABB();
+
+         // AABB
+         if (const auto* meshH = std::get_if<MeshHandle>(&collider.shape)) {
+            const Mesh& mesh = physicsStorage.getMesh(*meshH);
+            collider.transformMeshAABB(mesh.localAABB);
+         }
+         else {
+            collider.rebuildAABB();
+         }
 
          // Compound AABB bounds
          if (compound) {

@@ -89,20 +89,25 @@ MeshHandle Engine::uploadMesh(
    MeshHandle handle = physicsStorage.reserveMeshHandle();
    registry.emplace(id, handle);
 
-   Mesh mesh;
-   mesh.vertices = desc.vertices;
-   mesh.faceIndices = desc.faceIndices;
-
+   std::vector<MeshFace> faces;
+   faces.reserve(desc.faces.size());
    for (const MeshFaceDesc& faceDesc : desc.faces) {
       MeshFace face;
       face.firstIndex = faceDesc.firstIndex;
       face.vertexCount = faceDesc.vertexCount;
-      mesh.faces.push_back(face);
+      faces.push_back(face);
       // #TODO: Mesh collider: also upload face normals
    }
 
+   Mesh mesh(
+      desc.vertices,
+      faces,
+      desc.faceIndices
+   );
 
-   // #TODO: Mesh Collider: cook face AABBs, face normals, BVH
+
+   // #TODO: Mesh Collider: cook
+   // face normals, root AABB + BVH, reduce duplicated vertices, inertia matrix
 
 
    commandBuffer.recordMeshCreate(
@@ -167,6 +172,10 @@ ColliderHandle Engine::createCollider(
          collider.type = ColliderType::SPHERE;
          collider.shape = Sphere(shapeDesc.radius, shapeDesc.center);
       }
+      else if constexpr (std::is_same_v<ShapeDescType, MeshHandle>) {
+         collider.type = ColliderType::MESH;
+         collider.shape = shapeDesc;
+      }
       else {
          validShape = false;
       }
@@ -179,7 +188,7 @@ ColliderHandle Engine::createCollider(
 
    collider.updateWorldPose(body->pose);
    collider.updateShape();
-   collider.updateAABB();
+   collider.rebuildAABB();
 
    commandBuffer.recordColliderCreate(
       colliderHandle,

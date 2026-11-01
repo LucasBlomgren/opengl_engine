@@ -370,7 +370,7 @@ void Editor::PerformancePanel::OnImGuiRender(const PanelContext& ctx)
    TotalTooltip();
 
    ImGui::TextDisabled("CPU %.2f   GPU %.2f", cpu_total_ms, gpu_total_ms);
-   ImGui::TextDisabled("Obj %s   Col %zu", objCompact.c_str(), ctx.amountContacts);
+   ImGui::TextDisabled("Obj %s   Contact %zu", objCompact.c_str(), ctx.amountContacts);
 
    DrawSparkline(190.0f, 18.0f);
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <variant>
 
+#include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
 namespace physics {
@@ -35,7 +36,7 @@ struct MeshShapeDesc {
 };
 
 using ColliderShapeDesc =
-   std::variant<BoxShapeDesc, SphereShapeDesc, MeshShapeDesc>;
+   std::variant<BoxShapeDesc, SphereShapeDesc, MeshHandle>;
 
 //=======================================================
 // For use with Engine::createCollider() to

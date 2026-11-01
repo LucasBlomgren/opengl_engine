@@ -117,12 +117,13 @@ void SceneBuilder::createScene(int sceneID, bool isPlayerMode, int amount)
    setLights();
 
    switch (sceneID) {
-   case 0: testFloorScene(amount); break;
-   case 1: sandBox(); break;
-   case 2: terrainScene(); break;
-   case 3: tallStructureScene(); break;
-   case 4: castleScene(); break;
-   case 5: staircaseScene(); break;
+   case 0: emptyScene(); break;
+   case 1: testFloorScene(amount); break;
+   case 2: sandBox(); break;
+   case 3: terrainScene(); break;
+   case 4: tallStructureScene(); break;
+   case 5: castleScene(); break;
+   case 6: staircaseScene(); break;
    default: break;
    }
 

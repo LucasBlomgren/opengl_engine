@@ -88,10 +88,10 @@ BodyHandle Engine::createRigidBody(
       ColliderHandle colliderHandle =
          createCollider(bodyHandle, colliderDesc);
 
-      if (!colliderHandle.isValid()) {
-         commandBuffer.recordBodyDestroy(bodyHandle, physicsStorage);
-         return {};
-      }
+      //if (!colliderHandle.isValid()) {
+      //   commandBuffer.recordBodyDestroy(bodyHandle, physicsStorage);
+      //   return {};
+      //}
    }
 
    return bodyHandle;

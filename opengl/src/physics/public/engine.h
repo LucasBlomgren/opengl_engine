@@ -168,6 +168,7 @@ public:
    //======================================
    // Debug
    //======================================
+   void renderDebugImmediate();
    debug::Data getDebugData() const;
    debug::StepPhase getDebugPhase() const;
    debug::Bvh getDebugBvh(debug::BvhType type) const;

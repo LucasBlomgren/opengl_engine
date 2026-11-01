@@ -2,6 +2,8 @@
 
 #include "physics/public/engine.h"
 
+#include "graphics/debug/draw_line.h"
+
 namespace physics {
 
 using namespace internal;
@@ -45,6 +47,69 @@ physics::debug::Bvh copyBvh(const BVHTree& tree) {
 
    return result;
 }
+}
+
+void Engine::renderDebugImmediate()
+{
+   for (const RigidBody& body : physicsStorage.bodyStorage().dense()) {
+      if (!body.colliderRef.isSingle())
+         continue;
+
+      const Collider& collider =
+         physicsStorage.getCollider(body.colliderRef.single);
+
+      const MeshHandle* meshH = std::get_if<MeshHandle>(&collider.shape);
+      if (!meshH || !physicsStorage.isAlive(*meshH))
+         continue;
+
+      const Mesh& mesh = physicsStorage.getMesh(*meshH);
+
+      std::vector<internal::AABB> boxes;
+      boxes.reserve(mesh.faces.size());
+
+      for (const MeshFace& face : mesh.faces) {
+         glm::vec3 minimum(FLT_MAX);
+         glm::vec3 maximum(-FLT_MAX);
+
+         for (size_t i = 0; i < face.vertexCount; ++i) {
+            glm::vec3 vertex = mesh.vertices[mesh.faceIndices[face.firstIndex + i]];
+
+            glm::vec3 worldVertex = 
+               collider.worldPose.position + (collider.worldPose.orientation * vertex);
+
+            minimum = glm::min(minimum, worldVertex);
+            maximum = glm::max(maximum, worldVertex);
+         }
+
+         internal::AABB aabb;
+         aabb.worldMin = minimum;
+         aabb.worldMax = maximum;
+         aabb.worldCenter = (minimum + maximum) * 0.5f;
+         aabb.worldHalfExtents = (maximum - minimum) * 0.5f;
+
+         boxes.push_back(aabb);
+      }
+
+      for (uint32_t i = 0; i < boxes.size(); ++i) {
+         const auto& aabb = boxes[i];
+         glm::vec3 p[8];
+
+         for (int j = 0; j < 8; ++j) {
+            p[j] = {
+               (j & 1) ? aabb.worldMax.x : aabb.worldMin.x,
+               (j & 2) ? aabb.worldMax.y : aabb.worldMin.y,
+               (j & 4) ? aabb.worldMax.z : aabb.worldMin.z
+            };
+         }
+
+         for (int j = 0; j < 8; ++j) {
+            for (int axis = 0; axis < 3; ++axis) {
+               if (!(j & (1 << axis))) 
+                  drawLine(p[j], p[j | (1 << axis)], i);
+            }
+         }
+      }
+   }
 }
 
 physics::debug::Data Engine::getDebugData() const {

@@ -1,26 +1,49 @@
 #include "pch.h"
 #include "draw_line.h"
 
-unsigned int setupLine() {
-   // Din kod för att skapa och konfigurera VAO
-   unsigned int VAO;
-   glGenVertexArrays(1, &VAO); glcount::incVAO();
-   glBindVertexArray(VAO);
-   glBindVertexArray(0); // Återställ bindningen
-   return VAO;
+namespace {
+   Shader* lineShader = nullptr;
+   GLuint lineVAO = 0;
 }
 
-void drawLine(const Shader& shader, unsigned int& VAO, const glm::vec3& lineStart, const glm::vec3& lineEnd, const glm::vec3& color)
+void initLineRenderer(Shader* shader) {
+   lineShader = shader;
+
+   glGenVertexArrays(1, &lineVAO); glcount::incVAO();
+   glBindVertexArray(lineVAO);
+   glBindVertexArray(0);
+}
+
+glm::vec3 colorFromIndex(uint32_t index) {
+   uint32_t h = index + 1;
+   h ^= h >> 16;
+   h *= 0x7feb352d;
+   h ^= h >> 15;
+   h *= 0x846ca68b;
+   h ^= h >> 16;
+
+   return glm::vec3(
+      (h & 255) / 255.0f,
+      ((h >> 8) & 255) / 255.0f,
+      ((h >> 16) & 255) / 255.0f
+   );
+}
+
+void drawLine(
+   const glm::vec3& start,
+   const glm::vec3& end,
+   uint32_t index)
 {
-   // Skicka start- och slutpunkt till shadern
-   shader.setVec3("debug.lineStart", lineStart);
-   shader.setVec3("debug.lineEnd", lineEnd);
+   lineShader->use();
 
-   shader.setBool("debug.useUniformColor", true);
-   shader.setVec3("debug.uColor", color);
+   lineShader->setInt("debug.objectType", 3);
+   lineShader->setVec3("debug.lineStart", start);
+   lineShader->setVec3("debug.lineEnd", end);
+   lineShader->setBool("debug.useUniformColor", true);
+   lineShader->setVec3("debug.uColor", colorFromIndex(index));
 
-   // Rendera linjen
-   glBindVertexArray(VAO);
-   glDrawArrays(GL_LINES, 0, 2);  // GL_LINES används för att rita linjen
+   glLineWidth(2.0);
+   glBindVertexArray(lineVAO);
+   glDrawArrays(GL_LINES, 0, 2);
    glBindVertexArray(0);
 }

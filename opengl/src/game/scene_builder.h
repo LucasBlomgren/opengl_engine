@@ -43,6 +43,8 @@ public:
    void objectRain(float& current_time, glm::vec3& pos, int mode);
 
    void createScene(int sceneID, bool isPlayerMode, int amount);
+
+   void emptyScene();
    void staircaseScene();
    void sandBox();
    void terrainScene();

@@ -22,6 +22,38 @@ public:
    void clear();
 
    //===========================================
+   // Handle alive check
+   //===========================================
+   template<typename Tag>
+   bool isAlive(HandleT<Tag> handle) const {
+      if constexpr (std::is_same_v<Tag, BodyTag>)
+         return bodies.alive(handle);
+      else if constexpr (std::is_same_v<Tag, ColliderTag>)
+         return colliders.alive(handle);
+      else if constexpr (std::is_same_v<Tag, CompoundTag>)
+         return compounds.alive(handle);
+      else if constexpr (std::is_same_v<Tag, MotionStateTag>)
+         return motionStates.alive(handle);
+      else if constexpr (std::is_same_v<Tag, SleepStateTag>)
+         return sleepStates.alive(handle);
+      else if constexpr (std::is_same_v<Tag, MeshTag>)
+         return meshes.alive(handle);
+      else
+         return false;
+   }
+
+   bool isAlive(const BodyColliderRef& ref) const {
+      switch (ref.type) {
+      case BodyColliderRef::Type::SINGLE:
+         return isAlive(ref.single);
+      case BodyColliderRef::Type::COMPOUND:
+         return isAlive(ref.compound);
+      default:
+         return false;
+      }
+   }
+
+   //===========================================
    // Reservation
    //===========================================
    BodyHandle reserveBodyHandle();

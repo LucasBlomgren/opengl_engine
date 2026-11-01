@@ -14,7 +14,7 @@
 
 namespace physics::internal {
 
-using ColliderShape = std::variant<Box, Sphere, Mesh>;
+using ColliderShape = std::variant<Box, Sphere, MeshHandle>;
 
 class Collider {
 public:
@@ -31,7 +31,6 @@ public:
    ColliderTransformCache transformCache;
 
    AABB aabb;
-   bool aabbDirty = true;
 
    bool enabled = true;
    bool isTrigger = false;
@@ -40,12 +39,10 @@ public:
 
    void updateWorldPose(const Pose& bodyPose);
    void updateShape();
-   void updateAABB();
+   void rebuildAABB();
+   void transformMeshAABB(const AABB& localAABB);
 
    AABB& getAABB();
-
-private:
-   void rebuildAABB();
+   const AABB& getAABB() const;
 };
-
 }

@@ -26,7 +26,7 @@ struct BodyState {
    bool allowSleep = true;
    bool allowGravity = true;
 
-   AABB bounds;
+   physics::AABB bounds;
    std::vector<ColliderHandle> colliders;
 };
 

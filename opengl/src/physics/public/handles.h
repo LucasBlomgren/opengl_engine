@@ -12,12 +12,12 @@ struct HandleT {
    uint32_t slot = INVALID;
    uint32_t gen = INVALID;
 
-   bool isValid() const noexcept {
+   bool isSet() const noexcept {
       return slot != INVALID;
    }
 
    explicit operator bool() const noexcept {
-      return isValid();
+      return isSet();
    }
 
    friend bool operator==(const HandleT& a, const HandleT& b) noexcept {

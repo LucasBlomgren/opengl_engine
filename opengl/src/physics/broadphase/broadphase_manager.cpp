@@ -348,7 +348,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt)
       RigidBody& body = storage->getBody(handle);
 
       if (body.type != BodyType::Dynamic ||
-         !body.colliderRef.isValid())
+         body.colliderRef.isNone())
          continue;
 
       float minExtent = std::numeric_limits<float>::max();

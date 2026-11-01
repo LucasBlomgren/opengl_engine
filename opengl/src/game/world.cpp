@@ -176,7 +176,7 @@ GameObjectHandle World::createGameObject(
    physics::BodyHandle bodyHandle =
       physicsEngine.createRigidBody(bodyDesc);
 
-   if (!bodyHandle.isValid()) {
+   if (!bodyHandle.isSet()) {
       std::cerr
          << "[World] Cannot create physics body for GameObject '"
          << objectDesc.name
@@ -296,6 +296,12 @@ GameObjectHandle World::createGameObject(
             radius * maxRootScale * maxPartScale
          };
       }
+      else if (partDesc.colliderType == physics::ColliderType::MESH) 
+      {
+         gameObject->parts.push_back(part);
+         std::cout << "World created collider Mesh" << std::endl;
+         continue;
+      }
       else {
          std::cerr
             << "[World] Skipping part '"
@@ -307,7 +313,7 @@ GameObjectHandle World::createGameObject(
       physics::ColliderHandle colliderHandle =
          physicsEngine.createCollider(bodyHandle, colliderDesc);
 
-      if (!colliderHandle.isValid()) {
+      if (!colliderHandle.isSet()) {
          std::cerr
             << "[World] Failed to create collider for part '"
             << partDesc.name
@@ -319,18 +325,6 @@ GameObjectHandle World::createGameObject(
       gameObject->parts.push_back(part);
       ++createdColliderCount;
    }
-
-   //// If no colliders were created, clean up and return an invalid handle
-   //if (createdColliderCount == 0) {
-   //    std::cerr
-   //        << "[World] Cannot create GameObject '"
-   //        << objectDesc.name
-   //        << "': no colliders were created.\n";
-
-   //    physicsEngine.destroyRigidBody(bodyHandle);
-   //    gameObjects.destroy(gameObjectHandle);
-   //    return {};
-   //}
 
    // Map the rigid body handle to the game object handle
    bodyToGameObject[bodyHandle] = gameObjectHandle;

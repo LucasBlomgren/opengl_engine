@@ -107,7 +107,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
    ImGui::Spacing();
    ImGui::Spacing();
 
-   if (!ctx.objectIsSelected || !ctx.selectedObjectHandle.isValid())
+   if (!ctx.objectIsSelected || !ctx.selectedObjectHandle.isSet())
    {
       ImGui::TextDisabled("No object selected");
       ImGui::End();
@@ -586,7 +586,7 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
 
             physics::ColliderHandle colliderHandle =
                ctx.physicsEngine->createCollider(obj->rigidBodyHandle, colliderDesc);
-            if (colliderHandle.isValid()) {
+            if (colliderHandle.isSet()) {
                part.colliderHandle = colliderHandle;
                obj->parts.push_back(part);
                ctx.world->syncGameObjectTransformToPhysics(

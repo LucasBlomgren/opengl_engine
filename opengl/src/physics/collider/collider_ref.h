@@ -28,26 +28,14 @@ struct BodyColliderRef {
    BodyColliderRef(CompoundHandle h)
       : type(Type::COMPOUND), compound(h) {}
 
-
+   bool isNone() const {
+      return type == Type::NONE ? true : false;
+   }
    bool isSingle() const {
-      if (type == Type::SINGLE) return true;
-      return false;
+      return type == Type::SINGLE ? true : false;
    }
-
    bool isCompound() const {
-      if (type == Type::COMPOUND) return true;
-      return false;
-   }
-
-   bool isValid() const {
-      if (type == Type::NONE) {
-         return false;
-      }
-      else if (type == Type::SINGLE) {
-         return single.isValid();
-      }
-
-      return compound.isValid();
+      return type == Type::COMPOUND ? true : false;
    }
 };
 

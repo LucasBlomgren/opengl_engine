@@ -20,7 +20,7 @@ internal::AABB getCombinedBounds(
       if (!collider || !collider->enabled)
          continue;
 
-      const internal::AABB& box = collider->aabb;
+      const internal::AABB& box = collider->getAABB();
 
       if (first) {
          bounds = box;
@@ -198,7 +198,7 @@ Engine::getColliderState(ColliderHandle handle) const
    state.localPose = collider->localPose;
    state.worldPose = collider->worldPose;
    state.type = collider->type;
-   state.bounds = toPublicBounds(collider->aabb);
+   state.bounds = toPublicBounds(collider->getAABB());
    state.enabled = collider->enabled;
    state.isTrigger = collider->isTrigger;
    state.userTag = collider->userTag;
@@ -210,7 +210,7 @@ Engine::getColliderState(ColliderHandle handle) const
           box.localHalfExtents,
       };
    }
-   else {
+   else if (collider->type == ColliderType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider->shape);
       state.shape = SphereGeometry{
           sphere.centerWorld,

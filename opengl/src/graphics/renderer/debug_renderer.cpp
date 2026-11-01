@@ -3,10 +3,16 @@
 #include "graphics/debug/render_contact_points.h"
 #include "game/world.h"
 
+#include "graphics/debug/draw_line.h"
+
 //-----------------------------
 //   Init
 //-----------------------------
-void DebugRenderer::init(const EngineState& engineState, const MeshManager& meshManager, const ShaderManager& shaderManager) {
+void DebugRenderer::init(
+   const EngineState& engineState, 
+   const MeshManager& meshManager, 
+   const ShaderManager& shaderManager) 
+{
    this->engineState = &engineState;
    litMeshShader = shaderManager.getShader("default");
    debugShapeShader = shaderManager.getShader("debug");
@@ -21,12 +27,20 @@ void DebugRenderer::init(const EngineState& engineState, const MeshManager& mesh
 
    litMeshShader->use();
    VAO_contactPoint = setupContactPoint();
+
+   initLineRenderer(shaderManager.getShader("debug"));
 }
 
 //---------------------------------------------
 //  Prepare Scene debug meshes
 //---------------------------------------------
-void DebugRenderer::prepareFrame(physics::Engine& physics, const std::vector<GameObject>& objects, World& world, GameObjectHandle& selectedObjectHandle, int selectedSubPartIndex) {
+void DebugRenderer::prepareFrame(
+   physics::Engine& physics, 
+   const std::vector<GameObject>& objects, 
+   World& world, 
+   GameObjectHandle& selectedObjectHandle, 
+   int selectedSubPartIndex) 
+{
    sceneDebugMeshes.clear();
 
    prepareObjectLocalNormals(
@@ -59,7 +73,12 @@ void DebugRenderer::renderShadowPass() const {
 // ---------------------------------------------------------------------
 //    Render Overlay Pass: (debug shapes + debug meshes with lighting)
 // ---------------------------------------------------------------------
-void DebugRenderer::renderOverlayPass(const physics::Engine& physics, const Camera& camera, const std::vector<GameObject>& objects, World& world) {
+void DebugRenderer::renderOverlayPass(
+   const physics::Engine& physics, 
+   const Camera& camera, 
+   const std::vector<GameObject>& objects, 
+   World& world) 
+{
    // render debug shapes (AABBs, contact points etc) without lighting
    debugShapeShader->use();
    debugShapeShader->setBool("debug.useUniformColor", true);
@@ -124,7 +143,7 @@ void DebugRenderer::prepareObjectLocalNormals(
    GameObjectHandle& selectedObjectHandle,
    int selectedSubPartIndex)
 {
-   if (!selectedObjectHandle.isValid()) return;
+   if (!selectedObjectHandle.isSet()) return;
 
    GameObject* selectedObject = world.getGameObject(selectedObjectHandle);
    if (!selectedObject) return;
@@ -139,7 +158,8 @@ void DebugRenderer::prepareObjectLocalNormals(
    glm::quat orientationToUse = rootTransform->orientation;
    glm::vec3 positionToUse = rootTransform->position;
 
-   // subpart selected: use local transform + collider pose of subpart instead of root transform, to visualize local normals in the correct orientation/position
+   // subpart selected: use local transform + collider pose of subpart instead of root 
+   // transform, to visualize local normals in the correct orientation/position
    if (selectedSubPartIndex >= 0 && selectedSubPartIndex < selectedObject->parts.size()) {
       const std::optional<physics::ColliderState> collider =
          physics.getColliderState(
@@ -187,9 +207,12 @@ void DebugRenderer::prepareXYZAxes() {
    const glm::mat4 T = glm::translate(glm::mat4(1.0f), offset);
    const glm::mat4 TailToOrigin = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.77f, 0.0f));
 
-   sceneDebugMeshes.push_back({ m, T * normalsRenderer.modelX * TailToOrigin * S, glm::vec3(1,0,0), false });
-   sceneDebugMeshes.push_back({ m, T * normalsRenderer.modelY * TailToOrigin * S, glm::vec3(0,1,0), false });
-   sceneDebugMeshes.push_back({ m, T * normalsRenderer.modelZ * TailToOrigin * S, glm::vec3(0,0,1), false });
+   sceneDebugMeshes.push_back(
+      { m, T * normalsRenderer.modelX * TailToOrigin * S, glm::vec3(1,0,0), false });
+   sceneDebugMeshes.push_back(
+      { m, T * normalsRenderer.modelY * TailToOrigin * S, glm::vec3(0,1,0), false });
+   sceneDebugMeshes.push_back(
+      { m, T * normalsRenderer.modelZ * TailToOrigin * S, glm::vec3(0,0,1), false });
 }
 
 // ----------------------------------------------
@@ -197,7 +220,8 @@ void DebugRenderer::prepareXYZAxes() {
 // ----------------------------------------------
 void DebugRenderer::renderAABBs(
    const physics::Engine& physics,
-   const std::vector<GameObject>& objects) {
+   const std::vector<GameObject>& objects) 
+{
    if (!engineState->getShowAABB()) return;
 
    glLineWidth(AABB_LINE_WIDTH);
@@ -286,10 +310,10 @@ void DebugRenderer::renderContactPoints(
          index < contact.pointCount;
          ++index) {
          if (contact.points[index].warmStarted) {
-            debugShapeShader->setVec3("debug.uColor", glm::vec3(250, 0, 0)); // röd för warm-startade punkter
+            debugShapeShader->setVec3("debug.uColor", glm::vec3(250, 0, 0));
          }
          else {
-            debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 250, 154)); // grön för nya kontaktpunkter
+            debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 250, 154));
          }
 
          renderContactPoint(
@@ -302,7 +326,7 @@ void DebugRenderer::renderContactPoints(
 
    for (const physics::debug::SpeculativeContact& specContact :
       speculativeContacts) {
-      debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 255, 0)); // grön för spekulativa kontaktpunkter
+      debugShapeShader->setVec3("debug.uColor", glm::vec3(0, 255, 0));
       renderContactPoint(
          *debugShapeShader,
          VAO_contactPoint,

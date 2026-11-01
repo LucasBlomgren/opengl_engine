@@ -183,7 +183,7 @@ void Player::updateObjectSelection(Shader& shader) {
       pendingDrop = false;
    }
 
-   if (!selectedObjectHandle.isValid()) {
+   if (!selectedObjectHandle.isSet()) {
       createPlaceObjectAABB(shader);
    }
 
@@ -191,7 +191,7 @@ void Player::updateObjectSelection(Shader& shader) {
    physics::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
    // set new hover state
-   if (raycast.hit && !selectedObjectHandle.isValid()) {
+   if (raycast.hit && !selectedObjectHandle.isSet()) {
       hoveredObjectHandle =
          world->getGameObjectHandle(raycast.bodyHandle);
    }
@@ -280,11 +280,11 @@ void Player::resolveExternalContact() {
       bool playerIsA = false;
       bool playerInContact = false;
 
-      if (c.bodyA == playerObj->rigidBodyHandle && c.bodyA.isValid()) {
+      if (c.bodyA == playerObj->rigidBodyHandle && c.bodyA.isSet()) {
          playerInContact = true;
          playerIsA = true;
       }
-      else if (c.bodyB == playerObj->rigidBodyHandle && c.bodyB.isValid()) {
+      else if (c.bodyB == playerObj->rigidBodyHandle && c.bodyB.isSet()) {
          playerIsA = false;
          playerInContact = true;
       }
@@ -328,7 +328,7 @@ void Player::resolveExternalContact() {
 
 // Update position of selected object to follow camera + offset
 void Player::moveSelectedObject(float dt) {
-   if (!selectedObjectHandle.isValid()) return;
+   if (!selectedObjectHandle.isSet()) return;
 
    GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
    Transform* selectedTransform = world->getTransform(selectedObject->rootTransformHandle);
@@ -361,7 +361,7 @@ void Player::moveSelectedObject(float dt) {
 
 // Select object under crosshair
 void Player::selectObject() {
-   if (selectedObjectHandle.isValid()) return;
+   if (selectedObjectHandle.isSet()) return;
 
    physics::RaycastHit raycast = Player::raycast(SELECT_RANGE);
 
@@ -375,7 +375,7 @@ void Player::selectObject() {
 
    GameObjectHandle handle =
       world->getGameObjectHandle(raycast.bodyHandle);
-   if (!handle.isValid()) return;
+   if (!handle.isSet()) return;
 
    selectedObjectHandle = handle;
 
@@ -403,7 +403,7 @@ void Player::selectObject() {
 }
 
 void Player::dropObject() {
-   if (selectedObjectHandle.isValid()) {
+   if (selectedObjectHandle.isSet()) {
       GameObject* selectedObject = world->getGameObject(selectedObjectHandle);
 
       if (selectedObject) {

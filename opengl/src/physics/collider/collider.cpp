@@ -3,7 +3,12 @@
 
 namespace physics::internal {
 
+
 AABB& Collider::getAABB() {
+   return aabb;
+}
+
+const AABB& Collider::getAABB() const {
    return aabb;
 }
 
@@ -14,7 +19,6 @@ void Collider::updateWorldPose(const Pose& bodyPose) {
    worldPose.orientation = glm::normalize(bodyPose.orientation * localPose.orientation);
 
    transformCache.markDirty();
-   aabbDirty = true;
 }
 
 void Collider::updateShape() {
@@ -28,11 +32,6 @@ void Collider::updateShape() {
          colliderShape.update(worldPose);
       }
       }, shape);
-}
-
-void Collider::updateAABB() {
-   rebuildAABB();
-   aabbDirty = false;
 }
 
 void Collider::rebuildAABB() {
@@ -61,6 +60,24 @@ void Collider::rebuildAABB() {
       aabb.worldCenter = sphere.centerWorld;
       aabb.worldHalfExtents = glm::vec3(sphere.radius);
    }
+}
+
+void Collider::transformMeshAABB(const AABB& localAABB)
+{
+   const glm::mat3 R = glm::mat3_cast(worldPose.orientation);
+
+   const glm::vec3 center =
+      worldPose.position + R * localAABB.worldCenter;
+
+   const glm::vec3 extents =
+      glm::abs(R[0]) * localAABB.worldHalfExtents.x +
+      glm::abs(R[1]) * localAABB.worldHalfExtents.y +
+      glm::abs(R[2]) * localAABB.worldHalfExtents.z;
+
+   aabb.worldCenter = center;
+   aabb.worldHalfExtents = extents;
+   aabb.worldMin = center - extents;
+   aabb.worldMax = center + extents;
 }
 
 }

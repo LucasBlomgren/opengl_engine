@@ -16,7 +16,8 @@ enum class BodyType {
 
 enum class ColliderType {
    BOX,
-   SPHERE
+   SPHERE,
+   MESH
 };
 
 struct Pose {

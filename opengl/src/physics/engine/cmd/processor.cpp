@@ -26,7 +26,7 @@ void attachColliderToBody(
 {
    BodyColliderRef& ref = body.colliderRef;
 
-   if (!ref.isValid()) {
+   if (ref.isNone()) {
       ref = BodyColliderRef{ colliderH };
       return;
    }
@@ -44,7 +44,10 @@ void attachColliderToBody(
       return;
    }
 
-   storage.getCompound(ref.compound).colliders.push_back(colliderH);
+   if (ref.isCompound()) {
+      storage.getCompound(ref.compound).colliders.push_back(colliderH);
+      return;
+   }
 }
 
 void detachColliderFromBody(
@@ -209,8 +212,10 @@ void Processor::processLifecycleCommands(Buffer::Batch& batch)
    }
    // Commit Meshes
    for (auto& [meshH, mesh] : batch.meshCreates) {
-      physicsStorage.commitMesh(meshH, std::move(mesh));
+      Mesh* m = physicsStorage.commitMesh(meshH, std::move(mesh));
       std::cout << "Mesh committed" << std::endl;
+
+      m->printData();
    }
 
    std::unordered_set<BodyHandle> bodiesToRefresh;
@@ -261,10 +266,10 @@ void Processor::processLifecycleCommands(Buffer::Batch& batch)
       if (ref.isCompound())
          physicsStorage.destroyCompound(ref.compound);
 
-      if (body.motionStateHandle.isValid())
+      if (physicsStorage.isAlive(body.motionStateHandle))
          physicsStorage.destroyMotionState(body.motionStateHandle);
 
-      if (body.sleepStateHandle.isValid())
+      if (physicsStorage.isAlive(body.sleepStateHandle))
          physicsStorage.destroySleepState(body.sleepStateHandle);
 
       physicsStorage.destroyBody(bodyH);
@@ -602,7 +607,7 @@ void Processor::applyCommand(
       RigidBody& body = physicsStorage.getBody(bodyHandle);
 
       if (body.type == BodyType::Kinematic ||
-         !body.colliderRef.isValid()) {
+         !physicsStorage.isAlive(body.colliderRef)) {
          continue;
       }
 
@@ -626,9 +631,8 @@ void Processor::applyCommand(
    for (const BodyHandle& bodyHandle : asleepHandles) {
       RigidBody& body = physicsStorage.getBody(bodyHandle);
 
-      if (!body.colliderRef.isValid()) {
+      if (!physicsStorage.isAlive(body.colliderRef))
          continue;
-      }
 
       SleepState& sleepState =
          physicsStorage.getSleepState(body.sleepStateHandle);
@@ -691,7 +695,7 @@ void Processor::refreshBodySpatialState(
    RigidBody& body = physicsStorage.getBody(bodyHandle);
 
    // No colliders
-   if (!body.colliderRef.isValid()) {
+   if (body.colliderRef.isNone()) {
       body.invRadius = 0.0f;
 
       if (shouldRefreshInertia)
@@ -711,7 +715,7 @@ void Processor::refreshBodySpatialState(
 
          collider.updateWorldPose(body.pose);
          collider.updateShape();
-         collider.updateAABB();
+         collider.rebuildAABB();
 
          const AABB& aabb = collider.getAABB();
 

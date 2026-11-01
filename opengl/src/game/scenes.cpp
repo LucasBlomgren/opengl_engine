@@ -20,6 +20,10 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
       }
 }
 
+void SceneBuilder::emptyScene() {
+
+}
+
 void SceneBuilder::staircaseScene() {
    constexpr int stepCount = 12;
    constexpr float stepDepth = 1.0f;

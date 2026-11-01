@@ -51,7 +51,7 @@ RaycastHit raycastTree(
       }
    }
 
-   if (!bestBodyHandle.isValid()) {
+   if (!bestBodyHandle.isSet()) {
       return {};
    }
 
