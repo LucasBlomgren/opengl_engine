@@ -134,9 +134,13 @@ void NarrowphaseManager::processDynamicPair(
                if (!colliderB.enabled)
                   return;
 
-               // Broadphase filtering per collider
-               if (!colliderA.getAABB().intersects(colliderB.getAABB()))
-                  return;
+               // Broadphase filtering per collider if of them are Compounds
+               if (bodyA.colliderRef.isCompound() || 
+                  bodyB.colliderRef.isCompound()) 
+               {
+                  if (!colliderA.getAABB().intersects(colliderB.getAABB()))
+                     return;
+               }
 
                const auto shapePair =
                   classifyShapePair(colliderA, colliderB);
@@ -254,8 +258,13 @@ void NarrowphaseManager::processSpeculativePair(
                ++childIdxB;
 
                // Midphase: reject before expensive SAT
-               if (!aabbA.intersects(aabbB))
-                  return;
+               // if of them are Compounds 
+               if (bodyA.colliderRef.isCompound() ||
+                  bodyB.colliderRef.isCompound())
+               {
+                  if (!aabbA.intersects(aabbB))
+                     return;
+               }
 
                PairKey key = makeColliderPairKey(colA, colB);
 
