@@ -96,10 +96,14 @@ void Engine::updateColliders(RigidBody& body)
          collider.updateWorldPose(body.pose);
          collider.updateShape();
 
-         // AABB
+         // Update collider AABB
          if (const auto* meshH = std::get_if<MeshHandle>(&collider.shape)) {
-            const Mesh& mesh = physicsStorage.getMesh(*meshH);
-            collider.transformMeshAABB(mesh.localAABB);
+            const MeshShape& mesh = physicsStorage.getMesh(*meshH);
+            collider.transformLocalAABB(mesh.localAABB);
+         }
+         else if (const auto* hullH = std::get_if<HullHandle>(&collider.shape)) {
+            const Hull& hull = physicsStorage.getHull(*hullH);
+            collider.transformLocalAABB(hull.localAABB);
          }
          else {
             collider.rebuildAABB();
@@ -114,29 +118,15 @@ void Engine::updateColliders(RigidBody& body)
                hasBounds = true;
             }
             else {
-               compound->aabb.worldMin =
-                  glm::min(compound->aabb.worldMin, aabb.worldMin);
+               compound->aabb.min =
+                  glm::min(compound->aabb.min, aabb.min);
 
-               compound->aabb.worldMax =
-                  glm::max(compound->aabb.worldMax, aabb.worldMax);
+               compound->aabb.max =
+                  glm::max(compound->aabb.max, aabb.max);
             }
          }
       }
    );
-
-   // Compound AABB center and extents
-   if (compound) {
-      if (hasBounds) {
-         compound->aabb.worldCenter =
-            (compound->aabb.worldMin + compound->aabb.worldMax) * 0.5f;
-
-         compound->aabb.worldHalfExtents =
-            (compound->aabb.worldMax - compound->aabb.worldMin) * 0.5f;
-      }
-      else {
-         compound->aabb = internal::AABB{};
-      }
-   }
 }
 
 }

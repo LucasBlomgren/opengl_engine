@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "collider.h"
 
+#include "shapes/convex_hull.h"
+#include "shapes/mesh_shape.h"
+
 namespace physics::internal {
 
 
@@ -35,7 +38,7 @@ void Collider::updateShape() {
 }
 
 void Collider::rebuildAABB() {
-   if (type == ColliderType::BOX) {
+   if (type == ShapeType::BOX) {
       const Box& box = std::get<Box>(shape);
 
       glm::vec3 minimum = box.worldVertices[0];
@@ -46,38 +49,33 @@ void Collider::rebuildAABB() {
          maximum = glm::max(maximum, box.worldVertices[i]);
       }
 
-      aabb.worldMin = minimum;
-      aabb.worldMax = maximum;
-      aabb.worldCenter = (minimum + maximum) * 0.5f;
-      aabb.worldHalfExtents = (maximum - minimum) * 0.5f;
+      aabb.min = minimum;
+      aabb.max = maximum;
    }
-
-   else if (type == ColliderType::SPHERE) {
+   else if (type == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(shape);
 
-      aabb.worldMin = sphere.centerWorld - glm::vec3(sphere.radius);
-      aabb.worldMax = sphere.centerWorld + glm::vec3(sphere.radius);
-      aabb.worldCenter = sphere.centerWorld;
-      aabb.worldHalfExtents = glm::vec3(sphere.radius);
+      aabb.min = sphere.centerWorld - glm::vec3(sphere.radius);
+      aabb.max = sphere.centerWorld + glm::vec3(sphere.radius);
    }
 }
 
-void Collider::transformMeshAABB(const AABB& localAABB)
+void Collider::transformLocalAABB(const AABB& localAABB)
 {
    const glm::mat3 R = glm::mat3_cast(worldPose.orientation);
 
    const glm::vec3 center =
-      worldPose.position + R * localAABB.worldCenter;
+      worldPose.position + R * localAABB.center();
+
+   const glm::vec3 half = localAABB.halfExtents();
 
    const glm::vec3 extents =
-      glm::abs(R[0]) * localAABB.worldHalfExtents.x +
-      glm::abs(R[1]) * localAABB.worldHalfExtents.y +
-      glm::abs(R[2]) * localAABB.worldHalfExtents.z;
+      glm::abs(R[0]) * half.x +
+      glm::abs(R[1]) * half.y +
+      glm::abs(R[2]) * half.z;
 
-   aabb.worldCenter = center;
-   aabb.worldHalfExtents = extents;
-   aabb.worldMin = center - extents;
-   aabb.worldMax = center + extents;
+   aabb.min = center - extents;
+   aabb.max = center + extents;
 }
 
 }

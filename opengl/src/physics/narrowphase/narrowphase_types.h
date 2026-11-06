@@ -20,7 +20,10 @@ struct Contact;
 enum class ShapePairKind {
    BoxBox,
    BoxSphere,
-   SphereSphere
+   BoxMesh,
+   SphereSphere,
+   SphereMesh,
+   MeshMesh
 };
 
 enum class ContactPartnerType {
@@ -53,7 +56,10 @@ struct ResolvedColliderPair {
 //======================================================
 struct OverlapHit {
    ResolvedColliderPair pair;
-   SAT::Result geometry;
+   std::variant<
+      SAT::Result, 
+      std::vector<SAT::Result>
+   > geometry;
 };
 
 struct SweepHit {

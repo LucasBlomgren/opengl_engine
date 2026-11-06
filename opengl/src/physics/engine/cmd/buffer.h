@@ -137,9 +137,11 @@ public:
    // Complete command batch
    //=========================================
    struct Batch {
-      std::unordered_map<MeshHandle, Mesh> meshCreates;
+      std::unordered_map<HullHandle, Hull> hullCreates;
+      std::unordered_map<MeshHandle, MeshShape> meshCreates;
       std::unordered_map<BodyHandle, RigidBody> bodyCreates;
       std::unordered_map<ColliderHandle, Collider> colliderCreates;
+      std::unordered_set<HullHandle> hullDestroys;
       std::unordered_set<MeshHandle> meshDestroys;
       std::unordered_set<BodyHandle> bodyDestroys;
       std::unordered_map<ColliderHandle, BodyHandle> colliderDestroys;
@@ -147,9 +149,11 @@ public:
 
       bool empty() const noexcept {
          return 
+            hullCreates.empty() &&
             meshCreates.empty() &&
             bodyCreates.empty() &&
             colliderCreates.empty() &&
+            hullDestroys.empty() &&
             meshDestroys.empty() &&
             bodyDestroys.empty() &&
             colliderDestroys.empty() &&
@@ -167,10 +171,12 @@ public:
    //=========================================
    // Lifecycle recording
    //=========================================
-   void recordMeshCreate(MeshHandle mesh, Mesh&& meshData);
+   void recordHullCreate(HullHandle hull, Hull&& hullShape);
+   void recordMeshCreate(MeshHandle mesh, MeshShape&& meshShape);
    void recordBodyCreate(BodyHandle body, RigidBody&& bodyData);
    void recordColliderCreate(ColliderHandle collider, Collider&& colliderData);
 
+   bool recordHullDestroy(HullHandle hull, PhysicsStorage& physicsStorage);
    bool recordMeshDestroy(MeshHandle mesh, PhysicsStorage& physicsStorage);
    bool recordBodyDestroy(BodyHandle body, PhysicsStorage& physicsStorage);
    bool recordColliderDestroy(ColliderHandle collider, PhysicsStorage& physicsStorage);
@@ -239,7 +245,10 @@ private:
    void removeMutationsTargeting(ColliderHandle collider);
 
    std::vector<Mutation> mutations;
-   std::unordered_map<MeshHandle, Mesh> meshCreates;
+   std::unordered_map<HullHandle, Hull> hullCreates;
+   std::unordered_set<HullHandle> hullDestroys;
+
+   std::unordered_map<MeshHandle, MeshShape> meshCreates;
    std::unordered_set<MeshHandle> meshDestroys;
 
    std::unordered_map<BodyHandle, RigidBody> bodyCreates;

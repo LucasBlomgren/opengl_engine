@@ -31,7 +31,7 @@ std::optional<OverlapHit> NarrowphaseManager::tryBoxBox(
 std::optional<OverlapHit> NarrowphaseManager::tryBoxSphere(
    ResolvedColliderPair pair)
 {
-   if (pair.a.collider->type != ColliderType::BOX) {
+   if (pair.a.collider->type != ShapeType::BOX) {
       pair.swapAB();
    }
 
@@ -46,6 +46,26 @@ std::optional<OverlapHit> NarrowphaseManager::tryBoxSphere(
    }
 
    return OverlapHit{ std::move(pair), std::move(geometry) };
+}
+
+//=======================================================
+//     Box-Mesh
+//=======================================================
+std::optional<OverlapHit> NarrowphaseManager::tryBoxMesh(
+   ResolvedColliderPair pair)
+{
+   //SAT::Result geometry{};
+   //if (!SAT::sphereSphere(
+   //   *pair.a.collider,
+   //   *pair.b.collider,
+   //   geometry))
+   //{
+   //   return std::nullopt;
+   //}
+
+   //return OverlapHit{ std::move(pair), std::move(geometry) };
+
+   return std::nullopt;
 }
 
 //=======================================================
@@ -64,6 +84,46 @@ std::optional<OverlapHit> NarrowphaseManager::trySphereSphere(
    }
 
    return OverlapHit{ std::move(pair), std::move(geometry) };
+}
+
+//=======================================================
+//     Sphere-Mesh
+//=======================================================
+std::optional<OverlapHit> NarrowphaseManager::trySphereMesh(
+   ResolvedColliderPair pair)
+{
+   //SAT::Result geometry{};
+   //if (!SAT::sphereSphere(
+   //   *pair.a.collider,
+   //   *pair.b.collider,
+   //   geometry))
+   //{
+   //   return std::nullopt;
+   //}
+
+   //return OverlapHit{ std::move(pair), std::move(geometry) };
+
+   return std::nullopt;
+}
+
+//=======================================================
+//     Sphere-Sphere
+//=======================================================
+std::optional<OverlapHit> NarrowphaseManager::tryMeshMesh(
+   ResolvedColliderPair pair)
+{
+   //SAT::Result geometry{};
+   //if (!SAT::sphereSphere(
+   //   *pair.a.collider,
+   //   *pair.b.collider,
+   //   geometry))
+   //{
+   //   return std::nullopt;
+   //}
+
+   //return OverlapHit{ std::move(pair), std::move(geometry) };
+
+   return std::nullopt;
 }
 
 }

@@ -64,7 +64,6 @@ private:
    void split(int parentIdx, int depth);
    void updateLeaves();
    void refitNode(int nodeIdx);
-   void updateRenderData(Node& n);
 };
 
 }

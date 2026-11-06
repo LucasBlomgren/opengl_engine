@@ -30,13 +30,15 @@ struct FeatureId {
 };
 
 struct Result {
+   double timer = 0.0f;
+
    HitType hitType = HitType::Overlap;
 
    // Always from A to B after reverseNormal/canonicalization.
    glm::vec3 normal{ 0.0f };
 
    // Positive only for real penetration.
-   float depth = 0.0f;
+   float depth = FLT_MAX;
 
    // Positive only for speculative/non-overlapping contacts.
    float separation = 0.0f;

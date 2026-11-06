@@ -171,9 +171,6 @@ int BVHTree::createLeaf(BodyHandle handle)
    RigidBody& body = physicsStorage->getBody(handle);
    body.broadphaseHandle.leafIdx = leaf.selfIdx;
 
-   if (shouldUpdateRenderData)
-      updateRenderData(leaf);
-
    return leaf.selfIdx;
 }
 
@@ -211,11 +208,8 @@ void BVHTree::refitAncestors(int parentIdx) {
       const AABB* boxA = &nodes[n.childAIdx].fatBox;
       const AABB* boxB = &nodes[n.childBIdx].fatBox;
 
-      n.fatBox.worldMin = glm::min(boxA->worldMin, boxB->worldMin);
-      n.fatBox.worldMax = glm::max(boxA->worldMax, boxB->worldMax);
-
-      if (shouldUpdateRenderData)
-         updateRenderData(n);
+      n.fatBox.min = glm::min(boxA->min, boxB->min);
+      n.fatBox.max = glm::max(boxA->max, boxB->max);
    }
 }
 
@@ -316,13 +310,10 @@ void BVHTree::updateLeaves() {
          continue;
       }
 
-      n.fatBox.worldMin = n.tightBox.worldMin;
-      n.fatBox.worldMax = n.tightBox.worldMax;
+      n.fatBox.min = n.tightBox.min;
+      n.fatBox.max = n.tightBox.max;
       n.fatBox.grow(fatBoxMargin);
       numRefits++;
-
-      if (shouldUpdateRenderData)
-         updateRenderData(n);
 
       // Markera lövet och alla dess föräldrar
       for (int p = i; p != -1; p = nodes[p].parentIdx) {
@@ -351,12 +342,9 @@ void BVHTree::refitDirtySubtree(int nodeIdx) {
 
    // när barnen är klara, unionera dem
    if (childA && childB) {
-      node.fatBox.worldMin = glm::min(childA->fatBox.worldMin, childB->fatBox.worldMin);
-      node.fatBox.worldMax = glm::max(childA->fatBox.worldMax, childB->fatBox.worldMax);
+      node.fatBox.min = glm::min(childA->fatBox.min, childB->fatBox.min);
+      node.fatBox.max = glm::max(childA->fatBox.max, childB->fatBox.max);
    }
-
-   if (shouldUpdateRenderData)
-      updateRenderData(node);
 
    node.dirty = false;
 }
@@ -372,9 +360,9 @@ void BVHTree::rebuildFromLeaves() {
       const AABB& box = physicsStorage->getAABB(node.element);
 
       BVHPrimitive prim{};
-      prim.min = box.worldMin;
-      prim.max = box.worldMax;
-      prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
+      prim.min = box.min;
+      prim.max = box.max;
+      prim.centroid = (box.min + box.max) * 0.5f;
       prim.element = node.element;
 
       prims.push_back(prim);
@@ -416,9 +404,9 @@ void BVHTree::collectPrimitivesFromBodies(
       const AABB& box = physicsStorage->getAABB(bodyH);
 
       BVHPrimitive prim{};
-      prim.min = box.worldMin;
-      prim.max = box.worldMax;
-      prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
+      prim.min = box.min;
+      prim.max = box.max;
+      prim.centroid = (box.min + box.max) * 0.5f;
       prim.element = bodyH;
       prims.push_back(prim);
    }
@@ -446,9 +434,9 @@ void BVHTree::createPrimitivesFromExternalAABBs(
       }
 
       BVHPrimitive prim{};
-      prim.min = box.worldMin;
-      prim.max = box.worldMax;
-      prim.centroid = (box.worldMin + box.worldMax) * 0.5f;
+      prim.min = box.min;
+      prim.max = box.max;
+      prim.centroid = (box.min + box.max) * 0.5f;
       prim.element = bodyH;
       prims.push_back(prim);
    }
@@ -482,8 +470,8 @@ void BVHTree::constructTree()
    root.start = 0;
    root.count = static_cast<int>(prims.size());
 
-   root.fatBox.worldMin = prims[0].min;
-   root.fatBox.worldMax = prims[0].max;
+   root.fatBox.min = prims[0].min;
+   root.fatBox.max = prims[0].max;
 
    for (int i = 1; i < static_cast<int>(prims.size()); i++) {
       root.fatBox.growToInclude(prims[i].min);
@@ -496,10 +484,6 @@ void BVHTree::constructTree()
    for (auto& n : nodes) {
       if (n.isLeaf) {
          n.fatBox.grow(fatBoxMargin);
-
-         if (shouldUpdateRenderData) {
-            updateRenderData(n);
-         }
       }
       else {
          n.dirty = true;
@@ -527,7 +511,7 @@ void BVHTree::splitNode(int parentIdx, int depth) {
 
    // choose by largest extent axis to split
    int axis;
-   glm::vec3 extent = parent.fatBox.worldMax - parent.fatBox.worldMin;
+   glm::vec3 extent = parent.fatBox.max - parent.fatBox.min;
    axis = (extent.x > extent.y
       ? (extent.x > extent.z ? 0 : 2)
       : (extent.y > extent.z ? 1 : 2));
@@ -566,8 +550,8 @@ void BVHTree::initChild(int parentIdx, int childIdx, bool isLeft, int start, int
    else        parent.childBIdx = childIdx;
 
    // calculate both child's fatBox
-   child.fatBox.worldMin = prims[start].min;
-   child.fatBox.worldMax = prims[start].max;
+   child.fatBox.min = prims[start].min;
+   child.fatBox.max = prims[start].max;
    for (int i = start + 1; i < end; ++i) {
       child.fatBox.growToInclude(prims[i].min);
       child.fatBox.growToInclude(prims[i].max);
@@ -587,13 +571,8 @@ void BVHTree::finalizeLeaf(int nodeIdx)
 
    leaf.element = prim.element;
 
-   leaf.tightBox.worldMin = prim.min;
-   leaf.tightBox.worldMax = prim.max;
-
-   leaf.tightBox.worldCenter =
-      (leaf.tightBox.worldMin + leaf.tightBox.worldMax) * 0.5f;
-   leaf.tightBox.worldHalfExtents =
-      (leaf.tightBox.worldMax - leaf.tightBox.worldMin) * 0.5f;
+   leaf.tightBox.min = prim.min;
+   leaf.tightBox.max = prim.max;
 
    leaf.fatBox = leaf.tightBox;
 
@@ -601,14 +580,6 @@ void BVHTree::finalizeLeaf(int nodeIdx)
       RigidBody& body = physicsStorage->getBody(leaf.element);
       body.broadphaseHandle.leafIdx = leaf.selfIdx;
    }
-}
-
-//========================================================
-//      Update Render Data
-//========================================================
-void BVHTree::updateRenderData(Node& n) {
-   n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
-   n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;
 }
 
 }

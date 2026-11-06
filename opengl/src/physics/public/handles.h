@@ -31,7 +31,7 @@ struct SleepStateTag;
 struct ColliderTag;
 struct CompoundTag;
 struct MeshTag;
-struct ShapeTag;
+struct HullTag;
 
 using BodyHandle = HandleT<BodyTag>;
 using MotionStateHandle = HandleT<MotionStateTag>;
@@ -39,7 +39,7 @@ using SleepStateHandle = HandleT<SleepStateTag>;
 using ColliderHandle = HandleT<ColliderTag>;
 using CompoundHandle = HandleT<CompoundTag>;
 using MeshHandle = HandleT<MeshTag>;
-using ShapeHandle = HandleT<ShapeTag>;
+using HullHandle = HandleT<HullTag>;
 
 } // namespace physics
 

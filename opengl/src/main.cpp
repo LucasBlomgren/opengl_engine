@@ -204,9 +204,9 @@ int main() {
 
 
 
-   // 1. upload mesh
+   // upload mesh
    Mesh* mesh = meshManager.getMesh("cylinder_collider");
-   physics::MeshShapeDesc meshCollider;
+   physics::MeshGeometryDesc meshCollider;
 
    for (Vertex& v : mesh->vertices) {
       meshCollider.vertices.push_back(v.position);
@@ -214,7 +214,7 @@ int main() {
 
    for (std::vector<uint32_t>& face : mesh->faces) 
    {
-      physics::MeshFaceDesc faceDesc;
+      physics::FaceDesc faceDesc;
       faceDesc.firstIndex = meshCollider.faceIndices.size();
       faceDesc.vertexCount = face.size();
 
@@ -223,8 +223,34 @@ int main() {
       }
       meshCollider.faces.push_back(faceDesc);
    }
+
    physics::MeshHandle meshHandle =
       physicsEngine.uploadMesh("Cylinder", meshCollider);
+
+   // upload hull
+   mesh = meshManager.getMesh("cylinder_collider");
+   physics::MeshGeometryDesc hullCollider;
+
+   for (Vertex& v : mesh->vertices) {
+      hullCollider.vertices.push_back(v.position);
+   }
+
+   for (std::vector<uint32_t>& face : mesh->faces)
+   {
+      physics::FaceDesc faceDesc;
+      faceDesc.firstIndex = hullCollider.faceIndices.size();
+      faceDesc.vertexCount = face.size();
+
+      for (uint32_t idx : face) {
+         hullCollider.faceIndices.push_back(idx);
+      }
+      hullCollider.faces.push_back(faceDesc);
+   }
+
+   physics::HullHandle hullHandle =
+      physicsEngine.uploadConvexHull("Cylinder", hullCollider);
+
+
 
 
    {
@@ -236,7 +262,7 @@ int main() {
       SubPartDesc sub;
       sub.localTransformHandle = world.createTransform();
       sub.meshName = "cylinder_render";
-      sub.colliderType = physics::ColliderType::MESH;
+      sub.ShapeType = physics::ShapeType::MESH;
       desc.parts.push_back(sub);
 
       GameObjectHandle objH = world.createGameObject(desc);
@@ -260,7 +286,7 @@ int main() {
       SubPartDesc sub;
       sub.localTransformHandle = world.createTransform();
       sub.meshName = "cylinder_render";
-      sub.colliderType = physics::ColliderType::MESH;
+      sub.ShapeType = physics::ShapeType::MESH;
       desc.parts.push_back(sub);
 
       GameObjectHandle objH = world.createGameObject(desc);
@@ -269,6 +295,56 @@ int main() {
       // 2. Create Mesh Collider
       physics::ColliderDesc colliderDesc;
       colliderDesc.shape = meshHandle;
+      colliderDesc.localPose = {};
+
+      // 3. Attach Collider to GameObject's RigidBody
+      physics::ColliderHandle colliderH =
+         physicsEngine.createCollider(obj->rigidBodyHandle, colliderDesc);
+   }
+
+   {
+      // 1. Create GameObject
+      GameObjectDesc desc;
+      desc.name = "HullTest";
+      desc.rootTransformHandle = world.createTransform(glm::vec3(5.0, 0, 5.0));
+
+      SubPartDesc sub;
+      sub.localTransformHandle = world.createTransform();
+      sub.meshName = "cylinder_render";
+      sub.ShapeType = physics::ShapeType::CONVEX_HULL;
+      desc.parts.push_back(sub);
+
+      GameObjectHandle objH = world.createGameObject(desc);
+      GameObject* obj = world.getGameObject(objH);
+
+      // 2. Create Hull Collider
+      physics::ColliderDesc colliderDesc;
+      colliderDesc.shape = hullHandle;
+      colliderDesc.localPose = {};
+
+      // 3. Attach Collider to GameObject's RigidBody
+      physics::ColliderHandle colliderH =
+         physicsEngine.createCollider(obj->rigidBodyHandle, colliderDesc);
+   }
+
+   {
+      // 1. Create GameObject
+      GameObjectDesc desc;
+      desc.name = "HullTest";
+      desc.rootTransformHandle = world.createTransform(glm::vec3(0, 0, 5.0));
+
+      SubPartDesc sub;
+      sub.localTransformHandle = world.createTransform();
+      sub.meshName = "cylinder_render";
+      sub.ShapeType = physics::ShapeType::CONVEX_HULL;
+      desc.parts.push_back(sub);
+
+      GameObjectHandle objH = world.createGameObject(desc);
+      GameObject* obj = world.getGameObject(objH);
+
+      // 2. Create Hull Collider
+      physics::ColliderDesc colliderDesc;
+      colliderDesc.shape = hullHandle;
       colliderDesc.localPose = {};
 
       // 3. Attach Collider to GameObject's RigidBody

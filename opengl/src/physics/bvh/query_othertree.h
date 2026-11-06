@@ -36,7 +36,7 @@ void treeVsOtherTreeQuery(
    stack[sp++] = { a.rootIdx, b.rootIdx };
 
    auto sah2 = [](const AABB& box) {
-      const glm::vec3 e = box.worldMax - box.worldMin;
+      const glm::vec3 e = box.max - box.min;
       return e.x * e.y + e.y * e.z + e.z * e.x;
       };
 

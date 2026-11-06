@@ -41,7 +41,7 @@ GameObjectHandle createChair(
    seat.meshName = "cube";
    seat.textureName = "checker_magenta";
    seat.shaderName = "default";
-   seat.colliderType = physics::ColliderType::BOX;
+   seat.ShapeType = physics::ShapeType::BOX;
    chair.parts.push_back(seat);
 
    // backrest
@@ -56,7 +56,7 @@ GameObjectHandle createChair(
    backrest.meshName = "cube";
    backrest.textureName = "checker_magenta";
    backrest.shaderName = "default";
-   backrest.colliderType = physics::ColliderType::BOX;
+   backrest.ShapeType = physics::ShapeType::BOX;
    chair.parts.push_back(backrest);
 
    // legs
@@ -78,7 +78,7 @@ GameObjectHandle createChair(
       leg.meshName = "cube";
       leg.textureName = "checker_magenta";
       leg.shaderName = "default";
-      leg.colliderType = physics::ColliderType::BOX;
+      leg.ShapeType = physics::ShapeType::BOX;
       chair.parts.push_back(leg);
    }
 
@@ -99,7 +99,7 @@ GameObjectHandle createSphere(
    SubPartDesc part;
    part.name = "MainPart";
    part.localTransformHandle = world.createTransform();
-   part.colliderType = physics::ColliderType::SPHERE;
+   part.ShapeType = physics::ShapeType::SPHERE;
    part.meshName = "sphere";
    part.textureName = "checker_magenta";
    sphere.parts.push_back(part);

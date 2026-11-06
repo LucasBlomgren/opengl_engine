@@ -16,10 +16,10 @@
 
 namespace {
 physics::ColliderShapeDesc buildColliderShape(
-   physics::ColliderType type,
+   physics::ShapeType type,
    const Mesh& mesh)
 {
-   if (type == physics::ColliderType::SPHERE) {
+   if (type == physics::ShapeType::SPHERE) {
       return physics::SphereShapeDesc{
           glm::vec3(0.0f),
           1.0f
@@ -678,10 +678,10 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                int colliderChoice = 0;
                const char* colliderItems[] = { "BOX", "Sphere" };
 
-               if (colliderState->type == physics::ColliderType::BOX) {
+               if (colliderState->type == physics::ShapeType::BOX) {
                   colliderChoice = 0;
                }
-               else if (colliderState->type == physics::ColliderType::SPHERE) {
+               else if (colliderState->type == physics::ShapeType::SPHERE) {
                   colliderChoice = 1;
                }
 
@@ -701,10 +701,10 @@ void Editor::InspectorPanel::OnImGuiRender(const PanelContext& ctx)
                {
                   if (selectedPart.mesh)
                   {
-                     const physics::ColliderType selectedType =
+                     const physics::ShapeType selectedType =
                         colliderChoice == 0
-                        ? physics::ColliderType::BOX
-                        : physics::ColliderType::SPHERE;
+                        ? physics::ShapeType::BOX
+                        : physics::ShapeType::SPHERE;
 
                      ctx.physicsEngine->setColliderShape(
                         selectedPart.colliderHandle,

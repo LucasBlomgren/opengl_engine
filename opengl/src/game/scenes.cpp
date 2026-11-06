@@ -21,7 +21,9 @@ void SceneBuilder::createGridFloor(glm::vec3& offset, glm::vec3& cellSize, int g
 }
 
 void SceneBuilder::emptyScene() {
-
+   glm::vec3 offset = { -30.0f, -0.5f, -30.0f };
+   glm::vec3 cellSize = { 50, 1, 50 };
+   createGridFloor(offset, cellSize, 10, 8);
 }
 
 void SceneBuilder::staircaseScene() {
@@ -151,7 +153,7 @@ void SceneBuilder::staircaseScene() {
             SubPartDesc part;
             part.localTransformHandle = world.createTransform();
             part.meshName = "sphere";
-            part.colliderType = physics::ColliderType::SPHERE;
+            part.ShapeType = physics::ShapeType::SPHERE;
             part.color = glm::vec3(0.35f + 0.12f * ((row + column + layer) % 4));
             sphere.parts.push_back(part);
 
@@ -342,7 +344,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //            seat.textureName = "crate";
    //    //            seat.shaderName = "default";
    //    //            seat.color = color;
-   //    //            seat.colliderType = physics::ColliderType::BOX;
+   //    //            seat.ShapeType = physics::ShapeType::BOX;
    //    //            chair.parts.push_back(seat);
    //
    //    //            // backrest
@@ -356,7 +358,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //            backrest.textureName = "crate";
    //    //            backrest.shaderName = "default";
    //    //            backrest.color = color;
-   //    //            backrest.colliderType = physics::ColliderType::BOX;
+   //    //            backrest.ShapeType = physics::ShapeType::BOX;
    //    //            chair.parts.push_back(backrest);
    //
    //    //            // legs
@@ -377,7 +379,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //                leg.textureName = "crate";
    //    //                leg.shaderName = "default";
    //    //                leg.color = color;
-   //    //                leg.colliderType = physics::ColliderType::BOX;
+   //    //                leg.ShapeType = physics::ShapeType::BOX;
    //    //                chair.parts.push_back(leg);
    //    //            }
    //
@@ -415,7 +417,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //            part1.textureName = "crate";
    //    //            part1.shaderName = "default";
    //    //            part1.color = color;
-   //    //            part1.colliderType = physics::ColliderType::BOX;
+   //    //            part1.ShapeType = physics::ShapeType::BOX;
    //    //            object.parts.push_back(part1);
    //
    //    //            SubPartDesc part2;
@@ -428,7 +430,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //            part2.textureName = "crate";
    //    //            part2.shaderName = "default";
    //    //            part2.color = color;
-   //    //            part2.colliderType = physics::ColliderType::BOX;
+   //    //            part2.ShapeType = physics::ShapeType::BOX;
    //    //            object.parts.push_back(part2);
    //
    //    //            GameObjectHandle h = world.createGameObject(object);
@@ -498,7 +500,7 @@ void SceneBuilder::testFloorScene(int amount) {
    //    //part.localTransformHandle = world.createTransform();
    //    //part.textureName = "checker_gray";
    //    //part.meshName = "sphere";
-   //    //part.colliderType = physics::ColliderType::SPHERE;
+   //    //part.ShapeType = physics::ShapeType::SPHERE;
    //    //sphere.parts.push_back(part);
    //
    //    //GameObjectHandle h = world.createGameObject (sphere);
@@ -706,7 +708,7 @@ void SceneBuilder::terrainScene()
    //        SubPartDesc part;
    //        part.name = "MainPart";
    //        part.localTransformHandle = world.createTransform();
-   //        part.colliderType = physics::ColliderType::SPHERE;
+   //        part.ShapeType = physics::ShapeType::SPHERE;
    //        part.meshName = "sphere";
    //        part.textureName = "plain";
    //        sphere.parts.push_back(part);
@@ -746,7 +748,7 @@ void SceneBuilder::terrainScene()
             seat.textureName = "checker_magenta";
             seat.shaderName = "default";
             seat.color = color;
-            seat.colliderType = physics::ColliderType::BOX;
+            seat.ShapeType = physics::ShapeType::BOX;
             chair.parts.push_back(seat);
 
             // backrest
@@ -760,7 +762,7 @@ void SceneBuilder::terrainScene()
             backrest.textureName = "checker_magenta";
             backrest.shaderName = "default";
             backrest.color = color;
-            backrest.colliderType = physics::ColliderType::BOX;
+            backrest.ShapeType = physics::ShapeType::BOX;
             chair.parts.push_back(backrest);
 
             // legs
@@ -781,7 +783,7 @@ void SceneBuilder::terrainScene()
                leg.textureName = "checker_magenta";
                leg.shaderName = "default";
                leg.color = color;
-               leg.colliderType = physics::ColliderType::BOX;
+               leg.ShapeType = physics::ShapeType::BOX;
                chair.parts.push_back(leg);
             }
 
@@ -803,7 +805,7 @@ void SceneBuilder::containerScene() {
    //for (int i = 0; i < floorWidth; i++) {
    //    for (int j = 0; j < floorHeight; j++) {
    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-   //        world.createGameObject("uvmap", "cube", physics::ColliderType::BOX, physics::BodyType::Static, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, orientation, 99, false, {}, false);
+   //        world.createGameObject("uvmap", "cube", physics::ShapeType::BOX, physics::BodyType::Static, glm::vec3(baseX + i * 50, yOffset, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), 0, orientation, 99, false, {}, false);
    //    }
    //}
 
@@ -830,22 +832,22 @@ void SceneBuilder::containerScene() {
    //glm::quat wallOri = glm::quat(1, 0, 0, 0);
 
    //// syd (zMin)
-   //world.createGameObject("plain", "cube", physics::ColliderType::BOX, physics::BodyType::Static,
+   //world.createGameObject("plain", "cube", physics::ShapeType::BOX, physics::BodyType::Static,
    //    glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
    //    glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
    //    // nord (zMax)
-   //    world.createGameObject("plain", "cube", physics::ColliderType::BOX, physics::BodyType::Static,
+   //    world.createGameObject("plain", "cube", physics::ShapeType::BOX, physics::BodyType::Static,
    //        glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
    //        glm::vec3(lenX, wallH, thick), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
    //        // väst (xMin)
-   //        world.createGameObject("plain", "cube", physics::ColliderType::BOX, physics::BodyType::Static,
+   //        world.createGameObject("plain", "cube", physics::ShapeType::BOX, physics::BodyType::Static,
    //            glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
    //            glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
    //            // öst (xMax)
-   //            world.createGameObject("plain", "cube", physics::ColliderType::BOX, physics::BodyType::Static,
+   //            world.createGameObject("plain", "cube", physics::ShapeType::BOX, physics::BodyType::Static,
    //                glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
    //                glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 
@@ -853,13 +855,13 @@ void SceneBuilder::containerScene() {
    //                //for (int i = 0; i < floorWidth; i++) {
    //                //    for (int j = 0; j < floorHeight; j++) {
    //                //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0f, 0.5f, 0.0f));
-   //                //        world.createGameObject("uvmap", physics::ColliderType::BOX, glm::vec3(baseX + i * 50, wallH, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
+   //                //        world.createGameObject("uvmap", physics::ShapeType::BOX, glm::vec3(baseX + i * 50, wallH, baseZ + j * 50), glm::vec3(50, 1, 50), 0, 1, orientation);
    //                //        GameObject& floorTile = dynamicObjects.back();
    //                //        floorTile.seeThrough = true;
    //                //    }
    //                //}
 
-   //world.createGameObject("plain", "cube", physics::ColliderType::BOX, physics::BodyType::Kinematic,
+   //world.createGameObject("plain", "cube", physics::ShapeType::BOX, physics::BodyType::Kinematic,
    //    glm::vec3(xMax + thick * 0.5f, y+100, (zMin + zMax) * 0.5f),
    //    glm::vec3(thick, wallH, lenZ), 0, wallOri, 0, 0, glm::vec3(190, 255, 255), false);
 }
@@ -924,7 +926,7 @@ void SceneBuilder::shapePileScene() {
    //for (int i = 0; i < floorWidth; i++) {
    //    for (int j = 0; j < floorHeight; j++) {
    //        glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(1.0, 0.5, 0.0));
-   //        world.createGameObject("uvmap", "cube", physics::ColliderType::BOX, physics::BodyType::Static, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), false, orientation, 0, false, {}, false);
+   //        world.createGameObject("uvmap", "cube", physics::ShapeType::BOX, physics::BodyType::Static, glm::vec3(baseX + i * 50, -0.5, baseZ + j * 50), glm::vec3(50.0, 1.0, 50.0), false, orientation, 0, false, {}, false);
    //    }
    //}
 
@@ -940,16 +942,16 @@ void SceneBuilder::shapePileScene() {
    //    for (int j = 0; j < cubeSize; j++) {
    //        for (int k = 0; k < cubeSize; k++) {
 
-   //            physics::ColliderType type;
+   //            physics::ShapeType type;
    //            glm::vec3 size;
    //            std::string meshType;
    //            if (sphereLayer) {
-   //                type = physics::ColliderType::SPHERE;
+   //                type = physics::ShapeType::SPHERE;
    //                size = glm::vec3(0.5f);
    //                meshType = "sphere";
    //            }
    //            else {
-   //                type = physics::ColliderType::BOX;
+   //                type = physics::ShapeType::BOX;
    //                size = glm::vec3(1);
    //                meshType = "cube";
    //            }
@@ -1073,7 +1075,7 @@ void SceneBuilder::sandBox() {
       const std::string& name,
       const std::string& textureName,
       const std::string& meshName,
-      physics::ColliderType colliderType,
+      physics::ShapeType ShapeType,
       physics::BodyType bodyType,
       const glm::vec3& position,
       const glm::vec3& scale,
@@ -1096,7 +1098,7 @@ void SceneBuilder::sandBox() {
          part.localTransformHandle = world.createTransform();
          part.textureName = textureName;
          part.meshName = meshName;
-         part.colliderType = colliderType;
+         part.ShapeType = ShapeType;
          part.seeThrough = seeThrough;
 
          if (color255.x >= 0.0f && color255.y >= 0.0f && color255.z >= 0.0f) {
@@ -1121,7 +1123,7 @@ void SceneBuilder::sandBox() {
             "FloorTile",
             "uvmap",
             "cube",
-            physics::ColliderType::BOX,
+            physics::ShapeType::BOX,
             physics::BodyType::Static,
             glm::vec3(baseX + i * 50.0f, -0.5f, baseZ + j * 50.0f),
             glm::vec3(50.0f, 1.0f, 50.0f),
@@ -1155,7 +1157,7 @@ void SceneBuilder::sandBox() {
       "SouthWall",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3((xMin + xMax) * 0.5f, y, zMin - thick * 0.5f),
       glm::vec3(lenX, wallH, thick),
@@ -1169,7 +1171,7 @@ void SceneBuilder::sandBox() {
       "NorthWall",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3((xMin + xMax) * 0.5f, y, zMax + thick * 0.5f),
       glm::vec3(lenX, wallH, thick),
@@ -1183,7 +1185,7 @@ void SceneBuilder::sandBox() {
       "WestWall",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3(xMin - thick * 0.5f, y, (zMin + zMax) * 0.5f),
       glm::vec3(thick, wallH, lenZ),
@@ -1197,7 +1199,7 @@ void SceneBuilder::sandBox() {
       "EastWall",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3(xMax + thick * 0.5f, y, (zMin + zMax) * 0.5f),
       glm::vec3(thick, wallH, lenZ),
@@ -1230,7 +1232,7 @@ void SceneBuilder::sandBox() {
          "BridgeSegment",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          newPos,
          glm::vec3(wWidth, wHeight, wLength),
@@ -1287,7 +1289,7 @@ void SceneBuilder::sandBox() {
          "LeftSlope",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(slopeLeftX, slopeLeftY + i * distHeight, slopeLeftZ),
          glm::vec3(slopeWidth, slopeHeight, slopeLength),
@@ -1301,7 +1303,7 @@ void SceneBuilder::sandBox() {
          "LeftSlopeRailA",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(
             slopeLeftX + railWidth * 0.5f +
@@ -1318,7 +1320,7 @@ void SceneBuilder::sandBox() {
          "LeftSlopeRailB",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(
             slopeLeftX - railWidth * 0.5f -
@@ -1340,7 +1342,7 @@ void SceneBuilder::sandBox() {
          "RightSlope",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(slopeRightX, slopeRightY + i * distHeight, slopeRightZ),
          glm::vec3(slopeWidth, slopeHeight, slopeLength),
@@ -1354,7 +1356,7 @@ void SceneBuilder::sandBox() {
          "RightSlopeRailA",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(slopeRightX + railWidth * 0.5f +
             slopeWidth * 0.5f, slopeRightY + slopeHeight +
@@ -1370,7 +1372,7 @@ void SceneBuilder::sandBox() {
          "RightSlopeRailB",
          "plain",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Static,
          glm::vec3(slopeRightX - railWidth * 0.5f -
             slopeWidth * 0.5f, slopeRightY + slopeHeight +
@@ -1404,7 +1406,7 @@ void SceneBuilder::sandBox() {
       "Ramp",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3(80.0f, 0.0f, 120.0f),
       glm::vec3(30.0f, 0.5f, 30.0f),
@@ -1428,7 +1430,7 @@ void SceneBuilder::sandBox() {
       "SlantedPlatform",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3(24.5f, 3.0f, 10.0f),
       glm::vec3(4.0f, 0.2f, 4.0f),
@@ -1442,7 +1444,7 @@ void SceneBuilder::sandBox() {
       "CatapultSupport",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Static,
       glm::vec3(34.5f, 1.5f, 20.0f),
       glm::vec3(0.5f, 3.0f, 2.0f),
@@ -1455,7 +1457,7 @@ void SceneBuilder::sandBox() {
       "CatapultPlank",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(34.5f, 3.1f, 20.0f),
       plankSize,
@@ -1468,7 +1470,7 @@ void SceneBuilder::sandBox() {
       "CatapultProjectile",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(41.25f, 3.45f, 20.0f),
       glm::vec3(0.5f),
@@ -1481,7 +1483,7 @@ void SceneBuilder::sandBox() {
       "CatapultCounterweight",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(28.25f, 20.0f, 20.0f),
       glm::vec3(5.2f),
@@ -1498,7 +1500,7 @@ void SceneBuilder::sandBox() {
          "StackBox",
          "crate",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Dynamic,
          glm::vec3(24.5f, 1.0f + 1.2f * i, 34.5f),
          glm::vec3(1.0f),
@@ -1512,7 +1514,7 @@ void SceneBuilder::sandBox() {
          "StackBox",
          "crate",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Dynamic,
          glm::vec3(25.5f, 1.0f + 1.2f * i, 34.5f),
          glm::vec3(1.0f),
@@ -1526,7 +1528,7 @@ void SceneBuilder::sandBox() {
          "StackBox",
          "crate",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Dynamic,
          glm::vec3(24.5f, 1.0f + 1.2f * i, 35.5f),
          glm::vec3(1.0f),
@@ -1540,7 +1542,7 @@ void SceneBuilder::sandBox() {
          "StackBox",
          "crate",
          "cube",
-         physics::ColliderType::BOX,
+         physics::ShapeType::BOX,
          physics::BodyType::Dynamic,
          glm::vec3(25.5f, 1.0f + 1.2f * i, 35.5f),
          glm::vec3(1.0f),
@@ -1619,7 +1621,7 @@ void SceneBuilder::sandBox() {
       "HeavyCube",
       "crate",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(254.5f, 9.6f, -30.0f),
       glm::vec3(5.2f),
@@ -1631,7 +1633,7 @@ void SceneBuilder::sandBox() {
       "HeavySphere",
       "uvmap",
       "sphere",
-      physics::ColliderType::SPHERE,
+      physics::ShapeType::SPHERE,
       physics::BodyType::Dynamic,
       glm::vec3(224.5f, 9.0f, 10.0f),
       glm::vec3(4.0f),
@@ -1656,7 +1658,7 @@ void SceneBuilder::sandBox() {
             "PyramidBlock",
             "plain",
             "cube",
-            physics::ColliderType::BOX,
+            physics::ShapeType::BOX,
             physics::BodyType::Dynamic,
             glm::vec3(x, y, z),
             glm::vec3(1.0f),
@@ -1672,7 +1674,7 @@ void SceneBuilder::sandBox() {
       "TestCube",
       "plain",
       "cube",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(1.25f),
       glm::vec3(2.5f),
@@ -1685,7 +1687,7 @@ void SceneBuilder::sandBox() {
       "TeapotPlain",
       "plain",
       "teapot",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-20.0f, 0.0f, 0.0f),
       glm::vec3(1.0f),
@@ -1699,7 +1701,7 @@ void SceneBuilder::sandBox() {
       "TeapotCrate",
       "crate",
       "teapot",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-20.0f, 0.0f, 10.0f),
       glm::vec3(1.0f),
@@ -1713,7 +1715,7 @@ void SceneBuilder::sandBox() {
       "TeapotUvmap",
       "uvmap",
       "teapot",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-20.0f, 0.0f, 20.0f),
       glm::vec3(1.0f),
@@ -1727,7 +1729,7 @@ void SceneBuilder::sandBox() {
       "PylonPlain",
       "plain",
       "pylon",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-30.0f, 2.0f, 0.0f),
       glm::vec3(1.0f),
@@ -1741,7 +1743,7 @@ void SceneBuilder::sandBox() {
       "PylonCrate",
       "crate",
       "pylon",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-30.0f, 2.0f, 10.0f),
       glm::vec3(1.0f),
@@ -1755,7 +1757,7 @@ void SceneBuilder::sandBox() {
       "PylonUvmap",
       "uvmap",
       "pylon",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-30.0f, 2.0f, 20.0f),
       glm::vec3(1.0f),
@@ -1773,7 +1775,7 @@ void SceneBuilder::sandBox() {
    //    "Girl",
    //    "plain",
    //    "girl",
-   //    physics::ColliderType::BOX,
+   //    physics::ShapeType::BOX,
    //    physics::BodyType::Static,
    //    glm::vec3(-20.0f, 0.0f, 0.0f),
    //    glm::vec3(0.0135f),
@@ -1788,7 +1790,7 @@ void SceneBuilder::sandBox() {
       "Tank",
       "plain",
       "tank",
-      physics::ColliderType::BOX,
+      physics::ShapeType::BOX,
       physics::BodyType::Dynamic,
       glm::vec3(-20.0f, 0.0f, 0.0f),
       glm::vec3(1.0f),

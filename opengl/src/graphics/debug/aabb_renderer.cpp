@@ -55,8 +55,8 @@ void AABBRenderer::updateModel(
    if (asleep) return;
 
    model =
-      glm::translate(glm::mat4(1.0f), box.worldCenter) *
-      glm::scale(glm::mat4(1.0f), box.worldHalfExtents * 2.0f);
+      glm::translate(glm::mat4(1.0f), box.center()) *
+      glm::scale(glm::mat4(1.0f), box.halfExtents() * 2.0f);
 }
 
 void AABBRenderer::destroy() {

@@ -370,7 +370,7 @@ void BroadphaseManager::determineSpeculativeBodies(float dt)
             float extent = 0.0f;
             float radius = 0.0f;
 
-            if (collider.type == ColliderType::BOX) {
+            if (collider.type == ShapeType::BOX) {
                const Box& box = std::get<Box>(collider.shape);
 
                const glm::vec3& h = box.localHalfExtents;
@@ -382,10 +382,10 @@ void BroadphaseManager::determineSpeculativeBodies(float dt)
                const AABB& aabb = collider.getAABB();
 
                radius =
-                  glm::length(aabb.worldCenter - body.pose.position) +
-                  glm::length(aabb.worldHalfExtents);
+                  glm::length(aabb.center() - body.pose.position) +
+                  glm::length(aabb.halfExtents());
             }
-            else if (collider.type == ColliderType::SPHERE) {
+            else if (collider.type == ShapeType::SPHERE) {
                const Sphere& sphere = std::get<Sphere>(collider.shape);
 
                extent = 2.0f * sphere.radius;
@@ -446,22 +446,16 @@ void BroadphaseManager::determineSpeculativeBodies(float dt)
                first = false;
             }
             else {
-               sweptAABB.worldMin = glm::min(
-                  sweptAABB.worldMin, childSwept.worldMin
+               sweptAABB.min = glm::min(
+                  sweptAABB.min, childSwept.min
                );
 
-               sweptAABB.worldMax = glm::max(
-                  sweptAABB.worldMax, childSwept.worldMax
+               sweptAABB.max = glm::max(
+                  sweptAABB.max, childSwept.max
                );
             }
          }
       );
-
-      sweptAABB.worldCenter =
-         (sweptAABB.worldMin + sweptAABB.worldMax) * 0.5f;
-
-      sweptAABB.worldHalfExtents =
-         (sweptAABB.worldMax - sweptAABB.worldMin) * 0.5f;
 
       const int childCount = 
          static_cast<int>(sweepFrame.childSweptAABBs.size()) - childStart;
@@ -490,13 +484,13 @@ AABB BroadphaseManager::computeSweptAABB(
    // Linear motion
    glm::vec3 delta = body.linearVelocity * dt;
 
-   swept.worldMin += glm::min(delta, glm::vec3(0.0f));
-   swept.worldMax += glm::max(delta, glm::vec3(0.0f));
+   swept.min += glm::min(delta, glm::vec3(0.0f));
+   swept.max += glm::max(delta, glm::vec3(0.0f));
 
    // Angular motion
    float rotationRadius = 0.0f;
 
-   if (collider.type == ColliderType::SPHERE) {
+   if (collider.type == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider.shape);
 
       // Only the sphere center moves due to rotation
@@ -506,10 +500,10 @@ AABB BroadphaseManager::computeSweptAABB(
    }
    else {
       glm::vec3 center =
-         (aabb.worldMin + aabb.worldMax) * 0.5f;
+         (aabb.min + aabb.max) * 0.5f;
 
       glm::vec3 halfExtents =
-         (aabb.worldMax - aabb.worldMin) * 0.5f;
+         (aabb.max - aabb.min) * 0.5f;
 
       rotationRadius =
          glm::length(center - body.pose.position) +
@@ -530,14 +524,8 @@ AABB BroadphaseManager::computeSweptAABB(
    glm::vec3 expansion =
       angularExpansion + glm::vec3(sweptSkin);
 
-   swept.worldMin -= expansion;
-   swept.worldMax += expansion;
-
-   swept.worldCenter =
-      (swept.worldMin + swept.worldMax) * 0.5f;
-
-   swept.worldHalfExtents =
-      (swept.worldMax - swept.worldMin) * 0.5f;
+   swept.min -= expansion;
+   swept.max += expansion;
 
    return swept;
 }

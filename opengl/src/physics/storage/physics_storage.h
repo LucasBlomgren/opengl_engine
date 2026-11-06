@@ -11,6 +11,8 @@
 #include "physics/sleep/sleep_state.h"
 #include "physics/collider/collider.h"
 #include "physics/collider/compound_collider.h"
+#include "physics/collider/shapes/mesh_shape.h"
+#include "physics/collider/shapes/convex_hull.h"
 #include "physics/collider/collider_ref.h"
 
 namespace physics::internal {
@@ -38,6 +40,8 @@ public:
          return sleepStates.alive(handle);
       else if constexpr (std::is_same_v<Tag, MeshTag>)
          return meshes.alive(handle);
+      else if constexpr (std::is_same_v<Tag, HullTag>)
+         return hulls.alive(handle);
       else
          return false;
    }
@@ -60,16 +64,19 @@ public:
    ColliderHandle reserveColliderHandle();
    CompoundHandle reserveCompoundHandle();
    MeshHandle reserveMeshHandle();
+   HullHandle reserveHullHandle();
 
    void releaseBodyReservation(BodyHandle);
    void releaseColliderReservation(ColliderHandle);
    void releaseCompoundReservation(CompoundHandle);
    void releaseMeshReservation(MeshHandle);
+   void releaseHullReservation(HullHandle);
 
    //===========================================
    // Creation
    //===========================================
-   Mesh* commitMesh(MeshHandle, Mesh&&);
+   MeshShape* commitMesh(MeshHandle, MeshShape&&);
+   Hull* commitHull(HullHandle, Hull&&);
    RigidBody* commitBody(BodyHandle, RigidBody&&);
    Collider* commitCollider(ColliderHandle, Collider&&);
    Compound* commitCompound(CompoundHandle, Compound&&);
@@ -79,7 +86,8 @@ public:
    //===========================================
    // Deletion
    //===========================================
-   void destroyMesh(MeshHandle h);
+   void destroyMesh(MeshHandle);
+   void destroyHull(HullHandle);
    void destroyBody(BodyHandle);
    void destroyMotionState(MotionStateHandle);
    void destroySleepState(SleepStateHandle);
@@ -89,9 +97,13 @@ public:
    //===========================================
    // Get data by handle
    //===========================================
-   Mesh& getMesh(MeshHandle);
-   Mesh* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current());
-   const Mesh* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current()) const;
+   MeshShape& getMesh(MeshHandle);
+   MeshShape* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current());
+   const MeshShape* tryGetMesh(MeshHandle, SourceLoc c = SourceLoc::current()) const;
+
+   Hull& getHull(HullHandle);
+   Hull* tryGetHull(HullHandle, SourceLoc c = SourceLoc::current());
+   const Hull* tryGetHull(HullHandle, SourceLoc c = SourceLoc::current()) const;
 
    RigidBody& getBody(BodyHandle);
    RigidBody* tryGetBody(BodyHandle, SourceLoc c = SourceLoc::current());
@@ -115,8 +127,11 @@ public:
    //===========================================
    // Get storage
    //===========================================
-   SlotMap<Mesh, MeshHandle>& meshStorage();
-   const SlotMap<Mesh, MeshHandle>& meshStorage() const;
+   SlotMap<Hull, HullHandle>& hullStorage();
+   const SlotMap<Hull, HullHandle>& hullStorage() const;
+
+   SlotMap<MeshShape, MeshHandle>& meshStorage();
+   const SlotMap<MeshShape, MeshHandle>& meshStorage() const;
 
    SlotMap<RigidBody, BodyHandle>& bodyStorage();
    const SlotMap<RigidBody, BodyHandle>& bodyStorage() const;
@@ -139,14 +154,13 @@ public:
    AABB& getAABB(const BodyHandle h);
 
    //===========================================
-   // Get Unique Mesh Colliders
+   // Get registries
    //===========================================
-   std::unordered_map<std::string, MeshHandle>& getMeshRegistry() {
-      return meshRegistry;
-   }
-   const std::unordered_map<std::string, MeshHandle>& getMeshRegistry() const {
-      return meshRegistry;
-   }
+   std::unordered_map<std::string, MeshHandle>& getMeshRegistry() { return meshRegistry; }
+   const std::unordered_map<std::string, MeshHandle>& getMeshRegistry() const { return meshRegistry; }
+
+   std::unordered_map<std::string, HullHandle>& getHullRegistry() { return hullRegistry; }
+   const std::unordered_map<std::string, HullHandle>& getHullRegistry() const { return hullRegistry; }
 
 private:
    int colliderId = 0;
@@ -156,12 +170,10 @@ private:
    SlotMap<SleepState, SleepStateHandle> sleepStates{ "SleepState" };
    SlotMap<Collider, ColliderHandle> colliders{ "Collider" };
    SlotMap<Compound, CompoundHandle> compounds{ "Compound" };
-   SlotMap<Mesh, MeshHandle> meshes{ "Mesh" };
+   SlotMap<Hull, HullHandle> hulls{ "Hulls" };
+   SlotMap<MeshShape, MeshHandle> meshes{ "Mesh" };
 
-   SlotMap<Sphere, ShapeHandle> spheres{ "Sphere" };
-   SlotMap<BoxData, ShapeHandle> boxes{ "Box" };
-
-   //SlotMap<MeshData, ShapeHandle> meshes{ "Mesh" };
+   std::unordered_map<std::string, HullHandle> hullRegistry;
    std::unordered_map<std::string, MeshHandle> meshRegistry;
 };
 }

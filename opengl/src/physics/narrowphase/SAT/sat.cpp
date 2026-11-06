@@ -4,7 +4,7 @@
 namespace physics::internal {
 
 //=======================================================
-//      Utility functions for SAT results
+//   Utility functions for SAT results
 //=======================================================
 void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) {
    glm::vec3 direction = posB - posA;
@@ -14,9 +14,10 @@ void SAT::reverseNormal(glm::vec3& posA, glm::vec3& posB, glm::vec3& normal) {
 }
 
 //=======================================================
-//      Find 4 best triangles for manifold generation
-//      and sort them by depth
+//   Find 4 best triangles for manifold generation
 //=======================================================
+// #TODO: väljer trianglar utifrån centroid, inte utifrån vilka kontaktpunkter de kommer generera, 
+// vilket kan innebära att viktiga kontaktpunkter missas
 void SAT::findBestTriangles(std::vector<SAT::Result>& results) {
    if (results.size() <= 4)
       return;
@@ -46,7 +47,10 @@ void SAT::findBestTriangles(std::vector<SAT::Result>& results) {
    results.swap(temp);
 }
 
-void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>& indices) {
+void SAT::addFurthestTriangle(
+   std::vector<SAT::Result>& result, 
+   std::vector<int>& indices) 
+{
    int bestIdx = -1;
    float bestDist = std::numeric_limits<float>::lowest();
 
@@ -66,7 +70,9 @@ void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>
       float shortestDist = std::numeric_limits<float>::max();
       for (int j = 0; j < indices.size(); j++)
       {
-         glm::vec3 diff = result[i].tri_ptr->centroid - result[indices[j]].tri_ptr->centroid;
+         glm::vec3 diff =
+            result[i].tri_ptr->centroid - result[indices[j]].tri_ptr->centroid;
+
          float dist2 = glm::dot(diff, diff);
 
          if (dist2 < shortestDist) {
@@ -84,9 +90,12 @@ void SAT::addFurthestTriangle(std::vector<SAT::Result>& result, std::vector<int>
 
 
 //=======================================================
-//      General SAT for convex polygons
+//   General SAT for convex polygons
 //=======================================================
-std::pair<float, float> SAT::projectVertices(std::span<const glm::vec3> vertices, const glm::vec3& axis) {
+std::pair<float, float> SAT::projectVertices(
+   std::span<const glm::vec3> vertices, 
+   const glm::vec3& axis) 
+{
    float min = std::numeric_limits<float>::max();
    float max = std::numeric_limits<float>::lowest();
 
@@ -107,7 +116,9 @@ bool SAT::intersectPolygons(
    std::span<const glm::vec3> vertsB,
    std::span<const glm::vec3> normalsA,
    std::span<const glm::vec3> normalsB,
-   Result& satResult)
+   std::span<const glm::vec3> edgesA,
+   std::span<const glm::vec3> edgesB,
+   Result& result)
 {
    static std::vector<glm::vec3> triedAxes;
    triedAxes.clear();
@@ -118,22 +129,23 @@ bool SAT::intersectPolygons(
       auto [minA, maxA] = projectVertices(vertsA, A);
       auto [minB, maxB] = projectVertices(vertsB, A);
 
-      if (minA >= maxB or minB >= maxA)
+      if (minA >= maxB or minB >= maxA) {
          return false;
+      }
 
       float overlapPlus = maxB - minA;
       float overlapMinus = maxA - minB;
       float axisDepth = std::min(overlapPlus, overlapMinus);
 
-      if (axisDepth < satResult.depth) {
-         satResult.depth = axisDepth;
-         satResult.normal = A;
-         satResult.feature.type = AxisType::FaceA;
+      if (axisDepth < result.depth) {
+         result.depth = axisDepth;
+         result.normal = A;
+         result.feature.type = AxisType::FaceA;
       }
 
       float sepA_plus = minB - maxA;
       float sepA_minus = minA - maxB;
-      satResult.separationA = std::max(satResult.separationA, std::max(sepA_plus, sepA_minus));
+      result.separationA = std::max(result.separationA, std::max(sepA_plus, sepA_minus));
    }
 
    // testa normaler från B
@@ -141,32 +153,33 @@ bool SAT::intersectPolygons(
       auto [minA, maxA] = projectVertices(vertsA, B);
       auto [minB, maxB] = projectVertices(vertsB, B);
 
-      if (minA >= maxB or minB >= maxA)
+      if (minA >= maxB or minB >= maxA) {
          return false;
+      }
 
       float overlapPlus = maxB - minA;
       float overlapMinus = maxA - minB;
       float axisDepth = std::min(overlapPlus, overlapMinus);
 
-      if (axisDepth < satResult.depth) {
-         satResult.depth = axisDepth;
-         satResult.normal = B;
-         satResult.feature.type = AxisType::FaceB;
+      if (axisDepth < result.depth) {
+         result.depth = axisDepth;
+         result.normal = B;
+         result.feature.type = AxisType::FaceB;
       }
 
       float sepB_plus = minA - maxB;
       float sepB_minus = minB - maxA;
-      satResult.separationB = std::max(satResult.separationB, std::max(sepB_plus, sepB_minus));
+      result.separationB = std::max(result.separationB, std::max(sepB_plus, sepB_minus));
    }
 
    for (const glm::vec3& n : normalsA) triedAxes.push_back(n);
    for (const glm::vec3& n : normalsB) triedAxes.push_back(n);
 
    // testa korsprodukter mellan normaler
-   for (int i = 0; i < normalsA.size(); i++) {
-      for (int j = 0; j < normalsB.size(); j++) {
-         const glm::vec3& A = normalsA[i];
-         const glm::vec3& B = normalsB[j];
+   for (int i = 0; i < edgesA.size(); i++) {
+      for (int j = 0; j < edgesB.size(); j++) {
+         const glm::vec3& A = edgesA[i];
+         const glm::vec3& B = edgesB[j];
 
          glm::vec3 axis = glm::cross(A, B);
 
@@ -175,27 +188,22 @@ bool SAT::intersectPolygons(
 
          axis = glm::normalize(axis);
 
-         bool dup = false;
-         for (auto& t : triedAxes) {
-            if (glm::abs(glm::dot(axis, t)) > 0.999f) { dup = true; break; }
-         }
-         if (dup) continue;
-
          triedAxes.push_back(axis);
          auto [minA, maxA] = projectVertices(vertsA, axis);
          auto [minB, maxB] = projectVertices(vertsB, axis);
 
-         if (minA >= maxB or minB >= maxA)
+         if (minA >= maxB or minB >= maxA) {
             return false;
+         }
 
          float axisDepth = std::min(maxB - minA, maxA - minB);
 
-         if (axisDepth < satResult.depth) {
-            satResult.depth = axisDepth;
-            satResult.normal = axis;
-            satResult.feature.type = AxisType::EdgeEdge;
-            satResult.feature.edgeIndexA = i;
-            satResult.feature.edgeIndexB = j;
+         if (axisDepth < result.depth) {
+            result.depth = axisDepth;
+            result.normal = axis;
+            result.feature.type = AxisType::EdgeEdge;
+            result.feature.edgeIndexA = i;
+            result.feature.edgeIndexB = j;
          }
       }
    }

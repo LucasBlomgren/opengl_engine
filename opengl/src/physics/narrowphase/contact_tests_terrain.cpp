@@ -2,6 +2,8 @@
 #include <glm/gtx/norm.hpp>
 #include "narrowphase_manager.h"
 
+#include <GLFW/glfw3.h>
+
 namespace physics::internal {
 
 //===============================================
@@ -40,7 +42,15 @@ void NarrowphaseManager::processTerrainTriBox(
       SAT::Result SAT_result;
 
       // First: only use boxTri as "does this box overlap this triangle at all?"
-      if (!SAT::boxTri(*collider, *tri, SAT_result)) {
+      if (!SAT::intersectPolygons(
+         box.worldVertices,
+         tri->vertices,
+         box.worldAxes,
+         std::span<const glm::vec3>{&tri->normal, 1},
+         box.worldAxes,
+         tri->edgeDirs,
+         SAT_result)) 
+      {
          continue;
       }
 
@@ -151,7 +161,13 @@ void NarrowphaseManager::processTerrainTriBox(
    Contact* contactPtr =
       collisionManifold->boxMesh(contact, *contactCache, SAT_resultsList);
 
-   batch.contacts.push_back(contactPtr);
+   if (!contactPtr) {
+      std::cout << "boxMesh returned nullptr\n";
+   }
+   else {
+      batch.contacts.push_back(contactPtr);
+   }
+
 }
 
 //===============================================

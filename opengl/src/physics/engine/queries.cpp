@@ -27,14 +27,9 @@ internal::AABB getCombinedBounds(
          first = false;
       }
       else {
-         bounds.growToInclude(box.worldMin);
-         bounds.growToInclude(box.worldMax);
+         bounds.growToInclude(box.min);
+         bounds.growToInclude(box.max);
       }
-   }
-
-   if (!first) {
-      bounds.worldCenter = (bounds.worldMin + bounds.worldMax) * 0.5f;
-      bounds.worldHalfExtents = (bounds.worldMax - bounds.worldMin) * 0.5f;
    }
 
    return bounds;
@@ -42,19 +37,15 @@ internal::AABB getCombinedBounds(
 
 physics::AABB toPublicBounds(const internal::AABB& bounds) {
    physics::AABB result;
-   result.worldMin = bounds.worldMin;
-   result.worldMax = bounds.worldMax;
-   result.worldCenter = bounds.worldCenter;
-   result.worldHalfExtents = bounds.worldHalfExtents;
+   result.min = bounds.min;
+   result.max = bounds.max;
    return result;
 }
 
 internal::AABB toInternalBounds(const physics::AABB& bounds) {
    internal::AABB result;
-   result.worldMin = bounds.worldMin;
-   result.worldMax = bounds.worldMax;
-   result.worldCenter = bounds.worldCenter;
-   result.worldHalfExtents = bounds.worldHalfExtents;
+   result.min = bounds.min;
+   result.max = bounds.max;
    return result;
 }
 }
@@ -203,14 +194,14 @@ Engine::getColliderState(ColliderHandle handle) const
    state.isTrigger = collider->isTrigger;
    state.userTag = collider->userTag;
 
-   if (collider->type == ColliderType::BOX) {
+   if (collider->type == ShapeType::BOX) {
       const Box& box = std::get<Box>(collider->shape);
       state.shape = BoxGeometry{
           box.worldCenter,
           box.localHalfExtents,
       };
    }
-   else if (collider->type == ColliderType::SPHERE) {
+   else if (collider->type == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider->shape);
       state.shape = SphereGeometry{
           sphere.centerWorld,

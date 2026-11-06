@@ -10,8 +10,10 @@ using CompH = CompoundHandle;
 using MotionH = MotionStateHandle;
 using SleepH = SleepStateHandle;
 using MeshH = MeshHandle;
+using HullH = HullHandle;
 
-using MeshMap = SlotMap<Mesh, MeshHandle>;
+using MeshMap = SlotMap<MeshShape, MeshHandle>;
+using HullMap = SlotMap<Hull, HullHandle>;
 using BodyMap = SlotMap<RigidBody, BodyHandle>;
 using MotionMap = SlotMap<MotionState, MotionStateHandle>;
 using SleepMap = SlotMap<SleepState, SleepStateHandle>;
@@ -31,6 +33,7 @@ template bool PhysicsStorage::isAlive<SleepStateTag>(
 // Clear all data
 //===========================================
 void PS::clear() {
+   hulls.clear();
    meshes.clear();
    colliders.clear();
    bodies.clear();
@@ -43,9 +46,13 @@ void PS::clear() {
 //===========================================
 // Get data by handle
 //===========================================
-Mesh& PS::getMesh(MeshH h) { return meshes.get(h); }
-Mesh* PS::tryGetMesh(MeshH h, SourceLoc c) { return meshes.try_get(h, c); }
-const Mesh* PS::tryGetMesh(MeshH h, SourceLoc c) const { return meshes.try_get(h, c); }
+Hull& PS::getHull(HullH h) { return hulls.get(h); }
+Hull* PS::tryGetHull(HullH h, SourceLoc c) { return hulls.try_get(h, c); }
+const Hull* PS::tryGetHull(HullH h, SourceLoc c) const { return hulls.try_get(h, c); }
+
+MeshShape& PS::getMesh(MeshH h) { return meshes.get(h); }
+MeshShape* PS::tryGetMesh(MeshH h, SourceLoc c) { return meshes.try_get(h, c); }
+const MeshShape* PS::tryGetMesh(MeshH h, SourceLoc c) const { return meshes.try_get(h, c); }
 
 RigidBody& PS::getBody(BodyH h) { return bodies.get(h); }
 RigidBody* PS::tryGetBody(BodyH h, SourceLoc c) { return bodies.try_get(h, c); }
@@ -69,6 +76,9 @@ const Compound* PS::tryGetCompound(CompH h, SourceLoc c) const { return compound
 //===========================================
 // Get storage
 //===========================================
+HullMap& PS::hullStorage() { return hulls; }
+const HullMap& PS::hullStorage() const { return hulls; }
+
 MeshMap& PS::meshStorage() { return meshes; }
 const MeshMap& PS::meshStorage() const { return meshes; }
 
@@ -110,16 +120,21 @@ BodyHandle PS::reserveBodyHandle() { return bodies.reserve(); }
 ColliderHandle PS::reserveColliderHandle() { return colliders.reserve(); }
 CompoundHandle PS::reserveCompoundHandle() { return compounds.reserve(); }
 MeshHandle PS::reserveMeshHandle() { return meshes.reserve(); }
+HullHandle PS::reserveHullHandle() { return hulls.reserve(); }
 
 void PS::releaseBodyReservation(BodyH h) { bodies.release_reserved(h); }
 void PS::releaseColliderReservation(ColH h) { colliders.release_reserved(h); }
 void PS::releaseCompoundReservation(CompH h) { compounds.release_reserved(h); }
 void PS::releaseMeshReservation (MeshH h) { meshes.release_reserved(h); }
+void PS::releaseHullReservation(HullH h) { hulls.release_reserved(h); }
 
 //===========================================
 // Creation
 //===========================================
-Mesh* PS::commitMesh(MeshHandle h, Mesh&& m) {
+Hull* PS::commitHull(HullHandle h, Hull&& m) {
+   return hulls.create_reserved(h, std::move(m));
+}
+MeshShape* PS::commitMesh(MeshHandle h, MeshShape&& m) {
    return meshes.create_reserved(h, std::move(m));
 }
 RigidBody* PS::commitBody(BodyH h, RigidBody&& b) {
@@ -143,6 +158,7 @@ SleepStateHandle PS::commitSleepState(SleepState&& s) {
 //===========================================
 // Deletion
 //===========================================
+void PS::destroyHull(HullH h) { hulls.destroy(h); }
 void PS::destroyMesh(MeshH h) { meshes.destroy(h); }
 void PS::destroyBody(BodyH h) { bodies.destroy(h); }
 void PS::destroyCollider(ColH h) { colliders.destroy(h); }

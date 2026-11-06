@@ -60,7 +60,7 @@ const Collider* resolveCollider(
 //=========================================
 MeshHandle Engine::uploadMesh(
    const std::string& id, 
-   const MeshShapeDesc& desc)
+   const MeshGeometryDesc& desc)
 {
    std::unordered_map<std::string, MeshHandle>& registry = 
       physicsStorage.getMeshRegistry();
@@ -78,7 +78,7 @@ MeshHandle Engine::uploadMesh(
       return {};
    }
 
-   for (const MeshFaceDesc& faceDesc : desc.faces) {
+   for (const FaceDesc& faceDesc : desc.faces) {
       if (faceDesc.firstIndex < 0 || faceDesc.vertexCount <= 0)
       {
          std::cout << "[Physics] Invalid Mesh Face." << std::endl;
@@ -91,24 +91,22 @@ MeshHandle Engine::uploadMesh(
 
    std::vector<MeshFace> faces;
    faces.reserve(desc.faces.size());
-   for (const MeshFaceDesc& faceDesc : desc.faces) {
+   for (const FaceDesc& faceDesc : desc.faces) {
       MeshFace face;
-      face.firstIndex = faceDesc.firstIndex;
-      face.vertexCount = faceDesc.vertexCount;
+      face.start = faceDesc.firstIndex;
+      face.count = faceDesc.vertexCount;
       faces.push_back(face);
-      // #TODO: Mesh collider: also upload face normals
+      // #TODO: MeshGeometry: also upload face normals
    }
 
-   Mesh mesh(
+   MeshShape mesh(
       desc.vertices,
       faces,
       desc.faceIndices
    );
 
-
-   // #TODO: Mesh Collider: cook
-   // face normals, root AABB + BVH, reduce duplicated vertices, inertia matrix
-
+   // #TODO: MeshGeometry: cook inertia matrix
+   // #TODO: Mesh Collider: cook BVH
 
    commandBuffer.recordMeshCreate(
       handle,
@@ -122,13 +120,83 @@ bool Engine::destroyMesh(MeshHandle meshHandle)
 {
    if (!physicsStorage.tryGetMesh(meshHandle)) {
       std::cout << "Mesh handle is not alive" << std::endl;
-
       return false;
    }
 
-
    return commandBuffer.recordMeshDestroy(
       meshHandle, 
+      physicsStorage);
+}
+
+//=========================================
+// ConvexHull upload and destruction
+//=========================================
+HullHandle Engine::uploadConvexHull(
+   const std::string& id,
+   const MeshGeometryDesc& desc)
+{
+   std::unordered_map<std::string, HullHandle>& registry =
+      physicsStorage.getHullRegistry();
+
+   if (auto search = registry.find(id); search != registry.end()) {
+      std::cout << "[Physics] ConvexHull already uploaded." << std::endl;
+      return {};
+   }
+
+   if (desc.faces.size() <= 0 ||
+      desc.vertices.size() <= 0 ||
+      desc.faceIndices.size() <= 0)
+   {
+      std::cout << "[Physics] Invalid ConvexHull." << std::endl;
+      return {};
+   }
+
+   for (const FaceDesc& faceDesc : desc.faces) {
+      if (faceDesc.firstIndex < 0 || faceDesc.vertexCount <= 0)
+      {
+         std::cout << "[Physics] Invalid MeshGeometry Face." << std::endl;
+         return {};
+      }
+   }
+
+   HullHandle handle = physicsStorage.reserveHullHandle();
+   registry.emplace(id, handle);
+
+   std::vector<MeshFace> faces;
+   faces.reserve(desc.faces.size());
+   for (const FaceDesc& faceDesc : desc.faces) {
+      MeshFace face;
+      face.start = faceDesc.firstIndex;
+      face.count = faceDesc.vertexCount;
+      faces.push_back(face);
+      // #TODO: MeshGeometry: also upload face normals
+   }
+
+   Hull hull(
+      desc.vertices,
+      faces,
+      desc.faceIndices
+   );
+
+   // #TODO: MeshGeometry: cook inertia matrix
+
+   commandBuffer.recordHullCreate(
+      handle,
+      std::move(hull)
+   );
+
+   return handle;
+}
+
+bool Engine::destroyConvexHull(HullHandle hull)
+{
+   if (!physicsStorage.tryGetHull(hull)) {
+      std::cout << "Mesh handle is not alive" << std::endl;
+      return false;
+   }
+
+   return commandBuffer.recordHullDestroy(
+      hull,
       physicsStorage);
 }
 
@@ -165,15 +233,19 @@ ColliderHandle Engine::createCollider(
       using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
 
       if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-         collider.type = ColliderType::BOX;
+         collider.type = ShapeType::BOX;
          collider.shape = Box(shapeDesc.halfExtents, shapeDesc.center);
       }
       else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
-         collider.type = ColliderType::SPHERE;
+         collider.type = ShapeType::SPHERE;
          collider.shape = Sphere(shapeDesc.radius, shapeDesc.center);
       }
       else if constexpr (std::is_same_v<ShapeDescType, MeshHandle>) {
-         collider.type = ColliderType::MESH;
+         collider.type = ShapeType::MESH;
+         collider.shape = shapeDesc;
+      }
+      else if constexpr (std::is_same_v<ShapeDescType, HullHandle>) {
+         collider.type = ShapeType::CONVEX_HULL;
          collider.shape = shapeDesc;
       }
       else {

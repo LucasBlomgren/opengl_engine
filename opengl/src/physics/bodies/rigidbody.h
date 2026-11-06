@@ -65,11 +65,11 @@ public:
 
    void applyGravity(float dt);
    void applyVelocityDamping(float dt, SleepState& sleepState);
-   void applyRollingFriction(ColliderType colliderType, float dt, SleepState& sleepState);
+   void applyRollingFriction(ShapeType ShapeType, float dt, SleepState& sleepState);
    void applyAntistuckFriction(float dt, SleepState& sleepState);
 
    void calculateInverseInertia(
-      const ColliderType& type,
+      const ShapeType& type,
       const Collider& collider);
 
    void inertiaCube(const float sideX);

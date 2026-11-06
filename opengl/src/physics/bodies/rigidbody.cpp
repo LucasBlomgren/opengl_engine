@@ -35,8 +35,8 @@ void RigidBody::applyVelocityDamping(float dt, SleepState& sleepState) {
    }
 }
 
-void RigidBody::applyRollingFriction(ColliderType colliderType, float dt, SleepState& sleepState) {
-   if (colliderType != ColliderType::SPHERE)
+void RigidBody::applyRollingFriction(ShapeType ShapeType, float dt, SleepState& sleepState) {
+   if (ShapeType != ShapeType::SPHERE)
       return;
 
    float aLin;
@@ -111,10 +111,10 @@ void RigidBody::commitBiasImpulses(float dt) {
 //     Inertia calculations
 //===============================================
 void RigidBody::calculateInverseInertia(
-   const ColliderType& colliderType,
+   const ShapeType& ShapeType,
    const Collider& collider)
 {
-   if (colliderType == ColliderType::BOX) {
+   if (ShapeType == ShapeType::BOX) {
       const Box& box = std::get<Box>(collider.shape);
       const glm::vec3 size = box.localHalfExtents * 2.0f;
       bool isUniform = approxEqual(size.x, size.y) and approxEqual(size.y, size.z);
@@ -126,7 +126,7 @@ void RigidBody::calculateInverseInertia(
          inertiaCuboid(size);
       }
    }
-   else if (colliderType == ColliderType::SPHERE) {
+   else if (ShapeType == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider.shape);
       const glm::vec3 size = glm::vec3(sphere.radius);
       inertiaSphere(size);

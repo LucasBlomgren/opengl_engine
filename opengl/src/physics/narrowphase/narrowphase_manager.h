@@ -75,6 +75,9 @@ private:
    std::optional<OverlapHit> tryBoxBox(ResolvedColliderPair pair);
    std::optional<OverlapHit> tryBoxSphere(ResolvedColliderPair pair);
    std::optional<OverlapHit> trySphereSphere(ResolvedColliderPair pair);
+   std::optional<OverlapHit> tryBoxMesh(ResolvedColliderPair pair);
+   std::optional<OverlapHit> trySphereMesh(ResolvedColliderPair pair);
+   std::optional<OverlapHit> tryMeshMesh(ResolvedColliderPair pair);
 
    std::optional<SweepHit> trySpeculativeBoxBox(
       ResolvedColliderPair pair,

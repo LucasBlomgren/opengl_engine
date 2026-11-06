@@ -743,12 +743,12 @@ void Renderer::computeSceneBounds(SceneBuilder& builder) {
             }
 
             const physics::AABB& aabb = collider->bounds;
-            minY = std::min(minY, aabb.worldMin.y);
-            maxY = std::max(maxY, aabb.worldMax.y);
-            minX = std::min(minX, aabb.worldMin.x);
-            maxX = std::max(maxX, aabb.worldMax.x);
-            minZ = std::min(minZ, aabb.worldMin.z);
-            maxZ = std::max(maxZ, aabb.worldMax.z);
+            minY = std::min(minY, aabb.min.y);
+            maxY = std::max(maxY, aabb.max.y);
+            minX = std::min(minX, aabb.min.x);
+            maxX = std::max(maxX, aabb.max.x);
+            minZ = std::min(minZ, aabb.min.z);
+            maxZ = std::max(maxZ, aabb.max.z);
          }
       }
    }
@@ -880,7 +880,7 @@ void Renderer::renderHoveredObjectOutline(
       if (!collider) continue;
 
       // render based on collider type
-      if (collider->type == physics::ColliderType::BOX) {
+      if (collider->type == physics::ShapeType::BOX) {
          debugRenderer.oobbRenderer.renderBox(
             *debugShader,
             collider->worldPose,
@@ -888,7 +888,7 @@ void Renderer::renderHoveredObjectOutline(
             color
          );
       }
-      else if (collider->type == physics::ColliderType::SPHERE) {
+      else if (collider->type == physics::ShapeType::SPHERE) {
          const physics::SphereGeometry& sphere =
             std::get<physics::SphereGeometry>(
                collider->shape
@@ -946,7 +946,7 @@ void Renderer::renderSelectedObjectOutline(
       }
 
       // render based on collider type
-      if (collider->type == physics::ColliderType::BOX) {
+      if (collider->type == physics::ShapeType::BOX) {
          debugRenderer.oobbRenderer.renderBox(
             *debugShader,
             collider->worldPose,
@@ -954,7 +954,7 @@ void Renderer::renderSelectedObjectOutline(
             color
          );
       }
-      else if (collider->type == physics::ColliderType::SPHERE) {
+      else if (collider->type == physics::ShapeType::SPHERE) {
          const physics::SphereGeometry& sphere =
             std::get<physics::SphereGeometry>(
                collider->shape

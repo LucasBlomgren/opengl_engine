@@ -112,11 +112,11 @@ void TerrainBVH::build(std::vector<Tri>& tris) {
    root.count = prims.size();
 
    // Calculate root AABB as union of all primitives
-   root.fatBox.worldMin = prims[0].box.worldMin;
-   root.fatBox.worldMax = prims[0].box.worldMax;
+   root.fatBox.min = prims[0].box.min;
+   root.fatBox.max = prims[0].box.max;
    for (int i = 1; i < prims.size(); i++) {
-      root.fatBox.growToInclude(prims[i].box.worldMin);
-      root.fatBox.growToInclude(prims[i].box.worldMax);
+      root.fatBox.growToInclude(prims[i].box.min);
+      root.fatBox.growToInclude(prims[i].box.max);
    }
 
    // split into children
@@ -126,8 +126,6 @@ void TerrainBVH::build(std::vector<Tri>& tris) {
    for (auto& n : nodes) {
       if (n.isLeaf) {
          n.fatBox.grow(fatBoxMargin);
-
-         updateRenderData(n);
       }
       else {
          n.dirty = true;
@@ -167,7 +165,7 @@ void TerrainBVH::split(int parentIdx, int depth) {
 
    // choose by largest extent axis to split
    int axis;
-   glm::vec3 extent = parent.fatBox.worldMax - parent.fatBox.worldMin;
+   glm::vec3 extent = parent.fatBox.max - parent.fatBox.min;
    axis = (extent.x > extent.y
       ? (extent.x > extent.z ? 0 : 2)
       : (extent.y > extent.z ? 1 : 2));
@@ -176,7 +174,7 @@ void TerrainBVH::split(int parentIdx, int depth) {
    std::nth_element(
       prims.begin() + start, prims.begin() + mid, prims.begin() + start + count,
       [&](auto const& a, auto const& b) {
-         return a.box.worldCenter[axis] < b.box.worldCenter[axis];
+         return a.box.center()[axis] < b.box.center()[axis];
       });
 
    // create child nodes and init them
@@ -209,12 +207,12 @@ void TerrainBVH::initChild(int parentIdx, int childIdx, bool isLeft, int start, 
    else        parent.childBIdx = childIdx;
 
    // calculate both child's fatBox
-   child.fatBox.worldMin = prims[start].box.worldMin;
-   child.fatBox.worldMax = prims[start].box.worldMax;
+   child.fatBox.min = prims[start].box.min;
+   child.fatBox.max = prims[start].box.max;
 
    for (int i = start + 1; i < end; ++i) {
-      child.fatBox.growToInclude(prims[i].box.worldMin);
-      child.fatBox.growToInclude(prims[i].box.worldMax);
+      child.fatBox.growToInclude(prims[i].box.min);
+      child.fatBox.growToInclude(prims[i].box.max);
    }
 }
 
@@ -251,21 +249,10 @@ void TerrainBVH::refitNode(int nodeIdx) {
 
    // när barnen är klara, unionera dem
    if (childA and childB) {
-      node.fatBox.worldMin = glm::min(childA->fatBox.worldMin, childB->fatBox.worldMin);
-      node.fatBox.worldMax = glm::max(childA->fatBox.worldMax, childB->fatBox.worldMax);
+      node.fatBox.min = glm::min(childA->fatBox.min, childB->fatBox.min);
+      node.fatBox.max = glm::max(childA->fatBox.max, childB->fatBox.max);
    }
-
-   updateRenderData(node);
 
    node.dirty = false;
 }
-
-//------------------------------
-//     Update Render Data
-//------------------------------
-void TerrainBVH::updateRenderData(Node& n) {
-   n.fatBox.worldCenter = (n.fatBox.worldMin + n.fatBox.worldMax) * 0.5f;
-   n.fatBox.worldHalfExtents = (n.fatBox.worldMax - n.fatBox.worldMin) * 0.5f;
-}
-
 }

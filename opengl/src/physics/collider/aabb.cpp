@@ -3,69 +3,68 @@
 
 namespace physics::internal {
 
-////=================================================
-//// Initialization
-////=================================================
-//void AABB::init(const std::vector<glm::vec3>& vertices) {
-//   glm::vec3 mn(std::numeric_limits<float>::max());
-//   glm::vec3 mx(std::numeric_limits<float>::lowest());
-//
-//   for (const auto& v : vertices) {
-//      mn = glm::min(mn, v);
-//      mx = glm::max(mx, v);
-//   }
-//
-//   localMin = mn;
-//   localMax = mx;
-//
-//   worldMin = localMin;
-//   worldMax = localMax;
-//   worldCenter = (worldMin + worldMax) * 0.5f;
-//   worldHalfExtents = (worldMax - worldMin) * 0.5f;
-//}
-//
-////=================================================
-//// Standard AABB functions
-////=================================================
-//void AABB::update(
-//   const ColliderTransformCache& transformCache)
-//{
-//   glm::mat3 model3x3 = glm::mat3(transformCache.modelMatrix);
-//   transform_withRotation(
-//      model3x3,
-//      glm::vec3(transformCache.modelMatrix[3])
-//   );
-//
-//   worldCenter = (worldMin + worldMax) * 0.5f;
-//   worldHalfExtents = (worldMax - worldMin) * 0.5f;
-//}
-//
+glm::vec3 AABB::center() const {
+   return (min + max) * 0.5f;
+}
+
+glm::vec3 AABB::halfExtents() const {
+   return (max - min) * 0.5f;
+}
+
 bool AABB::intersects(const AABB& b) const {
    constexpr float margin = 1e-4f;
 
    return
-      (worldMin.x <= b.worldMax.x + margin && worldMax.x + margin >= b.worldMin.x) &&
-      (worldMin.y <= b.worldMax.y + margin && worldMax.y + margin >= b.worldMin.y) &&
-      (worldMin.z <= b.worldMax.z + margin && worldMax.z + margin >= b.worldMin.z);
+      (min.x <= b.max.x + margin && max.x + margin >= b.min.x) &&
+      (min.y <= b.max.y + margin && max.y + margin >= b.min.y) &&
+      (min.z <= b.max.z + margin && max.z + margin >= b.min.z);
 }
 
-////=================================================
-//// Transformations
-////=================================================
-//void AABB::transform_noRotation(
-//   const glm::mat4& M,
-//   const glm::vec3& T,
-//   const glm::vec3 S)
-//{
-//   worldMin.x = localMin.x * S.x + T.x;
-//   worldMin.y = localMin.y * S.y + T.y;
-//   worldMin.z = localMin.z * S.z + T.z;
-//
-//   worldMax.x = localMax.x * S.x + T.x;
-//   worldMax.y = localMax.y * S.y + T.y;
-//   worldMax.z = localMax.z * S.z + T.z;
-//}
-//
+void AABB::growToInclude(const glm::vec3& p) {
+   min = glm::min(min, p);
+   max = glm::max(max, p);
+}
+
+//=================================================
+// BVH functions
+//=================================================
+void AABB::grow(glm::vec3 m) {
+   min -= m;
+   max += m;
+}
+
+bool AABB::contains(const AABB& other) const {
+   return
+      (min.x <= other.min.x) &&
+      (min.y <= other.min.y) &&
+      (min.z <= other.min.z) &&
+      (max.x >= other.max.x) &&
+      (max.y >= other.max.y) &&
+      (max.z >= other.max.z);
+}
+
+float AABB::getSurfaceArea() const {
+   return 2.0f * (
+      halfExtents().x * halfExtents().y +
+      halfExtents().y * halfExtents().z +
+      halfExtents().z * halfExtents().x);
+}
+
+float AABB::getMergedSurfaceArea(const AABB& A, const AABB& B) {
+   glm::vec3 min = glm::min(A.min, B.min);
+   glm::vec3 max = glm::max(A.max, B.max);
+   glm::vec3 halfExtents = (max - min) * 0.5f;
+
+   return 2.0f * (
+      halfExtents.x * halfExtents.y +
+      halfExtents.y * halfExtents.z +
+      halfExtents.z * halfExtents.x
+      );
+}
+
+}
+
+
 //// only for box meshes
 //void AABB::transform_withRotation(const glm::mat3& M, const glm::vec3& T) {
 //   float  a, b;
@@ -96,54 +95,7 @@ bool AABB::intersects(const AABB& b) const {
 //      }
 //   }
 //
-//   worldMin.x = Bmin[0]; worldMax.x = Bmax[0];
-//   worldMin.y = Bmin[1]; worldMax.y = Bmax[1];
-//   worldMin.z = Bmin[2]; worldMax.z = Bmax[2];
+//   min.x = Bmin[0]; max.x = Bmax[0];
+//   min.y = Bmin[1]; max.y = Bmax[1];
+//   min.z = Bmin[2]; max.z = Bmax[2];
 //}
-
-//=================================================
-// BVH functions
-//=================================================
-bool AABB::contains(const AABB& other) const {
-   return
-      (worldMin.x <= other.worldMin.x) &&
-      (worldMin.y <= other.worldMin.y) &&
-      (worldMin.z <= other.worldMin.z) &&
-      (worldMax.x >= other.worldMax.x) &&
-      (worldMax.y >= other.worldMax.y) &&
-      (worldMax.z >= other.worldMax.z);
-}
-float AABB::getSurfaceArea() const {
-   return 2.0f * (
-      worldHalfExtents.x *
-      worldHalfExtents.y +
-      worldHalfExtents.y *
-      worldHalfExtents.z +
-      worldHalfExtents.z *
-      worldHalfExtents.x
-      );
-}
-void AABB::growToInclude(const glm::vec3& p) {
-   worldMin = glm::min(worldMin, p);
-   worldMax = glm::max(worldMax, p);
-}
-void AABB::grow(glm::vec3 m) {
-   worldMin -= m;
-   worldMax += m;
-}
-float AABB::getMergedSurfaceArea(const AABB& A, const AABB& B) {
-   glm::vec3 worldMin = glm::min(A.worldMin, B.worldMin);
-   glm::vec3 worldMax = glm::max(A.worldMax, B.worldMax);
-   glm::vec3 worldHalfExtents = (worldMax - worldMin) * 0.5f;
-
-   return 2.0f * (
-      worldHalfExtents.x *
-      worldHalfExtents.y +
-      worldHalfExtents.y *
-      worldHalfExtents.z +
-      worldHalfExtents.z *
-      worldHalfExtents.x
-      );
-}
-
-}

@@ -14,29 +14,57 @@ std::optional<ShapePairKind> classifyShapePair(
    const Collider& colliderB)
 {
    const bool boxBox =
-      colliderA.type == ColliderType::BOX &&
-      colliderB.type == ColliderType::BOX;
+      colliderA.type == ShapeType::BOX &&
+      colliderB.type == ShapeType::BOX;
 
    if (boxBox) {
       return ShapePairKind::BoxBox;
    }
 
    const bool boxSphere =
-      (colliderA.type == ColliderType::BOX &&
-         colliderB.type == ColliderType::SPHERE) ||
-      (colliderA.type == ColliderType::SPHERE &&
-         colliderB.type == ColliderType::BOX);
+      (colliderA.type == ShapeType::BOX &&
+         colliderB.type == ShapeType::SPHERE) ||
+      (colliderA.type == ShapeType::SPHERE &&
+         colliderB.type == ShapeType::BOX);
 
    if (boxSphere) {
       return ShapePairKind::BoxSphere;
    }
 
    const bool sphereSphere =
-      colliderA.type == ColliderType::SPHERE &&
-      colliderB.type == ColliderType::SPHERE;
+      colliderA.type == ShapeType::SPHERE &&
+      colliderB.type == ShapeType::SPHERE;
 
    if (sphereSphere) {
       return ShapePairKind::SphereSphere;
+   }
+
+   const bool boxMesh =
+      (colliderA.type == ShapeType::BOX &&
+         colliderB.type == ShapeType::MESH) ||
+      (colliderA.type == ShapeType::MESH &&
+         colliderB.type == ShapeType::BOX);
+
+   if (boxMesh) {
+      return ShapePairKind::BoxMesh;
+   }
+
+   const bool sphereMesh =
+      (colliderA.type == ShapeType::SPHERE &&
+         colliderB.type == ShapeType::MESH) ||
+      (colliderA.type == ShapeType::MESH &&
+         colliderB.type == ShapeType::SPHERE);
+
+   if (sphereMesh) {
+      return ShapePairKind::SphereMesh;
+   }
+
+   const bool meshMesh =
+      (colliderA.type == ShapeType::MESH &&
+         colliderB.type == ShapeType::MESH);
+
+   if (meshMesh) {
+      return ShapePairKind::MeshMesh;
    }
 
    return std::nullopt;
@@ -149,12 +177,8 @@ void NarrowphaseManager::processDynamicPair(
                   return;
 
                ResolvedColliderPair resolved{
-                  ColliderEndpointRef{
-                     pair.bodyA, colA, &bodyA, &colliderA
-                  },
-                  ColliderEndpointRef{
-                     pair.bodyB, colB, &bodyB, &colliderB
-                  },
+                  ColliderEndpointRef{ pair.bodyA, colA, &bodyA, &colliderA },
+                  ColliderEndpointRef{ pair.bodyB, colB, &bodyB, &colliderB },
                   *shapePair
                };
 
@@ -162,18 +186,18 @@ void NarrowphaseManager::processDynamicPair(
 
                switch (*shapePair) {
                case ShapePairKind::BoxBox:
-                  hit = tryBoxBox(std::move(resolved));
-                  break;
-
+                  hit = tryBoxBox(std::move(resolved)); break;
                case ShapePairKind::BoxSphere:
-                  hit = tryBoxSphere(std::move(resolved));
-                  break;
-
+                  hit = tryBoxSphere(std::move(resolved)); break;
                case ShapePairKind::SphereSphere:
-                  hit = trySphereSphere(std::move(resolved));
-                  break;
+                  hit = trySphereSphere(std::move(resolved)); break;
+               case ShapePairKind::BoxMesh:
+                  hit = tryBoxMesh(std::move(resolved)); break;
+               case ShapePairKind::SphereMesh:
+                  hit = trySphereMesh(std::move(resolved)); break;
+               case ShapePairKind::MeshMesh:
+                  hit = tryMeshMesh(std::move(resolved)); break;
                }
-
                if (!hit)
                   return;
 
@@ -271,19 +295,14 @@ void NarrowphaseManager::processSpeculativePair(
                if (normalHitPairs.contains(key))
                   return;
 
-               const auto shapePair =
-                  classifyShapePair(colliderA, colliderB);
+               const auto shapePair =classifyShapePair(colliderA, colliderB);
 
                if (!shapePair)
                   return;
 
                ResolvedColliderPair resolved{
-                  ColliderEndpointRef{
-                     pair.bodyA, colA, &bodyA, &colliderA
-                  },
-                  ColliderEndpointRef{
-                     pair.bodyB, colB, &bodyB, &colliderB
-                  },
+                  ColliderEndpointRef{ pair.bodyA, colA, &bodyA, &colliderA },
+                  ColliderEndpointRef{ pair.bodyB, colB, &bodyB, &colliderB },
                   *shapePair
                };
 
@@ -291,24 +310,15 @@ void NarrowphaseManager::processSpeculativePair(
 
                switch (*shapePair) {
                case ShapePairKind::BoxBox:
-                  hit = trySpeculativeBoxBox(
-                     std::move(resolved), dt, pair.sweepOwner
-                  );
+                  hit = trySpeculativeBoxBox(std::move(resolved), dt, pair.sweepOwner);
                   break;
-
                case ShapePairKind::BoxSphere:
-                  hit = trySpeculativeBoxSphere(
-                     std::move(resolved), dt, pair.sweepOwner
-                  );
+                  hit = trySpeculativeBoxSphere(std::move(resolved), dt, pair.sweepOwner);
                   break;
-
                case ShapePairKind::SphereSphere:
-                  hit = trySpeculativeSphereSphere(
-                     std::move(resolved), dt, pair.sweepOwner
-                  );
+                  hit = trySpeculativeSphereSphere(std::move(resolved), dt, pair.sweepOwner);
                   break;
                }
-
                if (hit)
                   pendingSweepHits.emplace_back(std::move(*hit));
             }
@@ -372,13 +382,13 @@ void NarrowphaseManager::processTerrainPair(
          SAT_resultsList.reserve(candidates->size());
 
          switch (collider.type) {
-         case ColliderType::BOX:
+         case ShapeType::BOX:
             processTerrainTriBox(
                batch, pair.body, &collider, &body, *candidates
             );
             break;
 
-         case ColliderType::SPHERE:
+         case ShapeType::SPHERE:
             processTerrainTriSphere(
                batch, pair.body, &collider, &body, *candidates
             );
@@ -441,13 +451,13 @@ void NarrowphaseManager::processSpeculativeTerrainPair(
             std::optional<TerrainSweepHit> hit;
 
             switch (collider.type) {
-            case ColliderType::BOX:
+            case ShapeType::BOX:
                hit = trySpeculativeBoxTriangle(
                   colliderRef, tri, dt, pair.body
                );
                break;
 
-            case ColliderType::SPHERE:
+            case ShapeType::SPHERE:
                hit = trySpeculativeSphereTriangle(
                   colliderRef, tri, dt, pair.body
                );

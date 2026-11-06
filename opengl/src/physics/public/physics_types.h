@@ -14,9 +14,10 @@ enum class BodyType {
    Static
 };
 
-enum class ColliderType {
+enum class ShapeType {
    BOX,
    SPHERE,
+   CONVEX_HULL,
    MESH
 };
 
@@ -36,27 +37,33 @@ struct SphereGeometry {
 };
 
 struct AABB {
-   glm::vec3 worldMin{ 0.0f };
-   glm::vec3 worldMax{ 0.0f };
-   glm::vec3 worldCenter{ 0.0f };
-   glm::vec3 worldHalfExtents{ 0.0f };
+   glm::vec3 min{ 0.0f };
+   glm::vec3 max{ 0.0f };
 
    bool intersects(const AABB& other) const {
       constexpr float margin = 1e-4f;
 
       return
-         worldMin.x <= other.worldMax.x + margin &&
-         worldMax.x + margin >= other.worldMin.x &&
-         worldMin.y <= other.worldMax.y + margin &&
-         worldMax.y + margin >= other.worldMin.y &&
-         worldMin.z <= other.worldMax.z + margin &&
-         worldMax.z + margin >= other.worldMin.z;
+         min.x <= other.max.x + margin &&
+         max.x + margin >= other.min.x &&
+         min.y <= other.max.y + margin &&
+         max.y + margin >= other.min.y &&
+         min.z <= other.max.z + margin &&
+         max.z + margin >= other.min.z;
+   }
+
+   glm::vec3 center() const {
+      return (min + max) * 0.5f;
+   }
+
+   glm::vec3 halfExtents() const {
+      return (max - min) * 0.5f;
    }
 
    glm::vec3 getOverlapDepth(const AABB& other) const {
-      const glm::vec3 centerDelta = other.worldCenter - worldCenter;
+      const glm::vec3 centerDelta = other.center() - this->center();
       const glm::vec3 combinedHalfExtents =
-         worldHalfExtents + other.worldHalfExtents;
+         this->halfExtents() + other.halfExtents();
 
       return glm::max(
          combinedHalfExtents - glm::abs(centerDelta),
@@ -84,7 +91,7 @@ struct AABB {
          return glm::vec3(0.0f);
       }
 
-      const glm::vec3 centerDelta = other.worldCenter - worldCenter;
+      const glm::vec3 centerDelta = other.center() - this->center();
 
       if (depth.x < depth.y && depth.x < depth.z) {
          return glm::vec3(
@@ -125,10 +132,8 @@ struct Triangle {
       : id(id),
       vertices{ v0, v1, v2 }
    {
-      bounds.worldMin = glm::min(v0, glm::min(v1, v2));
-      bounds.worldMax = glm::max(v0, glm::max(v1, v2));
-      bounds.worldCenter = (bounds.worldMin + bounds.worldMax) * 0.5f;
-      bounds.worldHalfExtents = (bounds.worldMax - bounds.worldMin) * 0.5f;
+      bounds.min = glm::min(v0, glm::min(v1, v2));
+      bounds.max = glm::max(v0, glm::max(v1, v2));
    }
 };
 

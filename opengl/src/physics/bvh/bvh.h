@@ -125,7 +125,6 @@ private:
    void updateLeaves();
    void refitDirtySubtree(int nodeIdx);
    void refitAncestors(int leafIdx);
-   void updateRenderData(Node& n);
 
    void collectPrimitivesFromBodies(const std::vector<BodyHandle>& handles);
    void createPrimitivesFromExternalAABBs(

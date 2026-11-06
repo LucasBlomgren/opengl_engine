@@ -23,20 +23,20 @@ struct SphereShapeDesc {
    float radius = 0.5f;
 };
 
-struct MeshFaceDesc {
+struct FaceDesc {
    uint32_t firstIndex;
    uint16_t vertexCount;
    glm::vec3 normal;
 };
 
-struct MeshShapeDesc {
+struct MeshGeometryDesc {
    std::vector<glm::vec3> vertices;
-   std::vector<MeshFaceDesc> faces;
+   std::vector<FaceDesc> faces;
    std::vector<uint32_t> faceIndices;
 };
 
 using ColliderShapeDesc =
-   std::variant<BoxShapeDesc, SphereShapeDesc, MeshHandle>;
+   std::variant<BoxShapeDesc, SphereShapeDesc, HullHandle, MeshHandle>;
 
 //=======================================================
 // For use with Engine::createCollider() to

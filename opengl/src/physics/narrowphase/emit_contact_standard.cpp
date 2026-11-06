@@ -9,32 +9,43 @@ void NarrowphaseManager::emitRigidContact(
    ContactBatch& batch,
    OverlapHit& hit)
 {
-   ColliderEndpointRef& a = hit.pair.a;
-   ColliderEndpointRef& b = hit.pair.b;
+   // Primitive shapes only
+   if (SAT::Result* geometry = 
+      std::get_if<SAT::Result>(&hit.geometry)) 
+   {
+      ColliderEndpointRef& a = hit.pair.a;
+      ColliderEndpointRef& b = hit.pair.b;
 
-   tryExportExternalContact(hit.pair, hit.geometry);
+      tryExportExternalContact(hit.pair, *geometry);
 
-   if (a.body->type == BodyType::Kinematic &&
-      b.body->type == BodyType::Kinematic) {
-      return;
+      if (a.body->type == BodyType::Kinematic &&
+         b.body->type == BodyType::Kinematic) {
+         return;
+      }
+
+      ContactRuntime runtimeData = makeRuntimeData(
+         a.body,
+         b.body,
+         a.collider,
+         b.collider
+      );
+
+      Contact contact(
+         a.bodyHandle,
+         b.bodyHandle,
+         runtimeData,
+         geometry->normal
+      );
+
+      Contact* contactPtr = createManifold(contact, hit);
+      batch.contacts.push_back(contactPtr);
    }
+   // Mesh shapes involved
+   else if (std::vector<SAT::Result>* geometry =
+      std::get_if<std::vector<SAT::Result>>(&hit.geometry)) 
+   {
 
-   ContactRuntime runtimeData = makeRuntimeData(
-      a.body,
-      b.body,
-      a.collider,
-      b.collider
-   );
-
-   Contact contact(
-      a.bodyHandle,
-      b.bodyHandle,
-      runtimeData,
-      hit.geometry.normal
-   );
-
-   Contact* contactPtr = createManifold(contact, hit);
-   batch.contacts.push_back(contactPtr);
+   }
 }
 
 //=======================================================
@@ -44,27 +55,41 @@ Contact* NarrowphaseManager::createManifold(
    Contact& contact,
    OverlapHit& hit)
 {
-   switch (hit.pair.shapePair) {
-   case ShapePairKind::BoxBox:
-      return collisionManifold->boxBox(
-         contact,
-         *contactCache,
-         hit.geometry
-      );
+   // Primitive shapes only
+   if (SAT::Result* geometry = 
+      std::get_if<SAT::Result>(&hit.geometry)) 
+   {
+      switch (hit.pair.shapePair) {
+      case ShapePairKind::BoxBox:
+         return collisionManifold->boxBox(
+            contact, *contactCache, *geometry);
 
-   case ShapePairKind::BoxSphere:
-      return collisionManifold->boxSphere(
-         contact,
-         *contactCache,
-         hit.geometry
-      );
+      case ShapePairKind::BoxSphere:
+         return collisionManifold->boxSphere(
+            contact, *contactCache, *geometry);
 
-   case ShapePairKind::SphereSphere:
-      return collisionManifold->sphereSphere(
-         contact,
-         *contactCache,
-         hit.geometry
-      );
+      case ShapePairKind::SphereSphere:
+         return collisionManifold->sphereSphere(
+            contact, *contactCache, *geometry);
+      }
+   }
+   // Mesh shapes involved
+   else if (std::vector<SAT::Result>* geometry = 
+      std::get_if<std::vector<SAT::Result>>(&hit.geometry)) 
+   {
+      //switch (hit.pair.shapePair) {
+      //case ShapePairKind::BoxMesh:
+      //   return collisionManifold->boxMesh(
+      //      contact, *contactCache, *geometry);
+
+      //case ShapePairKind::SphereMesh:
+      //   return collisionManifold->sphereMesh (
+      //      contact, *contactCache, *geometry);
+
+      //case ShapePairKind::MeshMesh:
+      //   return collisionManifold->meshMesh(
+      //      contact, *contactCache, *geometry);
+      //}
    }
 
    return nullptr;

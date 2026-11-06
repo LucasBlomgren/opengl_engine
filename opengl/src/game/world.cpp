@@ -263,7 +263,7 @@ GameObjectHandle World::createGameObject(
       );
       const glm::vec3 bakedCenter = bakedTransform * localCenter;
 
-      if (partDesc.colliderType == physics::ColliderType::BOX) {
+      if (partDesc.ShapeType == physics::ShapeType::BOX) {
          const glm::vec3 bakedHalfExtents =
             getTransformedHalfExtents(bakedTransform, localHalfExtents);
 
@@ -272,7 +272,7 @@ GameObjectHandle World::createGameObject(
             bakedHalfExtents
          };
       }
-      else if (partDesc.colliderType == physics::ColliderType::SPHERE) {
+      else if (partDesc.ShapeType == physics::ShapeType::SPHERE) {
          float radius = 0.5f;
 
          if (!part.mesh->vertices.empty()) {
@@ -296,10 +296,12 @@ GameObjectHandle World::createGameObject(
             radius * maxRootScale * maxPartScale
          };
       }
-      else if (partDesc.colliderType == physics::ColliderType::MESH) 
-      {
+      else if (partDesc.ShapeType == physics::ShapeType::MESH) {
          gameObject->parts.push_back(part);
-         std::cout << "World created collider Mesh" << std::endl;
+         continue;
+      }
+      else if (partDesc.ShapeType == physics::ShapeType::CONVEX_HULL) {
+         gameObject->parts.push_back(part);
          continue;
       }
       else {

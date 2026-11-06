@@ -10,6 +10,8 @@
 
 #include "physics/engine/cmd/processor.h"
 
+#include "physics/collider/shapes/convex_hull.h"
+#include "physics/collider/shapes/mesh_shape.h"
 #include "physics/broadphase/broadphase_manager.h"
 #include "physics/storage/physics_storage.h"
 #include "physics/sleep/sleep_manager.h"
@@ -126,14 +128,14 @@ bool applyShape(
       using ShapeDescType = std::decay_t<decltype(shapeDesc)>;
 
       if constexpr (std::is_same_v<ShapeDescType, BoxShapeDesc>) {
-         collider.type = ColliderType::BOX;
+         collider.type = ShapeType::BOX;
          collider.shape = Box(
             shapeDesc.halfExtents,
             shapeDesc.center
          );
       }
       else if constexpr (std::is_same_v<ShapeDescType, SphereShapeDesc>) {
-         collider.type = ColliderType::SPHERE;
+         collider.type = ShapeType::SPHERE;
          collider.shape = Sphere(
             shapeDesc.radius,
             shapeDesc.center
@@ -205,6 +207,18 @@ void Processor::process(
 //================================================
 void Processor::processLifecycleCommands(Buffer::Batch& batch)
 {
+   // Destroy Hulls
+   for (HullHandle h : batch.hullDestroys) {
+      physicsStorage.destroyHull(h);
+      std::cout << "ConvexHull destroyed" << std::endl;
+   }
+   // Commit Hulls
+   for (auto& [hullH, hull] : batch.hullCreates) {
+      Hull* m = physicsStorage.commitHull(hullH, std::move(hull));
+      std::cout << "ConvexHull committed" << std::endl;
+      //m->printData();
+   }
+
    // Destroy Meshes
    for (MeshHandle h : batch.meshDestroys) {
       physicsStorage.destroyMesh(h);
@@ -212,10 +226,9 @@ void Processor::processLifecycleCommands(Buffer::Batch& batch)
    }
    // Commit Meshes
    for (auto& [meshH, mesh] : batch.meshCreates) {
-      Mesh* m = physicsStorage.commitMesh(meshH, std::move(mesh));
+      MeshShape* m = physicsStorage.commitMesh(meshH, std::move(mesh));
       std::cout << "Mesh committed" << std::endl;
-
-      m->printData();
+      //m->printData();
    }
 
    std::unordered_set<BodyHandle> bodiesToRefresh;
@@ -672,11 +685,11 @@ void Processor::refreshBodyInertia(RigidBody& body)
 
    glm::vec3 inertiaScale{ 0.0f };
 
-   if (collider->type == ColliderType::SPHERE) {
+   if (collider->type == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(collider->shape);
       inertiaScale = glm::vec3(sphere.radius * 2.0f);
    }
-   else if (collider->type == ColliderType::BOX) {
+   else if (collider->type == ShapeType::BOX) {
       const Box& box = std::get<Box>(collider->shape);
       inertiaScale = box.localHalfExtents * 2.0f;
    }
@@ -721,10 +734,10 @@ void Processor::refreshBodySpatialState(
 
          // Maximum distance from body origin to AABB corners
          glm::vec3 minDelta =
-            glm::abs(aabb.worldMin - body.pose.position);
+            glm::abs(aabb.min - body.pose.position);
 
          glm::vec3 maxDelta =
-            glm::abs(aabb.worldMax - body.pose.position);
+            glm::abs(aabb.max - body.pose.position);
 
          float radius = glm::length(
             glm::max(minDelta, maxDelta)

@@ -62,8 +62,12 @@ public:
    // Objects
    //======================================
    [[nodiscard]]
-   MeshHandle uploadMesh(const std::string& id, const MeshShapeDesc& mesh);
+   MeshHandle uploadMesh(const std::string& id, const MeshGeometryDesc& mesh);
    bool destroyMesh(MeshHandle mesh);
+
+   [[nodiscard]]
+   HullHandle uploadConvexHull(const std::string& id, const MeshGeometryDesc& hull);
+   bool destroyConvexHull(HullHandle hull);
 
    [[nodiscard]] 
    BodyHandle createRigidBody(const BodyDesc& desc);

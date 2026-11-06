@@ -25,11 +25,11 @@ void forEachBodyCollider(
 
 inline glm::vec3 getColliderSize(Collider& col) {
    glm::vec3 size{ 0.0f };
-   if (col.type == ColliderType::SPHERE) {
+   if (col.type == ShapeType::SPHERE) {
       const Sphere& sphere = std::get<Sphere>(col.shape);
       size = glm::vec3(sphere.radius * 2.0f);
    }
-   else if (col.type == ColliderType::BOX) {
+   else if (col.type == ShapeType::BOX) {
       const Box& box = std::get<Box>(col.shape);
       size = box.localHalfExtents * 2.0f;
    }

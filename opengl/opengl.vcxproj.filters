@@ -73,7 +73,6 @@
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_sphere_sphere.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_box.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_tri.cpp" />
-    <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_tri.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_sphere_sphere.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\overlap_box_sphere.cpp" />
     <ClCompile Include="src\physics\narrowphase\SAT\speculative_box_box.cpp" />
@@ -89,6 +88,8 @@
     <ClCompile Include="src\physics\engine\scene.cpp" />
     <ClCompile Include="src\physics\narrowphase\narrowphase_types.cpp" />
     <ClCompile Include="src\physics\sleep\sleep_manager.cpp" />
+    <ClCompile Include="src\physics\collider\shapes\mesh_shape.cpp" />
+    <ClCompile Include="src\physics\collider\geometry\mesh_geometry.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="src">
@@ -216,7 +217,9 @@
     <ClInclude Include="src\physics\collider\collider_ref.h" />
     <ClInclude Include="src\physics\collider\compound_collider.h" />
     <ClInclude Include="src\physics\collider\body_collider_utils.h" />
-    <ClInclude Include="src\physics\collider\shapes\mesh.h" />
+    <ClInclude Include="src\physics\collider\shapes\mesh_shape.h" />
+    <ClInclude Include="src\physics\collider\geometry\mesh_geometry.h" />
+    <ClInclude Include="src\physics\collider\shapes\convex_hull.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\UV0.png" />

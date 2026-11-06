@@ -6,21 +6,24 @@
 #include "aabb.h"
 #include "shapes/box.h"
 #include "shapes/sphere.h"
-#include "shapes/mesh.h"
 #include "collider_transform_cache.h"
-
 #include "physics/public/handles.h"
 #include "physics/public/physics_types.h"
 
 namespace physics::internal {
 
-using ColliderShape = std::variant<Box, Sphere, MeshHandle>;
+using ColliderShape = std::variant<
+   Box,
+   Sphere,
+   HullHandle,
+   MeshHandle
+>;
 
 class Collider {
 public:
    int id = -1;
 
-   ColliderType type = ColliderType::BOX;
+   ShapeType type = ShapeType::BOX;
    ColliderShape shape;
 
    BodyHandle bodyHandle;
@@ -28,6 +31,7 @@ public:
    Pose localPose;
    Pose worldPose;
 
+   // #TODO: should NOT be here later because sphere doesnt need it
    ColliderTransformCache transformCache;
 
    AABB aabb;
@@ -40,7 +44,7 @@ public:
    void updateWorldPose(const Pose& bodyPose);
    void updateShape();
    void rebuildAABB();
-   void transformMeshAABB(const AABB& localAABB);
+   void transformLocalAABB(const AABB& localAABB);
 
    AABB& getAABB();
    const AABB& getAABB() const;

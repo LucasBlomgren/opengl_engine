@@ -3,6 +3,9 @@
 #include "physics/engine/cmd/buffer.h"
 #include "physics/collider/body_collider_utils.h"
 
+#include "physics/collider/shapes/convex_hull.h"
+#include "physics/collider/shapes/mesh_shape.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -56,10 +59,12 @@ Buffer::Batch Buffer::take() {
       }
    };
 
+   transferNodes(hullCreates, batch.hullCreates);
    transferNodes(meshCreates, batch.meshCreates);
    transferNodes(bodyCreates, batch.bodyCreates);
    transferNodes(colliderCreates, batch.colliderCreates);
 
+   transferNodes(hullDestroys, batch.hullDestroys);
    transferNodes(meshDestroys, batch.meshDestroys);
    transferNodes(bodyDestroys, batch.bodyDestroys);
    transferNodes(colliderDestroys, batch.colliderDestroys);
@@ -77,39 +82,47 @@ Buffer::Batch Buffer::take() {
 //=========================================
 // Lifecycle create
 //=========================================
+void Buffer::recordHullCreate(
+   HullHandle hull,
+   Hull&& hullShape) {
+   hullCreates.insert_or_assign(hull, std::move(hullShape));
+}
+
 void Buffer::recordMeshCreate(
    MeshHandle mesh,
-   Mesh&& meshData)
-{
-   meshCreates.insert_or_assign(
-      mesh,
-      std::move(meshData)
-   );
+   MeshShape&& meshShape) {
+   meshCreates.insert_or_assign(mesh, std::move(meshShape));
 }
 
 void Buffer::recordBodyCreate(
    BodyHandle body,
-   RigidBody&& rigidBody)
-{
-   bodyCreates.insert_or_assign(
-      body,
-      std::move(rigidBody)
-   );
+   RigidBody&& rigidBody) {
+   bodyCreates.insert_or_assign(body, std::move(rigidBody));
 }
 
 void Buffer::recordColliderCreate(
    ColliderHandle collider,
-   Collider&& colliderData)
-{
-   colliderCreates.insert_or_assign(
-      collider,
-      std::move(colliderData)
-   );
+   Collider&& colliderData) {
+   colliderCreates.insert_or_assign(collider, std::move(colliderData));
 }
 
 //=========================================
 // Lifecycle destroy
 //=========================================
+bool Buffer::recordHullDestroy(
+   HullHandle hull,
+   PhysicsStorage& physicsStorage)
+{
+   if (hullCreates.contains(hull)) {
+      hullCreates.erase(hull);
+      physicsStorage.releaseHullReservation(hull);
+
+      return false;
+   }
+
+   return hullDestroys.insert(hull).second;
+}
+
 bool Buffer::recordMeshDestroy(
    MeshHandle mesh, 
    PhysicsStorage& physicsStorage)

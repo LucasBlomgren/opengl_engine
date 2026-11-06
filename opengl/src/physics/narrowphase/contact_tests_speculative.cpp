@@ -31,7 +31,7 @@ std::optional<SweepHit> NarrowphaseManager::trySpeculativeBoxSphere(
    float dt,
    BodyHandle sweepOwner)
 {
-   if (pair.a.collider->type != ColliderType::BOX) {
+   if (pair.a.collider->type != ShapeType::BOX) {
       pair.swapAB();
    }
 

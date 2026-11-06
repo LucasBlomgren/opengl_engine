@@ -14,8 +14,8 @@ RaycastHit raycastTree(
    BodyHandle ignoredBody)
 {
    AABB rayAABB;
-   rayAABB.worldMin = glm::min(ray.start, ray.end);
-   rayAABB.worldMax = glm::max(ray.start, ray.end);
+   rayAABB.min = glm::min(ray.start, ray.end);
+   rayAABB.max = glm::max(ray.start, ray.end);
 
    BodyHandle bestBodyHandle;
    float bestT = std::numeric_limits<float>::max();
@@ -33,8 +33,8 @@ RaycastHit raycastTree(
 
       AABB& aabb = storage.getAABB(handle);
 
-      const glm::vec3 tMin = (aabb.worldMin - ray.start) / ray.direction;
-      const glm::vec3 tMax = (aabb.worldMax - ray.start) / ray.direction;
+      const glm::vec3 tMin = (aabb.min - ray.start) / ray.direction;
+      const glm::vec3 tMax = (aabb.max - ray.start) / ray.direction;
 
       const glm::vec3 t1 = glm::min(tMin, tMax);
       const glm::vec3 t2 = glm::max(tMin, tMax);
@@ -57,8 +57,8 @@ RaycastHit raycastTree(
 
    AABB& aabb = storage.getAABB(bestBodyHandle);
 
-   const glm::vec3 tMin = (aabb.worldMin - ray.start) / ray.direction;
-   const glm::vec3 tMax = (aabb.worldMax - ray.start) / ray.direction;
+   const glm::vec3 tMin = (aabb.min - ray.start) / ray.direction;
+   const glm::vec3 tMax = (aabb.max - ray.start) / ray.direction;
    const glm::vec3 entry = glm::min(tMin, tMax);
 
    int hitAxis = 2;

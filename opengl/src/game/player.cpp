@@ -43,7 +43,7 @@ void Player::handleInput(const InputFrame& in, const InputContext& ctx, Consumed
 
          SubPartDesc part;
          part.localTransformHandle = world->createTransform();
-         part.colliderType = physics::ColliderType::SPHERE;
+         part.ShapeType = physics::ShapeType::SPHERE;
          part.textureName = "checker_gray";
          part.meshName = "sphere";
          newObj.parts.push_back(part);
@@ -115,7 +115,7 @@ void Player::createPlayerObject() {
    SubPartDesc part;
    part.seeThrough = true;
    part.localTransformHandle = world->createTransform();
-   part.colliderType = physics::ColliderType::BOX;
+   part.ShapeType = physics::ShapeType::BOX;
    playerDesc.parts.push_back(part);
    playerHandle = world->createGameObject(playerDesc);
 
@@ -423,7 +423,7 @@ void Player::placeObject() {
       return;
 
    glm::vec3 size{ OBJ_PLACE_SIZE };
-   glm::vec3 spawnPos = aabbToPlace.worldCenter;
+   glm::vec3 spawnPos = aabbToPlace.center();
    glm::quat orientation = glm::angleAxis(glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
    // create new object description
@@ -433,7 +433,7 @@ void Player::placeObject() {
 
    SubPartDesc part;
    part.localTransformHandle = world->createTransform();
-   part.colliderType = physics::ColliderType::BOX;
+   part.ShapeType = physics::ShapeType::BOX;
    part.textureName = "checker_gray";
    part.meshName = "cube";
    newObj.parts.push_back(part);
@@ -444,26 +444,27 @@ void Player::placeObject() {
 
 void Player::createPlaceObjectAABB(Shader& shader) {
    glm::vec3 size{ OBJ_PLACE_SIZE };
-
-   physics::AABB aabb;
-   aabb.worldCenter = camera->position + camera->front * OBJ_PLACE_DISTANCE;
-   aabb.worldHalfExtents = glm::vec3(size / 2.0f);
+   glm::vec3 halfExtents = size * 0.5f;
+   glm::vec3 center = camera->position + camera->front * OBJ_PLACE_DISTANCE;
 
    physics::RaycastHit hitData = raycast(OBJ_PLACE_DISTANCE);
    glm::vec3 normal = hitData.normal;
+
    if (hitData.hit) {
       if (glm::dot(hitData.normal, camera->front) > 0.0f)
          normal = -normal;
 
       glm::vec3 absN = glm::abs(normal);
-      float extentOnN = glm::dot(aabb.worldHalfExtents, absN);
+      float extentOnN = glm::dot(halfExtents, absN);
 
       float margin = 0.1f;
-      aabb.worldCenter = hitData.point + normal * (extentOnN - margin);
+      center = hitData.point + normal * (extentOnN - margin);
    }
 
-   aabb.worldMin = aabb.worldCenter - aabb.worldHalfExtents;
-   aabb.worldMax = aabb.worldCenter + aabb.worldHalfExtents;
+   physics::AABB aabb;
+   aabb.min = center - halfExtents;
+   aabb.max = center + halfExtents;
+
    int maxIter = 8;
    int iter = 0;
    for (int i = 0; i < maxIter; i++) {
@@ -514,9 +515,10 @@ void Player::createPlaceObjectAABB(Shader& shader) {
       glm::vec3 normal =
          aabb.getCollisionNormal(*minDepthBounds);
 
-      aabb.worldCenter += normal * min * 1.2f;
-      aabb.worldMin = aabb.worldCenter - aabb.worldHalfExtents;
-      aabb.worldMax = aabb.worldCenter + aabb.worldHalfExtents;
+      glm::vec3 displacement = normal * min * 1.2f;
+
+      aabb.min += displacement;
+      aabb.max += displacement;
 
       iter++;
    }

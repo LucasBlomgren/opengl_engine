@@ -269,7 +269,7 @@ void DebugRenderer::renderColliders(
             color = AWAKE_COLOR;
          }
 
-         if (collider->type == physics::ColliderType::BOX) {
+         if (collider->type == physics::ShapeType::BOX) {
             glLineWidth(OOBB_LINE_WIDTH);
             oobbRenderer.renderBox(
                *debugShapeShader,
@@ -278,7 +278,7 @@ void DebugRenderer::renderColliders(
                color
             );
          }
-         else if (collider->type == physics::ColliderType::SPHERE) {
+         else if (collider->type == physics::ShapeType::SPHERE) {
             glLineWidth(SPHERE_LINE_WIDTH);
             const physics::SphereGeometry& sphere =
                std::get<physics::SphereGeometry>(
@@ -349,12 +349,6 @@ void DebugRenderer::renderSweptAABBs(
 
    for (const physics::AABB& sweptSrc : sweeps) {
       physics::AABB swept = sweptSrc;
-
-      swept.worldCenter =
-         (swept.worldMin + swept.worldMax) * 0.5f;
-
-      swept.worldHalfExtents =
-         (swept.worldMax - swept.worldMin) * 0.5f;
 
       aabbRenderer.updateModel(swept, false);
       aabbRenderer.render(

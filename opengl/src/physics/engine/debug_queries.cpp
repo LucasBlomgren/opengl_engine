@@ -11,10 +11,8 @@ using namespace internal;
 namespace {
 physics::AABB toPublicBounds(const internal::AABB& bounds) {
    physics::AABB result;
-   result.worldMin = bounds.worldMin;
-   result.worldMax = bounds.worldMax;
-   result.worldCenter = bounds.worldCenter;
-   result.worldHalfExtents = bounds.worldHalfExtents;
+   result.min = bounds.min;
+   result.max = bounds.max;
    return result;
 }
 
@@ -23,7 +21,7 @@ glm::vec3 getColliderCenter(const Collider* collider) {
       return glm::vec3(0.0f);
    }
 
-   if (collider->type == ColliderType::BOX) {
+   if (collider->type == ShapeType::BOX) {
       return std::get<Box>(collider->shape).worldCenter;
    }
 
@@ -62,7 +60,7 @@ void Engine::renderDebugImmediate()
       if (!meshH || !physicsStorage.isAlive(*meshH))
          continue;
 
-      const Mesh& mesh = physicsStorage.getMesh(*meshH);
+      const MeshShape& mesh = physicsStorage.getMesh(*meshH);
 
       std::vector<internal::AABB> boxes;
       boxes.reserve(mesh.faces.size());
@@ -71,8 +69,8 @@ void Engine::renderDebugImmediate()
          glm::vec3 minimum(FLT_MAX);
          glm::vec3 maximum(-FLT_MAX);
 
-         for (size_t i = 0; i < face.vertexCount; ++i) {
-            glm::vec3 vertex = mesh.vertices[mesh.faceIndices[face.firstIndex + i]];
+         for (size_t i = 0; i < face.count; ++i) {
+            glm::vec3 vertex = mesh.vertices[mesh.faceIndices[face.start + i]];
 
             glm::vec3 worldVertex = 
                collider.worldPose.position + (collider.worldPose.orientation * vertex);
@@ -82,10 +80,8 @@ void Engine::renderDebugImmediate()
          }
 
          internal::AABB aabb;
-         aabb.worldMin = minimum;
-         aabb.worldMax = maximum;
-         aabb.worldCenter = (minimum + maximum) * 0.5f;
-         aabb.worldHalfExtents = (maximum - minimum) * 0.5f;
+         aabb.min = minimum;
+         aabb.max = maximum;
 
          boxes.push_back(aabb);
       }
@@ -96,9 +92,9 @@ void Engine::renderDebugImmediate()
 
          for (int j = 0; j < 8; ++j) {
             p[j] = {
-               (j & 1) ? aabb.worldMax.x : aabb.worldMin.x,
-               (j & 2) ? aabb.worldMax.y : aabb.worldMin.y,
-               (j & 4) ? aabb.worldMax.z : aabb.worldMin.z
+               (j & 1) ? aabb.max.x : aabb.min.x,
+               (j & 2) ? aabb.max.y : aabb.min.y,
+               (j & 4) ? aabb.max.z : aabb.min.z
             };
          }
 
